@@ -4,19 +4,8 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "package-name": "zoneweaver",
+      "package-name": "hyperweaver-ui",
       "include-component-in-tag": false,
-      "extra-files": [
-        {
-          "type": "json",
-          "path": "web/package.json",
-          "jsonpath": "$.version"
-        },
-        "index.js",
-        "config/swagger.js",
-        "packaging/config/production-config.yaml",
-        "packaging/omnios/man/zoneweaver.yaml.5"
-      ],
       "changelog-sections": [
         { "type": "feat", "section": "Features", "hidden": false },
         { "type": "fix", "section": "Bug Fixes", "hidden": false },

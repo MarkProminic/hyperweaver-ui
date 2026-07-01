@@ -1,0 +1,332 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+
+import { useServers } from '../../contexts/ServerContext';
+
+import {
+  updatePoolIOChartData as updatePoolIOChartDataUtil,
+  updateARCChartData as updateARCChartDataUtil,
+  updateNetworkChartData as updateNetworkChartDataUtil,
+  updateCPUChartData as updateCPUChartDataUtil,
+  updateCPUCoreChartData as updateCPUCoreChartDataUtil,
+  updateMemoryChartData as updateMemoryChartDataUtil,
+} from './utils/chartUpdaters';
+import {
+  loadHistoricalChartData as loadHistoricalChartDataUtil,
+  loadRecentChartData as loadRecentChartDataUtil,
+  loadHostData as loadHostDataUtil,
+} from './utils/dataLoaders';
+import { getHistoricalTimestamp, getResolutionLimit } from './utils/hostUtils';
+
+export const useHostData = currentServer => {
+  const [serverStats, setServerStats] = useState({});
+  const [monitoringHealth, setMonitoringHealth] = useState({});
+  const [monitoringStatus, setMonitoringStatus] = useState({});
+  const [networkInterfaces, setNetworkInterfaces] = useState({});
+  const [storageSummary, setStorageSummary] = useState({});
+  const [taskStats, setTaskStats] = useState({});
+  const [diskIOStats, setDiskIOStats] = useState([]);
+  const [arcStats, setArcStats] = useState([]);
+  const [networkUsage, setNetworkUsage] = useState([]);
+  const [cpuStats, setCpuStats] = useState([]);
+  const [cpuCoreStats] = useState({});
+  const [memoryStats, setMemoryStats] = useState([]);
+  const [swapSummaryData, setSwapSummaryData] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [refreshInterval, setRefreshInterval] = useState(300);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+
+  const [chartData, setChartData] = useState({});
+  const [arcChartData, setArcChartData] = useState({
+    sizeData: [],
+    targetData: [],
+    hitRateData: [],
+  });
+  const [networkChartData, setNetworkChartData] = useState({});
+  const [cpuChartData, setCpuChartData] = useState({
+    overall: [],
+    cores: {},
+    load: { '1min': [], '5min': [], '15min': [] },
+  });
+  const [memoryChartData, setMemoryChartData] = useState({
+    used: [],
+    free: [],
+    cached: [],
+    total: [],
+  });
+  const [timeWindow, setTimeWindow] = useState('15min');
+  const [resolution, setResolution] = useState('high');
+  const [maxDataPoints, setMaxDataPoints] = useState(180);
+
+  // Track initial loading to prevent duplicate historical calls and auto-refresh overlap
+  const initialLoadDone = useRef(false);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+
+  // In-flight guard for loadHostData. Kept in a ref (not the `loading` state) so the
+  // loadHostData callback identity stays stable. If the guard lived in `loading`, every
+  // fetch toggling that state would give loadHostData a new identity, re-fire the data
+  // load effect, and poll in a tight loop instead of honoring refreshInterval.
+  const isLoadingRef = useRef(false);
+
+  // Track latest timestamps for incremental chart updates
+  const [lastChartTimestamps, setLastChartTimestamps] = useState({
+    poolIO: null,
+    network: null,
+    arc: null,
+    cpu: null,
+    memory: null,
+  });
+
+  const {
+    makeAgentRequest,
+    getMonitoringHealth,
+    getMonitoringStatus,
+    getStoragePools,
+    getStorageDatasets,
+  } = useServers();
+
+  // Wrapper functions for chart updaters that use state setters
+  const updatePoolIOChartData = useCallback(
+    poolIOData => {
+      setChartData(prevData => updatePoolIOChartDataUtil(prevData, poolIOData, maxDataPoints));
+    },
+    [maxDataPoints]
+  );
+
+  const updateARCChartData = useCallback(
+    arcData => {
+      setArcChartData(prevData => updateARCChartDataUtil(prevData, arcData, maxDataPoints));
+    },
+    [maxDataPoints]
+  );
+
+  const updateNetworkChartData = useCallback(
+    networkUsageData => {
+      setNetworkChartData(prevData =>
+        updateNetworkChartDataUtil(prevData, networkUsageData, maxDataPoints)
+      );
+    },
+    [maxDataPoints]
+  );
+
+  const updateCPUChartData = useCallback(
+    cpuData => {
+      setCpuChartData(prevData => updateCPUChartDataUtil(prevData, cpuData, maxDataPoints));
+    },
+    [maxDataPoints]
+  );
+
+  const updateCPUCoreChartData = useCallback(
+    cpuData => {
+      setCpuChartData(prevData => updateCPUCoreChartDataUtil(prevData, cpuData, maxDataPoints));
+    },
+    [maxDataPoints]
+  );
+
+  const updateMemoryChartData = useCallback(
+    memoryData => {
+      setMemoryChartData(prevData =>
+        updateMemoryChartDataUtil(prevData, memoryData, maxDataPoints)
+      );
+    },
+    [maxDataPoints]
+  );
+
+  // Wrapper for loadHistoricalChartData
+  const loadHistoricalChartData = useCallback(async () => {
+    await loadHistoricalChartDataUtil({
+      currentServer,
+      makeAgentRequest,
+      timeWindow,
+      resolution,
+      setNetworkChartData,
+      setNetworkUsage,
+      setChartData,
+      setDiskIOStats,
+      setArcChartData,
+      setArcStats,
+      setCpuChartData,
+      setCpuStats,
+      setMemoryChartData,
+      setMemoryStats,
+      setLastChartTimestamps,
+      getHistoricalTimestamp,
+      getResolutionLimit,
+    });
+  }, [currentServer, makeAgentRequest, timeWindow, resolution]);
+
+  // Wrapper for loadRecentChartData
+  const loadRecentChartData = useCallback(async () => {
+    await loadRecentChartDataUtil({
+      currentServer,
+      makeAgentRequest,
+      lastChartTimestamps,
+      resolution,
+      updateNetworkChartData,
+      updatePoolIOChartData,
+      updateARCChartData,
+      updateCPUChartData,
+      updateCPUCoreChartData,
+      updateMemoryChartData,
+      setLastChartTimestamps,
+      loadHistoricalChartDataFn: loadHistoricalChartData,
+      getResolutionLimit,
+    });
+  }, [
+    currentServer,
+    makeAgentRequest,
+    lastChartTimestamps,
+    resolution,
+    updateNetworkChartData,
+    updatePoolIOChartData,
+    updateARCChartData,
+    updateCPUChartData,
+    updateCPUCoreChartData,
+    updateMemoryChartData,
+    loadHistoricalChartData,
+  ]);
+
+  // Wrapper for loadHostData
+  const loadHostData = useCallback(
+    async server => {
+      await loadHostDataUtil({
+        server,
+        isLoadingRef,
+        makeAgentRequest,
+        getMonitoringHealth,
+        getMonitoringStatus,
+        getStoragePools,
+        getStorageDatasets,
+        setLoading,
+        setError,
+        setServerStats,
+        setMonitoringHealth,
+        setMonitoringStatus,
+        setNetworkInterfaces,
+        setStorageSummary,
+        setTaskStats,
+        setSwapSummaryData,
+      });
+    },
+    [
+      makeAgentRequest,
+      getMonitoringHealth,
+      getMonitoringStatus,
+      getStoragePools,
+      getStorageDatasets,
+    ]
+  );
+
+  // Load data when server changes - sequential loading pattern
+  useEffect(() => {
+    console.log('🔍 HOST: Server changed effect triggered', {
+      currentServer: currentServer?.hostname,
+      hasRequest: !!makeAgentRequest,
+    });
+
+    if (currentServer && makeAgentRequest) {
+      // Load historical chart data first to establish chart foundation
+      loadHistoricalChartData();
+
+      // Load main host data
+      loadHostData(currentServer).then(() => {
+        setInitialDataLoaded(true);
+        initialLoadDone.current = true;
+        console.log('🔍 HOST: Initial data loading completed - preventing duplicate calls');
+      });
+    }
+  }, [currentServer, makeAgentRequest, loadHistoricalChartData, loadHostData]);
+
+  // Load historical chart data when time window or resolution changes
+  useEffect(() => {
+    if (currentServer && makeAgentRequest && initialLoadDone.current) {
+      console.log(
+        '📊 HISTORICAL CHARTS: Time window or resolution changed, loading historical data'
+      );
+      // Reset timestamps when time window or resolution changes
+      setLastChartTimestamps({
+        poolIO: null,
+        network: null,
+        arc: null,
+        cpu: null,
+        memory: null,
+      });
+      loadHistoricalChartData();
+    } else if (!initialLoadDone.current) {
+      console.log('📊 HISTORICAL CHARTS: Skipping settings change during initial load');
+    }
+  }, [timeWindow, resolution, currentServer, makeAgentRequest, loadHistoricalChartData]);
+
+  // Combined refresh function for both auto-refresh and manual refresh
+  const refreshAllData = useCallback(
+    async (server = currentServer) => {
+      if (!server) {
+        return;
+      }
+
+      console.log('🔄 REFRESH: Starting combined refresh for host data and charts');
+
+      // Run both in parallel
+      await Promise.all([loadHostData(server), loadRecentChartData()]);
+
+      console.log('🔄 REFRESH: Completed combined refresh');
+    },
+    [currentServer, loadHostData, loadRecentChartData]
+  );
+
+  // Auto-refresh effect - wait for initial data to load before starting
+  useEffect(() => {
+    if (!refreshInterval || refreshInterval === 0 || !currentServer || !initialDataLoaded) {
+      if (!initialDataLoaded) {
+        console.log('🔄 HOST: Auto-refresh waiting for initial data load to complete');
+      }
+      return undefined;
+    }
+
+    console.log('🔄 HOST: Setting up auto-refresh every', refreshInterval, 'seconds');
+    const interval = setInterval(() => {
+      console.log('🔄 HOST: Auto-refreshing host data and charts...');
+      refreshAllData(currentServer);
+    }, refreshInterval * 1000);
+
+    return () => {
+      console.log('🔄 HOST: Cleaning up auto-refresh interval');
+      clearInterval(interval);
+    };
+  }, [refreshInterval, currentServer, initialDataLoaded, refreshAllData]);
+
+  return {
+    serverStats,
+    monitoringHealth,
+    monitoringStatus,
+    networkInterfaces,
+    storageSummary,
+    taskStats,
+    diskIOStats,
+    arcStats,
+    networkUsage,
+    cpuStats,
+    cpuCoreStats,
+    memoryStats,
+    swapSummaryData,
+    loading,
+    error,
+    refreshInterval,
+    setRefreshInterval,
+    autoRefresh,
+    setAutoRefresh,
+    chartData,
+    arcChartData,
+    networkChartData,
+    cpuChartData,
+    memoryChartData,
+    timeWindow,
+    setTimeWindow,
+    resolution,
+    setResolution,
+    maxDataPoints,
+    setMaxDataPoints,
+    loadHostData,
+    refreshAllData,
+  };
+};

@@ -26,39 +26,16 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: |
-          npm ci
-          cd web && npm ci
+        run: npm ci
 
       - name: Run ESLint
-        run: npm run lint:all
+        run: npm run lint
 
       - name: Check Prettier formatting
-        run: npm run format:check
+        run: npx prettier --check .
 
-  build-frontend:
-    name: Build Frontend
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: |
-          npm ci
-          cd web && npm ci
-
-      - name: Build frontend
-        run: npm run build
-
-  verify-scripts:
-    name: Verify Scripts
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -73,12 +50,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify scripts run
-        run: |
-          npm run sync-versions || echo "sync-versions verification complete"
-          npm run generate-docs || echo "generate-docs verification complete"
+      - name: Build
+        run: npm run build
 
   codeql-analysis:
     name: CodeQL
-    needs: [lint-and-format, build-frontend, verify-scripts]
+    needs: [lint-and-format, build]
     uses: ./.github/workflows/codeql.yml

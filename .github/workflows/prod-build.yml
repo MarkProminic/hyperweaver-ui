@@ -1,4 +1,4 @@
-name: Production Build
+name: Build UI Artifact
 
 on:
   workflow_call:
@@ -26,12 +26,11 @@ permissions:
   contents: write
 
 jobs:
-  build-production-packages:
-    name: Packages
-    runs-on: self-hosted
+  build-and-upload:
+    name: Build & Upload
+    runs-on: ubuntu-latest
     steps:
-      # Debian Build Steps
-      - name: Checkout for Debian build
+      - name: Checkout code
         uses: actions/checkout@v5
 
       - name: Setup Node.js
@@ -40,227 +39,15 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install Node.js dependencies
+      - name: Install dependencies
         run: npm ci
 
-      - name: Install web dependencies
-        run: cd web && npm ci
-
-      - name: Build frontend
+      - name: Build
         run: npm run build
-
-      - name: Generate OpenAPI documentation
-        run: npm run generate-docs
-
-      - name: Install Ruby and Jekyll for documentation build
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ruby-full build-essential zlib1g-dev libffi-dev
-          sudo gem install bundler
-          bundle config set --local path 'vendor/bundle'
-          bundle config set --local without 'development'
-          bundle install
-
-      - name: Build documentation site with Jekyll
-        run: bundle exec jekyll build
-        env:
-          JEKYLL_ENV: production
-
-      - name: Bundle documentation into web build
-        run: cp -r _site web/dist/docs
-
-      - name: Set Debian package variables
-        run: |
-          echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
-          echo "PACKAGE_NAME=zoneweaver" >> $GITHUB_ENV
-          echo "ARCH=amd64" >> $GITHUB_ENV
-          echo "TAG_NAME=${{ inputs.tag_name }}" >> $GITHUB_ENV
-
-      - name: Create Debian package structure
-        run: |
-          mkdir -p "${PACKAGE_NAME}_${VERSION}_${ARCH}"/{opt/zoneweaver/web,etc/zoneweaver,etc/systemd/system,var/lib/zoneweaver,var/log/zoneweaver,usr/share/man/man8,usr/share/man/man5,DEBIAN}
-
-      - name: Copy application files to Debian package
-        run: |
-          cp -r controllers models routes auth config utils scripts index.js package.json "${PACKAGE_NAME}_${VERSION}_${ARCH}/opt/zoneweaver/"
-          cp -r node_modules "${PACKAGE_NAME}_${VERSION}_${ARCH}/opt/zoneweaver/"
-          cp -r web/dist "${PACKAGE_NAME}_${VERSION}_${ARCH}/opt/zoneweaver/web/dist"
-
-      - name: Copy configuration files to Debian package
-        run: |
-          cp packaging/config/production-config.yaml "${PACKAGE_NAME}_${VERSION}_${ARCH}/etc/zoneweaver/config.yaml"
-          cp packaging/DEBIAN/systemd/zoneweaver.service "${PACKAGE_NAME}_${VERSION}_${ARCH}/etc/systemd/system/"
-          cp packaging/DEBIAN/postinst packaging/DEBIAN/prerm packaging/DEBIAN/postrm "${PACKAGE_NAME}_${VERSION}_${ARCH}/DEBIAN/"
-
-      - name: Install man pages
-        run: |
-          # Copy and compress man pages following Debian Policy
-          gzip -9 -c packaging/DEBIAN/man/zoneweaver.8 > "${PACKAGE_NAME}_${VERSION}_${ARCH}/usr/share/man/man8/zoneweaver.8.gz"
-          gzip -9 -c packaging/DEBIAN/man/zoneweaver.yaml.5 > "${PACKAGE_NAME}_${VERSION}_${ARCH}/usr/share/man/man5/zoneweaver.yaml.5.gz"
-
-      - name: Create Debian control file
-        run: |
-          cat > "${PACKAGE_NAME}_${VERSION}_${ARCH}/DEBIAN/control" << EOF
-          Package: zoneweaver
-          Version: ${VERSION}
-          Section: misc
-          Priority: optional
-          Architecture: ${ARCH}
-          Maintainer: Makr91 <makr91@users.noreply.github.com>
-          Depends: nodejs (>= 22.0.0), sqlite3, openssl
-          Description: Zoneweaver - Zone Hypervisor Management Interface
-           Web-based management interface for Zoneweaver API hypervisors.
-           Provides intuitive control over zones, networking, and storage
-           through a modern React frontend and Node.js API backend.
-          Homepage: https://github.com/Makr91/zoneweaver
-          EOF
-
-      - name: Set Debian package permissions
-        run: |
-          find "${PACKAGE_NAME}_${VERSION}_${ARCH}" -type d -exec chmod 755 {} \;
-          find "${PACKAGE_NAME}_${VERSION}_${ARCH}" -type f -exec chmod 644 {} \;
-          chmod 755 "${PACKAGE_NAME}_${VERSION}_${ARCH}/DEBIAN"/{postinst,prerm,postrm}
-
-      - name: Build Debian package
-        run: |
-          dpkg-deb --build "${PACKAGE_NAME}_${VERSION}_${ARCH}" "${PACKAGE_NAME}_${VERSION}_${ARCH}.deb"
-
-      #      # OmniOS Build Steps (PARKED — uncomment to resume .p5p builds; packaging/omnios/ is kept)
-      #      - name: Fresh checkout for OmniOS build
-      #        uses: actions/checkout@v5
-      #        with:
-      #          path: omnios-source
-      #          clean: true
-      #
-      #      - name: Clean OmniOS build directory
-      #        run: |
-      #          ssh ghrunner@omnios.packages.startcloud.com "rm -rf /local/builds/zoneweaver/* /local/builds/zoneweaver/.*" || true
-      #
-      #      - name: Sync source code to OmniOS
-      #        run: |
-      #          rsync -av \
-      #            --exclude='.git' \
-      #            --exclude='node_modules' \
-      #            --exclude='web/node_modules' \
-      #            --exclude='web/dist' \
-      #            --exclude='*.deb' \
-      #            omnios-source/ ghrunner@omnios.packages.startcloud.com:/local/builds/zoneweaver/
-      #
-      #      - name: Build package on OmniOS
-      #        run: |
-      #          ssh ghrunner@omnios.packages.startcloud.com "cd /local/builds/zoneweaver && export PATH=/opt/ooce/bin:/opt/ooce/node-22/bin:\$PATH && export MAKE=gmake && chmod +x packaging/omnios/build.sh && ./packaging/omnios/build.sh"
-      #
-      #      - name: Transfer OmniOS package back
-      #        run: |
-      #          rsync -av ghrunner@omnios.packages.startcloud.com:/local/builds/zoneweaver/*.p5p ./ || echo "No .p5p files found"
-
-      - name: Install GitHub CLI
-        run: |
-          if ! command -v gh &> /dev/null; then
-            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-            sudo apt update
-            sudo apt install gh -y
-          fi
-
-      - name: Upload Debian package to release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "${TAG_NAME}" "${PACKAGE_NAME}_${VERSION}_${ARCH}.deb" --clobber
 
       - name: Package and upload Hyperweaver UI artifact
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tar -czf "hyperweaver-ui-${VERSION}.tar.gz" -C web/dist .
-          gh release upload "${TAG_NAME}" "hyperweaver-ui-${VERSION}.tar.gz" --clobber
-
-      #      - name: Upload OmniOS package to release (PARKED)
-      #        env:
-      #          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #        run: |
-      #          for file in *.p5p; do
-      #            if [ -f "$file" ]; then
-      #              echo "Uploading $file..."
-      #              gh release upload "${TAG_NAME}" "$file" --clobber
-      #            fi
-      #          done
-      #
-      #      - name: Publish OmniOS package to repository (PARKED)
-      #        run: |
-      #          ssh ghrunner@omnios.packages.startcloud.com "cd /local/builds/zoneweaver && pfexec pkgsend publish -d proto -s file:///local/public/r151054/pkg zoneweaver.p5m.final && pfexec pkgrepo refresh -s /local/public/r151054/pkg && pfexec svcadm restart pkg/server:r151054_STARTcloud"
-      #
-      #      - name: Clean up OmniOS build directory (PARKED)
-      #        run: |
-      #          ssh ghrunner@omnios.packages.startcloud.com "rm -rf /local/builds/zoneweaver/*"
-
-      - name: Upload Debian package to repository server
-        run: |
-          rsync -av zoneweaver_*.deb startcloud@172.17.204.177:/tmp/
-
-      - name: Add package to repository pool
-        run: |
-          ssh startcloud@172.17.204.177 "
-            mkdir -p /local/public/debian/pool/main/z/zoneweaver
-            cp /tmp/zoneweaver_*.deb /local/public/debian/pool/main/z/zoneweaver/
-          "
-
-      - name: Create multi-suite directory structure
-        run: |
-          ssh startcloud@172.17.204.177 "
-            cd /local/public/debian
-            mkdir -p dists/bookworm/main/binary-amd64
-            mkdir -p dists/trixie/main/binary-amd64
-          "
-
-      - name: Update repository Packages files for all suites
-        run: |
-          ssh startcloud@172.17.204.177 "
-            cd /local/public/debian
-            for suite in bookworm trixie; do
-              dpkg-scanpackages --arch amd64 pool/ > dists/\$suite/main/binary-amd64/Packages
-              gzip -c dists/\$suite/main/binary-amd64/Packages > dists/\$suite/main/binary-amd64/Packages.gz
-            done
-          "
-
-      - name: Generate Release files for all suites
-        run: |
-          ssh startcloud@172.17.204.177 "
-            cd /local/public/debian
-            for suite in bookworm trixie; do
-              cd dists/\$suite
-              /local/generate-release.sh \$suite > Release
-              cd ../..
-            done
-          "
-
-      - name: Create stable distribution with proper Release file
-        run: |
-          ssh startcloud@172.17.204.177 "
-            cd /local/public/debian/dists
-            rm -rf stable 2>/dev/null || true
-            cp -r trixie stable
-            cd stable
-            /local/generate-release.sh stable > Release
-          "
-
-      - name: Sign repository for all suites including stable
-        run: |
-          ssh startcloud@172.17.204.177 "
-            cd /local/public/debian
-            for suite in bookworm trixie stable; do
-              cd dists/\$suite
-              export GNUPGHOME=\$(mktemp -d /local/pgp/pgpkeys-XXXXXX)
-              cat /local/pgp/pgp-key.private | gpg --import
-              cat Release | gpg --default-key startcloud -abs > Release.gpg
-              cat Release | gpg --default-key startcloud -abs --clearsign > InRelease
-              rm -rf \$GNUPGHOME
-              cd ../..
-            done
-          "
-
-      - name: Cleanup temporary files
-        run: |
-          ssh startcloud@172.17.204.177 "rm -f /tmp/zoneweaver_*.deb"
+          tar -czf "hyperweaver-ui-${{ inputs.version }}.tar.gz" -C dist .
+          gh release upload "${{ inputs.tag_name }}" "hyperweaver-ui-${{ inputs.version }}.tar.gz" --clobber

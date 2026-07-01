@@ -1,67 +1,29 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
-*/node_modules
+# Dependencies
 node_modules/
-node_modules/*
+node_modules/.cache
 
-*/node_modules/.cache
+# Build output
+dist/
 
-*/core
-core/*
+# Vite cache
+.vite/
 
-Trash
-
-core
-/.pnp
-.pnp.js
-
-# testing
+# Testing
 /coverage
 
-# production
-/build
-web/dist
-
-# Debian packaging artifacts
-zoneweaver_*_*/
-zoneweaver-dev_*_*/
-*.deb
-
-# Vite build cache
-web/.vite
-web/node_modules/.vite
-
-# misc
-.DS_Store
+# Local env overrides (Vite) — committed config.yaml holds the shared dev defaults
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-docs/passport-integration-plan.md
-modal_close_button_scratchpad.md
-modal_conversion_scratchpad.md
+
+# OS / editor / tooling
+.DS_Store
 .claude/
-
-# Jekyll docs build output + Ruby gems (docs are built into web/dist/docs in CI)
-_site/
-.jekyll-cache/
-.jekyll-metadata
-.sass-cache/
-vendor/
-.bundle/
-
-# Runtime artifacts + local dev config + SQLite DB (created when the app runs — never commit)
-logs/
-/config.yaml
-/data/
-
-# Generated API docs (created by scripts/generate-docs.js; CI regenerates them on build).
-# openapi.json carries Jekyll front matter so it is not valid JSON — never commit/format.
-docs/api/openapi.json
-docs/api/swagger-ui.html
-docs/api/reference.md

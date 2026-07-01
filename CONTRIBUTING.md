@@ -1,10 +1,10 @@
-# Contributing to Zoneweaver
+# Contributing to Hyperweaver UI
 
-Thank you for your interest in contributing to Zoneweaver! We welcome contributions from the community as they are essential for the project's continued growth and development.
+Thank you for your interest in contributing to Hyperweaver UI! Community contributions are essential to the project's continued growth.
 
 ## Important Note on Resources
 
-Zoneweaver is maintained with limited development resources. **Community contributions directly impact the pace of feature development and bug fixes.** The more the community contributes, the faster the project can grow and improve.
+Hyperweaver UI is maintained with limited development resources. **Community contributions directly impact the pace of feature development and bug fixes.**
 
 ## How to Contribute
 
@@ -14,83 +14,60 @@ Before creating an issue, please:
 
 1. **Search existing issues** to avoid duplicates
 2. **Use the appropriate issue template** (bug report, feature request, etc.)
-3. **Provide detailed information** to help us understand and prioritize the issue
-4. **Include system information** (OmniOS version, Node.js version, etc.)
+3. **Provide detailed information** — steps to reproduce, expected vs. actual behavior
+4. **Include environment details** (browser + version, OS, Node.js version)
 
 ### Submitting Pull Requests
 
-We appreciate all pull requests! To ensure smooth collaboration:
-
 1. **Fork the repository** and create your feature branch from `main`
-2. **Follow the existing code style** and patterns
-3. **Add tests** for new functionality when possible
-4. **Update documentation** if your changes affect the API or configuration
-5. **Write clear commit messages** describing your changes
-6. **Fill out the pull request template** completely
+2. **Follow the existing code style** — ESLint + Prettier enforce it (`npm run lint`)
+3. **Keep changes focused** and write clear commit messages using [Conventional Commits](https://www.conventionalcommits.org/) (release-please relies on them)
+4. **Fill out the pull request template** completely
 
 ### Development Setup
 
 1. Clone your fork of the repository
 2. Install dependencies: `npm install`
-3. Copy `config/config.yaml.example` to `config/config.yaml` and configure for development
-4. Run in development mode: `npm run dev`
-5. Access the API documentation at `http://localhost:5000/api-docs`
+3. Point the dev proxy at a backend in `config.yaml` (`server.api_target`)
+4. Start the dev server: `npm run dev`, then open [localhost:3000](http://localhost:3000)
 
 ### Code Style Guidelines
 
-- Follow existing JavaScript/Node.js conventions
-- Use meaningful variable and function names
-- Comment complex logic appropriately
-- Maintain consistent indentation (2 spaces)
-- Keep functions focused and modular
+- Follow existing React / JavaScript conventions
+- **ESLint** (strict React + hooks + jsx-a11y + import rules) and **Prettier** enforce style — run `npm run lint` / `npm run lint:fix`
+- Use meaningful names, keep components focused, and prefer Bootstrap utilities/components over ad-hoc CSS
 
 ### What We're Looking For
 
 **High Impact Contributions:**
 
-- Bug fixes (especially those affecting system stability)
-- Security improvements
-- Performance optimizations
+- Bug fixes (especially state/rendering and accessibility issues)
+- Accessibility (jsx-a11y) and UX improvements
+- Performance improvements (bundle size, render performance)
 - Documentation improvements
-- Test coverage improvements
 
 **Feature Contributions:**
 
-- New zone management features
-- Enhanced monitoring capabilities
-- API improvements
-- Better error handling
-- Integration improvements
+- New views and components
+- Better error handling and empty/loading states
+- Improved theming and responsiveness
 
 ## Response Times and Review Process
 
 Due to limited development resources:
 
-- **Issue responses**: We aim to acknowledge new issues within a few days
-- **Pull request reviews**: Reviews may take weeks depending on complexity and current workload
-- **Feature requests**: Prioritized based on community needs and available resources
-- **Documentation updates**: Generally reviewed quickly as they're high-impact, low-risk
-
-## Getting Help
-
-If you need help with contributing:
-
-- **GitHub Discussions**: Ask questions about development
-- **Issues**: Use the "question" template for specific inquiries
-- **Documentation**: Check our [comprehensive documentation](https://zoneweaver.startcloud.com/)
+- **Issue responses**: we aim to acknowledge new issues within a few days
+- **Pull request reviews**: may take time depending on complexity and workload
+- **Documentation updates**: generally reviewed quickly as they're high-impact, low-risk
 
 ## Recognition
 
-All contributors are recognized in our [AUTHORS.md](AUTHORS.md) file. We appreciate every contribution, from small bug fixes to major features!
+All contributors are recognized in our [AUTHORS.md](AUTHORS.md) file. We appreciate every contribution, from small fixes to major features!
 
 ## Code of Conduct
 
-Please note that this project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to abide by its terms.
+This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to abide by its terms.
 
 ## License
 
-By contributing to Zoneweaver, you agree that your contributions will be licensed under the [GPL-3.0 License](LICENSE.md).
-
----
-
-**Remember**: Your contributions directly influence the project's development speed and capabilities. Thank you for helping make Zoneweaver better for everyone!
+By contributing to Hyperweaver UI, you agree that your contributions will be licensed under the [GPL-3.0 License](LICENSE.md).

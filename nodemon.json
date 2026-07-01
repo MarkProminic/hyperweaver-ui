@@ -1,9 +1,0 @@
-{
-  "events": {
-    "restart": "",
-    "crash": ""
-  },
-  "watch": ["*"],
-  "delay": "1500",
-  "ext": "js, css, scss, sass, json, jsx"
-}

@@ -1,10 +1,6 @@
 # Build output
-web/dist
+dist/
 
-# Generated API docs (created by scripts/generate-docs.js).
-# openapi.json carries Jekyll front matter so it is NOT valid JSON — Prettier's
-# JSON parser chokes on the leading `---`. These are regenerated every build/CI,
-# so they should never be formatted or hand-edited.
-docs/api/openapi.json
-docs/api/swagger-ui.html
-docs/api/reference.md
+# Managed by tooling — don't reformat
+package-lock.json
+CHANGELOG.md
