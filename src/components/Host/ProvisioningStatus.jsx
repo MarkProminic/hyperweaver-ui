@@ -1,6 +1,7 @@
-import axios from 'axios';
 import PropTypes from 'prop-types';
 import React, { useState, useEffect } from 'react';
+
+import { makeAgentRequest } from '../../api/serverUtils';
 
 const ProvisioningStatus = ({ currentServer }) => {
   const [status, setStatus] = useState(null);
@@ -14,10 +15,17 @@ const ProvisioningStatus = ({ currentServer }) => {
       }
       try {
         setLoading(true);
-        const response = await axios.get(
-          `/api/zapi/${currentServer.protocol}/${currentServer.hostname}/${currentServer.port}/provisioning/status`
+        const result = await makeAgentRequest(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          'provisioning/status'
         );
-        setStatus(response.data);
+        if (result.success) {
+          setStatus(result.data);
+        } else {
+          setError(`Failed to load provisioning status: ${result.message}`);
+        }
         setLoading(false);
       } catch (err) {
         setError(`Failed to load provisioning status: ${err.message}`);

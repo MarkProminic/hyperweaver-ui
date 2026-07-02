@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 
+import { getAgentBasePath } from '../../../api/serverUtils';
+
 /**
  * Custom hook providing standard cubone file manager event handlers
  * and modal handlers for the enhanced file manager.
@@ -142,12 +144,18 @@ const useCuboneHandlers = ({
         return;
       }
 
+      const base = getAgentBasePath(downloadServer);
+      if (base === null) {
+        setError('Host not resolvable yet — try again in a moment');
+        return;
+      }
+
       const downloadable = filesToDownload.filter(f => !f.isDirectory);
       await Promise.all(
         downloadable.map(async fileToDownload => {
           try {
             const filePath = encodeURIComponent(fileToDownload.path);
-            const downloadUrl = `/api/zapi/${downloadServer.protocol}/${downloadServer.hostname}/${downloadServer.port}/filesystem/download?path=${filePath}`;
+            const downloadUrl = `${base}/filesystem/download?path=${filePath}`;
 
             const response = await fetch(downloadUrl, {
               headers: {

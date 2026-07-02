@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -261,18 +260,19 @@ export const useNavbarActions = () => {
 
   useEffect(() => {
     if (currentServer && user) {
-      axios
-        .get(
-          `/api/zapi/${currentServer.protocol}/${currentServer.hostname}/${currentServer.port}/stats`
-        )
+      makeAgentRequest(currentServer.hostname, currentServer.port, currentServer.protocol, 'stats')
         .then(res => {
-          setZones(res);
+          if (res.success) {
+            setZones({ data: res.data });
+          } else {
+            console.error('Error fetching zones:', res.message);
+          }
         })
         .catch(fetchError => {
           console.error('Error fetching zones:', fetchError);
         });
     }
-  }, [currentServer, user]);
+  }, [currentServer, user, makeAgentRequest]);
 
   return {
     isModal,

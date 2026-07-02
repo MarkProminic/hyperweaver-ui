@@ -32,8 +32,10 @@ export const configureAgentAddressing = ({ mode, resolveId }) => {
 /**
  * Base path prefix for a given agent — also used for WebSocket paths.
  * Direct: '' (origin root). Aggregated: `/api/agents/{id}`.
+ * NEVER throws (this is reachable from render paths): returns null when the id
+ * is not resolvable yet — callers skip/defer until addressing is ready.
  * @param {Object} server - Server object ({ id } or { hostname, port, protocol })
- * @returns {string} Base path prefix (no trailing slash)
+ * @returns {string|null} Base path prefix (no trailing slash), or null if unresolvable
  */
 export const getAgentBasePath = server => {
   if (addressing.mode === 'direct') {
@@ -41,9 +43,7 @@ export const getAgentBasePath = server => {
   }
   const id = server?.id ?? addressing.resolveId(server?.hostname, server?.port, server?.protocol);
   if (id === null || id === undefined) {
-    throw new Error(
-      `No registry id known for agent ${server?.hostname}:${server?.port} — is the servers list loaded?`
-    );
+    return null;
   }
   return `/api/agents/${id}`;
 };
@@ -54,7 +54,7 @@ export const getAgentBasePath = server => {
  * @param {string} hostname - Agent hostname
  * @param {number} port - Agent port
  * @param {string} path - Agent API path (root-relative, no leading slash)
- * @returns {string} URL to request
+ * @returns {string|null} URL to request, or null if the agent id is not resolvable yet
  */
 const buildAgentUrl = (protocol, hostname, port, path) => {
   if (addressing.mode === 'direct') {
@@ -62,9 +62,7 @@ const buildAgentUrl = (protocol, hostname, port, path) => {
   }
   const id = addressing.resolveId(hostname, port, protocol);
   if (id === null || id === undefined) {
-    throw new Error(
-      `No registry id known for agent ${hostname}:${port} — is the servers list loaded?`
-    );
+    return null;
   }
   return `/api/agents/${id}/${path}`;
 };
@@ -153,6 +151,16 @@ export const makeAgentRequest = async (...args) => {
     onUploadProgress = null,
     responseType = 'json',
   ] = args;
+
+  // Addressing not ready (registry still loading / unknown agent): fail cleanly,
+  // never throw — mount-time callers retry when the servers list lands.
+  if (buildAgentUrl(protocol, hostname, port, path) === null) {
+    return {
+      success: false,
+      message: `Agent ${hostname}:${port} is not resolvable yet — servers list still loading`,
+      status: null,
+    };
+  }
 
   try {
     const config = createAxiosConfig({

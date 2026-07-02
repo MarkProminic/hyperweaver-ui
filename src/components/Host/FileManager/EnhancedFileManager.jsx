@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import '@cubone/react-file-manager/dist/style.css';
 
+import { getAgentBasePath } from '../../../api/serverUtils';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useServers } from '../../../contexts/ServerContext';
 import { canManageHosts, canViewHosts } from '../../../utils/permissions';
@@ -164,14 +165,19 @@ const EnhancedFileManager = ({ server }) => {
     [user?.role]
   );
 
-  // Upload configuration
+  // Upload configuration (mode-aware agent base path)
   const fileUploadConfig = useMemo(() => {
     if (!server) {
       return null;
     }
 
+    const base = getAgentBasePath(server);
+    if (base === null) {
+      return null;
+    }
+
     return {
-      url: `/api/zapi/${server.protocol}/${server.hostname}/${server.port}/filesystem/upload`,
+      url: `${base}/filesystem/upload`,
       method: 'POST',
       headers: {
         Authorization: `Bearer ${localStorage.getItem('authToken')}`,

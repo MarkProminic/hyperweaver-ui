@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import '@cubone/react-file-manager/dist/style.css';
 
+import { getAgentBasePath } from '../../../api/serverUtils';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useServers } from '../../../contexts/ServerContext';
 import { canManageHosts, canViewHosts } from '../../../utils/permissions';
@@ -230,14 +231,19 @@ const HostFileManager = ({ server }) => {
     [user?.role]
   );
 
-  // Upload configuration
+  // Upload configuration (mode-aware agent base path)
   const fileUploadConfig = useMemo(() => {
     if (!server) {
       return null;
     }
 
+    const base = getAgentBasePath(server);
+    if (base === null) {
+      return null;
+    }
+
     return {
-      url: `/api/zapi/${server.protocol}/${server.hostname}/${server.port}/filesystem/upload`,
+      url: `${base}/filesystem/upload`,
       method: 'POST',
       headers: {
         Authorization: `Bearer ${localStorage.getItem('authToken')}`,
@@ -395,12 +401,18 @@ const HostFileManager = ({ server }) => {
         return;
       }
 
+      const base = getAgentBasePath(currentServer);
+      if (base === null) {
+        setError('Host not resolvable yet — try again in a moment');
+        return;
+      }
+
       // Download files using authenticated requests - use Promise.all to avoid await in loop
       const downloadPromises = filesToDownload
         .filter(file => !file.isDirectory)
         .map(async file => {
           const path = encodeURIComponent(file.path);
-          const downloadUrl = `/api/zapi/${currentServer.protocol}/${currentServer.hostname}/${currentServer.port}/filesystem/download?path=${path}`;
+          const downloadUrl = `${base}/filesystem/download?path=${path}`;
 
           try {
             // Use authenticated fetch to get the file

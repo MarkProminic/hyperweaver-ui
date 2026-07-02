@@ -5,6 +5,8 @@
 
 import { useCallback } from 'react';
 
+import { getAgentBasePath } from '../../../api/serverUtils';
+
 import { isTextFile } from './FileManagerTransforms';
 
 /**
@@ -245,12 +247,18 @@ const useExtendedHandlers = ({
         return;
       }
 
+      const base = getAgentBasePath(downloadServer);
+      if (base === null) {
+        setError('Host not resolvable yet — try again in a moment');
+        return;
+      }
+
       try {
         const downloadableFiles = filesToDownload.filter(f => !f.isDirectory);
         await Promise.all(
           downloadableFiles.map(async dlFile => {
             const filePath = encodeURIComponent(dlFile.path);
-            const downloadUrl = `/api/zapi/${downloadServer.protocol}/${downloadServer.hostname}/${downloadServer.port}/filesystem/download?path=${filePath}`;
+            const downloadUrl = `${base}/filesystem/download?path=${filePath}`;
 
             try {
               const response = await fetch(downloadUrl, {

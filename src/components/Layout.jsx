@@ -122,7 +122,7 @@ const LayoutContent = () => {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="accounts" element={<Accounts />} />
               <Route path="settings/hyperweaver" element={<HyperweaverSettings />} />
-              <Route path="settings/zapi" element={<AgentSettings />} />
+              <Route path="settings/agent" element={<AgentSettings />} />
               <Route path="zones" element={<Zones />} />
               <Route path="hosts" element={<Hosts />} />
               <Route path="host-manage" element={<HostManage />} />

@@ -1,5 +1,6 @@
-import axios from 'axios';
 import { useCallback, useEffect, useState } from 'react';
+
+import { makeAgentRequest } from '../../../api/serverUtils';
 
 import { bytesToGb } from './arcUtils';
 
@@ -35,9 +36,16 @@ export const useArcConfig = server => {
           setMessage('');
         }
 
-        const response = await axios.get(
-          `/api/zapi/${server.protocol}/${server.hostname}/${server.port}/system/zfs/arc/config`
+        const response = await makeAgentRequest(
+          server.hostname,
+          server.port,
+          server.protocol,
+          'system/zfs/arc/config'
         );
+
+        if (!response.success) {
+          throw new Error(response.message);
+        }
 
         if (response.data) {
           setCurrentConfig(response.data);
@@ -127,10 +135,18 @@ export const useArcConfig = server => {
         payload.arc_min_gb = parseFloat(formData.arc_min_gb);
       }
 
-      const response = await axios.post(
-        `/api/zapi/${server.protocol}/${server.hostname}/${server.port}/system/zfs/arc/validate`,
+      const response = await makeAgentRequest(
+        server.hostname,
+        server.port,
+        server.protocol,
+        'system/zfs/arc/validate',
+        'POST',
         payload
       );
+
+      if (!response.success) {
+        throw new Error(response.message);
+      }
 
       setValidation(response.data);
 
@@ -199,10 +215,18 @@ export const useArcConfig = server => {
       }
       payload.prefetch_disable = formData.prefetch_disable;
 
-      const response = await axios.put(
-        `/api/zapi/${server.protocol}/${server.hostname}/${server.port}/system/zfs/arc/config`,
+      const response = await makeAgentRequest(
+        server.hostname,
+        server.port,
+        server.protocol,
+        'system/zfs/arc/config',
+        'PUT',
         payload
       );
+
+      if (!response.success) {
+        throw new Error(response.message);
+      }
 
       if (response.data.success) {
         setMessage(`ZFS configuration updated successfully! ${response.data.message}`);
@@ -253,10 +277,18 @@ export const useArcConfig = server => {
       setMessage('Resetting ARC configuration to defaults...');
       setMessageType('alert-info');
 
-      const response = await axios.post(
-        `/api/zapi/${server.protocol}/${server.hostname}/${server.port}/system/zfs/arc/reset`,
+      const response = await makeAgentRequest(
+        server.hostname,
+        server.port,
+        server.protocol,
+        'system/zfs/arc/reset',
+        'POST',
         { apply_method: formData.apply_method }
       );
+
+      if (!response.success) {
+        throw new Error(response.message);
+      }
 
       if (response.data.success) {
         setMessage(`ARC configuration reset to defaults successfully! ${response.data.message}`);

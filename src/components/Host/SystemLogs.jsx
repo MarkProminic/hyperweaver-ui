@@ -1,7 +1,9 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
 
+import { getAgentBasePath } from '../../api/serverUtils';
 import { useServers } from '../../contexts/ServerContext';
+import { buildWsUrl } from '../../utils/websocket';
 
 import LogControls from './SystemLogs/LogControls';
 import LogFileExplorer from './SystemLogs/LogFileExplorer';
@@ -144,10 +146,15 @@ const SystemLogs = ({ server }) => {
 
   const connectToWebSocket = useCallback(
     session => {
-      const protocol = server.protocol === 'https' ? 'wss' : 'ws';
-      const wsUrl = `${protocol}://${server.hostname}:${server.port}/logs/stream/${session.session_id}`;
+      // WS path derived from mode + session id (same-origin, rides the server's
+      // /api/agents/{id} proxy in aggregated mode) — never dialed at the agent direct.
+      const basePath = getAgentBasePath(server);
+      if (basePath === null) {
+        setError('Agent connection is not ready yet — try again in a moment');
+        return;
+      }
 
-      const ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(buildWsUrl(`${basePath}/logs/stream/${session.session_id}`));
 
       ws.onopen = () => {
         console.log('Connected to log stream:', session.session_id);

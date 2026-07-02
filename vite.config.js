@@ -65,14 +65,17 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        entryFileNames: `assets/[name].js`,
-        chunkFileNames: `assets/[name].js`,
+        // Content-hashed filenames: a new index.html always references the new chunks,
+        // so cache-first service workers / HTTP caches can never serve a mixed bundle
+        // (the exact failure that shipped a stale pre-0.10.1 chunk alongside 0.10.0).
+        entryFileNames: `assets/[name]-[hash].js`,
+        chunkFileNames: `assets/[name]-[hash].js`,
         assetFileNames: assetInfo => {
           // Keep favicons at root level
           if (assetInfo.name === 'favicon.ico' || assetInfo.name === 'dark-favicon.ico') {
             return '[name][extname]';
           }
-          return `assets/[name].[ext]`;
+          return `assets/[name]-[hash].[ext]`;
         },
         manualChunks: id => {
           // Simplify chunking to avoid dependency issues

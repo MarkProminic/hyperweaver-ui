@@ -3,6 +3,8 @@
  * Handles core file operations with the agent's filesystem endpoints
  */
 
+import { getAgentBasePath } from '../../../api/serverUtils';
+
 import {
   transformFilesToHierarchy,
   transformAgentToFile,
@@ -262,11 +264,16 @@ class FileManagerAPIBase {
       return [];
     }
 
+    const base = getAgentBasePath(server);
+    if (base === null) {
+      return [];
+    }
+
     return files
       .filter(file => !file.isDirectory)
       .map(file => {
         const path = encodeURIComponent(getPathFromFile(file));
-        return `/api/zapi/${server.protocol}/${server.hostname}/${server.port}/filesystem/download?path=${path}`;
+        return `${base}/filesystem/download?path=${path}`;
       });
   }
 
@@ -280,8 +287,13 @@ class FileManagerAPIBase {
       return null;
     }
 
+    const base = getAgentBasePath(server);
+    if (base === null) {
+      return null;
+    }
+
     return {
-      url: `/api/zapi/${server.protocol}/${server.hostname}/${server.port}/filesystem/upload`,
+      url: `${base}/filesystem/upload`,
       method: 'POST',
       headers: {
         Authorization: `Bearer ${localStorage.getItem('authToken')}`,

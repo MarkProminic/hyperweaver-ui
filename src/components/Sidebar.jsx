@@ -87,7 +87,7 @@ const Sidebar = () => {
               )}
               <DashEntry
                 title={'Agent'}
-                link={'/ui/settings/zapi'}
+                link={'/ui/settings/agent'}
                 icon={'fas fa-database'}
                 isSubmenu
               />
