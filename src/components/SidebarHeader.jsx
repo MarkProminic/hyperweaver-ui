@@ -20,14 +20,14 @@ const SidebarHeader = () => {
     if (isIconOnly) {
       return (
         <span title="Expand Sidebar">
-          <i className="icon-hyperweaver-logo" />
+          <img src="/images/hyperweaver-glyph.svg" alt="Hyperweaver" className="logo-lg" />
         </span>
       );
     }
     return (
       <>
         <span className="flex-grow-0">
-          <i className="icon-hyperweaver-logo" />
+          <img src="/images/hyperweaver-glyph.svg" alt="Hyperweaver" className="logo-lg" />
         </span>
         <span>Hyperweaver</span>
         <span className="ms-auto flex-grow-0 pe-2">

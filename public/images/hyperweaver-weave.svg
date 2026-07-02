@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img">
+  <title>Hyperweaver hexagon fabric swatch</title>
+  <!-- flat-side hexagon clip: vertical left/right edges, pointy top/bottom, circumradius 100, center 128,128 -->
+  <defs>
+    <clipPath id="hwHex">
+      <polygon points="214.603,78 214.603,178 128,228 41.397,178 41.397,78 128,28"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#hwHex)">
+    <!-- weft: burnt-orange horizontal bands (painted first) -->
+    <g fill="#b34700">
+      <rect x="13.35" y="33.75" width="229.3" height="25.3"/><rect x="13.35" y="74.55" width="229.3" height="25.3"/><rect x="13.35" y="115.35" width="229.3" height="25.3"/><rect x="13.35" y="156.15" width="229.3" height="25.3"/><rect x="13.35" y="196.95" width="229.3" height="25.3"/>
+    </g>
+    <!-- warp: orange vertical bands (painted over weft) -->
+    <g fill="#ff6600">
+      <rect x="33.75" y="13.35" width="25.3" height="229.3"/><rect x="74.55" y="13.35" width="25.3" height="229.3"/><rect x="115.35" y="13.35" width="25.3" height="229.3"/><rect x="156.15" y="13.35" width="25.3" height="229.3"/><rect x="196.95" y="13.35" width="25.3" height="229.3"/>
+    </g>
+    <!-- over-under: burnt-orange caps put weft on top at odd (col+row) crossings -->
+    <g fill="#b34700">
+      <rect x="33.75" y="74.55" width="25.3" height="25.3"/><rect x="33.75" y="156.15" width="25.3" height="25.3"/><rect x="74.55" y="33.75" width="25.3" height="25.3"/><rect x="74.55" y="115.35" width="25.3" height="25.3"/><rect x="74.55" y="196.95" width="25.3" height="25.3"/><rect x="115.35" y="74.55" width="25.3" height="25.3"/><rect x="115.35" y="156.15" width="25.3" height="25.3"/><rect x="156.15" y="33.75" width="25.3" height="25.3"/><rect x="156.15" y="115.35" width="25.3" height="25.3"/><rect x="156.15" y="196.95" width="25.3" height="25.3"/><rect x="196.95" y="74.55" width="25.3" height="25.3"/><rect x="196.95" y="156.15" width="25.3" height="25.3"/>
+    </g>
+  </g>
+  <!-- hexagon edge stroke -->
+  <polygon points="214.603,78 214.603,178 128,228 41.397,178 41.397,78 128,28" fill="none" stroke="#ff6600" stroke-width="4" stroke-linejoin="round"/>
+</svg>
