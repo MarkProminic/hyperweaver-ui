@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.10.0](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.9.0...v0.10.0) (2026-07-02)
+
+
+### Features
+
+* dual-mode — mode discovery, /api/agents addressing, direct API-key auth + bootstrap, derived WS paths, capability-gated nav ([dd93ea8](https://github.com/MarkProminic/hyperweaver-ui/commit/dd93ea83bb7b056c9d90e2327a5068b63b3f8881))
+
+
+### Bug Fixes
+
+* correct favicon sizes in manifest, bump sw cache for rebranded icons ([bb76427](https://github.com/MarkProminic/hyperweaver-ui/commit/bb7642709a34f14ab3dba60d979b8db05f9847d2))
+* correct manifest icon sizes, bump sw cache, neutralize zone-centric copy to machines ([4ba508b](https://github.com/MarkProminic/hyperweaver-ui/commit/4ba508b37911490ff9ba902b3af6deb327b256f9))
+* icon work ([e519011](https://github.com/MarkProminic/hyperweaver-ui/commit/e519011e5740078486999ff5a312574237b8d335))
+* rebrand ([b253ef6](https://github.com/MarkProminic/hyperweaver-ui/commit/b253ef67f1851341eff56ecfa8d14947b6b7ab1c))
+
 ## [0.9.0](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.8.1...v0.9.0) (2026-07-01)
 
 
