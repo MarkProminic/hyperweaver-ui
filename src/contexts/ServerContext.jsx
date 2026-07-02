@@ -118,12 +118,22 @@ export const ServerProvider = ({ children }) => {
         server.id,
       ])
     );
+    // Seed the persisted selection: it carries its registry id from the previous
+    // session, so mount-time callers (footer terminal, dashboard) don't race the
+    // /api/servers fetch. The loaded list overwrites the seed once it lands.
+    const seedId = currentServer?.id ?? null;
+    if (seedId !== null && seedId !== 'self') {
+      const seedKey = `${currentServer.hostname}:${String(currentServer.port)}:${currentServer.protocol}`;
+      if (!byTriple.has(seedKey)) {
+        byTriple.set(seedKey, seedId);
+      }
+    }
     configureAgentAddressing({
       mode: 'aggregated',
       resolveId: (hostname, port, protocol) =>
         byTriple.get(`${hostname}:${String(port)}:${protocol}`) ?? null,
     });
-  }, [modeReady, isDirect, servers]);
+  }, [modeReady, isDirect, servers, currentServer]);
 
   /**
    * Load all servers from the application (Aggregated mode only — Direct has no registry)

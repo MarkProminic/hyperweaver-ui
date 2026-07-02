@@ -269,18 +269,33 @@ export const FooterProvider = ({ children }) => {
 
       // The agent returns the session (some responses nest it under data)
       const sessionData = res.data?.data || res.data;
+      // terminal/start echoes the terminal_cookie back as `id`; the session's UUID —
+      // the only key the agent's /term/{id} upgrade matcher and
+      // terminal/sessions/{id}/stop accept — travels only as the tail of its
+      // websocket_url. Extract the UUID; the WS path itself is still derived from
+      // mode + base (the returned path is agent-origin-relative, useless as-is).
+      const sessionId = sessionData.websocket_url?.split('/').filter(Boolean).pop();
+      if (!sessionId) {
+        console.error('🚨 FOOTER: terminal/start response missing session UUID:', sessionData);
+        return;
+      }
       console.log(`🔍 FOOTER: Parsed session data:`, {
-        id: sessionData.id,
+        id: sessionId,
+        terminal_cookie: sessionData.id,
         reused: sessionData.reused,
       });
 
+      const basePath = getAgentBasePath(currentServer);
+      if (basePath === null) {
+        console.error('🚫 FOOTER: Agent not resolvable yet — skipping terminal WebSocket');
+        return;
+      }
+
       // Create WebSocket for react-xtermjs — path DERIVED from mode + session id
-      const ws = new WebSocket(
-        buildWsUrl(`${getAgentBasePath(currentServer)}/term/${sessionData.id}`)
-      );
+      const ws = new WebSocket(buildWsUrl(`${basePath}/term/${sessionId}`));
 
       ws.onopen = () => {
-        console.log('🔗 FOOTER: WebSocket connected for session:', sessionData.id);
+        console.log('🔗 FOOTER: WebSocket connected for session:', sessionId);
         // Send initial prompt
         ws.send('\n');
       };
@@ -288,7 +303,7 @@ export const FooterProvider = ({ children }) => {
       ws.onclose = event => {
         console.log(
           '🔗 FOOTER: WebSocket closed for session:',
-          sessionData.id,
+          sessionId,
           'Code:',
           event.code,
           'Reason:',
@@ -297,12 +312,16 @@ export const FooterProvider = ({ children }) => {
       };
 
       ws.onerror = wsError => {
-        console.error('🚨 FOOTER: WebSocket error for session:', sessionData.id, wsError);
+        console.error('🚨 FOOTER: WebSocket error for session:', sessionId, wsError);
       };
 
-      // Store session with WebSocket for HostShell
+      // Store session with WebSocket for HostShell — `id` is the UUID so the
+      // cleanup/restart stop calls (terminal/sessions/{id}/stop, findByPk on the
+      // agent) actually terminate the PTY instead of silently missing.
       const sessionWithWs = {
         ...sessionData,
+        id: sessionId,
+        terminal_cookie: terminalCookie,
         websocket: ws,
       };
 
@@ -310,7 +329,7 @@ export const FooterProvider = ({ children }) => {
       persistentWs.current = ws;
       setSession(sessionWithWs);
 
-      console.log('✅ FOOTER: Session created:', sessionData.id);
+      console.log('✅ FOOTER: Session created:', sessionId);
     } catch (createErr) {
       console.error('Failed to create session:', createErr);
     } finally {
