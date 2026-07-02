@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { useRef, useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { VncScreen } from 'react-vnc';
 
+import { getAgentBasePath } from '../api/serverUtils';
 import {
   getStatusColorClass,
   performTyping,
@@ -123,8 +124,7 @@ const VncConnectingOverlay = () => (
 const VncViewerReact = forwardRef(
   (
     {
-      serverHostname,
-      serverPort,
+      server,
       zoneName,
       viewOnly = false,
       autoConnect = true,
@@ -148,11 +148,13 @@ const VncViewerReact = forwardRef(
     const [connecting, setConnecting] = useState(false);
     const [error, setError] = useState('');
 
-    // Build WebSocket URL using existing proxy path (maintains all security/auth)
+    // Mode-aware WebSocket URL (dual-mode plan §4.2/§4.3):
+    // Aggregated → /api/agents/{id}/zones/{z}/vnc/websockify (Server proxies)
+    // Direct     → /zones/{z}/vnc/websockify (agent's own WS, same origin)
     const wsUrl =
-      serverHostname && zoneName
+      server && zoneName
         ? buildWsUrl(
-            `/api/servers/${encodeURIComponent(serverHostname)}:${serverPort}/zones/${encodeURIComponent(zoneName)}/vnc/websockify`
+            `${getAgentBasePath(server)}/zones/${encodeURIComponent(zoneName)}/vnc/websockify`
           )
         : '';
 
@@ -295,12 +297,12 @@ const VncViewerReact = forwardRef(
     }, [connected, onConnect, handleClipboardPaste]);
 
     // Validate required parameters (Render error if missing, but hooks are already called)
-    if (!serverHostname || !zoneName) {
+    if (!server || !zoneName) {
       return (
         <VncErrorDisplay
           className={className}
           style={style}
-          message="Missing required parameters: serverHostname and zoneName"
+          message="Missing required parameters: server and zoneName"
         />
       );
     }
@@ -365,8 +367,12 @@ const VncViewerReact = forwardRef(
 VncViewerReact.displayName = 'VncViewerReact';
 
 VncViewerReact.propTypes = {
-  serverHostname: PropTypes.string,
-  serverPort: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  server: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    hostname: PropTypes.string,
+    port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    protocol: PropTypes.string,
+  }),
   zoneName: PropTypes.string,
   viewOnly: PropTypes.bool,
   autoConnect: PropTypes.bool,

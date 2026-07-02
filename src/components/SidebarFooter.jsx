@@ -4,6 +4,7 @@ import Dropdown from 'react-bootstrap/Dropdown';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { useMode } from '../contexts/ModeContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import { UserSettings } from '../contexts/UserSettingsContext.jsx';
 
@@ -45,6 +46,7 @@ const SidebarFooter = () => {
   const navigate = useNavigate();
   const userContext = useContext(UserSettings);
   const { user, logout } = useAuth();
+  const { isDirect } = useMode();
   const { toggleTheme, getThemeDisplay } = useTheme();
 
   const handleLogout = async () => {
@@ -104,10 +106,13 @@ const SidebarFooter = () => {
             <i className="fas fa-bell" />
             <span>Notifications</span>
           </Dropdown.Item>
-          <Dropdown.Item as={Link} to="/ui/profile" className="d-flex align-items-center gap-2">
-            <i className="fas fa-user" />
-            <span>Profile</span>
-          </Dropdown.Item>
+          {/* Profile (account/password/gravatar) is a Server user concept — not in Direct mode */}
+          {!isDirect && (
+            <Dropdown.Item as={Link} to="/ui/profile" className="d-flex align-items-center gap-2">
+              <i className="fas fa-user" />
+              <span>Profile</span>
+            </Dropdown.Item>
+          )}
           <Dropdown.Divider />
           <Dropdown.Item
             as="button"

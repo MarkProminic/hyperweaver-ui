@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
+import { useMode } from '../contexts/ModeContext';
 
 /**
  * Register component for Hyperweaver user registration with organization support
@@ -25,15 +26,21 @@ const Register = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { register, isAuthenticated } = useAuth();
+  const { isDirect, ready: modeReady } = useMode();
 
   /**
-   * Redirect to dashboard if already authenticated
+   * Redirect to dashboard if already authenticated.
+   * Direct mode has no user registration at all — send to the API-key login.
    */
   useEffect(() => {
+    if (modeReady && isDirect) {
+      navigate('/login');
+      return;
+    }
     if (isAuthenticated) {
       navigate('/ui');
     }
-  }, [isAuthenticated, navigate]);
+  }, [modeReady, isDirect, isAuthenticated, navigate]);
 
   /**
    * Validate invitation code

@@ -225,9 +225,7 @@ const VncConsoleDisplay = ({
               <VncViewerReact
                 ref={vncRef}
                 key={`vnc-preview-${selectedZone}-${previewVncViewOnly}-${vncReconnectKey}`}
-                serverHostname={currentServer.hostname}
-                serverPort={currentServer.port}
-                serverProtocol={currentServer.protocol}
+                server={currentServer}
                 zoneName={selectedZone}
                 viewOnly={previewVncViewOnly}
                 autoConnect

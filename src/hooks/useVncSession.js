@@ -130,8 +130,9 @@ export const useVncSession = (
             if (openInNewTab) {
               // Open the standalone full-window console route in a new tab. It
               // reuses the same websockify-backed viewer as the embedded console
-              // and connects to the session we just started above.
-              const consoleUrl = `/ui/console/${currentServer.hostname}:${currentServer.port}/${encodeURIComponent(zoneName)}`;
+              // and connects to the session we just started above. Addressed by
+              // registry id ('self' in Direct mode) per the /api/agents scheme.
+              const consoleUrl = `/ui/console/${encodeURIComponent(currentServer.id)}/${encodeURIComponent(zoneName)}`;
               window.open(
                 consoleUrl,
                 '_blank',

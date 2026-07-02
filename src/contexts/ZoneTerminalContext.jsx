@@ -5,10 +5,10 @@ import { SearchAddon } from '@xterm/addon-search';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
-import axios from 'axios';
 import PropTypes from 'prop-types';
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 
+import { getAgentBasePath, makeAgentRequest } from '../api/serverUtils';
 import { buildWsUrl } from '../utils/websocket';
 
 import { useServers } from './ServerContext';
@@ -155,27 +155,50 @@ export const ZoneTerminalProvider = ({ children }) => {
 
       try {
         console.log(`🚀 ZLOGIN SESSION: Starting new session for ${zoneKey}`);
-        const response = await axios.post(
-          `/api/servers/${server.hostname}:${server.port}/zones/${zoneName}/zlogin/start`
+
+        // Stop any existing zlogin session for this zone first — this dedup used to
+        // live in the Server's special zlogin/start handler; under the unified
+        // /api/agents namespace the client owns it (dual-mode plan §4.2/F11).
+        const sessionsResult = await makeAgentRequest(
+          server.hostname,
+          server.port,
+          server.protocol,
+          'zlogin/sessions'
+        );
+        if (sessionsResult.success && Array.isArray(sessionsResult.data)) {
+          const existing = sessionsResult.data.find(s => s.zone_name === zoneName);
+          if (existing) {
+            console.log(`🔁 ZLOGIN SESSION: Stopping existing session ${existing.id}`);
+            await makeAgentRequest(
+              server.hostname,
+              server.port,
+              server.protocol,
+              `zlogin/sessions/${existing.id}/stop`,
+              'DELETE'
+            );
+          }
+        }
+
+        const response = await makeAgentRequest(
+          server.hostname,
+          server.port,
+          server.protocol,
+          `zones/${zoneName}/zlogin/start`,
+          'POST'
         );
 
-        if (!response.data.success || !response.data.session) {
+        // The agent returns the raw session object (some responses nest it)
+        const sessionData = response.data?.session || response.data;
+        if (!response.success || !sessionData?.id) {
           console.error(
             `❌ ZLOGIN SESSION: Backend failed to start session for ${zoneKey}:`,
-            response.data.error
+            response.message
           );
           return null;
         }
 
-        const sessionData = response.data.session;
-        if (!sessionData.websocket_url) {
-          console.error(`🚫 ZLOGIN SESSION: Missing websocket_url for ${zoneKey}!`);
-          return null;
-        }
-
-        const wsUrl = buildWsUrl(
-          `/api/servers/${server.hostname}:${server.port}${sessionData.websocket_url}`
-        );
+        // WS path is DERIVED, never read from the backend (plan §4.2)
+        const wsUrl = buildWsUrl(`${getAgentBasePath(server)}/zlogin/${sessionData.id}`);
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => console.log(`🔗 ZONE TERMINAL: WebSocket connected for ${zoneKey}`);
@@ -290,14 +313,6 @@ export const ZoneTerminalProvider = ({ children }) => {
         return;
       }
 
-      // Construct websocket_url if missing (for sessions from GET /sessions API)
-      const websocketUrl = sessionData.websocket_url || `/zlogin/${sessionData.id}`;
-
-      if (!websocketUrl) {
-        console.error(`❌ ZLOGIN RECONNECT: Could not determine websocket URL for ${zoneKey}`);
-        return;
-      }
-
       if (websocketsMap.current.has(zoneKey)) {
         console.log(`✅ ZLOGIN RECONNECT: WebSocket already exists for ${zoneKey}`);
         return;
@@ -305,11 +320,10 @@ export const ZoneTerminalProvider = ({ children }) => {
 
       console.log(`🔄 ZLOGIN RECONNECT: Initializing session from existing data for ${zoneKey}`, {
         sessionId: sessionData.id,
-        websocketUrl,
-        wasConstructed: !sessionData.websocket_url,
       });
 
-      const wsUrl = buildWsUrl(`/api/servers/${server.hostname}:${server.port}${websocketUrl}`);
+      // WS path is DERIVED from mode + session id (plan §4.2)
+      const wsUrl = buildWsUrl(`${getAgentBasePath(server)}/zlogin/${sessionData.id}`);
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => console.log(`🔗 ZLOGIN RECONNECT: WebSocket connected for ${zoneKey}`);

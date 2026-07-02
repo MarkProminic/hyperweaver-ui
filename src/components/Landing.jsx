@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
+import { useMode } from '../contexts/ModeContext';
 
 /**
  * Landing component that handles first-time setup flow
@@ -12,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 const Landing = () => {
   const navigate = useNavigate();
   const { isAuthenticated, loading } = useAuth();
+  const { isDirect, ready: modeReady } = useMode();
   const [setupStatus, setSetupStatus] = useState(null);
   const [checkingSetup, setCheckingSetup] = useState(true);
 
@@ -43,10 +45,20 @@ const Landing = () => {
       }
     };
 
-    if (!loading) {
-      checkSetupStatus();
+    if (loading || !modeReady) {
+      return;
     }
-  }, [navigate, isAuthenticated, loading]);
+
+    // Direct mode: agents have no user setup flow (/api/auth/setup-status is
+    // Server-only) — first boot is handled by the Login screen's bootstrap.
+    if (isDirect) {
+      navigate(isAuthenticated ? '/ui' : '/login');
+      setCheckingSetup(false);
+      return;
+    }
+
+    checkSetupStatus();
+  }, [navigate, isAuthenticated, loading, modeReady, isDirect]);
 
   // Show loading while checking authentication and setup status
   if (loading || checkingSetup) {

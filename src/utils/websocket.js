@@ -7,8 +7,9 @@
  * this is correct in both Direct mode (an agent serves the page + WS) and
  * Aggregated mode (the Server serves the page + proxies the WS).
  *
- * @param {string} path - Absolute path (and optional query) from the backend,
- *   e.g. "/zlogin/abc123" or "/api/servers/host:port/zones/z/vnc/websockify".
+ * @param {string} path - Absolute path (and optional query), built client-side as
+ *   `${getAgentBasePath(server)}/{suffix}` (see serverUtils) — e.g. Direct:
+ *   "/zlogin/abc123"; Aggregated: "/api/agents/7/zones/z/vnc/websockify".
  * @returns {string} Full WebSocket URL, e.g. "wss://host:port/zlogin/abc123".
  */
 export const buildWsUrl = path => {

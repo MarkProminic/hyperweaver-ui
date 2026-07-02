@@ -2,6 +2,7 @@ import { useEffect, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
+import { useMode } from '../contexts/ModeContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
 
 import DashEntry from './DashEntry';
@@ -11,6 +12,7 @@ import SidebarZones from './SidebarZones';
 
 const Sidebar = () => {
   const { user } = useAuth();
+  const { isDirect } = useMode();
   const location = useLocation();
   const userSettings = useContext(UserSettings);
 
@@ -65,7 +67,8 @@ const Sidebar = () => {
         )}
       </div>
 
-      {(user?.role === 'admin' || user?.role === 'super-admin') && (
+      {/* Accounts (users/orgs) live on the Hyperweaver Server — no such thing in Direct mode */}
+      {!isDirect && (user?.role === 'admin' || user?.role === 'super-admin') && (
         <DashEntry title={'Accounts'} link={'/ui/accounts'} icon={'fas fa-solid fa-id-card'} />
       )}
       {user?.role === 'super-admin' && (
@@ -73,12 +76,15 @@ const Sidebar = () => {
           <DashEntryDropDown title={'Settings'} icon={'fas fa-solid fa-sliders'} />
           {settingsExpanded && (
             <div className="sidebar-submenu">
-              <DashEntry
-                title={'Hyperweaver'}
-                link={'/ui/settings/hyperweaver'}
-                icon={'fas fa-cogs'}
-                isSubmenu
-              />
+              {/* Hyperweaver Server settings — Aggregated only */}
+              {!isDirect && (
+                <DashEntry
+                  title={'Hyperweaver'}
+                  link={'/ui/settings/hyperweaver'}
+                  icon={'fas fa-cogs'}
+                  isSubmenu
+                />
+              )}
               <DashEntry
                 title={'Agent'}
                 link={'/ui/settings/zapi'}

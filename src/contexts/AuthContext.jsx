@@ -2,8 +2,15 @@ import axios from 'axios';
 import PropTypes from 'prop-types';
 import { createContext, useState, useContext, useEffect, useCallback } from 'react';
 
+import { useMode } from './ModeContext';
+
 /**
- * Authentication context for Hyperweaver local user management
+ * Authentication context for Hyperweaver user management.
+ *
+ * Dual-mode (plan §6/§7): in Aggregated mode this is the Server's user-account JWT flow
+ * (/api/auth/*). In Direct mode the agent has no users — auth is the agent's API key,
+ * stored in the same localStorage slot and sent as the same Bearer header (the agent
+ * accepts Bearer or X-API-Key), validated via GET /api-keys/info.
  */
 const AuthContext = createContext();
 
@@ -25,24 +32,53 @@ export const useAuth = () => {
  * @param {React.ReactNode} props.children - Child components
  */
 export const AuthProvider = ({ children }) => {
+  const { isDirect, ready: modeReady } = useMode();
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('authToken'));
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const fetchGravatarData = useCallback(async userData => {
-    if (!userData || !userData.email) {
-      return userData;
+  const fetchGravatarData = useCallback(
+    async userData => {
+      // Gravatar rides the Server's /api/profile — agents don't have it (or users/emails).
+      if (isDirect || !userData || !userData.email) {
+        return userData;
+      }
+      try {
+        console.log('Fetching Gravatar data for:', userData.email);
+        const response = await axios.get(`/api/profile/${userData.email}`);
+        console.log('Gravatar data response:', response.data);
+        return { ...userData, gravatar: response.data };
+      } catch (gravatarErr) {
+        console.error('Failed to fetch Gravatar data:', gravatarErr);
+        return userData;
+      }
+    },
+    [isDirect]
+  );
+
+  /**
+   * Direct mode: validate an API key against the agent and build the local "user".
+   * The agent is single-operator — a valid key is treated as admin (plan §7.5/§10).
+   * @param {string} apiKey - Agent API key
+   * @returns {Promise<Object|null>} User object or null if invalid
+   */
+  const validateApiKey = useCallback(async apiKey => {
+    const response = await axios.get('/api-keys/info', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    const entity = response.data;
+    if (!entity || !entity.name) {
+      return null;
     }
-    try {
-      console.log('Fetching Gravatar data for:', userData.email);
-      const response = await axios.get(`/api/profile/${userData.email}`);
-      console.log('Gravatar data response:', response.data);
-      return { ...userData, gravatar: response.data };
-    } catch (gravatarErr) {
-      console.error('Failed to fetch Gravatar data:', gravatarErr);
-      return userData;
-    }
+    return {
+      username: entity.name,
+      // The API key IS the highest credential on this host; Server-only surfaces
+      // (users/orgs/server settings) are hidden in Direct mode regardless.
+      role: 'super-admin',
+      email: null,
+      entity,
+    };
   }, []);
 
   /**
@@ -57,31 +93,45 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   /**
-   * Initialize authentication by checking stored token
+   * Initialize authentication by checking the stored token against the origin:
+   * Direct → the token IS the agent API key, verified via /api-keys/info.
+   * Aggregated → JWT verified via the Server's /api/auth/verify.
    */
   const initializeAuth = useCallback(async () => {
     const storedToken = localStorage.getItem('authToken');
 
     if (storedToken) {
       try {
-        // Verify token with server
-        const response = await axios.get('/api/auth/verify', {
-          headers: {
-            Authorization: `Bearer ${storedToken}`,
-          },
-        });
-
-        if (response.data.success && response.data.user) {
-          const userWithGravatar = await fetchGravatarData(response.data.user);
-          setUser(userWithGravatar);
-          setToken(storedToken);
-          setIsAuthenticated(true);
-
-          // Set default authorization header for future requests
-          axios.defaults.headers.common.Authorization = `Bearer ${storedToken}`;
+        if (isDirect) {
+          const directUser = await validateApiKey(storedToken);
+          if (directUser) {
+            setUser(directUser);
+            setToken(storedToken);
+            setIsAuthenticated(true);
+            axios.defaults.headers.common.Authorization = `Bearer ${storedToken}`;
+          } else {
+            clearAuth();
+          }
         } else {
-          // Invalid token, clear it
-          clearAuth();
+          // Verify token with server
+          const response = await axios.get('/api/auth/verify', {
+            headers: {
+              Authorization: `Bearer ${storedToken}`,
+            },
+          });
+
+          if (response.data.success && response.data.user) {
+            const userWithGravatar = await fetchGravatarData(response.data.user);
+            setUser(userWithGravatar);
+            setToken(storedToken);
+            setIsAuthenticated(true);
+
+            // Set default authorization header for future requests
+            axios.defaults.headers.common.Authorization = `Bearer ${storedToken}`;
+          } else {
+            // Invalid token, clear it
+            clearAuth();
+          }
         }
       } catch (verifyErr) {
         console.error('Token verification failed:', verifyErr);
@@ -92,14 +142,18 @@ export const AuthProvider = ({ children }) => {
     }
 
     setLoading(false);
-  }, [clearAuth, fetchGravatarData]);
+  }, [isDirect, validateApiKey, clearAuth, fetchGravatarData]);
 
   /**
-   * Initialize authentication state on component mount
+   * Initialize authentication state once the serving mode is known
+   * (verification target differs per mode).
    */
   useEffect(() => {
+    if (!modeReady) {
+      return;
+    }
     initializeAuth();
-  }, [initializeAuth]);
+  }, [modeReady, initializeAuth]);
 
   /**
    * Login user with credentials
@@ -109,6 +163,9 @@ export const AuthProvider = ({ children }) => {
    * @returns {Promise<Object>} Login result
    */
   const login = async (identifier, password, authMethod = 'local') => {
+    if (isDirect) {
+      return { success: false, message: 'Use an API key to sign in to this host' };
+    }
     try {
       console.log(`🔐 Attempting ${authMethod.toUpperCase()} authentication for:`, identifier);
 
@@ -151,10 +208,87 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
+   * Direct mode: sign in with an agent API key.
+   * Stores the key in the same slot/header the JWT flow uses (transport-identical).
+   * @param {string} apiKey - Agent API key
+   * @returns {Promise<Object>} Login result
+   */
+  const loginWithApiKey = async apiKey => {
+    if (!isDirect) {
+      return { success: false, message: 'API-key login is only available in Direct mode' };
+    }
+    if (!apiKey || !apiKey.trim()) {
+      return { success: false, message: 'Please enter an API key' };
+    }
+    try {
+      const directUser = await validateApiKey(apiKey.trim());
+      if (!directUser) {
+        return { success: false, message: 'Invalid API key' };
+      }
+
+      localStorage.setItem('authToken', apiKey.trim());
+      setToken(apiKey.trim());
+      setUser(directUser);
+      setIsAuthenticated(true);
+      axios.defaults.headers.common.Authorization = `Bearer ${apiKey.trim()}`;
+
+      return { success: true, message: `Signed in as ${directUser.username}` };
+    } catch (keyErr) {
+      console.error('API key login failed:', keyErr);
+      const status = keyErr.response?.status;
+      return {
+        success: false,
+        message:
+          status === 401 || status === 403
+            ? 'Invalid API key'
+            : keyErr.response?.data?.msg || 'Failed to validate API key',
+      };
+    }
+  };
+
+  /**
+   * Direct mode first boot: generate the host's first API key via the agent's
+   * public bootstrap endpoint (auto-disables after first use — plan F21),
+   * then sign in with it. The key is returned so the UI can show it ONCE.
+   * @returns {Promise<Object>} { success, apiKey?, message }
+   */
+  const bootstrapFirstKey = async () => {
+    if (!isDirect) {
+      return { success: false, message: 'Bootstrap is only available in Direct mode' };
+    }
+    try {
+      const response = await axios.post('/api-keys/bootstrap', {
+        name: 'Direct-Login',
+        description: 'Generated from the Hyperweaver UI first-boot screen',
+      });
+
+      const apiKey = response.data?.api_key;
+      if (!apiKey) {
+        return { success: false, message: 'Agent did not return an API key' };
+      }
+
+      const result = await loginWithApiKey(apiKey);
+      return { ...result, apiKey };
+    } catch (bootstrapErr) {
+      console.error('Bootstrap failed:', bootstrapErr);
+      return {
+        success: false,
+        message: bootstrapErr.response?.data?.msg || 'Bootstrap failed',
+      };
+    }
+  };
+
+  /**
    * Get available authentication methods
    * @returns {Promise<Object>} Available auth methods result
    */
   const getAuthMethods = async () => {
+    if (isDirect) {
+      return {
+        success: true,
+        methods: [{ id: 'apikey', name: 'API Key', enabled: true }],
+      };
+    }
     try {
       const response = await axios.get('/api/auth/methods');
       return {
@@ -181,6 +315,9 @@ export const AuthProvider = ({ children }) => {
    * @returns {Promise<Object>} Registration result
    */
   const register = async userData => {
+    if (isDirect) {
+      return { success: false, message: 'Registration is not available in Direct mode' };
+    }
     try {
       const response = await axios.post('/api/auth/register', userData);
 
@@ -202,7 +339,10 @@ export const AuthProvider = ({ children }) => {
    */
   const logout = async () => {
     try {
-      await axios.post('/api/auth/logout');
+      // Agents have no logout endpoint — the key is simply forgotten client-side.
+      if (!isDirect) {
+        await axios.post('/api/auth/logout');
+      }
     } catch (logoutErr) {
       console.error('Logout error:', logoutErr);
     } finally {
@@ -297,6 +437,8 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated,
     login,
+    loginWithApiKey,
+    bootstrapFirstKey,
     register,
     logout,
     changePassword,

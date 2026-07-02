@@ -1,6 +1,75 @@
 import axios from 'axios';
 
 /**
+ * Mode-aware agent addressing (hyperweaver-dualmode-plan.md §4).
+ *
+ * Aggregated mode: every agent request rides the Hyperweaver Server's unified proxy
+ * namespace `/api/agents/{id}/{path}` — {id} is the registry row id, resolved here from
+ * the (hostname, port, protocol) triple the existing call sites already pass around.
+ * Direct mode: the SPA is served BY the agent, so `{path}` goes straight to origin
+ * root (`/{path}`) — the exact same path segment the proxy would have forwarded.
+ *
+ * ServerContext owns the state and pushes it here via configureAgentAddressing()
+ * whenever the mode pins or the registry changes; keeping the call-site signature
+ * (hostname, port, protocol, path, …) confines the dual-mode change to this module.
+ */
+const addressing = {
+  mode: null, // 'direct' | 'aggregated' | null (unconfigured)
+  resolveId: () => null,
+};
+
+/**
+ * Configure how agent URLs are built. Called by ServerContext.
+ * @param {Object} config - Addressing configuration
+ * @param {string} config.mode - 'direct' or 'aggregated'
+ * @param {Function} [config.resolveId] - (hostname, port, protocol) => registry id (aggregated only)
+ */
+export const configureAgentAddressing = ({ mode, resolveId }) => {
+  addressing.mode = mode;
+  addressing.resolveId = resolveId || (() => null);
+};
+
+/**
+ * Base path prefix for a given agent — also used for WebSocket paths.
+ * Direct: '' (origin root). Aggregated: `/api/agents/{id}`.
+ * @param {Object} server - Server object ({ id } or { hostname, port, protocol })
+ * @returns {string} Base path prefix (no trailing slash)
+ */
+export const getAgentBasePath = server => {
+  if (addressing.mode === 'direct') {
+    return '';
+  }
+  const id = server?.id ?? addressing.resolveId(server?.hostname, server?.port, server?.protocol);
+  if (id === null || id === undefined) {
+    throw new Error(
+      `No registry id known for agent ${server?.hostname}:${server?.port} — is the servers list loaded?`
+    );
+  }
+  return `/api/agents/${id}`;
+};
+
+/**
+ * Build the request URL for an agent API path in the current mode.
+ * @param {string} protocol - Agent protocol (used for id resolution in aggregated mode)
+ * @param {string} hostname - Agent hostname
+ * @param {number} port - Agent port
+ * @param {string} path - Agent API path (root-relative, no leading slash)
+ * @returns {string} URL to request
+ */
+const buildAgentUrl = (protocol, hostname, port, path) => {
+  if (addressing.mode === 'direct') {
+    return `/${path}`;
+  }
+  const id = addressing.resolveId(hostname, port, protocol);
+  if (id === null || id === undefined) {
+    throw new Error(
+      `No registry id known for agent ${hostname}:${port} — is the servers list loaded?`
+    );
+  }
+  return `/api/agents/${id}/${path}`;
+};
+
+/**
  * Helper to create Axios configuration for Agent requests
  * Reduces complexity of the main request function
  * @param {Object} config - Request configuration
@@ -18,7 +87,7 @@ export const createAxiosConfig = ({
   onUploadProgress,
   responseType,
 }) => {
-  const proxyUrl = `/api/zapi/${protocol}/${hostname}/${port}/${path}`;
+  const proxyUrl = buildAgentUrl(protocol, hostname, port, path);
   const config = {
     url: proxyUrl,
     method,

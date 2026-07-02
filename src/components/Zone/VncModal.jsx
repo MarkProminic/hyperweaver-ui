@@ -200,9 +200,7 @@ const VncModal = ({
                 <VncViewerReact
                   ref={modalVncRef}
                   key={`vnc-modal-${selectedZone}-${modalVncViewOnly}-${vncReconnectKey}`}
-                  serverHostname={currentServer.hostname}
-                  serverPort={currentServer.port}
-                  serverProtocol={currentServer.protocol}
+                  server={currentServer}
                   zoneName={selectedZone}
                   viewOnly={modalVncViewOnly}
                   autoConnect

@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 import { makeAgentRequest } from './serverUtils';
 
 // ========================================
@@ -55,30 +53,42 @@ export const getAllVncSessions = async (hostname, port, protocol, filters = {}) 
 // ========================================
 
 /**
- * Start zlogin console session for a zone
- * NOTE: Uses direct API endpoint instead of proxy to get websocket_url
+ * Start zlogin console session for a zone.
+ * Stops any existing session for the zone first (the dedup the old Server-side
+ * special handler performed); the caller derives the WS path from the session id.
  * @param {string} hostname - Server hostname
  * @param {number} port - Server port
- * @param {string} protocol - Server protocol (unused but kept for consistency)
+ * @param {string} protocol - Server protocol
  * @param {string} zoneName - Zone name
- * @returns {Promise<Object>} Zlogin start result
+ * @returns {Promise<Object>} Zlogin start result ({ success, data: session })
  */
 export const startZloginSession = async (hostname, port, protocol, zoneName) => {
-  // Use specific handler (like HOST terminal) instead of general proxy to get websocket_url
-  try {
-    const response = await axios.post(
-      `/api/servers/${hostname}:${port}/zones/${zoneName}/zlogin/start`
-    );
-    // Log protocol to satisfy no-unused-vars rule
-    console.log(`Starting zlogin session via ${protocol} protocol`);
-    return { success: true, data: response.data };
-  } catch (error) {
-    console.error('Start zlogin session error:', error);
-    return {
-      success: false,
-      message: error.response?.data?.message || 'Failed to start zlogin session',
-    };
+  const sessionsResult = await makeAgentRequest(hostname, port, protocol, 'zlogin/sessions');
+  if (sessionsResult.success && Array.isArray(sessionsResult.data)) {
+    const existing = sessionsResult.data.find(session => session.zone_name === zoneName);
+    if (existing) {
+      await makeAgentRequest(
+        hostname,
+        port,
+        protocol,
+        `zlogin/sessions/${existing.id}/stop`,
+        'DELETE'
+      );
+    }
   }
+
+  const result = await makeAgentRequest(
+    hostname,
+    port,
+    protocol,
+    `zones/${zoneName}/zlogin/start`,
+    'POST'
+  );
+  if (!result.success) {
+    return result;
+  }
+  // Normalize: some agent responses nest the session object
+  return { success: true, data: result.data?.session || result.data };
 };
 
 /**

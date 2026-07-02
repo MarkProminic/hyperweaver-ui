@@ -1,7 +1,9 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+import { getAgentBasePath } from '../api/serverUtils';
 import { useServers } from '../contexts/ServerContext';
+import { buildWsUrl } from '../utils/websocket';
 
 import ContentModal from './common/ContentModal';
 
@@ -104,8 +106,8 @@ const TaskDetailModal = ({ task, onClose }) => {
     let cleanup;
 
     if (currentServer) {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/api/servers/${currentServer.hostname}:${currentServer.port}/tasks/${task.id}/stream`;
+      // Mode-aware task-output stream (plan §4.2/§4.3)
+      const wsUrl = buildWsUrl(`${getAgentBasePath(currentServer)}/tasks/${task.id}/stream`);
 
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;

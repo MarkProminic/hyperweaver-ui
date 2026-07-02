@@ -1,16 +1,25 @@
 import axios from 'axios';
 import PropTypes from 'prop-types';
-import { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
+import {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 
 import * as consoleAPI from '../api/consoleAPI';
 import * as deviceAPI from '../api/deviceAPI';
 import * as hostManagementAPI from '../api/hostManagementAPI';
 import * as monitoringAPI from '../api/monitoringAPI';
-import { makeAgentRequest } from '../api/serverUtils';
+import { configureAgentAddressing, makeAgentRequest } from '../api/serverUtils';
 import * as vlanAPI from '../api/vlanAPI';
 import * as zoneAPI from '../api/zoneAPI';
 
 import { useAuth } from './AuthContext';
+import { useMode } from './ModeContext';
 
 /**
  * Server context for managing Agent connections
@@ -41,6 +50,7 @@ export const useServers = () => {
  */
 export const ServerProvider = ({ children }) => {
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isDirect, ready: modeReady, serverInfo } = useMode();
   const [servers, setServers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentServer, setCurrentServer] = useState(() => {
@@ -69,9 +79,59 @@ export const ServerProvider = ({ children }) => {
   const loadingRef = useRef(false);
 
   /**
-   * Load all servers from the application
+   * Direct mode: the agent that served the SPA IS the (only) server. Synthesized from
+   * the origin + the /api/status payload. The 'self' id is a sentinel — in direct mode
+   * getAgentBasePath never uses it (agent paths go to origin root).
+   */
+  const selfServer = useMemo(() => {
+    if (!isDirect || !serverInfo) {
+      return null;
+    }
+    const scheme = window.location.protocol.replace(':', '');
+    return {
+      id: 'self',
+      hostname: window.location.hostname,
+      port: parseInt(window.location.port, 10) || (scheme === 'https' ? 443 : 80),
+      protocol: scheme,
+      entityName: serverInfo.hostname || window.location.hostname,
+      description: 'This host (Direct mode)',
+      capabilities: serverInfo,
+    };
+  }, [isDirect, serverInfo]);
+
+  /**
+   * Keep the request layer's addressing in sync with mode + registry
+   * (dual-mode plan §4/§7): direct → origin-root paths; aggregated →
+   * /api/agents/{id} resolved from the loaded servers list.
+   */
+  useEffect(() => {
+    if (!modeReady) {
+      return;
+    }
+    if (isDirect) {
+      configureAgentAddressing({ mode: 'direct' });
+      return;
+    }
+    const byTriple = new Map(
+      servers.map(server => [
+        `${server.hostname}:${String(server.port)}:${server.protocol}`,
+        server.id,
+      ])
+    );
+    configureAgentAddressing({
+      mode: 'aggregated',
+      resolveId: (hostname, port, protocol) =>
+        byTriple.get(`${hostname}:${String(port)}:${protocol}`) ?? null,
+    });
+  }, [modeReady, isDirect, servers]);
+
+  /**
+   * Load all servers from the application (Aggregated mode only — Direct has no registry)
    */
   const loadServers = useCallback(async () => {
+    if (isDirect) {
+      return;
+    }
     // Prevent concurrent calls
     if (loadingRef.current) {
       console.log('📡 SERVER: loadServers already in progress, skipping duplicate');
@@ -95,7 +155,7 @@ export const ServerProvider = ({ children }) => {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, []);
+  }, [isDirect]);
 
   // Persist currentServer to localStorage whenever it changes
   useEffect(() => {
@@ -131,9 +191,29 @@ export const ServerProvider = ({ children }) => {
   }, [currentZone]);
 
   /**
-   * Load servers when user is authenticated
+   * Establish the server list once authenticated.
+   * Direct mode: the list IS the origin agent — no registry call.
+   * Aggregated mode: load the registry from /api/servers.
    */
   useEffect(() => {
+    if (!modeReady) {
+      return undefined;
+    }
+
+    if (isDirect) {
+      if (isAuthenticated && selfServer && !hasLoadedOnce) {
+        setServers([selfServer]);
+        setCurrentServer(selfServer);
+        setHasLoadedOnce(true);
+      }
+      if (!isAuthenticated && !authLoading) {
+        setServers([]);
+        setCurrentServer(null);
+        setHasLoadedOnce(false);
+      }
+      return undefined;
+    }
+
     if (isAuthenticated && !hasLoadedOnce) {
       const timer = setTimeout(() => {
         loadServers();
@@ -148,7 +228,7 @@ export const ServerProvider = ({ children }) => {
       setHasLoadedOnce(false);
     }
     return undefined;
-  }, [isAuthenticated, authLoading, hasLoadedOnce, loadServers]);
+  }, [modeReady, isDirect, selfServer, isAuthenticated, authLoading, hasLoadedOnce, loadServers]);
 
   /**
    * Re-establish currentServer connection after servers load
@@ -156,6 +236,11 @@ export const ServerProvider = ({ children }) => {
    * but needs to be matched with the actual server objects from the API
    */
   useEffect(() => {
+    if (isDirect) {
+      // Direct mode: currentServer is always the origin agent; nothing to re-establish.
+      return;
+    }
+
     console.log('🔄 SERVER RE-ESTABLISHMENT: Checking...', {
       serversLoaded: servers.length,
       currentServer,
@@ -210,7 +295,7 @@ export const ServerProvider = ({ children }) => {
     } else if (servers.length > 0 && !currentServer) {
       console.log('📝 SERVER RE-ESTABLISHMENT: No currentServer to restore');
     }
-  }, [servers, currentServer]);
+  }, [isDirect, servers, currentServer]);
 
   /**
    * Add a new Server (Admin only)
@@ -223,6 +308,9 @@ export const ServerProvider = ({ children }) => {
    * @returns {Promise<Object>} Add result
    */
   const addServer = async serverData => {
+    if (isDirect) {
+      return { success: false, message: 'Server management is not available in Direct mode' };
+    }
     try {
       setLoading(true);
       const response = await axios.post('/api/servers', serverData);
@@ -253,6 +341,9 @@ export const ServerProvider = ({ children }) => {
    * @returns {Promise<Object>} Test result
    */
   const testServer = async serverData => {
+    if (isDirect) {
+      return { success: false, message: 'Server management is not available in Direct mode' };
+    }
     try {
       const response = await axios.post('/api/servers/test', serverData);
 
@@ -276,6 +367,9 @@ export const ServerProvider = ({ children }) => {
    * @returns {Promise<Object>} Remove result
    */
   const removeServer = async serverId => {
+    if (isDirect) {
+      return { success: false, message: 'Server management is not available in Direct mode' };
+    }
     try {
       setLoading(true);
       const response = await axios.delete(`/api/servers/${serverId}`);

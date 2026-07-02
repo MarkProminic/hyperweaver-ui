@@ -1,7 +1,7 @@
-import axios from 'axios';
 import PropTypes from 'prop-types';
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 
+import { getAgentBasePath } from '../api/serverUtils';
 import { randomId } from '../utils/randomId';
 import { buildWsUrl } from '../utils/websocket';
 
@@ -219,17 +219,20 @@ export const FooterProvider = ({ children }) => {
     }
     if (persistentSession.current) {
       console.log('🔄 FOOTER: Cleaning up session:', persistentSession.current.id);
-      axios
-        .delete(
-          `/api/servers/${currentServer.hostname}:${currentServer.port}/terminal/sessions/${persistentSession.current.id}/stop`
-        )
-        .catch(console.error);
+      makeAgentRequest(
+        currentServer.hostname,
+        currentServer.port,
+        currentServer.protocol,
+        `terminal/sessions/${persistentSession.current.id}/stop`,
+        'DELETE'
+      ).catch(console.error);
       persistentSession.current = null;
     }
 
     // Reset session state
     setSession(null);
-  }, [currentServer?.hostname, currentServer?.port]); // Trigger when the server identity (host:port) changes
+    // Trigger when the server identity changes (protocol included — it's part of the triple)
+  }, [currentServer?.hostname, currentServer?.port, currentServer?.protocol, makeAgentRequest]);
 
   // Create session and WebSocket for react-xtermjs
   const createSession = useCallback(async () => {
@@ -250,25 +253,30 @@ export const FooterProvider = ({ children }) => {
     try {
       // Create backend session
       const terminalCookie = `terminal_${currentServer.hostname}_${currentServer.port}_${randomId()}_${Date.now()}`;
-      const res = await axios.post(
-        `/api/servers/${currentServer.hostname}:${currentServer.port}/terminal/start`,
-        {
-          terminal_cookie: terminalCookie,
-        }
+      const res = await makeAgentRequest(
+        currentServer.hostname,
+        currentServer.port,
+        currentServer.protocol,
+        'terminal/start',
+        'POST',
+        { terminal_cookie: terminalCookie }
       );
 
-      const sessionData = res.data.data?.data || res.data.data;
+      if (!res.success) {
+        console.error('Failed to create terminal session:', res.message);
+        return;
+      }
+
+      // The agent returns the session (some responses nest it under data)
+      const sessionData = res.data?.data || res.data;
       console.log(`🔍 FOOTER: Parsed session data:`, {
-        websocket_url: sessionData.websocket_url,
         id: sessionData.id,
         reused: sessionData.reused,
       });
 
-      // Create WebSocket for react-xtermjs
+      // Create WebSocket for react-xtermjs — path DERIVED from mode + session id
       const ws = new WebSocket(
-        buildWsUrl(
-          `/api/servers/${currentServer.hostname}:${currentServer.port}${sessionData.websocket_url}`
-        )
+        buildWsUrl(`${getAgentBasePath(currentServer)}/term/${sessionData.id}`)
       );
 
       ws.onopen = () => {
@@ -308,7 +316,7 @@ export const FooterProvider = ({ children }) => {
     } finally {
       terminalCreating.current = false;
     }
-  }, [currentServer]);
+  }, [currentServer, makeAgentRequest]);
 
   // Create session when server is available
   useEffect(() => {
@@ -333,11 +341,13 @@ export const FooterProvider = ({ children }) => {
         persistentWs.current = null;
       }
       if (persistentSession.current) {
-        await axios
-          .delete(
-            `/api/servers/${currentServer.hostname}:${currentServer.port}/terminal/sessions/${persistentSession.current.id}/stop`
-          )
-          .catch(console.error);
+        await makeAgentRequest(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          `terminal/sessions/${persistentSession.current.id}/stop`,
+          'DELETE'
+        ).catch(console.error);
         persistentSession.current = null;
       }
 
@@ -349,7 +359,7 @@ export const FooterProvider = ({ children }) => {
     } catch (restartErr) {
       console.error('Failed to restart shell:', restartErr);
     }
-  }, [currentServer, createSession]);
+  }, [currentServer, createSession, makeAgentRequest]);
 
   const value = React.useMemo(
     () => ({

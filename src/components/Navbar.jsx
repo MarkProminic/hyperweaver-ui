@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import Dropdown from 'react-bootstrap/Dropdown';
 
+import { useMode } from '../contexts/ModeContext';
 import {
   canStartStopZones,
   canRestartZones,
@@ -21,6 +22,7 @@ import {
 import { useNavbarActions } from './Navbar/useNavbarActions';
 
 const Navbar = () => {
+  const { isDirect } = useMode();
   const {
     isModal,
     zones,
@@ -47,6 +49,29 @@ const Navbar = () => {
     selectZone,
     clearZone,
   } = useNavbarActions();
+
+  /**
+   * No server selected: Aggregated mode offers the Add Server CTA; Direct mode has
+   * exactly one host (the origin agent), so show a plain connecting state instead.
+   */
+  const renderNoServerFallback = () =>
+    isDirect ? (
+      <span className="btn btn-outline-secondary d-flex align-items-center gap-2 disabled">
+        <i className="fas fa-server" />
+        <span className="text-uppercase small opacity-75">Host</span>
+        <span className="fw-semibold opacity-75">Connecting…</span>
+      </span>
+    ) : (
+      <a
+        href="/ui/settings/hyperweaver?tab=servers"
+        className="btn btn-outline-secondary d-flex align-items-center gap-2"
+      >
+        <i className="fas fa-server" />
+        <span className="text-uppercase small opacity-75">Host</span>
+        <span className="fw-semibold">Add Server</span>
+        <i className="fas fa-plus text-success" />
+      </a>
+    );
 
   const ZoneControlDropdown = () => {
     const userRole = user?.role;
@@ -382,15 +407,7 @@ const Navbar = () => {
               </Dropdown.Menu>
             </Dropdown>
           ) : (
-            <a
-              href="/ui/settings/hyperweaver?tab=servers"
-              className="btn btn-outline-secondary d-flex align-items-center gap-2"
-            >
-              <i className="fas fa-server" />
-              <span className="text-uppercase small opacity-75">Host</span>
-              <span className="fw-semibold">Add Server</span>
-              <i className="fas fa-plus text-success" />
-            </a>
+            renderNoServerFallback()
           )}
 
           <div className="vr mx-1" />

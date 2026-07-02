@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
+import { useMode } from '../contexts/ModeContext';
 
 import Logo from './Logo';
 
@@ -13,22 +14,26 @@ import Logo from './Logo';
 const Login = () => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [bootstrappedKey, setBootstrappedKey] = useState(null);
   const [authMethod, setAuthMethod] = useState('local');
   const [authMethods, setAuthMethods] = useState([]);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [methodsLoading, setMethodsLoading] = useState(true);
   const navigate = useNavigate();
-  const { login, isAuthenticated, getAuthMethods } = useAuth();
+  const { login, loginWithApiKey, bootstrapFirstKey, isAuthenticated, getAuthMethods } = useAuth();
+  const { isDirect, ready: modeReady, serverInfo, error: modeError, refresh } = useMode();
 
   /**
-   * Redirect to dashboard if already authenticated
+   * Redirect to dashboard if already authenticated — unless we're showing a
+   * freshly bootstrapped API key, which the user must save first (shown once).
    */
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !bootstrappedKey) {
       navigate('/ui');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, bootstrappedKey, navigate]);
 
   /**
    * Load available authentication methods
@@ -71,11 +76,15 @@ const Login = () => {
   }, [getAuthMethods]);
 
   /**
-   * Load available authentication methods on component mount
+   * Load available authentication methods once the serving mode is known
+   * (Direct mode answers locally with the API-key method).
    */
   useEffect(() => {
+    if (!modeReady) {
+      return;
+    }
     loadAuthMethods();
-  }, [loadAuthMethods]);
+  }, [modeReady, loadAuthMethods]);
 
   /**
    * Handle auth method selection change
@@ -109,6 +118,21 @@ const Login = () => {
    */
   const handleLogin = async e => {
     e.preventDefault();
+
+    // Direct mode: the agent knows only API keys
+    if (isDirect) {
+      try {
+        setLoading(true);
+        setMsg('');
+        const result = await loginWithApiKey(apiKey);
+        if (!result.success) {
+          setMsg(result.message);
+        }
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     // Handle OIDC providers differently - redirect immediately
     if (authMethod.startsWith('oidc-')) {
@@ -148,6 +172,25 @@ const Login = () => {
     }
   };
 
+  /**
+   * Direct-mode first boot: generate the host's first API key. The key is shown
+   * ONCE (bootstrappedKey holds the navigation until the user confirms saving it).
+   */
+  const handleBootstrap = async () => {
+    try {
+      setLoading(true);
+      setMsg('');
+      const result = await bootstrapFirstKey();
+      if (result.success && result.apiKey) {
+        setBootstrappedKey(result.apiKey);
+      } else {
+        setMsg(result.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getAuthMethodHelpText = () => {
     if (authMethod === 'ldap') {
       return 'Use your directory credentials';
@@ -158,7 +201,100 @@ const Login = () => {
     return 'Use your local account credentials';
   };
 
-  const isError = msg.includes('error') || msg.includes('failed');
+  const isError = msg.includes('error') || msg.includes('failed') || msg.includes('Invalid');
+
+  // The login form depends on the serving mode (user accounts vs API key), so wait
+  // for the origin probe before rendering any fields.
+  if (!modeReady) {
+    return (
+      <section className="min-vh-100 d-flex align-items-center py-4">
+        <Helmet>
+          <meta charSet="utf-8" />
+          <title>Login - Hyperweaver</title>
+        </Helmet>
+        <div className="container">
+          <div className="row justify-content-center">
+            <div className="col-12 col-lg-4">
+              <div className="card">
+                <div className="card-body p-4 text-center">
+                  {modeError ? (
+                    <>
+                      <div className="alert alert-danger">
+                        <p className="mb-0">{modeError}</p>
+                      </div>
+                      <button type="button" className="btn btn-primary" onClick={refresh}>
+                        Retry
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                      <p className="mt-3 mb-0">Contacting host...</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Freshly bootstrapped key: shown exactly once; navigation is held until confirmed.
+  if (bootstrappedKey) {
+    return (
+      <section className="min-vh-100 d-flex align-items-center py-4">
+        <Helmet>
+          <meta charSet="utf-8" />
+          <title>API Key Generated - Hyperweaver</title>
+        </Helmet>
+        <div className="container">
+          <div className="row justify-content-center">
+            <div className="col-12 col-lg-5">
+              <div className="card">
+                <div className="card-body p-4">
+                  <h1 className="h4 text-center mb-3">Your API key</h1>
+                  <div className="alert alert-warning">
+                    <p className="mb-0">
+                      <strong>Save this key now.</strong> It is shown only once — the host stores
+                      only a hash, and the bootstrap endpoint has been disabled.
+                    </p>
+                  </div>
+                  <div className="input-group mb-3">
+                    <input
+                      type="text"
+                      className="form-control font-monospace"
+                      value={bootstrappedKey}
+                      readOnly
+                      onFocus={e => e.target.select()}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => navigator.clipboard?.writeText(bootstrappedKey)}
+                      title="Copy to clipboard"
+                    >
+                      <i className="fas fa-copy" />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary w-100"
+                    onClick={() => setBootstrappedKey(null)}
+                  >
+                    I saved it — continue
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="min-vh-100 d-flex align-items-center py-4">
@@ -176,14 +312,67 @@ const Login = () => {
                 <div className="d-flex justify-content-center my-2">
                   <Logo />
                 </div>
+                {isDirect && (
+                  <p className="text-muted small mb-3">
+                    Direct mode — managing{' '}
+                    <strong>{serverInfo?.hostname || window.location.hostname}</strong>
+                  </p>
+                )}
                 {msg && (
                   <div className={`alert ${isError ? 'alert-danger' : 'alert-info'}`}>
                     <p className="mb-0">{msg}</p>
                   </div>
                 )}
 
+                {/* Direct mode: the agent authenticates by API key */}
+                {isDirect && (
+                  <>
+                    <div className="mb-3 text-start">
+                      <label className="form-label" htmlFor="apiKey">
+                        API Key
+                      </label>
+                      <input
+                        id="apiKey"
+                        type="password"
+                        className="form-control font-monospace"
+                        name="apiKey"
+                        autoComplete="off"
+                        placeholder="wh_..."
+                        value={apiKey}
+                        onChange={e => setApiKey(e.target.value)}
+                        disabled={loading}
+                      />
+                      <div className="form-text text-muted">
+                        Generate keys under Settings once signed in
+                      </div>
+                    </div>
+                    {serverInfo?.bootstrapAvailable && (
+                      <div className="alert alert-info text-start">
+                        <p className="mb-2">
+                          <strong>First boot?</strong> This host has no API keys yet.
+                        </p>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-success w-100"
+                          onClick={handleBootstrap}
+                          disabled={loading}
+                        >
+                          {loading && (
+                            <span
+                              className="spinner-border spinner-border-sm me-2"
+                              role="status"
+                              aria-hidden="true"
+                            />
+                          )}
+                          Generate first API key
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+
                 {/* Show username/password fields only for local/LDAP authentication */}
-                {!authMethod.startsWith('oidc-') && (
+                {!isDirect && !authMethod.startsWith('oidc-') && (
                   <>
                     <div className="mb-3 text-start">
                       <label className="form-label" htmlFor="identifier">
@@ -265,11 +454,13 @@ const Login = () => {
                       : 'Login'}
                   </button>
                 </div>
-                <div className="mt-3">
-                  <p className="mb-0">
-                    Don&apos;t have an account? <a href="/register">Register here</a>
-                  </p>
-                </div>
+                {!isDirect && (
+                  <div className="mt-3">
+                    <p className="mb-0">
+                      Don&apos;t have an account? <a href="/register">Register here</a>
+                    </p>
+                  </div>
+                )}
                 <div className="mt-3">
                   <a href="/docs" className="text-muted" target="_blank" rel="noopener noreferrer">
                     Documentation
