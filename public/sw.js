@@ -1,5 +1,5 @@
 // Hyperweaver Service Worker with Notification Support
-const CACHE_NAME = 'hyperweaver-v1';
+const CACHE_NAME = 'hyperweaver-v2'; // v2: rebranded icon set (hyperweaver-glyph/mark, regenerated logo192/512 + favicon)
 const API_CACHE_NAME = 'hyperweaver-api-v1';
 
 // Files to cache immediately
