@@ -143,7 +143,7 @@ const ServerSetup = () => {
               <div className="card-body p-4">
                 <h1 className="h3 text-center mb-1">Server Setup</h1>
                 <p className="text-muted text-center mb-4">
-                  Bootstrap a new Server for zone management
+                  Bootstrap a new Server for machine management
                 </p>
 
                 {user && (
@@ -151,7 +151,7 @@ const ServerSetup = () => {
                     <p className="mb-1">
                       <strong>Welcome, {user.username}!</strong>
                     </p>
-                    <p className="mb-0">You can now add Servers to manage your zones.</p>
+                    <p className="mb-0">You can now add Servers to manage your machines.</p>
                   </div>
                 )}
 

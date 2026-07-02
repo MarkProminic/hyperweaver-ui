@@ -77,7 +77,7 @@ const Landing = () => {
       </Helmet>
       <div className="container">
         <h1 className="display-4 fw-semibold">Welcome to Hyperweaver</h1>
-        <p className="fs-4 text-muted">Zone Management Made Simple</p>
+        <p className="fs-4 text-muted">Machine Management Made Simple</p>
 
         {setupStatus && (
           <div className="mt-5">
