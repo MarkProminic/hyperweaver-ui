@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 
-import { getAgentBasePath } from '../api/serverUtils';
+import { getAgentBasePath, fetchWsTicket } from '../api/serverUtils';
 import { randomId } from '../utils/randomId';
 import { buildWsUrl } from '../utils/websocket';
 
@@ -291,8 +291,11 @@ export const FooterProvider = ({ children }) => {
         return;
       }
 
+      // Phase H: every agent WS upgrade requires a fresh short-lived ticket.
+      const ticket = await fetchWsTicket(currentServer);
+
       // Create WebSocket for react-xtermjs — path DERIVED from mode + session id
-      const ws = new WebSocket(buildWsUrl(`${basePath}/term/${sessionId}`));
+      const ws = new WebSocket(buildWsUrl(`${basePath}/term/${sessionId}`, ticket));
 
       ws.onopen = () => {
         console.log('🔗 FOOTER: WebSocket connected for session:', sessionId);

@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
 
-import { getAgentBasePath } from '../../api/serverUtils';
+import { getAgentBasePath, fetchWsTicket } from '../../api/serverUtils';
 import { useServers } from '../../contexts/ServerContext';
 import { buildWsUrl } from '../../utils/websocket';
 
@@ -145,7 +145,7 @@ const SystemLogs = ({ server }) => {
   }, [streamSession, makeAgentRequest, server, websocket]);
 
   const connectToWebSocket = useCallback(
-    session => {
+    async session => {
       // WS path derived from mode + session id (same-origin, rides the server's
       // /api/agents/{id} proxy in aggregated mode) — never dialed at the agent direct.
       const basePath = getAgentBasePath(server);
@@ -154,7 +154,9 @@ const SystemLogs = ({ server }) => {
         return;
       }
 
-      const ws = new WebSocket(buildWsUrl(`${basePath}/logs/stream/${session.session_id}`));
+      // Phase H: fetch a fresh WS ticket right before opening.
+      const ticket = await fetchWsTicket(server);
+      const ws = new WebSocket(buildWsUrl(`${basePath}/logs/stream/${session.session_id}`, ticket));
 
       ws.onopen = () => {
         console.log('Connected to log stream:', session.session_id);

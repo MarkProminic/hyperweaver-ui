@@ -8,7 +8,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import PropTypes from 'prop-types';
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 
-import { getAgentBasePath, makeAgentRequest } from '../api/serverUtils';
+import { getAgentBasePath, makeAgentRequest, fetchWsTicket } from '../api/serverUtils';
 import { buildWsUrl } from '../utils/websocket';
 
 import { useServers } from './ServerContext';
@@ -197,8 +197,10 @@ export const ZoneTerminalProvider = ({ children }) => {
           return null;
         }
 
-        // WS path is DERIVED, never read from the backend (plan §4.2)
-        const wsUrl = buildWsUrl(`${getAgentBasePath(server)}/zlogin/${sessionData.id}`);
+        // WS path is DERIVED, never read from the backend (plan §4.2).
+        // Phase H: fetch a fresh WS ticket right before opening.
+        const ticket = await fetchWsTicket(server);
+        const wsUrl = buildWsUrl(`${getAgentBasePath(server)}/zlogin/${sessionData.id}`, ticket);
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => console.log(`🔗 ZONE TERMINAL: WebSocket connected for ${zoneKey}`);
@@ -302,7 +304,7 @@ export const ZoneTerminalProvider = ({ children }) => {
   );
 
   const initializeSessionFromExisting = useCallback(
-    (server, zoneName, sessionData) => {
+    async (server, zoneName, sessionData) => {
       const zoneKey = getZoneKey(server, zoneName);
       if (!zoneKey || !sessionData || !sessionData.id) {
         console.error(`❌ ZLOGIN RECONNECT: Invalid data provided for ${zoneKey}`, {
@@ -322,8 +324,10 @@ export const ZoneTerminalProvider = ({ children }) => {
         sessionId: sessionData.id,
       });
 
-      // WS path is DERIVED from mode + session id (plan §4.2)
-      const wsUrl = buildWsUrl(`${getAgentBasePath(server)}/zlogin/${sessionData.id}`);
+      // WS path is DERIVED from mode + session id (plan §4.2).
+      // Phase H: fetch a fresh WS ticket right before opening.
+      const ticket = await fetchWsTicket(server);
+      const wsUrl = buildWsUrl(`${getAgentBasePath(server)}/zlogin/${sessionData.id}`, ticket);
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => console.log(`🔗 ZLOGIN RECONNECT: WebSocket connected for ${zoneKey}`);

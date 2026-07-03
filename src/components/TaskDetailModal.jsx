@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-import { getAgentBasePath } from '../api/serverUtils';
+import { getAgentBasePath, fetchWsTicket } from '../api/serverUtils';
 import { useServers } from '../contexts/ServerContext';
 import { buildWsUrl } from '../utils/websocket';
 
@@ -103,36 +103,41 @@ const TaskDetailModal = ({ task, onClose }) => {
 
   // Connect to WebSocket for task output
   useEffect(() => {
-    let cleanup;
+    let cancelled = false;
 
     if (currentServer) {
-      // Mode-aware task-output stream (plan §4.2/§4.3)
-      const wsUrl = buildWsUrl(`${getAgentBasePath(currentServer)}/tasks/${task.id}/stream`);
+      const basePath = getAgentBasePath(currentServer);
+      if (basePath !== null) {
+        // Phase H: fetch a fresh WS ticket, then open the mode-aware task-output stream.
+        fetchWsTicket(currentServer).then(ticket => {
+          if (cancelled) {
+            return;
+          }
+          const ws = new WebSocket(buildWsUrl(`${basePath}/tasks/${task.id}/stream`, ticket));
+          wsRef.current = ws;
 
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
+          ws.onmessage = event => {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'output') {
+              msg._ui_id = Date.now() + Math.random();
+              setOutput(prev => [...prev, msg]);
+            }
+          };
 
-      ws.onmessage = event => {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'output') {
-          msg._ui_id = Date.now() + Math.random();
-          setOutput(prev => [...prev, msg]);
-        }
-      };
-
-      ws.onerror = err => {
-        console.error('Task stream WebSocket error:', err);
-      };
-
-      cleanup = () => {
-        if (wsRef.current) {
-          wsRef.current.close();
-          wsRef.current = null;
-        }
-      };
+          ws.onerror = err => {
+            console.error('Task stream WebSocket error:', err);
+          };
+        });
+      }
     }
 
-    return cleanup;
+    return () => {
+      cancelled = true;
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
   }, [task.id, currentServer]);
 
   // Auto-scroll output to bottom

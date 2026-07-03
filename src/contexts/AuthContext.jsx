@@ -259,7 +259,7 @@ export const AuthProvider = ({ children }) => {
    * then sign in with it. The key is returned so the UI can show it ONCE.
    * @returns {Promise<Object>} { success, apiKey?, message }
    */
-  const bootstrapFirstKey = async () => {
+  const bootstrapFirstKey = async setupToken => {
     if (!isDirect) {
       return { success: false, message: 'Bootstrap is only available in Direct mode' };
     }
@@ -267,6 +267,7 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post('/api-keys/bootstrap', {
         name: 'Direct-Login',
         description: 'Generated from the Hyperweaver UI first-boot screen',
+        setupToken,
       });
 
       const apiKey = response.data?.api_key;

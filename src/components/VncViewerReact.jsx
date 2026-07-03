@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import { useRef, useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { VncScreen } from 'react-vnc';
 
-import { getAgentBasePath } from '../api/serverUtils';
+import { getAgentBasePath, fetchWsTicket } from '../api/serverUtils';
 import {
   getStatusColorClass,
   performTyping,
@@ -148,14 +148,24 @@ const VncViewerReact = forwardRef(
     const [connecting, setConnecting] = useState(false);
     const [error, setError] = useState('');
 
+    // Phase H: every VNC WS upgrade needs a short-lived ticket. Fetch on mount and
+    // again on disconnect, so react-vnc's auto-reconnect always upgrades with a valid
+    // one (the ticket is checked only at upgrade, so a 60s TTL covers the retry window).
+    const [ticket, setTicket] = useState(null);
+    const refreshTicket = useCallback(async () => {
+      setTicket(server ? await fetchWsTicket(server) : null);
+    }, [server]);
+    useEffect(() => {
+      refreshTicket();
+    }, [refreshTicket]);
+
     // Mode-aware WebSocket URL (dual-mode plan §4.2/§4.3):
     // Aggregated → /api/agents/{id}/zones/{z}/vnc/websockify (Server proxies)
     // Direct     → /zones/{z}/vnc/websockify (agent's own WS, same origin)
+    const basePath = server ? getAgentBasePath(server) : null;
     const wsUrl =
-      server && zoneName
-        ? buildWsUrl(
-            `${getAgentBasePath(server)}/zones/${encodeURIComponent(zoneName)}/vnc/websockify`
-          )
+      server && zoneName && ticket && basePath !== null
+        ? buildWsUrl(`${basePath}/zones/${encodeURIComponent(zoneName)}/vnc/websockify`, ticket)
         : '';
 
     const handleRefresh = useCallback(() => {
@@ -227,6 +237,8 @@ const VncViewerReact = forwardRef(
       console.log(`❌ REACT-VNC: Disconnected from ${zoneName}:`, event);
       setConnected(false);
       setConnecting(false);
+      // Fresh ticket so react-vnc's next auto-reconnect upgrade is authorized.
+      refreshTicket();
 
       if (onDisconnect) {
         onDisconnect(event);

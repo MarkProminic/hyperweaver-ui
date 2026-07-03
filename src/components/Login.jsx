@@ -1,4 +1,5 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
+import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,6 +10,114 @@ import { copyText } from '../utils/clipboard';
 import Logo from './Logo';
 
 /**
+ * Direct-mode auth fields. First boot (no keys yet) shows the setup-token bootstrap
+ * action; otherwise the API-key entry. Extracted from Login to keep its complexity down.
+ */
+const DirectModeFields = ({
+  directFirstBoot,
+  serverInfo,
+  setupToken,
+  setSetupToken,
+  onBootstrap,
+  onShowKeyEntry,
+  apiKey,
+  setApiKey,
+  loading,
+}) => {
+  if (directFirstBoot) {
+    return (
+      <div className="alert alert-info text-start">
+        <p className="mb-2">
+          <strong>First boot?</strong> This host has no API keys yet. Read its setup token from the
+          host (<code>setup.token</code> beside the config file, or the agent startup log) to create
+          the first key.
+        </p>
+        <label className="form-label" htmlFor="setupToken">
+          Setup token
+        </label>
+        <input
+          id="setupToken"
+          type="text"
+          className="form-control font-monospace mb-2"
+          autoComplete="off"
+          placeholder="64-character token"
+          value={setupToken}
+          onChange={e => setSetupToken(e.target.value)}
+          disabled={loading}
+        />
+        <button
+          type="button"
+          className="btn btn-sm btn-success w-100"
+          onClick={onBootstrap}
+          disabled={loading || !setupToken.trim()}
+        >
+          {loading && (
+            <span
+              className="spinner-border spinner-border-sm me-2"
+              role="status"
+              aria-hidden="true"
+            />
+          )}
+          Generate first API key
+        </button>
+        <button
+          type="button"
+          className="btn btn-link btn-sm w-100 mt-1"
+          onClick={onShowKeyEntry}
+          disabled={loading}
+        >
+          I already have a key
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-3 text-start">
+      <label className="form-label" htmlFor="apiKey">
+        API Key
+      </label>
+      {/* Companion username field gives password managers an account label to file the
+          key under (current-password below makes them offer to save/autofill it). */}
+      <input
+        type="text"
+        name="username"
+        autoComplete="username"
+        value={serverInfo?.hostname || window.location.hostname}
+        readOnly
+        className="d-none"
+        aria-hidden="true"
+        tabIndex={-1}
+      />
+      <input
+        id="apiKey"
+        type="password"
+        className="form-control font-monospace"
+        name="apiKey"
+        autoComplete="current-password"
+        placeholder="hw_..."
+        value={apiKey}
+        onChange={e => setApiKey(e.target.value)}
+        disabled={loading}
+      />
+      <div className="form-text text-muted">Generate keys under Settings once signed in</div>
+    </div>
+  );
+};
+
+DirectModeFields.propTypes = {
+  directFirstBoot: PropTypes.bool,
+  serverInfo: PropTypes.shape({ hostname: PropTypes.string }),
+  setupToken: PropTypes.string,
+  setSetupToken: PropTypes.func,
+  onBootstrap: PropTypes.func,
+  onShowKeyEntry: PropTypes.func,
+  apiKey: PropTypes.string,
+  setApiKey: PropTypes.func,
+  loading: PropTypes.bool,
+};
+
+/**
  * Login component for Hyperweaver authentication
  * @returns {JSX.Element} Login component
  */
@@ -16,6 +125,7 @@ const Login = () => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [setupToken, setSetupToken] = useState('');
   const [showKeyEntry, setShowKeyEntry] = useState(false);
   const [bootstrappedKey, setBootstrappedKey] = useState(null);
   const [authMethod, setAuthMethod] = useState('local');
@@ -182,7 +292,7 @@ const Login = () => {
     try {
       setLoading(true);
       setMsg('');
-      const result = await bootstrapFirstKey();
+      const result = await bootstrapFirstKey(setupToken);
       if (result.success && result.apiKey) {
         setBootstrappedKey(result.apiKey);
       } else {
@@ -331,72 +441,19 @@ const Login = () => {
                   </div>
                 )}
 
-                {/* Direct-mode first boot: only the bootstrap action — no dead key form */}
-                {directFirstBoot && (
-                  <div className="alert alert-info text-start">
-                    <p className="mb-2">
-                      <strong>First boot?</strong> This host has no API keys yet.
-                    </p>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-success w-100"
-                      onClick={handleBootstrap}
-                      disabled={loading}
-                    >
-                      {loading && (
-                        <span
-                          className="spinner-border spinner-border-sm me-2"
-                          role="status"
-                          aria-hidden="true"
-                        />
-                      )}
-                      Generate first API key
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-link btn-sm w-100 mt-1"
-                      onClick={() => setShowKeyEntry(true)}
-                      disabled={loading}
-                    >
-                      I already have a key
-                    </button>
-                  </div>
-                )}
-
-                {/* Direct mode: the agent authenticates by API key */}
-                {isDirect && !directFirstBoot && (
-                  <div className="mb-3 text-start">
-                    <label className="form-label" htmlFor="apiKey">
-                      API Key
-                    </label>
-                    {/* Companion username field gives password managers an account
-                        label to file the key under (current-password below makes
-                        them offer to save/autofill it like a password) */}
-                    <input
-                      type="text"
-                      name="username"
-                      autoComplete="username"
-                      value={serverInfo?.hostname || window.location.hostname}
-                      readOnly
-                      className="d-none"
-                      aria-hidden="true"
-                      tabIndex={-1}
-                    />
-                    <input
-                      id="apiKey"
-                      type="password"
-                      className="form-control font-monospace"
-                      name="apiKey"
-                      autoComplete="current-password"
-                      placeholder="wh_..."
-                      value={apiKey}
-                      onChange={e => setApiKey(e.target.value)}
-                      disabled={loading}
-                    />
-                    <div className="form-text text-muted">
-                      Generate keys under Settings once signed in
-                    </div>
-                  </div>
+                {/* Direct-mode auth (first-boot bootstrap or API-key entry) */}
+                {isDirect && (
+                  <DirectModeFields
+                    directFirstBoot={directFirstBoot}
+                    serverInfo={serverInfo}
+                    setupToken={setupToken}
+                    setSetupToken={setSetupToken}
+                    onBootstrap={handleBootstrap}
+                    onShowKeyEntry={() => setShowKeyEntry(true)}
+                    apiKey={apiKey}
+                    setApiKey={setApiKey}
+                    loading={loading}
+                  />
                 )}
 
                 {/* Show username/password fields only for local/LDAP authentication */}

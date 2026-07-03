@@ -211,3 +211,19 @@ export const makeAgentRequest = async (...args) => {
     };
   }
 };
+
+/**
+ * Fetch a short-lived WebSocket auth ticket from the agent (Phase H).
+ * Every agent WS upgrade requires a `?ticket=` minted by `GET /ws-ticket` under
+ * API-key (direct) / JWT (aggregated, via the server proxy) auth. Call this right
+ * before opening any console/stream WS and pass the result to `buildWsUrl(path, ticket)`.
+ * @param {Object} server - Server object ({ id } or { hostname, port, protocol })
+ * @returns {Promise<string|null>} The ticket, or null if unavailable
+ */
+export const fetchWsTicket = async server => {
+  if (!server) {
+    return null;
+  }
+  const result = await makeAgentRequest(server.hostname, server.port, server.protocol, 'ws-ticket');
+  return result.success ? result.data?.ticket || null : null;
+};
