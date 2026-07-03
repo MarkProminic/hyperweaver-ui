@@ -235,10 +235,13 @@ const VncViewerReact = forwardRef(
 
     const handleVncDisconnect = event => {
       console.log(`❌ REACT-VNC: Disconnected from ${zoneName}:`, event);
+      // Only refresh the ticket after a real drop (we were connected), so a failing
+      // initial connect can't spin refetch→reconnect. react-vnc paces its own retries.
+      if (connected) {
+        refreshTicket();
+      }
       setConnected(false);
       setConnecting(false);
-      // Fresh ticket so react-vnc's next auto-reconnect upgrade is authorized.
-      refreshTicket();
 
       if (onDisconnect) {
         onDisconnect(event);
@@ -348,28 +351,33 @@ const VncViewerReact = forwardRef(
         <div
           className={showControls ? 'hw-vnc-display-with-controls' : 'hw-vnc-display-no-controls'}
         >
-          {connecting && !connected && <VncConnectingOverlay />}
+          {(!wsUrl || (connecting && !connected)) && <VncConnectingOverlay />}
 
-          <VncScreen
-            ref={vncRef}
-            url={wsUrl}
-            viewOnly={viewOnly}
-            scaleViewport={resize === 'scale' && !resizeSession}
-            resizeSession={resizeSession}
-            autoConnect={autoConnect}
-            background="#000000"
-            qualityLevel={quality}
-            compressionLevel={compression}
-            showDotCursor={showDot}
-            retryDuration={5000}
-            debug={false} // Set to true for debugging
-            className="hw-vnc-screen"
-            onConnect={handleVncConnect}
-            onDisconnect={handleVncDisconnect}
-            onCredentialsRequired={handleCredentialsRequired}
-            onSecurityFailure={handleSecurityFailure}
-            onClipboard={handleClipboard}
-          />
+          {/* Mount the viewer only once the WS URL (incl. the Phase H ticket) is ready.
+              react-vnc autoConnects on mount and does NOT connect if it mounts with an
+              empty url and the ticket arrives afterward — that left the canvas blank. */}
+          {wsUrl && (
+            <VncScreen
+              ref={vncRef}
+              url={wsUrl}
+              viewOnly={viewOnly}
+              scaleViewport={resize === 'scale' && !resizeSession}
+              resizeSession={resizeSession}
+              autoConnect={autoConnect}
+              background="#000000"
+              qualityLevel={quality}
+              compressionLevel={compression}
+              showDotCursor={showDot}
+              retryDuration={5000}
+              debug={false} // Set to true for debugging
+              className="hw-vnc-screen"
+              onConnect={handleVncConnect}
+              onDisconnect={handleVncDisconnect}
+              onCredentialsRequired={handleCredentialsRequired}
+              onSecurityFailure={handleSecurityFailure}
+              onClipboard={handleClipboard}
+            />
+          )}
         </div>
       </div>
     );
