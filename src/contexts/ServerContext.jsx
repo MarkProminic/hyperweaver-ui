@@ -456,7 +456,7 @@ export const ServerProvider = ({ children }) => {
       currentServer.hostname,
       currentServer.port,
       currentServer.protocol,
-      'api-keys?include_key=true',
+      'api-keys',
       'GET'
     );
   };

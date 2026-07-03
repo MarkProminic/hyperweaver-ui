@@ -143,7 +143,7 @@ export const useHostNetworkingData = () => {
       }
 
       const result = await makeAgentRequest(
-        currentServer,
+        currentServer.hostname,
         currentServer.port,
         currentServer.protocol,
         `monitoring/network/usage?since=${encodeURIComponent(lastChartTimestamp)}&limit=${getResolutionLimit(resolution)}&per_interface=true`

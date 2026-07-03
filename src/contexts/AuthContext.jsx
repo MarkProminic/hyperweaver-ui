@@ -135,7 +135,14 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (verifyErr) {
         console.error('Token verification failed:', verifyErr);
-        clearAuth();
+        // Only a definitive rejection invalidates the stored credential. A transient
+        // failure (agent restarting, network blip) must NOT wipe it — especially in
+        // Direct mode, where the API key doesn't expire and the user may not have
+        // another copy. Leave it stored; the next load restores the session.
+        const status = verifyErr.response?.status;
+        if (status === 401 || status === 403) {
+          clearAuth();
+        }
         setLoading(false);
         return;
       }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 import { useServers } from '../contexts/ServerContext';
+import { copyText } from '../utils/clipboard';
 
 import { ConfirmModal, ContentModal } from './common';
 
@@ -129,9 +130,13 @@ const ApiKeysTab = () => {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => {
-              navigator.clipboard.writeText(generatedKey);
-              setMessage('API key copied to clipboard!');
+            onClick={async () => {
+              const copied = await copyText(generatedKey);
+              setMessage(
+                copied
+                  ? 'API key copied to clipboard!'
+                  : 'Copy failed — select the key text above and copy it manually.'
+              );
             }}
           >
             <i className="fas fa-copy me-2" />
@@ -219,27 +224,17 @@ const ApiKeysTab = () => {
                     <td>{key.last_used ? new Date(key.last_used).toLocaleString() : 'Never'}</td>
                     <td>{new Date(key.created_at).toLocaleString()}</td>
                     <td>
-                      <div className="d-flex gap-1">
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          onClick={() => {
-                            setGeneratedKey(key.api_key);
-                          }}
-                        >
-                          <i className="fas fa-eye me-2" />
-                          View
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-danger btn-sm"
-                          onClick={() => setDeleteKeyId(key.id)}
-                          disabled={loading}
-                        >
-                          <i className="fas fa-trash me-2" />
-                          Delete
-                        </button>
-                      </div>
+                      {/* No View action: only bcrypt hashes are stored — a key is
+                          visible exactly once, at generation. */}
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        onClick={() => setDeleteKeyId(key.id)}
+                        disabled={loading}
+                      >
+                        <i className="fas fa-trash me-2" />
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}

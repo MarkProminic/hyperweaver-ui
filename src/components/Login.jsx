@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useMode } from '../contexts/ModeContext';
+import { copyText } from '../utils/clipboard';
 
 import Logo from './Logo';
 
@@ -15,6 +16,7 @@ const Login = () => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [showKeyEntry, setShowKeyEntry] = useState(false);
   const [bootstrappedKey, setBootstrappedKey] = useState(null);
   const [authMethod, setAuthMethod] = useState('local');
   const [authMethods, setAuthMethods] = useState([]);
@@ -203,6 +205,11 @@ const Login = () => {
 
   const isError = msg.includes('error') || msg.includes('failed') || msg.includes('Invalid');
 
+  // Direct-mode first boot: bootstrap is THE action — the key-paste form hides
+  // behind "I already have a key" (covers bootstrap_auto_disable=false configs
+  // where bootstrap stays open even though keys already exist).
+  const directFirstBoot = isDirect && !!serverInfo?.bootstrapAvailable && !showKeyEntry;
+
   // The login form depends on the serving mode (user accounts vs API key), so wait
   // for the origin probe before rendering any fields.
   if (!modeReady) {
@@ -274,7 +281,7 @@ const Login = () => {
                     <button
                       type="button"
                       className="btn btn-outline-secondary"
-                      onClick={() => navigator.clipboard?.writeText(bootstrappedKey)}
+                      onClick={() => copyText(bootstrappedKey)}
                       title="Copy to clipboard"
                     >
                       <i className="fas fa-copy" />
@@ -324,51 +331,72 @@ const Login = () => {
                   </div>
                 )}
 
+                {/* Direct-mode first boot: only the bootstrap action — no dead key form */}
+                {directFirstBoot && (
+                  <div className="alert alert-info text-start">
+                    <p className="mb-2">
+                      <strong>First boot?</strong> This host has no API keys yet.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-success w-100"
+                      onClick={handleBootstrap}
+                      disabled={loading}
+                    >
+                      {loading && (
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          role="status"
+                          aria-hidden="true"
+                        />
+                      )}
+                      Generate first API key
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-link btn-sm w-100 mt-1"
+                      onClick={() => setShowKeyEntry(true)}
+                      disabled={loading}
+                    >
+                      I already have a key
+                    </button>
+                  </div>
+                )}
+
                 {/* Direct mode: the agent authenticates by API key */}
-                {isDirect && (
-                  <>
-                    <div className="mb-3 text-start">
-                      <label className="form-label" htmlFor="apiKey">
-                        API Key
-                      </label>
-                      <input
-                        id="apiKey"
-                        type="password"
-                        className="form-control font-monospace"
-                        name="apiKey"
-                        autoComplete="off"
-                        placeholder="wh_..."
-                        value={apiKey}
-                        onChange={e => setApiKey(e.target.value)}
-                        disabled={loading}
-                      />
-                      <div className="form-text text-muted">
-                        Generate keys under Settings once signed in
-                      </div>
+                {isDirect && !directFirstBoot && (
+                  <div className="mb-3 text-start">
+                    <label className="form-label" htmlFor="apiKey">
+                      API Key
+                    </label>
+                    {/* Companion username field gives password managers an account
+                        label to file the key under (current-password below makes
+                        them offer to save/autofill it like a password) */}
+                    <input
+                      type="text"
+                      name="username"
+                      autoComplete="username"
+                      value={serverInfo?.hostname || window.location.hostname}
+                      readOnly
+                      className="d-none"
+                      aria-hidden="true"
+                      tabIndex={-1}
+                    />
+                    <input
+                      id="apiKey"
+                      type="password"
+                      className="form-control font-monospace"
+                      name="apiKey"
+                      autoComplete="current-password"
+                      placeholder="wh_..."
+                      value={apiKey}
+                      onChange={e => setApiKey(e.target.value)}
+                      disabled={loading}
+                    />
+                    <div className="form-text text-muted">
+                      Generate keys under Settings once signed in
                     </div>
-                    {serverInfo?.bootstrapAvailable && (
-                      <div className="alert alert-info text-start">
-                        <p className="mb-2">
-                          <strong>First boot?</strong> This host has no API keys yet.
-                        </p>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-success w-100"
-                          onClick={handleBootstrap}
-                          disabled={loading}
-                        >
-                          {loading && (
-                            <span
-                              className="spinner-border spinner-border-sm me-2"
-                              role="status"
-                              aria-hidden="true"
-                            />
-                          )}
-                          Generate first API key
-                        </button>
-                      </div>
-                    )}
-                  </>
+                  </div>
                 )}
 
                 {/* Show username/password fields only for local/LDAP authentication */}
@@ -439,21 +467,23 @@ const Login = () => {
                     <div className="form-text text-muted">{getAuthMethodHelpText()}</div>
                   </div>
                 )}
-                <div className="mb-3">
-                  <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-                    {loading && (
-                      <span
-                        className="spinner-border spinner-border-sm me-2"
-                        role="status"
-                        aria-hidden="true"
-                      />
-                    )}
-                    {authMethod.startsWith('oidc-')
-                      ? authMethods.find(m => m.id === authMethod)?.name ||
-                        'Continue with OpenID Connect'
-                      : 'Login'}
-                  </button>
-                </div>
+                {!directFirstBoot && (
+                  <div className="mb-3">
+                    <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+                      {loading && (
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          role="status"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {authMethod.startsWith('oidc-')
+                        ? authMethods.find(m => m.id === authMethod)?.name ||
+                          'Continue with OpenID Connect'
+                        : 'Login'}
+                    </button>
+                  </div>
+                )}
                 {!isDirect && (
                   <div className="mt-3">
                     <p className="mb-0">
