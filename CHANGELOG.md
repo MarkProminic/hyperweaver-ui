@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.3](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.2...v0.10.3) (2026-07-03)
+
+
+### Bug Fixes
+
+* WS upgrade ticket auth + claim-token bootstrap + hardening (Phase H) ([9cb98cf](https://github.com/MarkProminic/hyperweaver-ui/commit/9cb98cf5cb237133feb9f81bd1b4e3685bf9f039))
+
 ## [0.10.2](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.1...v0.10.2) (2026-07-03)
 
 
