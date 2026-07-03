@@ -81,8 +81,10 @@ const PoolsTable = ({
                   </thead>
                   <tbody>
                     {storagePools.map(pool => {
-                      const allocBytes = parseSize(pool.alloc) || pool.alloc_bytes || 0;
-                      const freeBytes = parseSize(pool.free) || pool.free_bytes || 0;
+                      // The agent serves *_bytes as STRINGS (Sequelize model transport) —
+                      // coerce before adding or `+` concatenates into petabyte garbage
+                      const allocBytes = parseSize(pool.alloc) || Number(pool.alloc_bytes) || 0;
+                      const freeBytes = parseSize(pool.free) || Number(pool.free_bytes) || 0;
                       const totalBytes = allocBytes + freeBytes;
                       const usagePercent =
                         totalBytes > 0 ? ((allocBytes / totalBytes) * 100).toFixed(1) : 0;

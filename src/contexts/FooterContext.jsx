@@ -219,13 +219,18 @@ export const FooterProvider = ({ children }) => {
     }
     if (persistentSession.current) {
       console.log('🔄 FOOTER: Cleaning up session:', persistentSession.current.id);
-      makeAgentRequest(
-        currentServer.hostname,
-        currentServer.port,
-        currentServer.protocol,
-        `terminal/sessions/${persistentSession.current.id}/stop`,
-        'DELETE'
-      ).catch(console.error);
+      // Stop against the server the session was CREATED on — currentServer is null
+      // when the selected server was just deleted (that deref used to crash the app)
+      const { id, server: sessionServer } = persistentSession.current;
+      if (sessionServer) {
+        makeAgentRequest(
+          sessionServer.hostname,
+          sessionServer.port,
+          sessionServer.protocol,
+          `terminal/sessions/${id}/stop`,
+          'DELETE'
+        ).catch(console.error);
+      }
       persistentSession.current = null;
     }
 
@@ -267,21 +272,18 @@ export const FooterProvider = ({ children }) => {
         return;
       }
 
-      // The agent returns the session (some responses nest it under data)
+      // The agent returns the session (some responses nest it under data).
+      // Agent ≥0.3.4: `id` IS the session UUID — the only key the /term/{id}
+      // upgrade matcher and terminal/sessions/{id}/stop accept.
       const sessionData = res.data?.data || res.data;
-      // terminal/start echoes the terminal_cookie back as `id`; the session's UUID —
-      // the only key the agent's /term/{id} upgrade matcher and
-      // terminal/sessions/{id}/stop accept — travels only as the tail of its
-      // websocket_url. Extract the UUID; the WS path itself is still derived from
-      // mode + base (the returned path is agent-origin-relative, useless as-is).
-      const sessionId = sessionData.websocket_url?.split('/').filter(Boolean).pop();
+      const sessionId = sessionData.id;
       if (!sessionId) {
         console.error('🚨 FOOTER: terminal/start response missing session UUID:', sessionData);
         return;
       }
       console.log(`🔍 FOOTER: Parsed session data:`, {
         id: sessionId,
-        terminal_cookie: sessionData.id,
+        terminal_cookie: sessionData.terminal_cookie,
         reused: sessionData.reused,
       });
 
@@ -318,13 +320,17 @@ export const FooterProvider = ({ children }) => {
         console.error('🚨 FOOTER: WebSocket error for session:', sessionId, wsError);
       };
 
-      // Store session with WebSocket for HostShell — `id` is the UUID so the
-      // cleanup/restart stop calls (terminal/sessions/{id}/stop, findByPk on the
-      // agent) actually terminate the PTY instead of silently missing.
+      // Store session with WebSocket for HostShell — `id` (UUID) drives the
+      // cleanup/restart stop calls (terminal/sessions/{id}/stop). The creating
+      // server's triple rides along so cleanup works after the server is
+      // deselected or deleted (currentServer may be null by then).
       const sessionWithWs = {
         ...sessionData,
-        id: sessionId,
-        terminal_cookie: terminalCookie,
+        server: {
+          hostname: currentServer.hostname,
+          port: currentServer.port,
+          protocol: currentServer.protocol,
+        },
         websocket: ws,
       };
 
@@ -363,11 +369,13 @@ export const FooterProvider = ({ children }) => {
         persistentWs.current = null;
       }
       if (persistentSession.current) {
+        const { id, server: sessionServer } = persistentSession.current;
+        const stopTarget = sessionServer || currentServer;
         await makeAgentRequest(
-          currentServer.hostname,
-          currentServer.port,
-          currentServer.protocol,
-          `terminal/sessions/${persistentSession.current.id}/stop`,
+          stopTarget.hostname,
+          stopTarget.port,
+          stopTarget.protocol,
+          `terminal/sessions/${id}/stop`,
           'DELETE'
         ).catch(console.error);
         persistentSession.current = null;

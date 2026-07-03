@@ -372,6 +372,39 @@ export const ServerProvider = ({ children }) => {
   };
 
   /**
+   * Update a server's editable settings (Admin only). allow_insecure is the only
+   * editable field — it governs whether the Server accepts the agent's self-signed
+   * TLS certificate (REST and console WS alike).
+   * @param {number} serverId - Server ID
+   * @param {boolean} allowInsecure - Accept self-signed TLS certificates
+   * @returns {Promise<Object>} Update result
+   */
+  const updateServer = async (serverId, allowInsecure) => {
+    if (isDirect) {
+      return { success: false, message: 'Server management is not available in Direct mode' };
+    }
+    try {
+      setLoading(true);
+      const response = await axios.patch(`/api/servers/${serverId}`, { allowInsecure });
+
+      if (response.data.success) {
+        // Reload servers so the row reflects the new flag
+        await loadServers();
+        return { success: true, message: response.data.message };
+      }
+      return { success: false, message: response.data.message };
+    } catch (updateErr) {
+      console.error('Update server error:', updateErr);
+      return {
+        success: false,
+        message: updateErr.response?.data?.message || 'Failed to update server',
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
    * Remove a server (Admin only)
    * @param {number} serverId - Server ID
    * @returns {Promise<Object>} Remove result
@@ -511,6 +544,7 @@ export const ServerProvider = ({ children }) => {
     refreshServers: loadServers,
     addServer,
     testServer,
+    updateServer,
     removeServer,
     getServers,
     selectServer,
@@ -549,7 +583,6 @@ export const ServerProvider = ({ children }) => {
     getStorageARC: monitoringAPI.getStorageARC,
     // System Monitoring Functions
     getSystemCPU: monitoringAPI.getSystemCPU,
-    getSystemCPUCores: monitoringAPI.getSystemCPUCores,
     getSystemMemory: monitoringAPI.getSystemMemory,
     // Device Management Functions
     ...deviceAPI,

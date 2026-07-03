@@ -5,10 +5,15 @@ import { SearchAddon } from '@xterm/addon-search';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useXTerm } from 'react-xtermjs';
 
 import { useFooter } from '../../contexts/FooterContext';
+
+// NUL prefix for PTY control messages (resize) on the terminal WebSocket.
+// Keystrokes never arrive as a NUL-led JSON blob, and the agent writes anything
+// it can't parse straight through to the shell, so typed input is never eaten.
+const PTY_CTRL_PREFIX = String.fromCharCode(0);
 
 const HostShell = () => {
   const { session } = useFooter();
@@ -17,6 +22,25 @@ const HostShell = () => {
 
   const addonsRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
+
+  // Fit xterm to its pane, then tell the agent's PTY the new geometry so programs
+  // wrap at the real width (the PTY spawns 80×30 otherwise).
+  const fitAndResizePty = useCallback(() => {
+    const fitAddon = addonsRef.current?.fitAddon;
+    if (!fitAddon || !instance) {
+      return;
+    }
+    fitAddon.fit?.();
+    const ws = session?.websocket;
+    if (ws?.readyState === WebSocket.OPEN && instance.cols && instance.rows) {
+      const resizeMsg = JSON.stringify({
+        type: 'resize',
+        cols: instance.cols,
+        rows: instance.rows,
+      });
+      ws.send(PTY_CTRL_PREFIX + resizeMsg);
+    }
+  }, [instance, session]);
 
   if (!addonsRef.current) {
     addonsRef.current = {
@@ -66,11 +90,15 @@ const HostShell = () => {
             console.error('HOSTSHELL: WebGL addon failed:', error);
           }
         }
+
+        // Size to the pane immediately — without this first fit the canvas keeps
+        // the constructor's 80-col size until the footer is manually resized
+        setTimeout(fitAndResizePty, 50);
       } catch (error) {
         console.error('HOSTSHELL: Terminal initialization failed:', error);
       }
     }
-  }, [instance]);
+  }, [instance, fitAndResizePty]);
 
   useEffect(() => {
     if (!instance || !session?.websocket) {
@@ -86,6 +114,8 @@ const HostShell = () => {
         attachAddon = new AttachAddon(websocket);
         instance.loadAddon(attachAddon);
         setIsReady(true);
+        // Refit at attach — content starts flowing now and the PTY learns its size
+        setTimeout(fitAndResizePty, 50);
       }
     };
 
@@ -110,20 +140,21 @@ const HostShell = () => {
       }
       setIsReady(false);
     };
-  }, [instance, session]);
+  }, [instance, session, fitAndResizePty]);
 
   useEffect(() => {
-    const handleFooterResize = () => {
-      if (addonsRef.current?.fitAddon && instance) {
-        setTimeout(() => addonsRef.current.fitAddon.fit?.(), 50);
-      }
+    // Refit on footer drag AND window resize — both change the pane geometry
+    const handlePaneResize = () => {
+      setTimeout(fitAndResizePty, 50);
     };
 
-    window.addEventListener('footer-resized', handleFooterResize);
+    window.addEventListener('footer-resized', handlePaneResize);
+    window.addEventListener('resize', handlePaneResize);
     return () => {
-      window.removeEventListener('footer-resized', handleFooterResize);
+      window.removeEventListener('footer-resized', handlePaneResize);
+      window.removeEventListener('resize', handlePaneResize);
     };
-  }, [instance]);
+  }, [fitAndResizePty]);
 
   if (!session) {
     return (
@@ -151,7 +182,7 @@ const HostShell = () => {
 
   return (
     <div className="h-100 w-100 d-flex flex-column">
-      <div ref={ref} className="h-100 w-100 flex-grow-1" />
+      <div ref={ref} className="h-100 w-100 flex-grow-1 hw-hostshell-term" />
 
       {!isReady && (
         <div className="alert alert-dark p-2 float-end mt-1 me-1">

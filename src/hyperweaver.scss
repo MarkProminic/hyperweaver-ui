@@ -517,13 +517,19 @@ button::-moz-focus-inner {
   contain: layout;
   display: flex;
   flex-direction: column;
+  // The pane is a hard boundary — xterm's canvas keeps its own pixel size
+  // between fit() calls and must never paint past the footer edge
+  min-width: 0;
+  overflow: hidden;
 }
 
-// Fix react-xtermjs wrapper - let it fill naturally but account for padding
-.log-console .is-fullheight.is-fullwidth {
-  flex: 1;
-  width: 100% !important;
+// react-xtermjs host (HostShell): fill the pane and clip. (Replaces a stale
+// Bulma-era `.is-fullheight.is-fullwidth` selector that matched nothing.)
+.log-console .hw-hostshell-term {
+  flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 // Ensure terminal fills its wrapper

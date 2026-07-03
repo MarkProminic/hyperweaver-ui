@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useServers } from '../contexts/ServerContext';
+import { hasFeature } from '../utils/capabilities';
 
 import BootEnvironmentManagement from './Host/BootEnvironmentManagement';
 import FaultManagement from './Host/FaultManagement';
@@ -16,12 +17,46 @@ import StorageManagement from './Host/StorageManagement';
 import TimeNTPManagement from './Host/TimeNTPManagement';
 import UserGroupManagement from './Host/UserGroupManagement';
 
+// Tabs gate on the agent's capability feature tokens (dual-mode plan §3.1) where a
+// token exists; the rest stay ungated until Agent API v1 grows the vocabulary
+// (same gap as the Devices/PPT page). Legacy agents without a features array
+// render everything — hasFeature's render-all rule.
+const TABS = [
+  { id: 'services', label: 'Services', icon: 'fas fa-cogs' },
+  { id: 'network', label: 'Network', icon: 'fas fa-network-wired', feature: 'vnics' },
+  { id: 'packages', label: 'Package Management', icon: 'fas fa-box', feature: 'packages' },
+  {
+    id: 'boot-environments',
+    label: 'Boot Environments',
+    icon: 'fas fa-layer-group',
+    feature: 'boot-environments',
+  },
+  { id: 'storage', label: 'Storage', icon: 'fas fa-database', feature: 'zfs' },
+  { id: 'time-ntp', label: 'Time', icon: 'fas fa-clock' },
+  { id: 'processes', label: 'Processes', icon: 'fas fa-tasks' },
+  {
+    id: 'fault-management',
+    label: 'Fault Management',
+    icon: 'fas fa-exclamation-triangle',
+    feature: 'fault-management',
+  },
+  { id: 'file-manager', label: 'File Manager', icon: 'fas fa-folder' },
+  { id: 'user-group', label: 'User and Groups', icon: 'fas fa-users' },
+];
+
 const HostManage = () => {
   const [activeTab, setActiveTab] = useState('services');
 
   const { user } = useAuth();
   const { currentServer } = useServers();
   const navigate = useNavigate();
+
+  const visibleTabs = TABS.filter(tab => !tab.feature || hasFeature(currentServer, tab.feature));
+  // A server switch can hide the selected tab — fall back to the first visible one
+  // without touching state (clicking a tab still drives activeTab).
+  const effectiveTab = visibleTabs.some(tab => tab.id === activeTab)
+    ? activeTab
+    : visibleTabs[0]?.id;
 
   if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
     return (
@@ -91,45 +126,10 @@ const HostManage = () => {
           {/* Tab Navigation */}
           <div className="mb-0">
             <ul className="nav nav-tabs">
-              {[
-                { id: 'services', label: 'Services', icon: 'fas fa-cogs' },
-                {
-                  id: 'network',
-                  label: 'Network',
-                  icon: 'fas fa-network-wired',
-                },
-                {
-                  id: 'packages',
-                  label: 'Package Management',
-                  icon: 'fas fa-box',
-                },
-                {
-                  id: 'boot-environments',
-                  label: 'Boot Environments',
-                  icon: 'fas fa-layer-group',
-                },
-                { id: 'storage', label: 'Storage', icon: 'fas fa-database' },
-                { id: 'time-ntp', label: 'Time', icon: 'fas fa-clock' },
-                { id: 'processes', label: 'Processes', icon: 'fas fa-tasks' },
-                {
-                  id: 'fault-management',
-                  label: 'Fault Management',
-                  icon: 'fas fa-exclamation-triangle',
-                },
-                {
-                  id: 'file-manager',
-                  label: 'File Manager',
-                  icon: 'fas fa-folder',
-                },
-                {
-                  id: 'user-group',
-                  label: 'User and Groups',
-                  icon: 'fas fa-users',
-                },
-              ].map(tab => (
+              {visibleTabs.map(tab => (
                 <li key={tab.id} className="nav-item">
                   <a
-                    className={activeTab === tab.id ? 'nav-link active' : 'nav-link'}
+                    className={effectiveTab === tab.id ? 'nav-link active' : 'nav-link'}
                     href={`#${tab.id}`}
                     onClick={e => {
                       e.preventDefault();
@@ -154,7 +154,7 @@ const HostManage = () => {
 
           <div className="px-4">
             {/* Services Tab */}
-            {activeTab === 'services' && (
+            {effectiveTab === 'services' && (
               <div>
                 <div className="mb-4">
                   <h2 className="fs-5 fw-bold">Service Management</h2>
@@ -169,7 +169,7 @@ const HostManage = () => {
             )}
 
             {/* Network & Hostname Tab */}
-            {activeTab === 'network' && (
+            {effectiveTab === 'network' && (
               <div>
                 <div className="mb-4">
                   <h2 className="fs-5 fw-bold">Network</h2>
@@ -185,7 +185,7 @@ const HostManage = () => {
             )}
 
             {/* Package Management Tab */}
-            {activeTab === 'packages' && (
+            {effectiveTab === 'packages' && (
               <div>
                 <div className="mb-4">
                   <h2 className="fs-5 fw-bold">Package Management</h2>
@@ -201,7 +201,7 @@ const HostManage = () => {
             )}
 
             {/* Boot Environments Tab */}
-            {activeTab === 'boot-environments' && (
+            {effectiveTab === 'boot-environments' && (
               <div>
                 <div className="mb-4">
                   <h2 className="fs-5 fw-bold">Boot Environment Management</h2>
@@ -217,7 +217,7 @@ const HostManage = () => {
             )}
 
             {/* Storage Management Tab */}
-            {activeTab === 'storage' && (
+            {effectiveTab === 'storage' && (
               <div>
                 <div className="mb-4">
                   <h2 className="fs-5 fw-bold">Storage</h2>
@@ -232,7 +232,7 @@ const HostManage = () => {
             )}
 
             {/* Time & NTP Tab */}
-            {activeTab === 'time-ntp' && (
+            {effectiveTab === 'time-ntp' && (
               <div>
                 <div className="mb-4">
                   <h2 className="fs-5 fw-bold">Time</h2>
@@ -248,7 +248,7 @@ const HostManage = () => {
             )}
 
             {/* Process Management Tab */}
-            {activeTab === 'processes' && (
+            {effectiveTab === 'processes' && (
               <div>
                 <div className="mb-4">
                   <h2 className="fs-5 fw-bold">Process Management</h2>
@@ -264,7 +264,7 @@ const HostManage = () => {
             )}
 
             {/* Fault Management Tab */}
-            {activeTab === 'fault-management' && (
+            {effectiveTab === 'fault-management' && (
               <div>
                 <div className="mb-4">
                   <h2 className="fs-5 fw-bold">Fault Management</h2>
@@ -280,7 +280,7 @@ const HostManage = () => {
             )}
 
             {/* File Manager Tab */}
-            {activeTab === 'file-manager' && (
+            {effectiveTab === 'file-manager' && (
               <div>
                 <div className="mb-4">
                   <h2 className="fs-5 fw-bold">File Manager</h2>
@@ -297,7 +297,7 @@ const HostManage = () => {
             )}
 
             {/* User & Group Management Tab */}
-            {activeTab === 'user-group' && (
+            {effectiveTab === 'user-group' && (
               <div>
                 <div className="mb-4">
                   <h2 className="fs-5 fw-bold">User and Groups</h2>

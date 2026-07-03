@@ -13,6 +13,8 @@ const ServerForm = ({
   setApiKey,
   useExistingApiKey,
   setUseExistingApiKey,
+  allowInsecure,
+  setAllowInsecure,
   loading,
 }) => (
   <>
@@ -91,6 +93,28 @@ const ServerForm = ({
       </p>
     </div>
 
+    {protocol === 'https' && (
+      <div className="mb-3">
+        <div className="form-check">
+          <input
+            type="checkbox"
+            id="allow-insecure-checkbox"
+            className="form-check-input"
+            checked={allowInsecure}
+            onChange={e => setAllowInsecure(e.target.checked)}
+            disabled={loading}
+          />
+          <label className="form-check-label" htmlFor="allow-insecure-checkbox">
+            Allow self-signed TLS certificate
+          </label>
+        </div>
+        <p className="form-text text-muted">
+          Check this if the agent uses a self-signed certificate (bootstrap and all requests will
+          skip certificate verification for this server)
+        </p>
+      </div>
+    )}
+
     {useExistingApiKey && (
       <div className="mb-3">
         <label className="form-label" htmlFor="api-key-input">
@@ -159,6 +183,8 @@ ServerForm.propTypes = {
   setApiKey: PropTypes.func.isRequired,
   useExistingApiKey: PropTypes.bool.isRequired,
   setUseExistingApiKey: PropTypes.func.isRequired,
+  allowInsecure: PropTypes.bool.isRequired,
+  setAllowInsecure: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
 };
 

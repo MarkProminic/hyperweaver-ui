@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
 
-const ServerTable = ({ servers, onEdit, onDelete, loading }) => {
+const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) => {
   const [copiedKey, setCopiedKey] = useState(null);
 
   // Mask API key for security (show first 6 and last 4 characters)
@@ -51,6 +51,7 @@ const ServerTable = ({ servers, onEdit, onDelete, loading }) => {
             <th>Port</th>
             <th>Entity Name</th>
             <th>API Key</th>
+            <th>Self-Signed TLS</th>
             <th>Last Used</th>
             <th>Actions</th>
           </tr>
@@ -84,6 +85,20 @@ const ServerTable = ({ servers, onEdit, onDelete, loading }) => {
                     </button>
                   )}
                   <span className="badge text-bg-light">{maskApiKey(server.api_key)}</span>
+                </div>
+              </td>
+              <td>
+                <div className="form-check form-switch mb-0">
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    className="form-check-input"
+                    checked={!!server.allow_insecure}
+                    onChange={() => onToggleInsecure(server)}
+                    disabled={loading}
+                    title="Accept this agent's self-signed TLS certificate"
+                    aria-label={`Allow self-signed TLS for ${server.hostname}`}
+                  />
                 </div>
               </td>
               <td>{server.lastUsed ? new Date(server.lastUsed).toLocaleDateString() : 'Never'}</td>
@@ -121,6 +136,7 @@ ServerTable.propTypes = {
   servers: PropTypes.array.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
+  onToggleInsecure: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
 };
 

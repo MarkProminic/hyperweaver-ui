@@ -296,27 +296,6 @@ export const getSystemCPU = async (hostname, port, protocol, filters = {}) => {
 };
 
 /**
- * Get per-core CPU statistics
- * @param {string} hostname - Server hostname
- * @param {number} port - Server port
- * @param {string} protocol - Server protocol
- * @param {Object} filters - Filter options (limit, since)
- * @returns {Promise<Object>} Per-core CPU data
- */
-export const getSystemCPUCores = async (hostname, port, protocol, filters = {}) => {
-  console.log(`🔍 SYSTEM: Getting per-core CPU statistics from ${hostname}:${port}`);
-  return await makeAgentRequest(
-    hostname,
-    port,
-    protocol,
-    'monitoring/system/cpu/cores',
-    'GET',
-    null,
-    filters
-  );
-};
-
-/**
  * Get system memory statistics
  * @param {string} hostname - Server hostname
  * @param {number} port - Server port

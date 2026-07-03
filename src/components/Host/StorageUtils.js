@@ -64,18 +64,19 @@ export const parseSize = sizeStr => {
     return 0;
   }
 
-  // Match numbers with optional unit suffix (case insensitive)
-  const match = cleanStr.match(/^(?:[0-9.]+)\s*(?:[KMGTPEZB]?)/i);
+  // Match numbers with optional unit suffix (case insensitive) — the groups MUST
+  // capture (a former non-capturing version made every string parse to 0)
+  const match = cleanStr.match(/^(?<num>[0-9.]+)\s*(?<unit>[KMGTPEZB]?)/i);
   if (!match) {
     return 0;
   }
 
-  const value = parseFloat(match[1]);
+  const value = parseFloat(match.groups.num);
   if (isNaN(value)) {
     return 0;
   }
 
-  const unit = (match[2] || '').toUpperCase();
+  const unit = (match.groups.unit || '').toUpperCase();
 
   const multipliers = {
     '': 1,

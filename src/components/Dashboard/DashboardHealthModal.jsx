@@ -83,9 +83,16 @@ HealthIssueCard.propTypes = {
 };
 
 const DashboardHealthModal = ({ isOpen, onClose, servers }) => {
+  // Must mirror EVERY issue source the summary counts (calculateInfrastructureSummary):
+  // load/memory/offline via status, reboot_required, AND system faults — a fault-only
+  // server used to be filtered out here, so the badge said 1 but the modal was empty.
   const unhealthyServers =
-    servers?.filter(s => getServerHealthStatus(s) !== 'healthy' || s.healthData?.reboot_required) ||
-    [];
+    servers?.filter(
+      s =>
+        getServerHealthStatus(s) !== 'healthy' ||
+        s.healthData?.reboot_required ||
+        s.healthData?.faultStatus?.hasFaults
+    ) || [];
 
   return (
     <ContentModal

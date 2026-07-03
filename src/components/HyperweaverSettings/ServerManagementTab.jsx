@@ -36,8 +36,11 @@ const ServerManagementTab = ({
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  // Only consumed at submit time, so the flag lives here instead of the parent's form state
+  const [allowInsecure, setAllowInsecure] = useState(false);
 
-  const { removeServer, addServer, testServer, refreshServers, selectServer } = serverContext;
+  const { removeServer, addServer, testServer, updateServer, refreshServers, selectServer } =
+    serverContext;
 
   // Reset form to initial state
   const resetForm = useCallback(() => {
@@ -47,6 +50,7 @@ const ServerManagementTab = ({
     setEntityName('Hyperweaver-Production');
     setApiKey('');
     setUseExistingApiKey(false);
+    setAllowInsecure(false);
     setTestResult(null);
     setMsg('');
   }, [
@@ -94,6 +98,29 @@ const ServerManagementTab = ({
     [servers, selectServer, navigate]
   );
 
+  // Toggle a row's allow_insecure flag (self-signed TLS acceptance)
+  const handleToggleInsecure = useCallback(
+    async server => {
+      try {
+        setLoading(true);
+        setMsg('');
+        const result = await updateServer(server.id, !server.allow_insecure);
+        if (result.success) {
+          setMsg(
+            `Self-signed TLS ${server.allow_insecure ? 'no longer accepted' : 'now accepted'} for ${server.hostname}.`
+          );
+        } else {
+          setMsg(result.message || 'Failed to update server');
+        }
+      } catch {
+        setMsg('Error updating server. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [updateServer, setMsg]
+  );
+
   // Handle connection test
   const handleTestConnection = useCallback(async () => {
     if (!hostname || !port || !protocol) {
@@ -108,6 +135,7 @@ const ServerManagementTab = ({
         hostname,
         port: parseInt(port),
         protocol,
+        allowInsecure,
       });
       if (result.success) {
         setTestResult('success');
@@ -122,7 +150,7 @@ const ServerManagementTab = ({
     } finally {
       setLoading(false);
     }
-  }, [hostname, port, protocol, testServer, setMsg, setTestResult]);
+  }, [hostname, port, protocol, allowInsecure, testServer, setMsg, setTestResult]);
 
   // Handle server addition
   const handleAddServer = useCallback(
@@ -160,6 +188,7 @@ const ServerManagementTab = ({
           port: parseInt(port),
           protocol,
           entityName: entityName || 'Hyperweaver-Production',
+          allowInsecure,
         };
         if (useExistingApiKey) {
           serverData.apiKey = apiKey;
@@ -188,6 +217,7 @@ const ServerManagementTab = ({
       protocol,
       useExistingApiKey,
       apiKey,
+      allowInsecure,
       entityName,
       servers,
       addServer,
@@ -239,6 +269,8 @@ const ServerManagementTab = ({
                     setApiKey={setApiKey}
                     useExistingApiKey={useExistingApiKey}
                     setUseExistingApiKey={setUseExistingApiKey}
+                    allowInsecure={allowInsecure}
+                    setAllowInsecure={setAllowInsecure}
                     loading={loading}
                   />
                 </div>
@@ -282,6 +314,7 @@ const ServerManagementTab = ({
               onDelete={serverId => {
                 setConfirmDelete(serverId);
               }}
+              onToggleInsecure={handleToggleInsecure}
               loading={loading}
             />
           )}
@@ -331,6 +364,7 @@ ServerManagementTab.propTypes = {
     removeServer: PropTypes.func.isRequired,
     addServer: PropTypes.func.isRequired,
     testServer: PropTypes.func.isRequired,
+    updateServer: PropTypes.func.isRequired,
     refreshServers: PropTypes.func.isRequired,
     selectServer: PropTypes.func.isRequired,
   }).isRequired,
