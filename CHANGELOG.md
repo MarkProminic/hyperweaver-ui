@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.4](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.3...v0.10.4) (2026-07-03)
+
+
+### Bug Fixes
+
+* terminal id contract, ZFS pool size math, HostManage capability gating, allow_insecure editing, footer shell fit and PTY resize, dashboard fault alerts, delete-server crash, drop dead getSystemCPUCores ([9cfc99e](https://github.com/MarkProminic/hyperweaver-ui/commit/9cfc99e5a08f48a6cbb43510f375bb8a05fd0bfa))
+* vncViewer Issues ([a2eb5a4](https://github.com/MarkProminic/hyperweaver-ui/commit/a2eb5a432ac2bbf36cd5fcbb5ce32c3acebb5b69))
+
 ## [0.10.3](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.2...v0.10.3) (2026-07-03)
 
 
