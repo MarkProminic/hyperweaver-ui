@@ -256,7 +256,7 @@ const VncConsoleDisplay = ({
               <div className="text-center">
                 <div className="has-margin-bottom-12px">
                   <img
-                    src="/images/startcloud.svg"
+                    src="/ui/images/startcloud.svg"
                     alt="Start Console"
                     className="hw-startup-icon"
                   />

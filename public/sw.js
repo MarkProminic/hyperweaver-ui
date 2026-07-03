@@ -1,5 +1,5 @@
 // Hyperweaver Service Worker with Notification Support
-const CACHE_NAME = 'hyperweaver-v3'; // v3: content-hashed assets + /api/agents client (purges caches of pre-0.10.1 chunks)
+const CACHE_NAME = 'hyperweaver';
 const API_CACHE_NAME = 'hyperweaver-api-v1';
 
 // Files to cache immediately

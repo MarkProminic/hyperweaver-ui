@@ -103,7 +103,7 @@ const InactiveConsoleDisplay = ({
     <div className="hw-inactive-console-content">
       <div className="hw-text-placeholder text-center">
         <div className="has-margin-bottom-12px">
-          <img src="/images/startcloud.svg" alt="Start Console" className="hw-startup-icon" />
+          <img src="/ui/images/startcloud.svg" alt="Start Console" className="hw-startup-icon" />
         </div>
         <div className="fs-6 fw-medium mb-2">
           <strong>No Active Console Session</strong>

@@ -1,9 +1,10 @@
 import React, { useEffect, useContext, Suspense } from 'react';
 import { ResizableBox } from 'react-resizable';
-import { Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import { FooterProvider } from '../contexts/FooterContext';
+import { useMode } from '../contexts/ModeContext';
 import { useServers } from '../contexts/ServerContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
 
@@ -37,6 +38,7 @@ const LoadingSpinner = () => (
 
 const LayoutContent = () => {
   const { isAuthenticated } = useAuth();
+  const { isDirect } = useMode();
   const userSettings = useContext(UserSettings);
 
   const { servers, selectServer, selectZone, currentServer, currentZone } = useServers();
@@ -120,8 +122,15 @@ const LayoutContent = () => {
             <Routes>
               <Route path="" element={<Dashboard />} />
               <Route path="dashboard" element={<Dashboard />} />
-              <Route path="accounts" element={<Accounts />} />
-              <Route path="settings/hyperweaver" element={<HyperweaverSettings />} />
+              {/* Server-only pages: deep links (bookmarks, typed URLs) redirect in Direct mode */}
+              <Route
+                path="accounts"
+                element={isDirect ? <Navigate to="/ui" replace /> : <Accounts />}
+              />
+              <Route
+                path="settings/hyperweaver"
+                element={isDirect ? <Navigate to="/ui" replace /> : <HyperweaverSettings />}
+              />
               <Route path="settings/agent" element={<AgentSettings />} />
               <Route path="zones" element={<Zones />} />
               <Route path="hosts" element={<Hosts />} />
@@ -130,7 +139,10 @@ const LayoutContent = () => {
               <Route path="host-storage" element={<HostStorage />} />
               <Route path="host-devices" element={<HostDevices />} />
               <Route path="zone-register" element={<ZoneRegister />} />
-              <Route path="profile" element={<Profile />} />
+              <Route
+                path="profile"
+                element={isDirect ? <Navigate to="/ui" replace /> : <Profile />}
+              />
             </Routes>
           </Suspense>
         </div>

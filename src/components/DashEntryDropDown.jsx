@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useMode } from '../contexts/ModeContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
 
 const getExpandedState = (title, hostsExpanded, zonesExpanded, settingsExpanded) => {
@@ -16,6 +17,7 @@ const getExpandedState = (title, hostsExpanded, zonesExpanded, settingsExpanded)
 
 const DashEntryDropDown = ({ title, icon }) => {
   const navigate = useNavigate();
+  const { isDirect } = useMode();
   const userContext = useContext(UserSettings);
   const {
     hostsExpanded,
@@ -55,7 +57,8 @@ const DashEntryDropDown = ({ title, icon }) => {
     } else if (title === 'Zones') {
       navigate('/ui/zones');
     } else if (title === 'Settings') {
-      navigate('/ui/settings/hyperweaver');
+      // Direct mode has no Hyperweaver Server settings page — Agent settings is the only one
+      navigate(isDirect ? '/ui/settings/agent' : '/ui/settings/hyperweaver');
     }
   };
 
