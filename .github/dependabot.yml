@@ -12,16 +12,36 @@ updates:
       time: '09:00'
     # Allow both direct and indirect dependency updates
     open-pull-requests-limit: 10
-    # Group patch updates together to reduce noise
+    # xterm.js ecosystem — xterm 6 is a breaking major and the addon bumps track it,
+    # so they must migrate together (one PR) alongside code porting. react-xtermjs is
+    # the React wrapper, coupled to the same migration.
     groups:
+      xterm:
+        patterns:
+          - '@xterm/*'
+          - 'react-xtermjs'
+      # ESLint toolchain — eslint 10 needs matching plugin majors, so bump as one PR.
+      eslint:
+        patterns:
+          - 'eslint'
+          - 'eslint-*'
+          - '@eslint/*'
+          - 'globals'
+      # Everything else: group patch updates to reduce noise.
       patch-updates:
         patterns:
           - '*'
         update-types:
           - 'patch'
-    # Automatically merge minor and patch updates for trusted packages
-    reviewers:
-      - 'Makr91'
+    # Paused: xterm 6 is a migration we're not ready for, and the eslint 10 toolchain
+    # isn't plugin-ready. Dependabot won't reopen these until you delete the entries.
+    ignore:
+      - dependency-name: '@xterm/*'
+      - dependency-name: 'react-xtermjs'
+      - dependency-name: 'eslint'
+      - dependency-name: '@eslint/js'
+      - dependency-name: 'eslint-plugin-react-hooks'
+      - dependency-name: 'globals'
     labels:
       - 'dependencies'
       - 'automated'
