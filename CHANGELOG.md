@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.6](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.5...v0.10.6) (2026-07-03)
+
+
+### Bug Fixes
+
+* github template issues ([b8f6953](https://github.com/MarkProminic/hyperweaver-ui/commit/b8f6953da32540925a1cfc227cfcd963ecd86de8))
+* packages ([750b703](https://github.com/MarkProminic/hyperweaver-ui/commit/750b70369c44fa3e4e5aeb2882a262d4b8123166))
+* release please action ([2d37183](https://github.com/MarkProminic/hyperweaver-ui/commit/2d371839f7404bdd8842bfe4b4f136f3ceb232b2))
+
 ## [0.10.5](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.4...v0.10.5) (2026-07-03)
 
 
