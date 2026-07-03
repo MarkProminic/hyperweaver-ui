@@ -45,6 +45,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Bundle latest Hyperweaver docs into dist/docs
+        # Pulls the newest hyperweaver-docs release (version-less asset), so the UI
+        # artifact always ships current docs at /docs with no version to bump here.
+        run: |
+          echo "Fetching latest Hyperweaver docs artifact"
+          mkdir -p dist/docs
+          curl -fsSL "https://github.com/MarkProminic/hyperweaver-docs/releases/latest/download/hyperweaver-docs.tar.gz" | tar -xz -C dist/docs
+
       - name: Package and upload Hyperweaver UI artifact
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
