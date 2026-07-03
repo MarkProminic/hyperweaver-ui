@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.10.1](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.0...v0.10.1) (2026-07-03)
+
+
+### Bug Fixes
+
+* derive host-terminal WS path from session UUID, not echoed terminal_cookie ([c75316b](https://github.com/MarkProminic/hyperweaver-ui/commit/c75316b3f3c32faa75ac74c64d853d2f23b96ee6))
+* derive log-stream WebSocket path via mode-aware base path ([96a0f7d](https://github.com/MarkProminic/hyperweaver-ui/commit/96a0f7dcb68881e94d7444ce8a2439d3a93e57fe))
+* direct-mode settings nav + deep-link guards, /ui image paths, plain asset filenames ([aa880b6](https://github.com/MarkProminic/hyperweaver-ui/commit/aa880b6d3064c729f03c28506461ddd05fedb74f))
+* direct-mode settings nav + deep-link guards, /ui image paths, plain asset filenames ([941c4dc](https://github.com/MarkProminic/hyperweaver-ui/commit/941c4dcb9b9a0396aa69a361806610a5d4ede11e))
+* encode OIDC provider in redirect URL (CodeQL js/xss-through-dom) ([cedc042](https://github.com/MarkProminic/hyperweaver-ui/commit/cedc042b93a12387e13f0a46aaceee769c622cb9))
+
 ## [0.10.0](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.9.0...v0.10.0) (2026-07-02)
 
 
