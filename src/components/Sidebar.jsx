@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useMode } from '../contexts/ModeContext';
+import { useServers } from '../contexts/ServerContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
 
 import DashEntry from './DashEntry';
@@ -13,6 +14,7 @@ import SidebarZones from './SidebarZones';
 const Sidebar = () => {
   const { user } = useAuth();
   const { isDirect } = useMode();
+  const { currentServer } = useServers();
   const location = useLocation();
   const userSettings = useContext(UserSettings);
 
@@ -66,6 +68,26 @@ const Sidebar = () => {
           </div>
         )}
       </div>
+
+      {/* API Reference — live, dark-themed Swagger. Direct: this agent's own API at
+          /api-docs. Aggregated: the Server's own API, plus the selected host's agent API
+          which the Server relays at /agent/api-docs. Opens in a new tab (backend route,
+          not an SPA route); the Agent entry needs a selected host to resolve its id. */}
+      {isDirect ? (
+        <DashEntry title={'API Reference'} link={'/api-docs'} icon={'fas fa-code'} external />
+      ) : (
+        <>
+          <DashEntry title={'Server API'} link={'/api-docs'} icon={'fas fa-code'} external />
+          {currentServer?.id && (
+            <DashEntry
+              title={'Agent API'}
+              link={`/agent/api-docs?server=${currentServer.id}`}
+              icon={'fas fa-code'}
+              external
+            />
+          )}
+        </>
+      )}
 
       {/* Accounts (users/orgs) live on the Hyperweaver Server — no such thing in Direct mode */}
       {!isDirect && (user?.role === 'admin' || user?.role === 'super-admin') && (
