@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.5](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.4...v0.10.5) (2026-07-03)
+
+
+### Bug Fixes
+
+* adding git attributes to fix crlf issues ([b50e4d9](https://github.com/MarkProminic/hyperweaver-ui/commit/b50e4d9cbc5015408dd917854dab31b683f80365))
+* Including Docs in all UI Releases ([7abca64](https://github.com/MarkProminic/hyperweaver-ui/commit/7abca64a0d38ab7158c6f33a58f7a0bab7843f87))
+
 ## [0.10.4](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.3...v0.10.4) (2026-07-03)
 
 
