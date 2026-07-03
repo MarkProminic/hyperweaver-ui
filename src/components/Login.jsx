@@ -109,7 +109,7 @@ const Login = () => {
     setMsg('');
 
     // Direct redirect to provider-specific OIDC initiation endpoint
-    window.location.href = `/api/auth/oidc/${provider}`;
+    window.location.href = `/api/auth/oidc/${encodeURIComponent(provider)}`;
   };
 
   /**
