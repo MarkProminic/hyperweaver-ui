@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.7](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.6...v0.10.7) (2026-07-03)
+
+
+### Bug Fixes
+
+* Documentation ([7f62f3f](https://github.com/MarkProminic/hyperweaver-ui/commit/7f62f3f4a94ceb2c03d0237475f1df8479690f9c))
+
 ## [0.10.6](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.5...v0.10.6) (2026-07-03)
 
 
