@@ -13,10 +13,7 @@ const HostHeader = ({
   autoRefresh,
   setAutoRefresh,
 }) => (
-  <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <div>
-      <strong>Host Overview - {currentServer.hostname}</strong>
-    </div>
+  <div className="card-header d-flex justify-content-end align-items-center flex-wrap gap-2">
     <div>
       <div className="d-flex gap-2 flex-wrap">
         <select

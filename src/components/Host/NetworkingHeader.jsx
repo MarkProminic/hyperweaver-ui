@@ -13,10 +13,7 @@ const NetworkingHeader = ({
   timeWindow,
   setTimeWindow,
 }) => (
-  <div className="titlebar card-header active d-flex justify-content-between align-items-center flex-wrap gap-2 mb-0 p-3">
-    <div>
-      <strong>Network Monitoring</strong>
-    </div>
+  <div className="titlebar card-header active d-flex justify-content-end align-items-center flex-wrap gap-2 mb-0 p-3">
     <div>
       <div className="d-flex gap-2 flex-wrap">
         <select

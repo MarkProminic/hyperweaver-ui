@@ -1,7 +1,7 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import PropTypes from 'prop-types';
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useMode } from '../contexts/ModeContext';
@@ -117,6 +117,102 @@ DirectModeFields.propTypes = {
   loading: PropTypes.bool,
 };
 
+// Seconds to wait after a provider is chosen before auto-handing off to the IdP.
+const OIDC_REDIRECT_DELAY = 3;
+
+// OIDC redirect helper — module scope so it is NOT a hook dependency. Stashes the intended URL
+// (unless already on the login page) then hard-navigates to the Server's provider-start endpoint.
+// `register:true` adds ?register (C10) → the Server sends prompt=create → IdP registration page.
+const redirectToOidc = (provider, { register = false } = {}) => {
+  if (window.location.pathname !== '/ui/login') {
+    localStorage.setItem('hyperweaver_intended_url', window.location.pathname);
+  }
+  const query = register ? '?register' : '';
+  window.location.href = `/api/auth/oidc/${encodeURIComponent(provider)}${query}`;
+};
+
+/**
+ * Notice shown while an OIDC provider is selected: the auto-redirect countdown (the parent
+ * effect owns the timer) with immediate-go / cancel controls, or the static redirect copy.
+ */
+const OidcRedirectNotice = ({ authMethod, oidcCountdown, onCancel }) => (
+  <div className="alert alert-info mb-3">
+    <i className="fas fa-external-link-alt me-1" />
+    {oidcCountdown !== null && oidcCountdown > 0
+      ? `Redirecting you to sign in in ${oidcCountdown}…`
+      : 'You will be redirected to your identity provider to sign in.'}
+    {oidcCountdown !== null && (
+      <div className="mt-2 d-flex gap-2 justify-content-center">
+        <button
+          type="button"
+          className="btn btn-sm btn-primary"
+          onClick={() => redirectToOidc(authMethod.replace('oidc-', ''))}
+        >
+          Sign in now
+        </button>
+        <button type="button" className="btn btn-sm btn-outline-secondary" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    )}
+  </div>
+);
+
+OidcRedirectNotice.propTypes = {
+  authMethod: PropTypes.string,
+  oidcCountdown: PropTypes.number,
+  onCancel: PropTypes.func,
+};
+
+/**
+ * Register affordance (C9). Local registration ON → the local form link. OFF → route "Register"
+ * to the IdP (?register → prompt=create) via the selected (or first enabled) OIDC provider;
+ * OFF with no OIDC provider → no self-registration path, render nothing.
+ */
+const RegisterPrompt = ({ authMethods, authMethod, registrationEnabled }) => {
+  if (registrationEnabled) {
+    return (
+      <div className="mt-3">
+        <p className="mb-0">
+          Don&apos;t have an account? <a href="/register">Register here</a>
+        </p>
+      </div>
+    );
+  }
+  const method =
+    authMethods.find(m => m.id === authMethod && m.id.startsWith('oidc-')) ||
+    authMethods.find(m => m.id.startsWith('oidc-') && m.enabled);
+  if (!method) {
+    return null;
+  }
+  return (
+    <div className="mt-3">
+      <p className="mb-0">
+        Don&apos;t have an account?{' '}
+        <button
+          type="button"
+          className="btn btn-link p-0 align-baseline"
+          onClick={() => redirectToOidc(method.id.slice('oidc-'.length), { register: true })}
+        >
+          Create one with {method.name}
+        </button>
+      </p>
+    </div>
+  );
+};
+
+RegisterPrompt.propTypes = {
+  authMethods: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string,
+      name: PropTypes.string,
+      enabled: PropTypes.bool,
+    })
+  ),
+  authMethod: PropTypes.string,
+  registrationEnabled: PropTypes.bool,
+};
+
 /**
  * Login component for Hyperweaver authentication
  * @returns {JSX.Element} Login component
@@ -130,10 +226,13 @@ const Login = () => {
   const [bootstrappedKey, setBootstrappedKey] = useState(null);
   const [authMethod, setAuthMethod] = useState('local');
   const [authMethods, setAuthMethods] = useState([]);
+  const [registrationEnabled, setRegistrationEnabled] = useState(true);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [methodsLoading, setMethodsLoading] = useState(true);
+  const [oidcCountdown, setOidcCountdown] = useState(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, loginWithApiKey, bootstrapFirstKey, isAuthenticated, getAuthMethods } = useAuth();
   const { isDirect, ready: modeReady, serverInfo, error: modeError, refresh } = useMode();
 
@@ -154,6 +253,7 @@ const Login = () => {
     try {
       setMethodsLoading(true);
       const result = await getAuthMethods();
+      setRegistrationEnabled(result.localRegistrationEnabled !== false);
 
       if (result.success && result.methods.length > 0) {
         setAuthMethods(result.methods);
@@ -198,6 +298,39 @@ const Login = () => {
     loadAuthMethods();
   }, [modeReady, loadAuthMethods]);
 
+  // Auto-redirect countdown: once a provider is chosen (dropdown or ?provider= URL), tick down then
+  // hand off to the IdP. Cancellable from the alert. Runs only while active (oidcCountdown !== null).
+  useEffect(() => {
+    if (oidcCountdown === null) {
+      return undefined;
+    }
+    if (oidcCountdown <= 0) {
+      redirectToOidc(authMethod.replace('oidc-', ''));
+      return undefined;
+    }
+    const timer = setTimeout(() => setOidcCountdown(count => count - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [oidcCountdown, authMethod]);
+
+  // Provider-via-URL: /ui/login?provider=<name> pre-selects that OIDC provider and starts the
+  // auto-redirect once. Lets a link (or the Server) deep-link straight to a specific IdP.
+  const urlProviderHandled = useRef(false);
+  useEffect(() => {
+    if (urlProviderHandled.current || methodsLoading || isDirect) {
+      return;
+    }
+    const requested = searchParams.get('provider');
+    if (!requested) {
+      return;
+    }
+    const methodId = `oidc-${requested}`;
+    if (authMethods.some(method => method.id === methodId && method.enabled)) {
+      urlProviderHandled.current = true;
+      setAuthMethod(methodId);
+      setOidcCountdown(OIDC_REDIRECT_DELAY);
+    }
+  }, [methodsLoading, isDirect, searchParams, authMethods]);
+
   /**
    * Handle auth method selection change
    */
@@ -205,6 +338,9 @@ const Login = () => {
     setAuthMethod(newMethod);
     localStorage.setItem('hyperweaver_auth_method', newMethod);
     setMsg(''); // Clear any previous error messages
+    // Selecting an OIDC provider is explicit intent to use it — start a short countdown, then
+    // auto-hand off to the IdP (matches the "you will be redirected" copy). Any other method cancels.
+    setOidcCountdown(newMethod.startsWith('oidc-') ? OIDC_REDIRECT_DELAY : null);
   };
 
   /**
@@ -212,16 +348,9 @@ const Login = () => {
    * @param {string} provider
    */
   const handleOidcLogin = provider => {
-    // Store intended URL for after login
-    if (window.location.pathname !== '/ui/login') {
-      localStorage.setItem('hyperweaver_intended_url', window.location.pathname);
-    }
-
     setLoading(true);
     setMsg('');
-
-    // Direct redirect to provider-specific OIDC initiation endpoint
-    window.location.href = `/api/auth/oidc/${encodeURIComponent(provider)}`;
+    redirectToOidc(provider);
   };
 
   /**
@@ -494,13 +623,14 @@ const Login = () => {
                   </>
                 )}
 
-                {/* Show OIDC information when an OIDC provider is selected */}
+                {/* OIDC provider selected: the (auto-)redirect notice + controls. Once a provider
+                    is chosen we count down and hand off automatically; the user can go now or cancel. */}
                 {authMethod.startsWith('oidc-') && (
-                  <div className="alert alert-info mb-3">
-                    <i className="fas fa-external-link-alt" />
-                    <br />
-                    You will be redirected to your identity provider to sign in.
-                  </div>
+                  <OidcRedirectNotice
+                    authMethod={authMethod}
+                    oidcCountdown={oidcCountdown}
+                    onCancel={() => setOidcCountdown(null)}
+                  />
                 )}
                 {/* Authentication Method Selector - Show only if multiple methods available */}
                 {!methodsLoading && authMethods.length > 1 && (
@@ -542,11 +672,11 @@ const Login = () => {
                   </div>
                 )}
                 {!isDirect && (
-                  <div className="mt-3">
-                    <p className="mb-0">
-                      Don&apos;t have an account? <a href="/register">Register here</a>
-                    </p>
-                  </div>
+                  <RegisterPrompt
+                    authMethods={authMethods}
+                    authMethod={authMethod}
+                    registrationEnabled={registrationEnabled}
+                  />
                 )}
                 <div className="mt-3">
                   <a href="/docs" className="text-muted" target="_blank" rel="noopener noreferrer">

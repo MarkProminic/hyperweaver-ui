@@ -1,10 +1,7 @@
 import PropTypes from 'prop-types';
 
 const DeviceHeader = ({ selectedServer, loading, loadDeviceData }) => (
-  <div className="titlebar active card-header d-flex justify-content-between align-items-center flex-wrap gap-2 p-3">
-    <div className="d-flex align-items-center gap-2">
-      <strong>Device Monitoring</strong>
-    </div>
+  <div className="titlebar card-header active d-flex justify-content-end align-items-center flex-wrap gap-2 p-3">
     <div className="d-flex align-items-center gap-2">
       <button
         type="button"

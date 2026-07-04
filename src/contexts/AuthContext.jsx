@@ -37,6 +37,10 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('authToken'));
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Aggregate-root display label (contract C6). The Server returns it as a top-level
+  // sibling of `user` on /api/auth/verify, ALWAYS (independent of the pre-auth
+  // public_datacenter_label toggle). Direct-mode agents don't send it (no root node).
+  const [datacenterLabel, setDatacenterLabel] = useState(null);
 
   const fetchGravatarData = useCallback(
     async userData => {
@@ -89,6 +93,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
+    setDatacenterLabel(null);
     delete axios.defaults.headers.common.Authorization;
   }, []);
 
@@ -125,6 +130,7 @@ export const AuthProvider = ({ children }) => {
             setUser(userWithGravatar);
             setToken(storedToken);
             setIsAuthenticated(true);
+            setDatacenterLabel(response.data.datacenter_label ?? null);
 
             // Set default authorization header for future requests
             axios.defaults.headers.common.Authorization = `Bearer ${storedToken}`;
@@ -161,6 +167,28 @@ export const AuthProvider = ({ children }) => {
     }
     initializeAuth();
   }, [modeReady, initializeAuth]);
+
+  /**
+   * Global 401/403 handler. A mid-session token that stops verifying — e.g. server-side
+   * revocation on back-channel logout (T9), or expiry — clears auth so Layout's guard bounces
+   * to /login. This is what makes server-initiated logout UI-transparent. Excludes the auth
+   * probes themselves so a bad-password login 401 stays an inline error, not a forced logout.
+   */
+  useEffect(() => {
+    const interceptorId = axios.interceptors.response.use(
+      response => response,
+      error => {
+        const status = error.response?.status;
+        const url = error.config?.url || '';
+        const isAuthProbe = /\/api\/auth\/(?:login|ldap|verify)|\/api-keys\/info/.test(url);
+        if ((status === 401 || status === 403) && isAuthenticated && !isAuthProbe) {
+          clearAuth();
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => axios.interceptors.response.eject(interceptorId);
+  }, [isAuthenticated, clearAuth]);
 
   /**
    * Login user with credentials
@@ -295,6 +323,7 @@ export const AuthProvider = ({ children }) => {
       return {
         success: true,
         methods: [{ id: 'apikey', name: 'API Key', enabled: true }],
+        localRegistrationEnabled: false, // agents have no user registration at all
       };
     }
     try {
@@ -302,12 +331,16 @@ export const AuthProvider = ({ children }) => {
       return {
         success: true,
         methods: response.data.methods || [],
+        // C9: sibling of `methods`; when false the UI hides the local register form and routes
+        // "Register" to the IdP (?register). Defaults true when the server omits it.
+        localRegistrationEnabled: response.data.local_registration_enabled !== false,
       };
     } catch (methodsErr) {
       console.error('Get auth methods error:', methodsErr);
       return {
         success: false,
         methods: [{ id: 'local', name: 'Local Account', enabled: true }], // Fallback
+        localRegistrationEnabled: true,
         message: methodsErr.response?.data?.message || 'Failed to load authentication methods',
       };
     }
@@ -343,19 +376,28 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Logout user and clear authentication state
+   * Logout user and clear authentication state.
+   * @param {boolean} localOnly - FEDERATED (default): the Server revokes the app JWT AND returns an
+   *   RP-initiated end-session URL (T9), so the caller can redirect the browser to the IdP and end
+   *   the SSO session too ("log out everywhere"). LOCAL (`true`): the Server revokes only the app
+   *   JWT and leaves the IdP SSO session intact — returns no redirect (seamless re-login). The
+   *   Server reads this off the POST body (`local`). Non-OIDC sessions return no redirect either way.
+   * @returns {Promise<string|null>} RP-initiated end-session URL, or null.
    */
-  const logout = async () => {
+  const logout = async (localOnly = false) => {
+    let redirectUrl = null;
     try {
       // Agents have no logout endpoint — the key is simply forgotten client-side.
       if (!isDirect) {
-        await axios.post('/api/auth/logout');
+        const response = await axios.post('/api/auth/logout', { local: localOnly });
+        redirectUrl = response.data?.redirect_url || null;
       }
     } catch (logoutErr) {
       console.error('Logout error:', logoutErr);
     } finally {
       clearAuth();
     }
+    return redirectUrl;
   };
 
   /**
@@ -378,6 +420,7 @@ export const AuthProvider = ({ children }) => {
         const userWithGravatar = await fetchGravatarData(response.data.user);
         setUser(userWithGravatar);
         setIsAuthenticated(true);
+        setDatacenterLabel(response.data.datacenter_label ?? null);
         console.log('✅ External authentication processed successfully');
       } else {
         throw new Error('Invalid token received from external provider');
@@ -444,6 +487,7 @@ export const AuthProvider = ({ children }) => {
     token,
     loading,
     isAuthenticated,
+    datacenterLabel,
     login,
     loginWithApiKey,
     bootstrapFirstKey,

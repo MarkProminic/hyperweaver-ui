@@ -1,7 +1,6 @@
-import PropTypes from 'prop-types';
+import { useState } from 'react';
 import Dropdown from 'react-bootstrap/Dropdown';
 
-import { useMode } from '../contexts/ModeContext';
 import {
   canStartStopZones,
   canRestartZones,
@@ -11,21 +10,36 @@ import {
 } from '../utils/permissions';
 
 import { FormModal } from './common';
+import Breadcrumb from './Navbar/Breadcrumb';
+import BulkActionsModal from './Navbar/BulkActionsModal';
+import ContextTabs from './Navbar/ContextTabs';
 import { HostRestartOptions, HostShutdownOptions } from './Navbar/HostActionModalContent';
-import {
-  getZoneStatus,
-  getStatusDotColor,
-  getActionVariant,
-  getActionIcon,
-  isShareableRoute,
-} from './Navbar/navbarUtils';
+import { getActionVariant, getActionIcon, isShareableRoute } from './Navbar/navbarUtils';
 import { useNavbarActions } from './Navbar/useNavbarActions';
 
+/**
+ * Navbar — two rows (contract §2, XenCenter-style):
+ *   row 1: breadcrumb (Datacenter ▸ Host ▸ Machine) + scope-aware Controls dropdown
+ *   row 2: context tabs for the focused node (ContextTabs)
+ *
+ * Selection moved to the SidebarTree, so the old Host/Zone selector dropdowns are gone; the
+ * breadcrumb takes over their labeling role. The Controls dropdown (Zone/Host actions) and its
+ * confirm modal are unchanged.
+ */
+// Routes whose top-right control is the Host Actions dropdown (host context). Explicit, so it's
+// obvious which routes count — matches ContextTabs' host set (minus the Settings tab, which
+// needs no power controls). Dashboard → Datacenter controls; /ui/zones → Zone controls.
+const HOST_CONTROL_ROUTES = [
+  '/ui/hosts',
+  '/ui/host-manage',
+  '/ui/host-networking',
+  '/ui/host-devices',
+  '/ui/host-storage',
+];
+
 const Navbar = () => {
-  const { isDirect } = useMode();
   const {
     isModal,
-    zones,
     currentMode,
     setCurrentMode,
     currentAction,
@@ -45,33 +59,11 @@ const Navbar = () => {
     allServers,
     currentServer,
     currentZone,
-    selectServer,
-    selectZone,
-    clearZone,
   } = useNavbarActions();
 
-  /**
-   * No server selected: Aggregated mode offers the Add Server CTA; Direct mode has
-   * exactly one host (the origin agent), so show a plain connecting state instead.
-   */
-  const renderNoServerFallback = () =>
-    isDirect ? (
-      <span className="btn btn-outline-secondary d-flex align-items-center gap-2 disabled">
-        <i className="fas fa-server" />
-        <span className="text-uppercase small opacity-75">Host</span>
-        <span className="fw-semibold opacity-75">Connecting…</span>
-      </span>
-    ) : (
-      <a
-        href="/ui/settings/hyperweaver?tab=servers"
-        className="btn btn-outline-secondary d-flex align-items-center gap-2"
-      >
-        <i className="fas fa-server" />
-        <span className="text-uppercase small opacity-75">Host</span>
-        <span className="fw-semibold">Add Server</span>
-        <i className="fas fa-plus text-success" />
-      </a>
-    );
+  // Bulk Actions modal target: { action, servers } or null (phase B). Servers = one host
+  // (host scope) or all registered hosts (Datacenter scope).
+  const [bulk, setBulk] = useState(null);
 
   const ZoneControlDropdown = () => {
     const userRole = user?.role;
@@ -259,6 +251,39 @@ const Navbar = () => {
             </>
           )}
 
+          {canStartStopZones(userRole) && (
+            <>
+              <Dropdown.Divider />
+              <Dropdown.Header>Bulk machine actions</Dropdown.Header>
+              <Dropdown.Item
+                as="button"
+                type="button"
+                onClick={() => setBulk({ action: 'start', servers: [currentServer] })}
+              >
+                <i className="fas fa-play text-success me-2" />
+                Start machines…
+              </Dropdown.Item>
+              <Dropdown.Item
+                as="button"
+                type="button"
+                onClick={() => setBulk({ action: 'stop', servers: [currentServer] })}
+              >
+                <i className="fas fa-stop text-danger me-2" />
+                Shutdown machines…
+              </Dropdown.Item>
+              {canRestartZones(userRole) && (
+                <Dropdown.Item
+                  as="button"
+                  type="button"
+                  onClick={() => setBulk({ action: 'restart', servers: [currentServer] })}
+                >
+                  <i className="fas fa-redo text-warning me-2" />
+                  Restart machines…
+                </Dropdown.Item>
+              )}
+            </>
+          )}
+
           {!canControlHosts(userRole) && (
             <>
               <Dropdown.Divider />
@@ -274,173 +299,152 @@ const Navbar = () => {
     );
   };
 
-  const ZoneList = ({ zones: zoneData }) => (
-    <>
-      {currentZone && (
-        <Dropdown.Item as="button" type="button" onClick={clearZone}>
-          <i className="fas fa-times text-warning me-2" />
-          Deselect Zone
-        </Dropdown.Item>
-      )}
-      {zoneData.data.allzones
-        .filter(zone => zone !== currentZone)
-        .map(zone => {
-          const status = getZoneStatus(zones, zone);
-          const statusColor = getStatusDotColor(status);
+  const DatacenterControlDropdown = () => {
+    const userRole = user?.role;
 
-          return (
-            <Dropdown.Item
-              as="button"
-              type="button"
-              key={zone}
-              onClick={() => selectZone(zone)}
-              className="d-flex align-items-center gap-2"
-            >
-              <span>{zone}</span>
-              <span className={statusColor} title={`Status: ${status}`}>
-                <i className="fas fa-circle fa-xs" />
-              </span>
-            </Dropdown.Item>
-          );
-        })}
-    </>
-  );
+    return (
+      <Dropdown align="end">
+        <Dropdown.Toggle variant="outline-secondary">Bulk Actions</Dropdown.Toggle>
+        <Dropdown.Menu>
+          {canStartStopZones(userRole) ? (
+            <>
+              <Dropdown.Header>Across all hosts</Dropdown.Header>
+              <Dropdown.Item
+                as="button"
+                type="button"
+                onClick={() => setBulk({ action: 'start', servers: allServers })}
+              >
+                <i className="fas fa-play text-success me-2" />
+                Start machines…
+              </Dropdown.Item>
+              <Dropdown.Item
+                as="button"
+                type="button"
+                onClick={() => setBulk({ action: 'stop', servers: allServers })}
+              >
+                <i className="fas fa-stop text-danger me-2" />
+                Shutdown machines…
+              </Dropdown.Item>
+              {canRestartZones(userRole) && (
+                <Dropdown.Item
+                  as="button"
+                  type="button"
+                  onClick={() => setBulk({ action: 'restart', servers: allServers })}
+                >
+                  <i className="fas fa-redo text-warning me-2" />
+                  Restart machines…
+                </Dropdown.Item>
+              )}
+            </>
+          ) : (
+            <div className="text-muted text-center p-2 small">
+              Bulk actions require admin privileges
+            </div>
+          )}
+        </Dropdown.Menu>
+      </Dropdown>
+    );
+  };
 
-  ZoneList.propTypes = {
-    zones: PropTypes.shape({
-      data: PropTypes.shape({
-        allzones: PropTypes.arrayOf(PropTypes.string).isRequired,
-      }).isRequired,
-    }).isRequired,
+  // Controls are scope-aware, driven by the route (like the breadcrumb + tabs): the machine
+  // view → machine controls; a host view → host actions + host-scope bulk; the Datacenter /
+  // Dashboard → cross-host bulk. Other pages (accounts/settings/profile) → no controls.
+  const renderControls = () => {
+    const path = location.pathname;
+    if (path === '/ui/zones') {
+      return <ZoneControlDropdown />;
+    }
+    if (path === '/ui' || path === '/ui/dashboard') {
+      return <DatacenterControlDropdown />;
+    }
+    if (HOST_CONTROL_ROUTES.includes(path)) {
+      return <HostControlDropdown />;
+    }
+    return null;
   };
 
   return (
     <div>
+      {/* Confirm modal for host/zone actions (portal — placement here is irrelevant) */}
+      {!isModal && (
+        <FormModal
+          isOpen={!isModal}
+          onClose={handleModalClick}
+          onSubmit={() =>
+            currentMode === 'host'
+              ? handleHostAction(currentAction)
+              : handleZoneAction(currentAction)
+          }
+          title={`Confirm ${currentMode} ${currentAction}`}
+          icon={getActionIcon(currentAction)}
+          submitText={loading ? 'Processing...' : currentAction}
+          submitVariant={getActionVariant(currentAction)}
+          loading={loading}
+        >
+          {currentMode === 'host' && currentServer && (
+            <div>
+              <div className="alert alert-warning">
+                <p>
+                  <strong>Target:</strong> {currentServer.hostname}
+                </p>
+                <p>
+                  This action will {currentAction === 'restart' ? 'restart' : 'shutdown'} the entire
+                  host system.
+                </p>
+                <p>
+                  <strong>Warning:</strong> This will interrupt all system services and user
+                  sessions.
+                </p>
+              </div>
+
+              {currentAction === 'restart' && (
+                <HostRestartOptions
+                  hostActionOptions={hostActionOptions}
+                  setHostActionOptions={setHostActionOptions}
+                />
+              )}
+
+              {currentAction === 'shutdown' && (
+                <HostShutdownOptions
+                  hostActionOptions={hostActionOptions}
+                  setHostActionOptions={setHostActionOptions}
+                />
+              )}
+            </div>
+          )}
+          {currentMode === 'zone' && currentZone && (
+            <div className="alert alert-info">
+              <p>
+                <strong>Target:</strong> {currentZone}
+              </p>
+              <p>This action will be performed on the selected zone.</p>
+            </div>
+          )}
+        </FormModal>
+      )}
+
+      {/* Row 1: breadcrumb + scope-aware Controls */}
       <nav
-        className="d-flex justify-content-between align-items-center gap-2 p-2"
+        className="d-flex justify-content-between align-items-center gap-2 px-2 py-1"
         role="navigation"
         aria-label="main navigation"
       >
-        {!isModal && (
-          <FormModal
-            isOpen={!isModal}
-            onClose={handleModalClick}
-            onSubmit={() =>
-              currentMode === 'host'
-                ? handleHostAction(currentAction)
-                : handleZoneAction(currentAction)
-            }
-            title={`Confirm ${currentMode} ${currentAction}`}
-            icon={getActionIcon(currentAction)}
-            submitText={loading ? 'Processing...' : currentAction}
-            submitVariant={getActionVariant(currentAction)}
-            loading={loading}
-          >
-            {currentMode === 'host' && currentServer && (
-              <div>
-                <div className="alert alert-warning">
-                  <p>
-                    <strong>Target:</strong> {currentServer.hostname}
-                  </p>
-                  <p>
-                    This action will {currentAction === 'restart' ? 'restart' : 'shutdown'} the
-                    entire host system.
-                  </p>
-                  <p>
-                    <strong>Warning:</strong> This will interrupt all system services and user
-                    sessions.
-                  </p>
-                </div>
-
-                {currentAction === 'restart' && (
-                  <HostRestartOptions
-                    hostActionOptions={hostActionOptions}
-                    setHostActionOptions={setHostActionOptions}
-                  />
-                )}
-
-                {currentAction === 'shutdown' && (
-                  <HostShutdownOptions
-                    hostActionOptions={hostActionOptions}
-                    setHostActionOptions={setHostActionOptions}
-                  />
-                )}
-              </div>
-            )}
-            {currentMode === 'zone' && currentZone && (
-              <div className="alert alert-info">
-                <p>
-                  <strong>Target:</strong> {currentZone}
-                </p>
-                <p>This action will be performed on the selected zone.</p>
-              </div>
-            )}
-          </FormModal>
-        )}
-
-        <div className="d-flex align-items-center gap-2">
-          {currentServer ? (
-            <Dropdown>
-              <Dropdown.Toggle
-                variant="outline-secondary"
-                className="d-flex align-items-center gap-2"
-              >
-                <i className="fas fa-server" />
-                <span className="text-uppercase small opacity-75">Host</span>
-                <span className="fw-semibold">{currentServer.hostname}</span>
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                {allServers &&
-                  allServers.map(server => (
-                    <Dropdown.Item
-                      as="button"
-                      type="button"
-                      key={server.hostname}
-                      active={server.hostname === currentServer.hostname}
-                      onClick={() => selectServer(server)}
-                      className="d-flex align-items-center gap-2"
-                    >
-                      <i className="fas fa-server" />
-                      <span>{server.hostname}</span>
-                    </Dropdown.Item>
-                  ))}
-              </Dropdown.Menu>
-            </Dropdown>
-          ) : (
-            renderNoServerFallback()
-          )}
-
-          <div className="vr mx-1" />
-
-          <Dropdown>
-            <Dropdown.Toggle
-              variant="outline-secondary"
-              className="d-flex align-items-center gap-2"
-            >
-              <i className="fab fa-hive" />
-              <span className="text-uppercase small opacity-75">Zone</span>
-              {currentZone ? (
-                <span className="d-flex align-items-center gap-2">
-                  <span className="fw-semibold">{currentZone}</span>
-                  <span
-                    className={getStatusDotColor(getZoneStatus(zones, currentZone))}
-                    title={`Status: ${getZoneStatus(zones, currentZone)}`}
-                  >
-                    <i className="fas fa-circle fa-xs" />
-                  </span>
-                </span>
-              ) : (
-                <span className="fw-semibold opacity-75">None</span>
-              )}
-            </Dropdown.Toggle>
-            <Dropdown.Menu>{zones && <ZoneList zones={zones} />}</Dropdown.Menu>
-          </Dropdown>
-        </div>
-
-        <div className="d-flex align-items-center">
-          {currentZone ? <ZoneControlDropdown /> : <HostControlDropdown />}
-        </div>
+        <Breadcrumb />
+        <div className="d-flex align-items-center flex-shrink-0">{renderControls()}</div>
       </nav>
+
+      {/* Row 2: context tabs for the focused node */}
+      <ContextTabs />
+
+      {/* Bulk Actions modal (phase B) — scope-aware, launched from the Controls dropdowns */}
+      {bulk && (
+        <BulkActionsModal
+          show
+          action={bulk.action}
+          servers={bulk.servers}
+          onClose={() => setBulk(null)}
+        />
+      )}
 
       {recoveryFailed && (
         <div className="alert alert-warning alert-dismissible m-2">

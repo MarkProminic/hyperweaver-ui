@@ -166,7 +166,7 @@ const Layout = () => {
       if (currentUrl !== '/ui' && currentUrl !== '/ui/') {
         localStorage.setItem('hyperweaver_intended_url', currentUrl);
       }
-      navigate('/login');
+      navigate('/ui/login');
     }
   }, [isAuthenticated, loading, navigate]);
 

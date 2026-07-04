@@ -8,7 +8,7 @@ const SidebarHeader = () => {
   const handleClick = () => {
     if (userContext.sidebarMinimized) {
       userContext.setSidebarMinimized(false);
-      userContext.setSidebarWidth(240);
+      userContext.setSidebarWidth(260);
     } else {
       userContext.setSidebarMinimized(true);
     }
@@ -48,7 +48,7 @@ const SidebarHeader = () => {
     <div
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`btn w-100 d-flex align-items-center gap-2 ${isIconOnly ? 'justify-content-center px-0' : 'justify-content-between'}`}
+      className={`btn w-100 d-flex align-items-center gap-2 ${isIconOnly ? 'justify-content-center px-0' : 'justify-content-between hw-sidebar-brand'}`}
       role="button"
       tabIndex={0}
     >

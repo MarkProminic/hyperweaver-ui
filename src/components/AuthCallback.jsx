@@ -15,8 +15,12 @@ const AuthCallback = () => {
   const { setAuthData } = useAuth();
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    const error = searchParams.get('error');
+    // The Server hands the app JWT off via the URL FRAGMENT (#token=…), NOT a query param
+    // (contract §5.2 #1) — fragments aren't sent in Referer headers, server logs, or history.
+    // Read it from location.hash; keep the query fallback for error redirects.
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const token = hashParams.get('token');
+    const error = hashParams.get('error') || searchParams.get('error');
 
     if (error) {
       // Handle authentication errors
@@ -54,6 +58,8 @@ const AuthCallback = () => {
       try {
         // Update auth context (this will also store the token with correct key)
         setAuthData(token);
+        // Strip the token from the address bar + history now that it's stored.
+        window.history.replaceState(null, '', window.location.pathname);
 
         console.log('✅ Authentication successful, token stored');
 

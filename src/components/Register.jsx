@@ -25,7 +25,7 @@ const Register = () => {
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { register, isAuthenticated } = useAuth();
+  const { register, isAuthenticated, getAuthMethods } = useAuth();
   const { isDirect, ready: modeReady } = useMode();
 
   /**
@@ -68,8 +68,15 @@ const Register = () => {
     const checkSetupStatus = async () => {
       try {
         const response = await axios.get('/api/auth/setup-status');
-        if (response.data.success) {
-          setNeedsSetup(response.data.needsSetup);
+        const setupNeeded = response.data.success ? response.data.needsSetup : false;
+        setNeedsSetup(setupNeeded);
+        // C9: local registration disabled + not the first-user bootstrap → there is no local form
+        // to show; send them to the login page, which offers registration through the IdP.
+        if (!setupNeeded) {
+          const methods = await getAuthMethods();
+          if (methods.localRegistrationEnabled === false) {
+            navigate('/ui/login');
+          }
         }
       } catch (setupErr) {
         console.error('Error checking setup status:', setupErr);
@@ -86,7 +93,7 @@ const Register = () => {
       setInviteCode(inviteParam);
       validateInvitation(inviteParam);
     }
-  }, [searchParams]);
+  }, [searchParams, getAuthMethods, navigate]);
 
   /**
    * Handle registration form submission

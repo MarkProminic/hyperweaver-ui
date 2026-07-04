@@ -30,7 +30,11 @@ const App = () => (
                 <BrowserRouter>
                   <Routes>
                     <Route exact path="/" element={<Landing />} />
-                    <Route exact path="/login" element={<Login />} />
+                    {/* Canonical login is /ui/login — it's under the server-served /ui/ base (so a
+                        refresh/deep-link resolves), and Login/AuthCallback/the server's OIDC
+                        error + ?sso=unavailable redirects all target it. Bare /login funnels here. */}
+                    <Route path="/ui/login" element={<Login />} />
+                    <Route exact path="/login" element={<Navigate to="/ui/login" replace />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/setup" element={<ServerSetup />} />
                     <Route path="/ui/auth/callback" element={<AuthCallback />} />

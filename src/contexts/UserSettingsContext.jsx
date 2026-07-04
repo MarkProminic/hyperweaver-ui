@@ -12,7 +12,7 @@ const UserSettingsProvider = ({ children }) => {
 
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('hyperweaver_sidebar_width');
-    return saved ? parseInt(saved) : 240;
+    return saved ? parseInt(saved) : 260;
   });
 
   const [footerHeight, setFooterHeight] = useState(() => {
