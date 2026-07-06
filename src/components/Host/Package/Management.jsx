@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { useState } from 'react';
 
 import { useServers } from '../../../contexts/ServerContext';
+import { hasFeature } from '../../../utils/capabilities';
 import RepositorySection from '../RepositorySection';
 import SystemUpdatesSection from '../SystemUpdatesSection';
 
@@ -21,9 +22,13 @@ const PackageManagement = ({ server }) => {
     );
   }
 
+  // Repositories rides its own token — /system/repositories is a separate
+  // surface from /system/packages on the agents.
   const sections = [
     { key: 'packages', label: 'Packages', icon: 'fa-cube' },
-    { key: 'repositories', label: 'Repositories', icon: 'fa-database' },
+    ...(hasFeature(server, 'repositories')
+      ? [{ key: 'repositories', label: 'Repositories', icon: 'fa-database' }]
+      : []),
     { key: 'updates', label: 'Updates', icon: 'fa-download' },
   ];
 
@@ -63,7 +68,7 @@ const PackageManagement = ({ server }) => {
       <div className="section-content">
         {activeSection === 'packages' && <PackageSection server={server} onError={setError} />}
 
-        {activeSection === 'repositories' && (
+        {activeSection === 'repositories' && hasFeature(server, 'repositories') && (
           <RepositorySection server={server} onError={setError} />
         )}
 

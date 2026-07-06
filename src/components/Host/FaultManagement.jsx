@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
 
+import { hasFeature } from '../../utils/capabilities';
+
 import FaultList from './FaultList';
 import FaultManagerConfig from './FaultManagerConfig';
 import SyslogConfiguration from './SyslogConfiguration';
@@ -17,6 +19,12 @@ const FaultManagement = ({ server }) => {
     );
   }
 
+  // The log sub-tabs ride their own tokens, not the parent fault-management
+  // token: `log-streaming` gates /system/logs/* (viewer + WS streaming),
+  // `syslog` gates /system/syslog/* (config family).
+  const logsAvailable = hasFeature(server, 'log-streaming');
+  const syslogAvailable = hasFeature(server, 'syslog');
+
   return (
     <div>
       {/* Sub-Tab Navigation */}
@@ -31,16 +39,18 @@ const FaultManagement = ({ server }) => {
             <span>Current Faults</span>
           </button>
         </li>
-        <li className="nav-item">
-          <button
-            type="button"
-            className={`nav-link ${activeTab === 'logs' ? 'active' : ''}`}
-            onClick={() => setActiveTab('logs')}
-          >
-            <i className="fas fa-file-alt me-2" />
-            <span>System Logs</span>
-          </button>
-        </li>
+        {logsAvailable && (
+          <li className="nav-item">
+            <button
+              type="button"
+              className={`nav-link ${activeTab === 'logs' ? 'active' : ''}`}
+              onClick={() => setActiveTab('logs')}
+            >
+              <i className="fas fa-file-alt me-2" />
+              <span>System Logs</span>
+            </button>
+          </li>
+        )}
         <li className="nav-item">
           <button
             type="button"
@@ -51,16 +61,18 @@ const FaultManagement = ({ server }) => {
             <span>Configuration</span>
           </button>
         </li>
-        <li className="nav-item">
-          <button
-            type="button"
-            className={`nav-link ${activeTab === 'syslog-config' ? 'active' : ''}`}
-            onClick={() => setActiveTab('syslog-config')}
-          >
-            <i className="fas fa-edit me-2" />
-            <span>Syslog Config</span>
-          </button>
-        </li>
+        {syslogAvailable && (
+          <li className="nav-item">
+            <button
+              type="button"
+              className={`nav-link ${activeTab === 'syslog-config' ? 'active' : ''}`}
+              onClick={() => setActiveTab('syslog-config')}
+            >
+              <i className="fas fa-edit me-2" />
+              <span>Syslog Config</span>
+            </button>
+          </li>
+        )}
       </ul>
 
       {/* Tab Content */}
@@ -82,7 +94,7 @@ const FaultManagement = ({ server }) => {
           </div>
         )}
 
-        {activeTab === 'logs' && (
+        {activeTab === 'logs' && logsAvailable && (
           <div>
             <div className="mb-4">
               <h3 className="fs-6 fw-bold">
@@ -118,7 +130,7 @@ const FaultManagement = ({ server }) => {
           </div>
         )}
 
-        {activeTab === 'syslog-config' && (
+        {activeTab === 'syslog-config' && syslogAvailable && (
           <div>
             <div className="mb-4">
               <h3 className="fs-6 fw-bold">

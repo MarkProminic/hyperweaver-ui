@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
 
+import { hasFeature } from '../../utils/capabilities';
+
 import ArcConfiguration from './ArcConfiguration';
 import { ArtifactManagement } from './ArtifactStorage';
 
@@ -14,6 +16,10 @@ const StorageManagement = ({ server }) => {
       </div>
     );
   }
+
+  // `artifacts` is config-gated (artifact_storage.enabled) even on agents that
+  // advertise `zfs` — the sub-tab rides its own token, not the parent's.
+  const artifactsAvailable = hasFeature(server, 'artifacts');
 
   return (
     <div>
@@ -39,26 +45,28 @@ const StorageManagement = ({ server }) => {
             ZFS ARC
           </button>
         </li>
-        <li className="nav-item">
-          <button
-            type="button"
-            tabIndex={0}
-            onClick={e => {
-              e.preventDefault();
-              setActiveTab('artifacts');
-            }}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
+        {artifactsAvailable && (
+          <li className="nav-item">
+            <button
+              type="button"
+              tabIndex={0}
+              onClick={e => {
                 e.preventDefault();
                 setActiveTab('artifacts');
-              }
-            }}
-            className={`nav-link ${activeTab === 'artifacts' ? 'active' : ''}`}
-          >
-            <i className="fas fa-compact-disc me-2" />
-            ISO & Artifacts
-          </button>
-        </li>
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setActiveTab('artifacts');
+                }
+              }}
+              className={`nav-link ${activeTab === 'artifacts' ? 'active' : ''}`}
+            >
+              <i className="fas fa-compact-disc me-2" />
+              ISO & Artifacts
+            </button>
+          </li>
+        )}
         <li className="nav-item">
           <button type="button" className="nav-link" disabled>
             <i className="fas fa-database me-2" />
@@ -94,7 +102,7 @@ const StorageManagement = ({ server }) => {
         )}
 
         {/* ISO & Artifacts Tab */}
-        {activeTab === 'artifacts' && (
+        {activeTab === 'artifacts' && artifactsAvailable && (
           <div>
             <div className="mb-4">
               <h3 className="fs-6 fw-bold">

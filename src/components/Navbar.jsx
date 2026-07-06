@@ -76,6 +76,11 @@ const Navbar = () => {
   // any hypervisor that supports it advertises it; no hypervisor-value checks.
   const canSuspend = hasFeature(currentServer, 'machine-suspend');
 
+  // Host power controls ride the `host-power` token (config-gated on the Go
+  // agent via host_power.enabled; platform on zoneweaver) — role alone isn't
+  // enough when the agent doesn't serve /system/host/*.
+  const hostPowerAvailable = hasFeature(currentServer, 'host-power');
+
   const MachineControlDropdown = () => {
     const userRole = user?.role;
 
@@ -247,7 +252,7 @@ const Navbar = () => {
             Manage Host
           </Dropdown.Item>
 
-          {canPowerOffHosts(userRole) && (
+          {canPowerOffHosts(userRole) && hostPowerAvailable && (
             <>
               <Dropdown.Divider />
               <Dropdown.Item
