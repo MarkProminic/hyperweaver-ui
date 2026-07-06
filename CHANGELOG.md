@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.11](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.10...v0.10.11) (2026-07-06)
+
+
+### Bug Fixes
+
+* logins ([a876bb4](https://github.com/MarkProminic/hyperweaver-ui/commit/a876bb47499d9b2c802e9e450062a9f97c484377))
+
 ## [0.10.10](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.9...v0.10.10) (2026-07-06)
 
 
