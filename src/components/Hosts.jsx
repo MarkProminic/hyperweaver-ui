@@ -94,6 +94,13 @@ const Hosts = () => {
     setExpandedChartType(null);
   };
 
+  // Latest ARC size in bytes for the Resource Utilization memory bar — last
+  // point of the ARC chart series (GB, refreshed every poll cycle). Null (no
+  // ZFS / no ARC data) hides the bar segment entirely.
+  const arcSizeBytes = arcChartData?.sizeData?.length
+    ? arcChartData.sizeData[arcChartData.sizeData.length - 1][1] * 1024 ** 3
+    : null;
+
   // Machine management functions
   const handleMachineAction = async (action, machineName = null) => {
     if (!currentServer) {
@@ -259,6 +266,7 @@ const Hosts = () => {
               monitoringHealth={monitoringHealth}
               taskStats={taskStats}
               swapSummaryData={swapSummaryData}
+              arcSizeBytes={arcSizeBytes}
               loading={loading}
             />
 

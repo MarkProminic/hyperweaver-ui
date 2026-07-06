@@ -10,6 +10,7 @@ const SystemInfo = ({
   monitoringHealth,
   taskStats,
   swapSummaryData,
+  arcSizeBytes,
 }) => {
   const getHealthStatusClass = status => {
     if (status === 'healthy') {
@@ -130,6 +131,7 @@ const SystemInfo = ({
             serverStats={serverStats}
             cpuUsagePct={cpuUsagePct}
             swapSummaryData={swapSummaryData}
+            arcSizeBytes={arcSizeBytes}
           />
         </div>
       </div>
@@ -163,6 +165,7 @@ SystemInfo.propTypes = {
     failed: PropTypes.number,
   }),
   swapSummaryData: PropTypes.object,
+  arcSizeBytes: PropTypes.number,
 };
 
 export default SystemInfo;

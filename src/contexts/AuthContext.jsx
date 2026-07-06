@@ -253,6 +253,11 @@ export const AuthProvider = ({ children }) => {
    * revocation on back-channel logout (T9), or expiry — clears auth so Layout's guard bounces
    * to /login. This is what makes server-initiated logout UI-transparent. Excludes the auth
    * probes themselves so a bad-password login 401 stays an inline error, not a forced logout.
+   * Also excludes proxied agent responses (/api/agents/{id}/…): their 401/403 speaks about
+   * the Server↔agent API key, never this user's session — a de-paired agent must not log the
+   * user out (and with the Navbar auto-selecting a host, it locked users out of the UI
+   * entirely). Direct mode is unaffected: agent paths there are origin-root, and a rejected
+   * key IS the session dying.
    */
   useEffect(() => {
     const interceptorId = axios.interceptors.response.use(
@@ -261,7 +266,13 @@ export const AuthProvider = ({ children }) => {
         const status = error.response?.status;
         const url = error.config?.url || '';
         const isAuthProbe = /\/api\/auth\/(?:login|ldap|verify)|\/api-keys\/info/.test(url);
-        if ((status === 401 || status === 403) && isAuthenticated && !isAuthProbe) {
+        const isProxiedAgent = url.startsWith('/api/agents/');
+        if (
+          (status === 401 || status === 403) &&
+          isAuthenticated &&
+          !isAuthProbe &&
+          !isProxiedAgent
+        ) {
           clearAuth();
         }
         return Promise.reject(error);
