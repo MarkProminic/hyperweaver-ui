@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.10](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.9...v0.10.10) (2026-07-06)
+
+
+### Bug Fixes
+
+* logins ([36cd578](https://github.com/MarkProminic/hyperweaver-ui/commit/36cd578ee0e67f66b688160c20d964646d88d9ac))
+* sub-tab token gates (repositories/log-streaming/syslog/artifacts) + host-power Navbar gate, stale-capabilities localStorage regression fix, Host Overview interfaces card reads monitoring data, CPU pct excludes illumos irq accounting, dead monitoring fetches removed, hyperweaver.scss split into themable token/partial structure, AgentSettings + HostFileManager split into modules ([9826ec3](https://github.com/MarkProminic/hyperweaver-ui/commit/9826ec36e30129196e29bc00074870e32a82f4f9))
+
 ## [0.10.9](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.8...v0.10.9) (2026-07-06)
 
 
