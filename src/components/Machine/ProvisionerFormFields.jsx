@@ -13,7 +13,8 @@ import PropTypes from 'prop-types';
  * file fields (file pickers arrive with the assets/file-cache phase).
  */
 
-// The role files vocabulary (wire keys → labels), grouped for layout.
+// The role files vocabulary (wire keys → labels), grouped for layout. The
+// group's first key doubles as the file-cache `kind` its picker queries.
 const ROLE_FILE_GROUPS = [
   [
     ['installer', 'Installer'],
@@ -181,8 +182,9 @@ MetadataFieldGroup.propTypes = {
   loading: PropTypes.bool,
 };
 
-const RoleFileInput = ({ roleName, fileKey, label, value, onChange, loading }) => {
+const RoleFileInput = ({ roleName, fileKey, label, value, onChange, loading, suggestions }) => {
   const inputId = `role-${roleName}-${fileKey}`;
+  const listId = suggestions?.length ? `${inputId}-options` : undefined;
   return (
     <div className="col-12 col-md-4">
       <label className="form-label small mb-1" htmlFor={inputId}>
@@ -192,10 +194,18 @@ const RoleFileInput = ({ roleName, fileKey, label, value, onChange, loading }) =
         id={inputId}
         className="form-control form-control-sm"
         type="text"
+        list={listId}
         value={value ?? ''}
         onChange={e => onChange(fileKey, e.target.value)}
         disabled={loading}
       />
+      {listId && (
+        <datalist id={listId}>
+          {suggestions.map(artifact => (
+            <option key={artifact.filename} value={artifact.filename} />
+          ))}
+        </datalist>
+      )}
     </div>
   );
 };
@@ -207,11 +217,29 @@ RoleFileInput.propTypes = {
   value: PropTypes.string,
   onChange: PropTypes.func.isRequired,
   loading: PropTypes.bool,
+  suggestions: PropTypes.array,
 };
 
-export const RolesEditor = ({ roles, onRolesChange, loading }) => {
+export const RolesEditor = ({ roles, onRolesChange, loading, artifacts }) => {
   const setRole = (index, patch) => {
     onRolesChange(roles.map((role, i) => (i === index ? { ...role, ...patch } : role)));
+  };
+
+  // File-cache suggestions for a role's picker (sync item 12) — present files
+  // only; picking a known filename auto-fills its hash and version.
+  const suggestionsFor = (roleName, kind) =>
+    (artifacts || []).filter(artifact => artifact.role === roleName && artifact.kind === kind);
+
+  const handleFileChange = (index, role, kind, fileKey, value) => {
+    const patch = { [fileKey]: value };
+    const match = suggestionsFor(role.name, kind).find(artifact => artifact.filename === value);
+    if (match) {
+      patch[`${kind}_hash`] = match.expected_sha256 || match.sha256 || '';
+      if (match.version) {
+        patch[`${kind}_version`] = match.version;
+      }
+    }
+    setRole(index, { files: { ...role.files, ...patch } });
   };
 
   if (roles.length === 0) {
@@ -238,27 +266,40 @@ export const RolesEditor = ({ roles, onRolesChange, loading }) => {
           </div>
           {role.enabled && (
             <div className="mt-2">
-              {ROLE_FILE_GROUPS.map(group => (
-                <div className="row g-2 mb-1" key={group[0][0]}>
-                  {group.map(([fileKey, label]) => (
-                    <RoleFileInput
-                      key={fileKey}
-                      roleName={role.name}
-                      fileKey={fileKey}
-                      label={label}
-                      value={role.files?.[fileKey]}
-                      onChange={(key, value) =>
-                        setRole(index, { files: { ...role.files, [key]: value } })
-                      }
-                      loading={loading}
-                    />
-                  ))}
-                </div>
-              ))}
+              {ROLE_FILE_GROUPS.map(group => {
+                const [[kind]] = group;
+                return (
+                  <div className="row g-2 mb-1" key={kind}>
+                    {group.map(([fileKey, label]) => (
+                      <RoleFileInput
+                        key={fileKey}
+                        roleName={role.name}
+                        fileKey={fileKey}
+                        label={label}
+                        value={role.files?.[fileKey]}
+                        onChange={(key, value) =>
+                          key === kind
+                            ? handleFileChange(index, role, kind, key, value)
+                            : setRole(index, { files: { ...role.files, [key]: value } })
+                        }
+                        loading={loading}
+                        suggestions={fileKey === kind ? suggestionsFor(role.name, kind) : null}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
       ))}
+      {artifacts !== null && (
+        <p className="form-text text-warning mb-0">
+          <i className="fas fa-triangle-exclamation me-1" />
+          File references resolve against the host&apos;s file cache at start — absent, unhashed, or
+          hash-mismatched files FAIL the machine start.
+        </p>
+      )}
     </div>
   );
 };
@@ -273,4 +314,6 @@ RolesEditor.propTypes = {
   ).isRequired,
   onRolesChange: PropTypes.func.isRequired,
   loading: PropTypes.bool,
+  // null = the host has no file cache (no `artifacts` token) — free text only.
+  artifacts: PropTypes.array,
 };

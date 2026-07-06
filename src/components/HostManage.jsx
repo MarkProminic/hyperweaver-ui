@@ -10,6 +10,7 @@ import BootEnvironmentManagement from './Host/BootEnvironmentManagement';
 import FaultManagement from './Host/FaultManagement';
 import EnhancedFileManager from './Host/FileManager/EnhancedFileManager';
 import HostPageHeader from './Host/HostPageHeader';
+import InstallerFiles from './Host/InstallerFiles';
 import NetworkHostnameManagement from './Host/NetworkHostnameManagement';
 import PackageManagement from './Host/Package/Management';
 import ProcessManagement from './Host/ProcessManagement';
@@ -45,6 +46,16 @@ const TABS = [
   { id: 'file-manager', label: 'File Manager', icon: 'fas fa-folder', feature: 'file-browser' },
   { id: 'user-group', label: 'User and Groups', icon: 'fas fa-users', feature: 'system-users' },
   { id: 'provisioning', label: 'Provisioners', icon: 'fas fa-cubes', feature: 'provisioning' },
+  // Both tokens required (sync item 12): `artifacts` alone also names the
+  // zoneweaver ISO/storage-location surface (its own sub-tab under Storage);
+  // the file-cache page exists for the provisioning pipeline, so it lights up
+  // only where both ship.
+  {
+    id: 'installer-files',
+    label: 'Installer Files',
+    icon: 'fas fa-box-archive',
+    features: ['artifacts', 'provisioning'],
+  },
 ];
 
 const HostManage = () => {
@@ -54,7 +65,10 @@ const HostManage = () => {
   const { currentServer } = useServers();
   const navigate = useNavigate();
 
-  const visibleTabs = TABS.filter(tab => !tab.feature || hasFeature(currentServer, tab.feature));
+  const visibleTabs = TABS.filter(tab => {
+    const required = tab.features || (tab.feature ? [tab.feature] : []);
+    return required.every(token => hasFeature(currentServer, token));
+  });
   // A server switch can hide the selected tab — fall back to the first visible one
   // without touching state (clicking a tab still drives activeTab).
   const effectiveTab = visibleTabs.some(tab => tab.id === activeTab)
@@ -303,6 +317,23 @@ const HostManage = () => {
                 </div>
 
                 <ProvisionerManagement server={currentServer} />
+              </div>
+            )}
+
+            {/* Installer Files Tab */}
+            {effectiveTab === 'installer-files' && (
+              <div>
+                <div className="mb-4">
+                  <h2 className="fs-5 fw-bold">Installer Files</h2>
+                  <p>
+                    The hash-verified file cache on <strong>{currentServer.hostname}</strong> —
+                    installers, fixpacks, and hotfixes that machine creation mounts into working
+                    directories. References that are absent, unhashed, or hash-mismatched fail the
+                    machine start.
+                  </p>
+                </div>
+
+                <InstallerFiles server={currentServer} />
               </div>
             )}
 

@@ -206,11 +206,24 @@ const AgentSecretsTab = () => {
 
   return (
     <div>
-      <div className="alert alert-info py-2">
-        <i className="fas fa-info-circle me-2" />
-        Secrets are injected into generated Hosts.yml files as <code>SECRETS_*</code> template
-        variables and stored plain on the agent host. Entry names must match{' '}
-        <code>[a-zA-Z0-9_-]+</code>; rows without a name are dropped on save.
+      <div className="alert alert-info py-2 d-flex justify-content-between align-items-start gap-3">
+        <span>
+          <i className="fas fa-info-circle me-2" />
+          Secrets are injected into generated Hosts.yml files as <code>SECRETS_*</code> template
+          variables and stored plain on the agent host. Entry names must match{' '}
+          <code>[a-zA-Z0-9_-]+</code>; rows without a name are dropped on save. HCL portal keys
+          ROTATE server-side on every download — reload before editing that category, and never
+          paste a stale copy over a rotated value.
+        </span>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary flex-shrink-0"
+          onClick={loadSecrets}
+          disabled={loading}
+        >
+          <i className="fas fa-sync-alt me-2" />
+          Reload
+        </button>
       </div>
       {msg && <div className={`alert alert-${msgVariant} py-2`}>{msg}</div>}
       {loading && !document && <p className="text-muted">Loading…</p>}

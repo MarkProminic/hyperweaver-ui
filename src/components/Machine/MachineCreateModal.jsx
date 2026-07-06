@@ -1,10 +1,18 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { getProvisioners, createMachine, modifyMachine } from '../../api/provisioningAPI';
+import {
+  getProvisioners,
+  createMachine,
+  modifyMachine,
+  getArtifacts,
+  getBridgedInterfaces,
+} from '../../api/provisioningAPI';
+import { hasFeature } from '../../utils/capabilities';
 import { resourceLabel } from '../../utils/resourceLabel';
 import { FormModal } from '../common';
 
+import NetworksEditor from './NetworksEditor';
 import {
   configurationFields,
   seedRoles,
@@ -65,6 +73,10 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, editMachine, onCom
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // null = no file cache on this host (`artifacts` token absent) — the roles
+  // editor stays free-text-only, no fail-on-unverified warning.
+  const [artifacts, setArtifacts] = useState(null);
+  const [bridgeOptions, setBridgeOptions] = useState([]);
 
   const isEdit = !!editMachine;
   const editSpec = editMachine?.machine_info?.spec || null;
@@ -141,6 +153,32 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, editMachine, onCom
         }
       }
     );
+    // File-cache suggestions for the roles editor (sync item 12) — present
+    // files only; token-gated so cache-less hosts are never asked.
+    if (hasFeature(currentServer, 'artifacts')) {
+      getArtifacts(currentServer.hostname, currentServer.port, currentServer.protocol, {
+        exists: true,
+      }).then(result => {
+        setArtifacts(result.success ? result.data?.artifacts || [] : null);
+      });
+    } else {
+      setArtifacts(null);
+    }
+    // Bridge suggestions — the entry shape is implementation-flavored, so
+    // flatten strings and {name}-ish objects alike; failures just leave the
+    // bridge field free-text.
+    getBridgedInterfaces(currentServer.hostname, currentServer.port, currentServer.protocol).then(
+      result => {
+        const list = result.success
+          ? result.data?.interfaces || result.data?.bridged_interfaces || result.data || []
+          : [];
+        setBridgeOptions(
+          (Array.isArray(list) ? list : [])
+            .map(entry => (typeof entry === 'string' ? entry : entry?.name || entry?.device || ''))
+            .filter(Boolean)
+        );
+      }
+    );
   }, [isOpen, currentServer, seedForm]);
 
   // A (re)selected version seeds the roles editor from its metadata; in edit
@@ -184,10 +222,6 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, editMachine, onCom
       setError('Select a provisioner and version first.');
       return;
     }
-    if (!isEdit && !name.trim()) {
-      setError(`A ${singular.toLowerCase()} name is required.`);
-      return;
-    }
     if (!settings.hostname) {
       setError('A hostname is required.');
       return;
@@ -195,6 +229,8 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, editMachine, onCom
     setLoading(true);
     setError('');
     const spec = buildSpec();
+    // `name` is optional on create (sync item 12) — blank lets the agent
+    // derive it from server_id/hostname/domain per its naming config.
     const result = isEdit
       ? await modifyMachine(
           currentServer.hostname,
@@ -204,7 +240,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, editMachine, onCom
           spec
         )
       : await createMachine(currentServer.hostname, currentServer.port, currentServer.protocol, {
-          name: name.trim(),
+          ...(name.trim() && { name: name.trim() }),
           ...spec,
         });
     setLoading(false);
@@ -244,10 +280,10 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, editMachine, onCom
               id="machine-create-name"
               className="form-control"
               type="text"
+              placeholder="blank = derived from hostname/domain"
               value={name}
               onChange={e => setName(e.target.value)}
               disabled={loading}
-              required
             />
           </div>
         )}
@@ -392,11 +428,26 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, editMachine, onCom
         </div>
       )}
 
+      <h6 className="fw-bold">Networks</h6>
+      <div className="mb-3">
+        <NetworksEditor
+          networks={networks}
+          onNetworksChange={setNetworks}
+          bridgeOptions={bridgeOptions}
+          loading={loading}
+        />
+      </div>
+
       {(version || roles.length > 0) && (
         <>
           <h6 className="fw-bold">Roles</h6>
           <div className="mb-3">
-            <RolesEditor roles={roles} onRolesChange={setRoles} loading={loading} />
+            <RolesEditor
+              roles={roles}
+              onRolesChange={setRoles}
+              loading={loading}
+              artifacts={artifacts}
+            />
           </div>
         </>
       )}

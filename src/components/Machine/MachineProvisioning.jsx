@@ -74,9 +74,9 @@ const MachineProvisioning = ({
   };
 
   const handleClone = async () => {
-    if (!cloneName.trim() || !cloneHostname.trim()) {
+    if (!cloneHostname.trim()) {
       setMsgVariant('danger');
-      setMsg('Clone needs a new name and a new hostname.');
+      setMsg('Clone needs a new hostname.');
       return;
     }
     setLoading(true);
@@ -92,19 +92,28 @@ const MachineProvisioning = ({
     if (cloneVcpus !== '') {
       overrides.vcpus = Number(cloneVcpus);
     }
+    // `name` is optional (sync item 12) — blank lets the agent derive it.
     const result = await cloneMachine(
       currentServer.hostname,
       currentServer.port,
       currentServer.protocol,
       machineName,
-      { name: cloneName.trim(), settings, overrides, start_after_create: cloneStart }
+      {
+        ...(cloneName.trim() && { name: cloneName.trim() }),
+        settings,
+        overrides,
+        start_after_create: cloneStart,
+      }
     );
     setLoading(false);
     if (result.success) {
+      const newName = result.data?.machine_name || cloneName.trim();
       setShowClone(false);
       setMsgVariant('success');
-      setMsg(result.data?.message || `Cloned to ${result.data?.machine_name || cloneName}`);
-      onCloned(result.data?.machine_name || cloneName.trim());
+      setMsg(result.data?.message || (newName ? `Cloned to ${newName}` : 'Cloned'));
+      if (newName) {
+        onCloned(newName);
+      }
       setCloneName('');
       setCloneHostname('');
       setCloneDomain('');
@@ -248,9 +257,9 @@ const MachineProvisioning = ({
               id="clone-name"
               className="form-control"
               type="text"
+              placeholder="blank = derived from hostname/domain"
               value={cloneName}
               onChange={e => setCloneName(e.target.value)}
-              required
             />
           </div>
           <div className="col-12 col-md-6">

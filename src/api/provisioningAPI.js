@@ -117,3 +117,108 @@ export const provisionMachine = async (hostname, port, protocol, machineName) =>
  */
 export const syncMachine = async (hostname, port, protocol, machineName) =>
   await makeAgentRequest(hostname, port, protocol, `machines/${machineName}/sync`, 'POST');
+
+/**
+ * The installer file cache (sync item 12, the `artifacts` token). filters =
+ * {role?, kind?, exists?} — rows carry {id, role, kind, filename, path,
+ * sha256, expected_sha256, size, version, exists, verified_at, source_url}.
+ */
+export const getArtifacts = async (hostname, port, protocol, filters = null) =>
+  await makeAgentRequest(hostname, port, protocol, 'artifacts', 'GET', null, filters);
+
+/**
+ * Queue a cache scan. body = {verify_checksums} (false = existence/size
+ * refresh only).
+ */
+export const scanArtifacts = async (hostname, port, protocol, body) =>
+  await makeAgentRequest(hostname, port, protocol, 'artifacts/scan', 'POST', body);
+
+/**
+ * Queue a URL download into the cache. body = {url, role, kind, filename?,
+ * expected_sha256?, resource_name?} — resource_name names a
+ * custom_resource_url secret for HTTP-Basic-guarded mirrors.
+ */
+export const downloadArtifact = async (hostname, port, protocol, body) =>
+  await makeAgentRequest(hostname, port, protocol, 'artifacts/download', 'POST', body);
+
+/**
+ * Queue an HCL portal download. body = {key_name, filename, role, kind} —
+ * key_name names an hcl_download_portal_api_keys secret; the filename must
+ * match the HCL catalog name EXACTLY (its sha256 is authoritative).
+ */
+export const hclDownloadArtifact = async (hostname, port, protocol, body) =>
+  await makeAgentRequest(hostname, port, protocol, 'artifacts/hcl-download', 'POST', body);
+
+/**
+ * Upload a file into the cache. The multipart field ORDER is contractual:
+ * role/kind (and optional filename) must precede the file part — the agent
+ * ingests the stream single-pass.
+ */
+export const uploadArtifact = async (
+  hostname,
+  port,
+  protocol,
+  { role, kind, filename, file },
+  onUploadProgress = null
+) => {
+  const form = new FormData();
+  form.append('role', role);
+  form.append('kind', kind);
+  if (filename) {
+    form.append('filename', filename);
+  }
+  form.append('file', file);
+  return await makeAgentRequest(
+    hostname,
+    port,
+    protocol,
+    'artifacts/upload',
+    'POST',
+    form,
+    null,
+    false,
+    onUploadProgress
+  );
+};
+
+/**
+ * Register (copy or move) an agent-host file into the cache. body = {path,
+ * role, kind, filename?, move?}.
+ */
+export const registerArtifact = async (hostname, port, protocol, body) =>
+  await makeAgentRequest(hostname, port, protocol, 'artifacts/register', 'POST', body);
+
+/**
+ * Delete a cache row (deleteFile also removes the cached file).
+ */
+export const deleteArtifact = async (hostname, port, protocol, id, deleteFile = false) =>
+  await makeAgentRequest(
+    hostname,
+    port,
+    protocol,
+    `artifacts/${id}`,
+    'DELETE',
+    null,
+    deleteFile ? { delete_file: true } : null
+  );
+
+/**
+ * Host NICs usable as VirtualBox bridges — feeds the wizard's bridge picker.
+ * The entry shape is implementation-flavored; callers flatten defensively.
+ */
+export const getBridgedInterfaces = async (hostname, port, protocol) =>
+  await makeAgentRequest(hostname, port, protocol, 'provisioning/bridged-interfaces');
+
+/**
+ * Update check — {current_version, latest_version, update_available, …}.
+ * Agents without the surface answer 4xx; callers treat that as "no button".
+ */
+export const checkAgentUpdate = async (hostname, port, protocol) =>
+  await makeAgentRequest(hostname, port, protocol, 'app/updates/check');
+
+/**
+ * Queue the self-update (admin): download + SHA256SUMS-verify + launch the
+ * installer, then the agent exits.
+ */
+export const applyAgentUpdate = async (hostname, port, protocol) =>
+  await makeAgentRequest(hostname, port, protocol, 'app/updates/apply', 'POST');

@@ -1,6 +1,7 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import { useState, useEffect, useCallback } from 'react';
 
+import { checkAgentUpdate, applyAgentUpdate } from '../api/provisioningAPI';
 import { useAuth } from '../contexts/AuthContext';
 import { useServers } from '../contexts/ServerContext';
 import { useHostSystemManagement } from '../hooks/useHostSystemManagement';
@@ -28,6 +29,11 @@ const AgentSettings = () => {
   const [orchestrationStatus, setOrchestrationStatus] = useState(null);
   const [zonePriorities, setZonePriorities] = useState(null);
   const [orchestrationLoading, setOrchestrationLoading] = useState(false);
+
+  // Agent self-update (sync item 12): the Update button appears only when
+  // GET /app/updates/check answers with update_available — the data IS the
+  // gate, so agents without the surface (or already current) show nothing.
+  const [updateInfo, setUpdateInfo] = useState(null);
 
   // Confirmation Modal State
   const [confirmDialog, setConfirmDialog] = useState({
@@ -175,6 +181,57 @@ const AgentSettings = () => {
       loadZonePriorities();
     }
   }, [currentServer, user, loadOrchestrationStatus, loadZonePriorities]);
+
+  // Update availability probe — failures (agents without the surface,
+  // unconfigured versioninfo_url) just mean no button.
+  useEffect(() => {
+    setUpdateInfo(null);
+    if (!currentServer || !user || !canManageSettings(user.role)) {
+      return;
+    }
+    checkAgentUpdate(currentServer.hostname, currentServer.port, currentServer.protocol).then(
+      result => {
+        if (result.success && result.data?.update_available) {
+          setUpdateInfo(result.data);
+        }
+      }
+    );
+  }, [currentServer, user]);
+
+  const performApplyUpdate = async () => {
+    try {
+      setLoading(true);
+      const result = await applyAgentUpdate(
+        currentServer.hostname,
+        currentServer.port,
+        currentServer.protocol
+      );
+      if (result.success) {
+        setMsg(
+          `${result.data?.message || 'Update queued'} (task ${result.data?.task_id}, target ${result.data?.target_version})`
+        );
+      } else {
+        setMsg(`Failed to queue update: ${result.message}`);
+      }
+    } finally {
+      setLoading(false);
+      setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+    }
+  };
+
+  const requestApplyUpdate = () => {
+    if (!currentServer || !updateInfo) {
+      return;
+    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Update Agent',
+      message: `Update the agent from ${updateInfo.current_version} to ${updateInfo.latest_version}? The installer is downloaded and hash-verified, then the agent EXITS so it can take over.`,
+      onConfirm: performApplyUpdate,
+      confirmText: 'Update Now',
+      variant: 'is-warning',
+    });
+  };
 
   const handleSettingChange = (path, value) => {
     setSettings(prev => {
@@ -497,6 +554,18 @@ const AgentSettings = () => {
               <i className="fas fa-redo me-2" />
               <span>Restart</span>
             </button>
+            {updateInfo && (
+              <button
+                type="button"
+                className="btn btn-sm btn-success"
+                onClick={requestApplyUpdate}
+                disabled={loading}
+                title={`Update available: ${updateInfo.latest_version}`}
+              >
+                <i className="fas fa-circle-up me-2" />
+                <span>Update to {updateInfo.latest_version}</span>
+              </button>
+            )}
           </HostPageHeader>
           {settings && currentServer && (
             <ul className="nav nav-tabs pt-2 mb-0">

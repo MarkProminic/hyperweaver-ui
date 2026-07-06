@@ -10,6 +10,10 @@ const OPERATION_LABELS = {
   machine_prepare: 'Prepare Working Directory',
   machine_plugin_check: 'Vagrant Plugin Check',
   machine_vagrant_up: 'Vagrant Up',
+  artifact_scan: 'File Cache Scan',
+  artifact_download: 'File Download',
+  hcl_download: 'HCL Portal Download',
+  agent_update: 'Agent Update',
 };
 
 export const taskOperationLabel = operation => OPERATION_LABELS[operation] || operation;
