@@ -1,0 +1,78 @@
+// Design tokens — THE single place to re-theme the app.
+//
+// Every brand/palette constant the stylesheet uses lives here as a Sass variable
+// (all `!default`, so a future theme file can override before loading the rest).
+// The partials never hard-code a color: they consume these tokens directly (compile
+// time) or through the `--hw-*` custom properties published in _theme-layers.scss
+// (runtime). To re-brand: change values here. To re-theme at runtime: override the
+// `--hw-*` / `--bs-*` custom properties under your own [data-bs-theme] selector.
+
+@use 'sass:color';
+
+// --- Brand ---
+$brand-primary: #ff6600 !default; // Hyperweaver orange
+$brand-warning: #ffe600 !default; // Hyperweaver yellow
+
+// Bootstrap's own tint/shade helpers (mix with white / black), reimplemented with modern Sass.
+@function tint($color, $weight) {
+  @return color.mix(white, $color, $weight);
+}
+
+@function shade($color, $weight) {
+  @return color.mix(black, $color, $weight);
+}
+
+// "R, G, B" triple for `--bs-*-rgb` custom properties — derived from the token so a
+// re-brand never leaves a stale literal triple behind.
+@function rgb-list($color) {
+  @return color.channel($color, 'red', $space: rgb), color.channel($color, 'green', $space: rgb),
+    color.channel($color, 'blue', $space: rgb);
+}
+
+// --- Neutral chrome ---
+$hw-border-light-l: #dbdbdb !default; // component borders (light theme)
+$hw-border-light-d: #4a5568 !default; // component borders (dark theme)
+$hw-controls-bg-l: #363636 !default; // VNC controls band (light theme)
+$hw-controls-bg-d: #2d3748 !default; // VNC controls band (dark theme)
+$hw-btn-dark-border: #807769 !default;
+$hw-readonly-bg: #f8f9fa !default;
+
+// --- Text/feedback ---
+$hw-text-placeholder-l: #6c757d !default;
+$hw-text-placeholder-d: #ecf0f1 !default;
+$hw-loading-spinner-l: #6c757d !default;
+$hw-loading-spinner-d: #95a5a6 !default;
+
+// --- Charts ---
+$hw-chart-bg-l: #ffffff !default;
+$hw-chart-border-l: #dee2e6 !default;
+$hw-chart-bg-d: #1e2a3a !default; // dark blue-gray background
+$hw-chart-border-d: #37474f !default; // darker border for contrast
+
+// --- Network topology palette (same in both themes today; split like the pairs above if
+// a theme ever needs it) ---
+$hw-zone-active: #f14668 !default; // zone/machine running state
+$hw-zone-inactive: #6b7280 !default; // zone/machine stopped state
+$hw-nic-active: #48c78e !default; // NIC up state
+$hw-nic-inactive: #6b7280 !default; // NIC down state
+$hw-vnic: #ff9f43 !default; // VNIC nodes
+$hw-aggregate: #3273dc !default; // aggregate nodes (also edge-label secondary text)
+$hw-etherstub: #ffdd57 !default; // etherstub nodes
+$hw-node-text-l: #374151 !default; // node labels (light theme)
+$hw-node-text-d: #f8f9fa !default; // node labels (dark theme)
+$hw-vlan-badge: #e74c3c !default; // VLAN badge on topology nodes
+$hw-edge-label-bg: rgba(255, 255, 255, 0.9) !default;
+$hw-edge-label-border: #d1d5db !default;
+
+// --- Console surfaces (deliberately theme-INDEPENDENT: terminals stay dark either way,
+// published as --hw-* custom properties so a theme may still override them) ---
+$hw-console-canvas: #000 !default; // the VNC/terminal drawing surface
+$hw-console-surface: #2c3e50 !default; // inactive-console / placeholder panels
+$hw-console-surface-text: #ecf0f1 !default; // text on those panels
+$hw-console-overlay-bg: rgba(0, 0, 0, 0.7) !default; // status overlay chip
+$hw-modal-surface: white !default; // console modal chrome background
+
+// --- Console settings sliders (legacy Bootstrap blue/cyan kept for continuity) ---
+$hw-slider-primary: #007bff !default;
+$hw-slider-info: #17a2b8 !default;
+$hw-slider-track: #ccc !default;

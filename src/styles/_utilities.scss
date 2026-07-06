@@ -1,0 +1,118 @@
+// Small single-purpose utility classes: sizing, layering, status tints, and the
+// `--hw-*`-backed color helpers components apply as classes.
+
+.is-width-unset {
+  width: unset;
+}
+
+.has-overflow-y-scroll {
+  overflow-y: scroll;
+}
+
+// Need a size smaller than 7
+.is-size-8 {
+  font-size: 0.5rem !important;
+}
+
+// Z-index utility classes for consistent layering
+.has-z-index-sidebar {
+  z-index: 20;
+}
+
+.has-z-index-modal {
+  z-index: 9999;
+}
+
+.has-z-index-modal-high {
+  z-index: 10000;
+}
+
+.has-z-index-modal-top {
+  z-index: 10001;
+}
+
+.has-z-index-overlay {
+  z-index: 10;
+}
+
+// Task status row styling
+.task-failed {
+  background-color: rgba(var(--bs-danger-rgb), 0.1) !important;
+}
+
+.task-running {
+  background-color: rgba(var(--bs-warning-rgb), 0.1) !important;
+}
+
+// Color utility classes using our CSS variables
+.hw-loading-spinner {
+  color: var(--hw-loading-spinner);
+}
+
+.hw-text-placeholder {
+  color: var(--hw-text-placeholder);
+}
+
+.hw-status-success {
+  color: var(--hw-status-success);
+}
+
+.hw-status-warning {
+  color: var(--hw-status-warning);
+}
+
+.hw-chart-bg {
+  background-color: var(--hw-chart-background);
+}
+
+.hw-chart-border {
+  border-color: var(--hw-chart-border);
+}
+
+// Network topology node colors for theming
+.hw-zone-active {
+  background-color: var(--hw-zone-active);
+}
+
+.hw-zone-inactive {
+  background-color: var(--hw-zone-inactive);
+}
+
+.hw-nic-active {
+  background-color: var(--hw-nic-active);
+}
+
+.hw-nic-inactive {
+  background-color: var(--hw-nic-inactive);
+}
+
+.hw-vnic-color {
+  background-color: var(--hw-vnic-color);
+}
+
+.hw-aggregate-color {
+  background-color: var(--hw-aggregate-color);
+}
+
+.hw-etherstub-color {
+  background-color: var(--hw-etherstub-color);
+}
+
+.hw-node-text {
+  color: var(--hw-node-text);
+}
+
+.hw-border-light {
+  border-color: var(--hw-border-light);
+}
+
+.hw-controls-bg {
+  background-color: var(--hw-controls-bg);
+}
+
+// Navbar Styling Classes
+.hw-navbar-zone-item {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}

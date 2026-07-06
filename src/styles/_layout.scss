@@ -1,0 +1,163 @@
+// App chrome layout: the scrollable content grid, the resizable sidebar/footer
+// handles, and the uniform host-page header band.
+
+// Main content scrollable area for CSS Grid layout
+.hw-main-content-scrollable {
+  overflow-y: auto; // Scroll when content overflows
+  overflow-x: hidden; // Hide horizontal scroll
+  padding: 0;
+  min-height: 0; // Allow grid shrinking
+  width: 100%; // Ensure full width in grid
+}
+
+// Page content wrapper that fills the scrollable container
+.hw-page-content-scrollable {
+  height: 100%;
+  width: 100%;
+}
+
+.react-resizable-handle {
+  position: absolute;
+  width: 100%;
+}
+
+.react-resizable-handle-e {
+  top: 50%;
+  margin-top: -10px;
+  cursor: ew-resize;
+  right: 0;
+  transform: rotate(315deg);
+}
+
+.react-resizable-handle-n {
+  align-items: center;
+  top: 0;
+}
+
+.react-resizable-handle-n-icon {
+  cursor: ns-resize;
+}
+
+.is-collapsible {
+  overflow-y: hidden;
+  transition: height 0.2s ease;
+  overflow-x: hidden;
+}
+
+.is-submenu-collapsed {
+  .icon {
+    color: var(--bs-secondary-color) !important;
+  }
+}
+
+// ResizableBox styling for sidebar
+.react-resizable {
+  position: relative;
+}
+
+// Style the default react-resizable-handle-e for sidebar
+.react-resizable .react-resizable-handle-e {
+  position: absolute !important;
+  right: 0;
+  top: 0;
+  width: 0.5rem;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 5;
+  background: transparent;
+  border-left: none !important;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+  transform: none !important;
+  margin-top: 0 !important;
+
+  // Tertiary sits BETWEEN the sidebar's body background and the main content's
+  // secondary-bg wash, so the handle reads as its own affordance in both themes.
+  &:hover {
+    opacity: 1;
+    background: var(--bs-tertiary-bg);
+  }
+
+  // Add grip lines using CSS
+  &::before {
+    content: '||';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+    color: var(--bs-body-color);
+    opacity: 0.6;
+    letter-spacing: 1px;
+  }
+
+  &:hover::before {
+    opacity: 1;
+  }
+}
+
+// Dark theme adjustments for resize handle
+[data-bs-theme='dark'] .react-resizable .react-resizable-handle-e {
+  background: transparent;
+
+  &:hover {
+    background: var(--bs-tertiary-bg);
+  }
+}
+
+// Ensure ResizableBox respects the collapsed width
+.react-resizable[style*='width: 38px'] .hero {
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+}
+
+// Ensure the ResizableBox allows proper resizing
+.react-resizable {
+  .react-resizable-handle-e {
+    pointer-events: auto !important;
+    user-select: none !important;
+  }
+}
+
+// Hide resize handle when sidebar is minimized
+.is-sidebar-minimized .react-resizable-handle-e {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+// Ensure minimized sidebar doesn't show resize cursor
+.is-sidebar-minimized {
+  cursor: default !important;
+}
+
+// Hide resize handle when footer is minimized
+.is-footer-minimized .react-resizable-handle-n {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+// Ensure minimized footer doesn't show resize cursor
+.is-footer-minimized {
+  cursor: default !important;
+}
+
+// Visual grip area styling (empty spacer in header)
+.hw-footer-grip-visual {
+  width: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+// Custom cursor for footer resize handle
+.react-resizable-handle-n.button {
+  cursor: ns-resize !important;
+}
+
+// Uniform host-page header band (HostPageHeader): pages whose header carries no controls
+// still match the height of one carrying btn-sm controls (~31px content), so switching
+// navbar tabs never shifts the layout.
+.hw-page-header {
+  min-height: calc(31px + 2rem);
+}

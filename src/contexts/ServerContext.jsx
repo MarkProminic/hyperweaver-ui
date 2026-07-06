@@ -178,7 +178,14 @@ export const ServerProvider = ({ children }) => {
 
     try {
       if (currentServer) {
-        localStorage.setItem('hyperweaver_currentServer', JSON.stringify(currentServer));
+        // Persist addressing/identity ONLY — capabilities are live data from the
+        // registry/status probe. Persisting them froze a stale features array
+        // across sessions, and token gating then failed closed on surfaces the
+        // agent actually advertises (sync item 9). A restored row with no
+        // capabilities renders everything until the fresh registry row lands.
+        const { capabilities, ...persistable } = currentServer;
+        void capabilities;
+        localStorage.setItem('hyperweaver_currentServer', JSON.stringify(persistable));
       } else {
         localStorage.removeItem('hyperweaver_currentServer');
       }
@@ -278,12 +285,17 @@ export const ServerProvider = ({ children }) => {
       });
 
       if (matchingServer) {
-        // Compare meaningful fields instead of potentially different IDs
+        // Compare meaningful fields instead of potentially different IDs.
+        // capabilities MUST be part of the comparison: without it a restored
+        // currentServer kept its session-old capability snapshot forever and
+        // token gating ran against stale features (sync item 9).
         const hasActualChanges =
           matchingServer.hostname !== currentServer.hostname ||
           matchingServer.port !== currentServer.port ||
           matchingServer.protocol !== currentServer.protocol ||
-          matchingServer.lastUsed !== currentServer.lastUsed;
+          matchingServer.lastUsed !== currentServer.lastUsed ||
+          JSON.stringify(matchingServer.capabilities ?? null) !==
+            JSON.stringify(currentServer.capabilities ?? null);
 
         if (hasActualChanges) {
           console.log(

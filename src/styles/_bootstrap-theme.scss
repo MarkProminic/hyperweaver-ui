@@ -1,0 +1,169 @@
+// Brand theme over stock Bootstrap 5.3 (consumed as PRECOMPILED CSS — see the entry file):
+// re-applies orange primary / yellow warning / square corners as a CSS-variable +
+// component override layer. All color math flows from the tokens, so a re-brand is a
+// one-file edit in _tokens.scss.
+
+@use 'tokens' as *;
+
+// --- Brand theme: override Bootstrap's default blue palette + rounded corners ---
+:root {
+  // Square corners (Bootstrap ships rounded; we shipped $enable-rounded: false)
+  --bs-border-radius: 0;
+  --bs-border-radius-sm: 0;
+  --bs-border-radius-lg: 0;
+  --bs-border-radius-xl: 0;
+  --bs-border-radius-xxl: 0;
+  --bs-border-radius-2xl: 0;
+  --bs-border-radius-pill: 0;
+
+  // Primary -> orange
+  --bs-primary: #{$brand-primary};
+  --bs-primary-rgb: #{rgb-list($brand-primary)};
+  --bs-primary-text-emphasis: #{shade($brand-primary, 60%)};
+  --bs-primary-bg-subtle: #{tint($brand-primary, 80%)};
+  --bs-primary-border-subtle: #{tint($brand-primary, 60%)};
+
+  // Warning -> yellow
+  --bs-warning: #{$brand-warning};
+  --bs-warning-rgb: #{rgb-list($brand-warning)};
+  --bs-warning-text-emphasis: #{shade($brand-warning, 60%)};
+  --bs-warning-bg-subtle: #{tint($brand-warning, 80%)};
+  --bs-warning-border-subtle: #{tint($brand-warning, 60%)};
+
+  // Links + focus ring -> orange
+  --bs-link-color: #{$brand-primary};
+  --bs-link-color-rgb: #{rgb-list($brand-primary)};
+  --bs-link-hover-color: #{shade($brand-primary, 20%)};
+  --bs-link-hover-color-rgb: #{rgb-list(shade($brand-primary, 20%))};
+  --bs-focus-ring-color: #{rgba($brand-primary, 0.25)};
+}
+
+// Bootstrap lightens the emphasis/subtle tiers in dark mode
+[data-bs-theme='dark'] {
+  --bs-primary-text-emphasis: #{tint($brand-primary, 40%)};
+  --bs-primary-bg-subtle: #{shade($brand-primary, 80%)};
+  --bs-primary-border-subtle: #{shade($brand-primary, 60%)};
+  --bs-warning-text-emphasis: #{tint($brand-warning, 40%)};
+  --bs-warning-bg-subtle: #{shade($brand-warning, 80%)};
+  --bs-warning-border-subtle: #{shade($brand-warning, 60%)};
+}
+
+// --- Component overrides for the pieces Bootstrap bakes the color into at compile time ---
+// #ff6600 / #ffe600 both fail white-contrast, so (matching Bootstrap's color-contrast) their
+// buttons use BLACK text and LIGHTEN (tint) on hover/active rather than darken.
+
+.btn-primary {
+  --bs-btn-color: #000;
+  --bs-btn-bg: #{$brand-primary};
+  --bs-btn-border-color: #{$brand-primary};
+  --bs-btn-hover-color: #000;
+  --bs-btn-hover-bg: #{tint($brand-primary, 15%)};
+  --bs-btn-hover-border-color: #{tint($brand-primary, 10%)};
+  --bs-btn-focus-shadow-rgb: #{rgb-list($brand-primary)};
+  --bs-btn-active-color: #000;
+  --bs-btn-active-bg: #{tint($brand-primary, 20%)};
+  --bs-btn-active-border-color: #{tint($brand-primary, 10%)};
+  --bs-btn-disabled-color: #000;
+  --bs-btn-disabled-bg: #{$brand-primary};
+  --bs-btn-disabled-border-color: #{$brand-primary};
+}
+
+.btn-outline-primary {
+  --bs-btn-color: #{$brand-primary};
+  --bs-btn-border-color: #{$brand-primary};
+  --bs-btn-hover-color: #000;
+  --bs-btn-hover-bg: #{$brand-primary};
+  --bs-btn-hover-border-color: #{$brand-primary};
+  --bs-btn-focus-shadow-rgb: #{rgb-list($brand-primary)};
+  --bs-btn-active-color: #000;
+  --bs-btn-active-bg: #{$brand-primary};
+  --bs-btn-active-border-color: #{$brand-primary};
+  --bs-btn-disabled-color: #{$brand-primary};
+}
+
+.btn-warning {
+  --bs-btn-color: #000;
+  --bs-btn-bg: #{$brand-warning};
+  --bs-btn-border-color: #{$brand-warning};
+  --bs-btn-hover-color: #000;
+  --bs-btn-hover-bg: #{tint($brand-warning, 15%)};
+  --bs-btn-hover-border-color: #{tint($brand-warning, 10%)};
+  --bs-btn-focus-shadow-rgb: #{rgb-list($brand-warning)};
+  --bs-btn-active-color: #000;
+  --bs-btn-active-bg: #{tint($brand-warning, 20%)};
+  --bs-btn-active-border-color: #{tint($brand-warning, 10%)};
+  --bs-btn-disabled-color: #000;
+  --bs-btn-disabled-bg: #{$brand-warning};
+  --bs-btn-disabled-border-color: #{$brand-warning};
+}
+
+.btn-outline-warning {
+  --bs-btn-color: #{$brand-warning};
+  --bs-btn-border-color: #{$brand-warning};
+  --bs-btn-hover-color: #000;
+  --bs-btn-hover-bg: #{$brand-warning};
+  --bs-btn-hover-border-color: #{$brand-warning};
+  --bs-btn-active-color: #000;
+  --bs-btn-active-bg: #{$brand-warning};
+  --bs-btn-active-border-color: #{$brand-warning};
+  --bs-btn-disabled-color: #{$brand-warning};
+}
+
+.btn-link {
+  --bs-btn-color: #{$brand-primary};
+  --bs-btn-hover-color: #{shade($brand-primary, 20%)};
+  --bs-btn-active-color: #{shade($brand-primary, 25%)};
+}
+
+// Form controls (Bootstrap bakes primary into these)
+.form-check-input:checked {
+  background-color: #{$brand-primary};
+  border-color: #{$brand-primary};
+}
+
+.form-check-input:focus {
+  border-color: #{tint($brand-primary, 50%)};
+  box-shadow: 0 0 0 0.25rem #{rgba($brand-primary, 0.25)};
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #{tint($brand-primary, 50%)};
+  box-shadow: 0 0 0 0.25rem #{rgba($brand-primary, 0.25)};
+}
+
+.form-range {
+  &::-webkit-slider-thumb {
+    background-color: #{$brand-primary};
+  }
+
+  &::-moz-range-thumb {
+    background-color: #{$brand-primary};
+  }
+}
+
+// Active-state component variables that default to primary
+.nav-pills {
+  --bs-nav-pills-link-active-bg: #{$brand-primary};
+}
+
+.dropdown-menu {
+  --bs-dropdown-link-active-bg: #{$brand-primary};
+}
+
+.pagination {
+  --bs-pagination-color: #{$brand-primary};
+  --bs-pagination-hover-color: #{shade($brand-primary, 20%)};
+  --bs-pagination-focus-color: #{shade($brand-primary, 20%)};
+  --bs-pagination-active-bg: #{$brand-primary};
+  --bs-pagination-active-border-color: #{$brand-primary};
+}
+
+.progress {
+  --bs-progress-bar-bg: #{$brand-primary};
+}
+
+.list-group {
+  --bs-list-group-active-bg: #{$brand-primary};
+  --bs-list-group-active-border-color: #{$brand-primary};
+}

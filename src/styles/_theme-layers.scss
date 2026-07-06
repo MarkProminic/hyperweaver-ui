@@ -1,0 +1,80 @@
+// App `--hw-*` custom-property theme layers (light + dark) — the RUNTIME theming
+// surface. Components never hard-code palette colors; they read these custom
+// properties, whose values come from _tokens.scss. A custom theme overrides the
+// `--hw-*` properties under its own [data-bs-theme] selector (or swaps the tokens
+// at compile time) without touching any component rule.
+
+@use 'tokens' as *;
+
+@mixin hw-light-theme {
+  --hw-text-placeholder: #{$hw-text-placeholder-l}; // Medium gray for placeholders
+  --hw-loading-spinner: #{$hw-loading-spinner-l}; // Medium gray for loading spinners
+
+  // Status colors (inherit from Bootstrap theme variables)
+  --hw-status-success: var(--bs-success);
+  --hw-status-warning: var(--bs-warning);
+
+  // Chart colors - Light theme
+  --hw-chart-background: #{$hw-chart-bg-l};
+  --hw-chart-border: #{$hw-chart-border-l};
+
+  // Network topology node colors - Light theme
+  --hw-zone-active: #{$hw-zone-active}; // Zone running state
+  --hw-zone-inactive: #{$hw-zone-inactive}; // Zone stopped state
+  --hw-nic-active: #{$hw-nic-active}; // NIC up state
+  --hw-nic-inactive: #{$hw-nic-inactive}; // NIC down state
+  --hw-vnic-color: #{$hw-vnic}; // VNIC nodes
+  --hw-aggregate-color: #{$hw-aggregate}; // Aggregate nodes
+  --hw-etherstub-color: #{$hw-etherstub}; // Etherstub nodes
+  --hw-node-text: #{$hw-node-text-l}; // Node labels
+
+  // UI chrome colors - Light theme
+  --hw-border-light: #{$hw-border-light-l}; // Component borders
+  --hw-controls-bg: #{$hw-controls-bg-l}; // VNC controls background
+}
+
+@mixin hw-dark-theme {
+  --hw-text-placeholder: #{$hw-text-placeholder-d}; // Light gray for dark backgrounds
+  --hw-loading-spinner: #{$hw-loading-spinner-d}; // Muted gray for dark theme spinners
+
+  // Chart colors - Dark theme
+  --hw-chart-background: #{$hw-chart-bg-d};
+  --hw-chart-border: #{$hw-chart-border-d};
+
+  // Network topology node colors - Dark theme
+  --hw-zone-active: #{$hw-zone-active}; // Zone running state
+  --hw-zone-inactive: #{$hw-zone-inactive}; // Zone stopped state
+  --hw-nic-active: #{$hw-nic-active}; // NIC up state
+  --hw-nic-inactive: #{$hw-nic-inactive}; // NIC down state
+  --hw-vnic-color: #{$hw-vnic}; // VNIC nodes
+  --hw-aggregate-color: #{$hw-aggregate}; // Aggregate nodes
+  --hw-etherstub-color: #{$hw-etherstub}; // Etherstub nodes
+  --hw-node-text: #{$hw-node-text-d}; // Node labels (lighter for dark theme)
+
+  // UI chrome colors - Dark theme
+  --hw-border-light: #{$hw-border-light-d}; // Darker borders for dark theme
+  --hw-controls-bg: #{$hw-controls-bg-d}; // Darker VNC controls background
+}
+
+:root {
+  @include hw-light-theme;
+
+  // Theme-INDEPENDENT surfaces (consoles stay dark in both themes; the console modal
+  // chrome stays light). Published here — not baked into component rules — so a theme
+  // can still override them.
+  --hw-console-canvas: #{$hw-console-canvas};
+  --hw-console-surface: #{$hw-console-surface};
+  --hw-console-surface-text: #{$hw-console-surface-text};
+  --hw-console-overlay-bg: #{$hw-console-overlay-bg};
+  --hw-modal-surface: #{$hw-modal-surface};
+  --hw-slider-primary: #{$hw-slider-primary};
+  --hw-slider-info: #{$hw-slider-info};
+  --hw-slider-track: #{$hw-slider-track};
+  --hw-vlan-badge: #{$hw-vlan-badge};
+  --hw-edge-label-bg: #{$hw-edge-label-bg};
+  --hw-edge-label-border: #{$hw-edge-label-border};
+}
+
+[data-bs-theme='dark'] {
+  @include hw-dark-theme;
+}

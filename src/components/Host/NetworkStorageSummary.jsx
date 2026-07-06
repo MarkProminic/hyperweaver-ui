@@ -1,6 +1,9 @@
 import PropTypes from 'prop-types';
 
-const NetworkStorageSummary = ({ serverStats, storageSummary }) => (
+// Interface rows are the /monitoring/network/interfaces list (same feed the
+// Networking page renders) — the /stats payload carries no interface map, so
+// this card reads the monitoring data the page already fetches.
+const NetworkStorageSummary = ({ networkInterfaces, storageSummary }) => (
   <div className="row g-3 mb-5">
     {/* Network Summary Card */}
     <div className="col-12 col-lg-6">
@@ -10,41 +13,39 @@ const NetworkStorageSummary = ({ serverStats, storageSummary }) => (
             <i className="fas fa-network-wired" />
             <span>Network Interfaces</span>
           </h3>
-          {Object.keys(serverStats.networkInterfaces || {}).length > 0 ? (
+          {Array.isArray(networkInterfaces) && networkInterfaces.length > 0 ? (
             <>
               <div className="table-responsive">
                 <table className="table">
                   <thead>
                     <tr>
                       <th>Interface</th>
-                      <th>Address</th>
-                      <th>Status</th>
+                      <th>Class</th>
+                      <th>State</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(serverStats.networkInterfaces || {})
-                      .slice(0, 5)
-                      .map(([interfaceName, addresses]) => (
-                        <tr key={interfaceName}>
-                          <td>
-                            <strong>{interfaceName}</strong>
-                          </td>
-                          <td>
-                            {Array.isArray(addresses) && addresses.length > 0
-                              ? addresses[0].address
-                              : 'No IP'}
-                          </td>
-                          <td>
-                            <span className="badge text-bg-success">UP</span>
-                          </td>
-                        </tr>
-                      ))}
+                    {networkInterfaces.slice(0, 5).map(iface => (
+                      <tr key={iface.link}>
+                        <td>
+                          <strong>{iface.link}</strong>
+                        </td>
+                        <td>{iface.class || 'N/A'}</td>
+                        <td>
+                          <span
+                            className={`badge ${iface.state === 'up' ? 'text-bg-success' : 'text-bg-danger'}`}
+                          >
+                            {iface.state || 'unknown'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
-              {Object.keys(serverStats.networkInterfaces || {}).length > 5 && (
+              {networkInterfaces.length > 5 && (
                 <p className="small text-muted mt-2">
-                  Showing 5 of {Object.keys(serverStats.networkInterfaces || {}).length} interfaces.
+                  Showing 5 of {networkInterfaces.length} interfaces.
                   <a href="/ui/host-networking" className="ms-1">
                     View all →
                   </a>
@@ -95,15 +96,13 @@ const NetworkStorageSummary = ({ serverStats, storageSummary }) => (
 );
 
 NetworkStorageSummary.propTypes = {
-  serverStats: PropTypes.shape({
-    networkInterfaces: PropTypes.objectOf(
-      PropTypes.arrayOf(
-        PropTypes.shape({
-          address: PropTypes.string,
-        })
-      )
-    ),
-  }).isRequired,
+  networkInterfaces: PropTypes.arrayOf(
+    PropTypes.shape({
+      link: PropTypes.string,
+      class: PropTypes.string,
+      state: PropTypes.string,
+    })
+  ).isRequired,
   storageSummary: PropTypes.shape({
     pools: PropTypes.arrayOf(PropTypes.any),
     datasets: PropTypes.arrayOf(PropTypes.any),

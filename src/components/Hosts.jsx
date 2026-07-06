@@ -31,6 +31,7 @@ const Hosts = () => {
     cpuUsagePct,
     monitoringHealth,
     monitoringStatus,
+    networkInterfaces,
     storageSummary,
     taskStats,
     swapSummaryData, // Add swapSummaryData here
@@ -278,7 +279,7 @@ const Hosts = () => {
             {hasFeature(currentServer, 'monitoring') && (
               <>
                 <NetworkStorageSummary
-                  serverStats={serverStats}
+                  networkInterfaces={networkInterfaces}
                   storageSummary={storageSummary}
                   loading={loading}
                 />

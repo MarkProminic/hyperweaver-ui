@@ -1,0 +1,111 @@
+// Dropdown chrome: Bootstrap dropdown re-assertions + the hand-rolled console
+// dropdown positioning classes.
+
+.dropdown-content {
+  border-width: var(--bs-border-width);
+}
+
+// FormModal/ContentModal keep a 70vw max width.
+.hw-modal-wide {
+  max-width: 70vw;
+}
+
+// Dropdown menu chrome: re-assert Bootstrap's `--bs-dropdown-*` values on `.dropdown-menu.show`
+// so items and the divider render consistently and adapt to data-bs-theme.
+.dropdown-menu.show {
+  // Upgrade the divider to a solid, clearly-visible border (Bootstrap's default is faint).
+  --bs-dropdown-divider-bg: var(--bs-border-color);
+
+  display: block;
+  z-index: 1000;
+  padding: var(--bs-dropdown-padding-y, 0.5rem) var(--bs-dropdown-padding-x, 0);
+
+  .dropdown-item {
+    // Force transparent item backgrounds so items inherit the menu background uniformly.
+    background-color: transparent;
+    font-size: var(--bs-dropdown-font-size, 1rem);
+    color: var(--bs-dropdown-link-color);
+    padding: var(--bs-dropdown-item-padding-y, 0.25rem) var(--bs-dropdown-item-padding-x, 1rem);
+
+    &:hover,
+    &:focus {
+      color: var(--bs-dropdown-link-hover-color);
+      background-color: var(--bs-dropdown-link-hover-bg);
+    }
+
+    &.active,
+    &:active {
+      color: var(--bs-dropdown-link-active-color);
+      background-color: var(--bs-dropdown-link-active-bg);
+    }
+  }
+
+  .dropdown-divider {
+    height: 0;
+    margin: var(--bs-dropdown-divider-margin-y, 0.5rem) 0;
+    border-top: var(--bs-dropdown-border-width, 1px) solid var(--bs-dropdown-divider-bg);
+    background-color: transparent;
+    opacity: 1;
+  }
+}
+
+.dropdown.is-center .dropdown-menu {
+  left: 0;
+  right: 0;
+}
+
+// Hand-rolled console dropdowns (VncActionsDropdown / ZloginActionsDropdown) are NOT
+// react-bootstrap, so they have no Popper and never receive Bootstrap's
+// [data-bs-popper]-gated top/left offsets — a bare `.dropdown-menu.show` would render
+// on top of its trigger. Position the TOP-LEVEL menus below the trigger, aligned to its right
+// edge. The nested submenus self-position via `.hw-dropdown-submenu-*` /
+// `.hw-dropdown-function-keys` (`!important`) and don't carry `.dropdown-menu-end`, so this rule
+// never matches them; react-bootstrap menus carry `[data-bs-popper]`, so `:not()` excludes them.
+.dropdown-menu.show.dropdown-menu-end:not([data-bs-popper]) {
+  top: 100%;
+  right: 0;
+  left: auto;
+}
+
+// Console dropdown panels (VNC/zlogin action menus)
+.hw-dropdown-content {
+  min-width: 250px !important;
+}
+
+.hw-dropdown-submenu-right {
+  position: absolute !important;
+  left: 100% !important;
+  top: 0 !important;
+  min-width: 250px !important;
+  max-width: 350px !important;
+}
+
+.hw-dropdown-submenu-left {
+  position: absolute !important;
+  right: 100% !important;
+  left: auto !important;
+  top: 0 !important;
+  min-width: 250px !important;
+  max-width: 350px !important;
+}
+
+.hw-dropdown-function-keys {
+  position: absolute !important;
+  left: 100% !important;
+  top: 0 !important;
+  min-width: 140px !important;
+}
+
+.hw-dropdown-settings {
+  position: absolute !important;
+  top: 0 !important;
+  min-width: 300px !important;
+  max-width: 350px !important;
+}
+
+.hw-dropdown-actions {
+  position: absolute !important;
+  top: 0 !important;
+  min-width: 260px !important;
+  max-width: 300px !important;
+}

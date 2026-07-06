@@ -21,7 +21,7 @@ export const useHostData = currentServer => {
   const [serverStats, setServerStats] = useState({});
   const [monitoringHealth, setMonitoringHealth] = useState({});
   const [monitoringStatus, setMonitoringStatus] = useState({});
-  const [networkInterfaces, setNetworkInterfaces] = useState({});
+  const [networkInterfaces, setNetworkInterfaces] = useState([]);
   const [storageSummary, setStorageSummary] = useState({});
   const [taskStats, setTaskStats] = useState({});
   const [diskIOStats, setDiskIOStats] = useState([]);
@@ -112,13 +112,17 @@ export const useHostData = currentServer => {
       return;
     }
 
+    // Only the wall-time buckets count: on illumos, os.cpus()' `irq` value is
+    // interrupt accounting that OVERLAPS the real buckets (user+nice+sys+idle
+    // alone already sums to uptime there), so summing every key inflated busy
+    // ~15x (34% shown on a 2%-busy host). Explicit keys, never Object.values.
     let idle = 0;
     let total = 0;
     cpus.forEach(cpu => {
-      Object.values(cpu.times || {}).forEach(value => {
-        total += value;
-      });
-      idle += cpu.times?.idle || 0;
+      const times = cpu.times || {};
+      const busy = (times.user || 0) + (times.nice || 0) + (times.sys || 0);
+      idle += times.idle || 0;
+      total += busy + (times.idle || 0);
     });
 
     const prev = prevCpuSampleRef.current;
