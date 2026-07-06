@@ -203,11 +203,19 @@ export const makeAgentRequest = async (...args) => {
       }
     }
 
-    const message = error.response?.data?.msg || error.response?.data?.message || 'Request failed';
+    const message =
+      error.response?.data?.msg ||
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      'Request failed';
     return {
       success: false,
       message,
       status: error.response?.status,
+      // The raw error body — some contracts carry structured detail beside
+      // the message (e.g. provisioner delete's 409 lists referencing
+      // machines[]).
+      data: error.response?.data,
     };
   }
 };

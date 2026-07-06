@@ -3,6 +3,7 @@ import { useRef, useEffect, useContext, memo, useState } from 'react';
 
 import { useFooter } from '../contexts/FooterContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
+import { taskOperationLabel } from '../utils/taskOperations';
 
 import TaskDetailModal from './TaskDetailModal';
 
@@ -89,7 +90,7 @@ const truncate = (str, max = 40) => {
 
 export const TASK_COLUMNS = [
   { key: 'id', label: 'ID', render: task => task.id },
-  { key: 'operation', label: 'Operation', render: task => task.operation },
+  { key: 'operation', label: 'Operation', render: task => taskOperationLabel(task.operation) },
   { key: 'machine_name', label: 'Target', render: task => task.machine_name },
   { key: 'status', label: 'Status', render: renderStatus },
   { key: 'progress', label: 'Progress', render: renderProgress },

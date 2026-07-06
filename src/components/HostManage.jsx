@@ -13,6 +13,7 @@ import HostPageHeader from './Host/HostPageHeader';
 import NetworkHostnameManagement from './Host/NetworkHostnameManagement';
 import PackageManagement from './Host/Package/Management';
 import ProcessManagement from './Host/ProcessManagement';
+import ProvisionerManagement from './Host/ProvisionerManagement';
 import ServiceManagement from './Host/ServiceManagement';
 import StorageManagement from './Host/StorageManagement';
 import TimeNTPManagement from './Host/TimeNTPManagement';
@@ -43,6 +44,7 @@ const TABS = [
   },
   { id: 'file-manager', label: 'File Manager', icon: 'fas fa-folder', feature: 'file-browser' },
   { id: 'user-group', label: 'User and Groups', icon: 'fas fa-users', feature: 'system-users' },
+  { id: 'provisioning', label: 'Provisioners', icon: 'fas fa-cubes', feature: 'provisioning' },
 ];
 
 const HostManage = () => {
@@ -284,6 +286,23 @@ const HostManage = () => {
                 </div>
 
                 <EnhancedFileManager server={currentServer} />
+              </div>
+            )}
+
+            {/* Provisioners Tab */}
+            {effectiveTab === 'provisioning' && (
+              <div>
+                <div className="mb-4">
+                  <h2 className="fs-5 fw-bold">Provisioners</h2>
+                  <p>
+                    Manage provisioner packages on <strong>{currentServer.hostname}</strong>. Import
+                    package families from a folder, archive, or git repository; delete versions no
+                    machine references. Machine creation builds its forms from these packages&apos;
+                    metadata.
+                  </p>
+                </div>
+
+                <ProvisionerManagement server={currentServer} />
               </div>
             )}
 

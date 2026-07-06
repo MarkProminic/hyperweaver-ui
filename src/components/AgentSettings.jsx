@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useServers } from '../contexts/ServerContext';
 import { useHostSystemManagement } from '../hooks/useHostSystemManagement';
+import { hasFeature } from '../utils/capabilities';
 import { canManageSettings } from '../utils/permissions';
 
+import AgentSecretsTab from './AgentSecretsTab';
 import SettingsFieldList, { organizeBySection, schemaNodeForPath } from './AgentSettingsFields';
 import { AgentSettingsBackupModal, AgentSettingsConfirmModal } from './AgentSettingsModals';
 import AgentSettingsOrchestration, { isOrchestrationSection } from './AgentSettingsOrchestration';
@@ -524,6 +526,21 @@ const AgentSettings = () => {
                   <span>API Management</span>
                 </button>
               </li>
+              {/* Global secrets ride the provisioning surface (sync item 11) —
+                  a store of its own, deliberately OUT of GET /settings. */}
+              {hasFeature(currentServer, 'provisioning') && (
+                <li className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === 'secrets' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('secrets')}
+                    role="tab"
+                    aria-selected={activeTab === 'secrets'}
+                  >
+                    <span>Global Secrets</span>
+                  </button>
+                </li>
+              )}
             </ul>
           )}
 
@@ -626,6 +643,11 @@ const AgentSettings = () => {
                 <div className={`tab-pane ${activeTab === 'api_management' ? 'active' : ''}`}>
                   <ApiKeysTab />
                 </div>
+                {hasFeature(currentServer, 'provisioning') && (
+                  <div className={`tab-pane ${activeTab === 'secrets' ? 'active' : ''}`}>
+                    <AgentSecretsTab />
+                  </div>
+                )}
               </div>
             )}
 

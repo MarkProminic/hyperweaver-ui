@@ -17,6 +17,7 @@ export const canAccessMachineConsole = userRole => hasMinPermission(userRole, 'u
 export const canStartStopMachines = userRole => hasMinPermission(userRole, 'user'); // Users can start/stop machines
 export const canRestartMachines = userRole => hasMinPermission(userRole, 'user'); // Users can restart machines
 export const canDestroyMachines = userRole => hasMinPermission(userRole, 'admin'); // Only admins can destroy machines
+export const canCreateMachines = userRole => hasMinPermission(userRole, 'admin'); // Only admins can create/clone/reshape machines
 
 // Host Management Permissions
 export const canViewHosts = userRole => hasMinPermission(userRole, 'user'); // Users can view hosts (read-only)

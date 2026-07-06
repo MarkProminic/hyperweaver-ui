@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 import { getAgentBasePath, fetchWsTicket } from '../api/serverUtils';
 import { useServers } from '../contexts/ServerContext';
+import { taskOperationLabel } from '../utils/taskOperations';
 import { buildWsUrl } from '../utils/websocket';
 
 import ContentModal from './common/ContentModal';
@@ -58,7 +59,7 @@ InfoRow.propTypes = {
 
 const SubtaskRow = ({ task, onSelect }) => (
   <tr onClick={() => onSelect(task)} style={{ cursor: 'pointer' }}>
-    <td>{task.operation}</td>
+    <td>{taskOperationLabel(task.operation)}</td>
     <td>{task.machine_name}</td>
     <td>{renderStatusBadge(task.status)}</td>
     <td>
@@ -196,13 +197,18 @@ const TaskDetailModal = ({ task, onClose }) => {
 
   return (
     <>
-      <ContentModal isOpen onClose={onClose} title={`Task: ${task.operation}`} icon="fas fa-tasks">
+      <ContentModal
+        isOpen
+        onClose={onClose}
+        title={`Task: ${taskOperationLabel(task.operation)}`}
+        icon="fas fa-tasks"
+      >
         {/* Task Info */}
         <div className="card">
           <div className="card-body">
             <h6 className="fs-6 fw-bold">Details</h6>
             <InfoRow label="ID">{task.id}</InfoRow>
-            <InfoRow label="Operation">{task.operation}</InfoRow>
+            <InfoRow label="Operation">{taskOperationLabel(task.operation)}</InfoRow>
             <InfoRow label="Target">{task.machine_name}</InfoRow>
             <InfoRow label="Status">{renderStatusBadge(task.status)}</InfoRow>
             <InfoRow label="Priority">{renderPriorityBadge(task.priority)}</InfoRow>

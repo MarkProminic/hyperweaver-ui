@@ -64,6 +64,7 @@ const MANAGE_FEATURES = [
   'fault-management',
   'file-browser',
   'system-users',
+  'provisioning',
 ];
 
 /**

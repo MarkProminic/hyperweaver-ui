@@ -10,12 +10,15 @@ import { useMachineManager } from '../hooks/useMachineManager';
 import { useVncSession } from '../hooks/useVncSession';
 import { useZloginSession } from '../hooks/useZloginSession';
 import { hasConsole, hasFeature, hasMachines } from '../utils/capabilities';
+import { canCreateMachines } from '../utils/permissions';
 import { resourceLabel } from '../utils/resourceLabel';
 
 import ConsoleDisplay from './ConsoleDisplay';
+import MachineCreateModal from './Machine/MachineCreateModal';
 import MachineHardware from './Machine/MachineHardware';
 import MachineInfo from './Machine/MachineInfo';
 import MachineNetwork from './Machine/MachineNetwork';
+import MachineProvisioning from './Machine/MachineProvisioning';
 import MachineStorage from './Machine/MachineStorage';
 import VncModal from './Machine/VncModal';
 import ZloginModal from './Machine/ZloginModal';
@@ -63,6 +66,7 @@ const Machines = () => {
     runningMachines,
     error: machinesError,
     getMachineStatus,
+    loadMachines,
   } = useMachineManager(currentServer);
 
   const {
@@ -70,7 +74,34 @@ const Machines = () => {
     setMachineDetails,
     monitoringHealth,
     error: detailsError,
+    reloadMachineDetails,
   } = useMachineDetails(currentServer, currentMachine);
+
+  // Machine-create wizard (sync item 10): shared create/modify modal —
+  // gated on the machine-create + provisioning tokens (forms render from
+  // provisioner metadata, so both must be live) and NEVER on hypervisor
+  // (D14). editTarget null = create; set = modify that machine's spec.
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  // {text, warning} — warning styling carries the requires_restart answer
+  // ("changes apply on the next start") the way settings sections do.
+  const [provisioningNotice, setProvisioningNotice] = useState(null);
+  const wizardAvailable =
+    hasFeature(currentServer, 'machine-create') &&
+    hasFeature(currentServer, 'provisioning') &&
+    canCreateMachines(user?.role);
+
+  const handleWizardCompleted = ({ message, machineName, taskId, requiresRestart }) => {
+    const suffix = taskId ? ` (task ${taskId})` : '';
+    setProvisioningNotice({ text: `${message}${suffix}`, warning: requiresRestart });
+    loadMachines();
+    if (editTarget) {
+      reloadMachineDetails();
+    } else if (machineName) {
+      selectMachine(machineName);
+    }
+    setEditTarget(null);
+  };
 
   const {
     loadingVnc,
@@ -341,6 +372,19 @@ const Machines = () => {
                   </span>
                 </span>
               </div>
+              {wizardAvailable && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={() => {
+                    setEditTarget(null);
+                    setWizardOpen(true);
+                  }}
+                >
+                  <i className="fas fa-plus me-2" />
+                  New {singular}
+                </button>
+              )}
             </div>
           </div>
 
@@ -360,6 +404,19 @@ const Machines = () => {
                 <p>{detailsError}</p>
               </div>
             )}
+            {provisioningNotice && (
+              <div
+                className={`alert ${provisioningNotice.warning ? 'alert-warning' : 'alert-info'} mb-4 d-flex justify-content-between align-items-center`}
+              >
+                <span>{provisioningNotice.text}</span>
+                <button
+                  type="button"
+                  className="btn-close"
+                  aria-label="Dismiss"
+                  onClick={() => setProvisioningNotice(null)}
+                />
+              </div>
+            )}
 
             {/* Zone Details - Full Width */}
             <div>
@@ -377,6 +434,22 @@ const Machines = () => {
                               monitoringHealth={monitoringHealth}
                               getMachineStatus={getMachineStatus}
                               selectedMachine={selectedMachine}
+                            />
+
+                            {/* Provisioner-managed machines only (spec-carrying
+                                rows) — self-hides otherwise, either agent. */}
+                            <MachineProvisioning
+                              machineDetails={machineDetails}
+                              currentServer={currentServer}
+                              user={user}
+                              onModify={() => {
+                                setEditTarget(machineDetails);
+                                setWizardOpen(true);
+                              }}
+                              onCloned={cloneName => {
+                                loadMachines();
+                                selectMachine(cloneName);
+                              }}
                             />
 
                             <MachineHardware machineDetails={machineDetails} />
@@ -571,6 +644,19 @@ const Machines = () => {
         modalReadOnly={modalReadOnly}
         setModalReadOnly={setModalReadOnly}
       />
+
+      {wizardAvailable && (
+        <MachineCreateModal
+          isOpen={wizardOpen}
+          onClose={() => {
+            setWizardOpen(false);
+            setEditTarget(null);
+          }}
+          currentServer={currentServer}
+          editMachine={editTarget}
+          onCompleted={handleWizardCompleted}
+        />
+      )}
 
       <VncModal
         showVncConsole={showVncConsole}
