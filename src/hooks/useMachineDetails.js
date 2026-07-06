@@ -16,54 +16,35 @@ import { hasConsole, hasFeature } from '../utils/capabilities';
 export const useMachineDetails = (currentServer, currentMachine) => {
   const [machineDetails, setMachineDetails] = useState({});
   const [monitoringHealth, setMonitoringHealth] = useState({});
-  const [networkInterfaces, setNetworkInterfaces] = useState([]);
-  const [storagePools, setStoragePools] = useState([]);
-  const [storageDatasets, setStorageDatasets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const {
-    makeAgentRequest,
-    getMonitoringHealth,
-    getNetworkInterfaces,
-    getStoragePools,
-    getStorageDatasets,
-  } = useServers();
+  const { makeAgentRequest, getMonitoringHealth } = useServers();
 
   const { initializeSessionFromExisting } = useZoneTerminal();
 
   const loadMonitoringData = useCallback(
     async server => {
-      // /monitoring/* is a token-gated surface (sync OPEN ITEM 4b): agents that
-      // don't advertise `monitoring` are never asked — the panels show empty states.
+      // /monitoring/* is a token-gated surface: agents that don't advertise
+      // `monitoring` are never asked — the health badge shows its empty state.
       if (!server || !hasFeature(server, 'monitoring')) {
         return;
       }
       try {
-        const [healthResult, networkResult, poolsResult, datasetsResult] = await Promise.all([
-          getMonitoringHealth(server.hostname, server.port, server.protocol),
-          getNetworkInterfaces(server.hostname, server.port, server.protocol),
-          getStoragePools(server.hostname, server.port, server.protocol),
-          getStorageDatasets(server.hostname, server.port, server.protocol),
-        ]);
+        const healthResult = await getMonitoringHealth(
+          server.hostname,
+          server.port,
+          server.protocol
+        );
 
         if (healthResult.success) {
           setMonitoringHealth(healthResult.data);
-        }
-        if (networkResult.success) {
-          setNetworkInterfaces(networkResult.data);
-        }
-        if (poolsResult.success) {
-          setStoragePools(poolsResult.data);
-        }
-        if (datasetsResult.success) {
-          setStorageDatasets(datasetsResult.data);
         }
       } catch (monitoringErr) {
         console.warn('Error fetching monitoring data:', monitoringErr);
       }
     },
-    [getMonitoringHealth, getNetworkInterfaces, getStoragePools, getStorageDatasets]
+    [getMonitoringHealth]
   );
 
   const loadMachineDetails = useCallback(
@@ -214,9 +195,6 @@ export const useMachineDetails = (currentServer, currentMachine) => {
     } else {
       setMachineDetails({});
       setMonitoringHealth({});
-      setNetworkInterfaces([]);
-      setStoragePools([]);
-      setStorageDatasets([]);
     }
   }, [currentServer, currentMachine, loadMachineDetails]);
 
@@ -224,9 +202,6 @@ export const useMachineDetails = (currentServer, currentMachine) => {
     machineDetails,
     setMachineDetails, // Expose setter for optimistic updates
     monitoringHealth,
-    networkInterfaces,
-    storagePools,
-    storageDatasets,
     loading,
     error,
     reloadMachineDetails: () => loadMachineDetails(currentServer, currentMachine),
