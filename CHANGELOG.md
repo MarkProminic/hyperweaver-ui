@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.9](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.8...v0.10.9) (2026-07-06)
+
+
+### Bug Fixes
+
+* de-zoned wire vocabulary (machines/machine_name), capability-token gating on all tabs/actions/pollers, monitoring+swap fetch gates, CPU row from /stats cpus deltas, schema-decorated settings editor with requires_restart banners, ProvisioningStatus gate, ws-ticket console auth, TLS-clean request layer ([de850ef](https://github.com/MarkProminic/hyperweaver-ui/commit/de850ef7d5b579948b01a78b6ea5b615e43c6211))
+* de-zoned wire vocabulary (machines/machine_name), capability-token gating on all tabs/actions/pollers, monitoring+swap fetch gates, CPU row from /stats cpus deltas, schema-decorated settings editor with requires_restart banners, ProvisioningStatus gate, ws-ticket console auth, TLS-clean request layer ([067fa53](https://github.com/MarkProminic/hyperweaver-ui/commit/067fa53637dc27d020381d057fc6f1a2db9df280))
+* de-zoned wire vocabulary (machines/machine_name), capability-token gating on all tabs/actions/pollers, monitoring+swap fetch gates, CPU row from /stats cpus deltas, schema-decorated settings editor with requires_restart banners, ProvisioningStatus gate, ws-ticket console auth, TLS-clean request layer ([fc4fb6a](https://github.com/MarkProminic/hyperweaver-ui/commit/fc4fb6af377a6f1335199f6602d80a0878a80d9b))
+
 ## [0.10.8](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.7...v0.10.8) (2026-07-04)
 
 
