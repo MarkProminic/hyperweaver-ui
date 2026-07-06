@@ -9,6 +9,7 @@ import { canManageSettings } from '../utils/permissions';
 
 import ApiKeysTab from './ApiKeysTab';
 import { ContentModal, FormModal } from './common';
+import HostPageHeader from './Host/HostPageHeader';
 
 // Helper function moved outside component
 const organizeBySection = settingsData => {
@@ -23,6 +24,7 @@ const organizeBySection = settingsData => {
         content.push({
           type: 'subsection',
           name: key,
+          path: [...basePath, key],
           fields: collectSectionContent(value, [...basePath, key]),
         });
       } else {
@@ -55,7 +57,7 @@ const organizeBySection = settingsData => {
 // (e.g. artifact storage locations: an array of objects, which would otherwise
 // stringify to "[object Object]"). The raw text is held locally so the user can
 // type freely; the value is only committed to settings when the JSON parses.
-const JsonField = ({ fieldId, label, value, onChange }) => {
+const JsonField = ({ fieldId, label, value, onChange, description }) => {
   const [text, setText] = useState(() => JSON.stringify(value, null, 2));
   const [error, setError] = useState('');
 
@@ -105,7 +107,9 @@ const JsonField = ({ fieldId, label, value, onChange }) => {
             Invalid JSON — changes won&apos;t be saved until corrected.
           </div>
         ) : (
-          <p className="form-text text-muted">Structured value, edited as JSON.</p>
+          <p className="form-text text-muted">
+            {description || 'Structured value, edited as JSON.'}
+          </p>
         )}
       </div>
     </div>
@@ -117,12 +121,14 @@ JsonField.propTypes = {
   label: PropTypes.string.isRequired,
   value: PropTypes.oneOfType([PropTypes.array, PropTypes.object]).isRequired,
   onChange: PropTypes.func.isRequired,
+  description: PropTypes.string,
 };
 
 const AgentSettings = () => {
   const { user } = useAuth();
   const { currentServer, makeAgentRequest } = useServers();
   const [settings, setSettings] = useState(null);
+  const [schema, setSchema] = useState(null);
   const [backups, setBackups] = useState([]);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -184,6 +190,24 @@ const AgentSettings = () => {
       setLoading(false);
     }
   }, [currentServer, makeAgentRequest, activeTab]);
+
+  // Schema-driven decoration (sync-file contract 2026-07-05): GET /settings/schema
+  // serves per-key metadata — type/description/default/min/max/enum, object fields
+  // nested under `properties`, free-form map fields as `keys`/`values` vocabularies.
+  // The VALUES from GET /settings stay the source of form structure; the schema only
+  // decorates. No schema on the wire → fields render undecorated, one code path.
+  const loadSchema = useCallback(async () => {
+    if (!currentServer) {
+      return;
+    }
+    const response = await makeAgentRequest(
+      currentServer.hostname,
+      currentServer.port,
+      currentServer.protocol,
+      'settings/schema'
+    );
+    setSchema(response.success ? response.data : null);
+  }, [currentServer, makeAgentRequest]);
 
   const loadBackups = useCallback(async () => {
     if (!currentServer) {
@@ -249,9 +273,10 @@ const AgentSettings = () => {
   useEffect(() => {
     if (user && canManageSettings(user.role) && currentServer) {
       loadSettings();
+      loadSchema();
       loadBackups();
     }
-  }, [user, currentServer, loadSettings, loadBackups]);
+  }, [user, currentServer, loadSettings, loadSchema, loadBackups]);
 
   // Load orchestration data when component mounts or server changes
   useEffect(() => {
@@ -517,7 +542,7 @@ const AgentSettings = () => {
 
       if (result.success) {
         setMsg(
-          `Orchestration test completed: ${result.data.total_zones} zones, estimated ${result.data.estimated_duration}s duration`
+          `Orchestration test completed: ${result.data.total_machines} machines, estimated ${result.data.estimated_duration}s duration`
         );
         console.log('Orchestration test result:', result.data);
       } else {
@@ -600,15 +625,17 @@ const AgentSettings = () => {
             <p className="form-label small">Zone Priorities</p>
             <div className="mb-3">
               <div className="d-flex flex-wrap gap-2">
-                {Object.entries(zonePriorities.priority_groups || {}).map(([priority, zones]) => (
-                  <span key={priority} className="badge text-bg-light">
-                    Priority {priority}: {zones.length} zones
-                  </span>
-                ))}
+                {Object.entries(zonePriorities.priority_groups || {}).map(
+                  ([priority, machines]) => (
+                    <span key={priority} className="badge text-bg-light">
+                      Priority {priority}: {machines.length} machines
+                    </span>
+                  )
+                )}
               </div>
             </div>
             <p className="form-text text-muted">
-              Total zones: {zonePriorities.total_zones || 0} |
+              Total machines: {zonePriorities.total_machines || 0} |
               <button
                 type="button"
                 className="btn btn-link btn-sm p-0 ms-1"
@@ -628,9 +655,32 @@ const AgentSettings = () => {
     return <div>Access Denied</div>;
   }
 
+  // Walk the schema to the descriptor for a field path. Object nodes nest their
+  // children under `properties`; free-form map nodes (e.g. logging.categories)
+  // describe every child through a `values` vocabulary instead — synthesized here
+  // as an enum so map entries render as dropdowns.
+  const schemaNodeForPath = path => {
+    let node = schema?.[path[0]];
+    for (let i = 1; i < path.length; i++) {
+      if (!node) {
+        return null;
+      }
+      if (node.properties) {
+        node = node.properties[path[i]];
+      } else if (Array.isArray(node.values)) {
+        node = { type: 'string', enum: node.values };
+      } else {
+        return null;
+      }
+    }
+    return node || null;
+  };
+
   const renderField = item => {
     const { key, value, path } = item;
     const fieldId = path.join('.');
+    const descriptor = schemaNodeForPath(path);
+    const help = descriptor?.description;
 
     // Boolean → Bootstrap switch; the label carries the field name.
     if (typeof value === 'boolean') {
@@ -650,6 +700,7 @@ const AgentSettings = () => {
                 {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </label>
             </div>
+            {help && <p className="form-text text-muted mb-0">{help}</p>}
           </div>
         </div>
       );
@@ -667,32 +718,66 @@ const AgentSettings = () => {
           label={key.replace(/_/g, ' ')}
           value={value}
           onChange={parsed => handleSettingChange(path, parsed)}
+          description={help}
         />
       );
     }
 
-    const inputElement = isArray ? (
-      <textarea
-        id={fieldId}
-        className="form-control"
-        rows="6"
-        value={value.join('\n')}
-        onChange={e => handleSettingChange(path, e.target.value.split('\n'))}
-      />
-    ) : (
-      <input
-        id={fieldId}
-        className="form-control"
-        type={typeof value === 'number' ? 'number' : 'text'}
-        value={value}
-        onChange={e =>
-          handleSettingChange(
-            path,
-            typeof value === 'number' ? Number(e.target.value) : e.target.value
-          )
-        }
-      />
-    );
+    let inputElement;
+    if (!isArray && Array.isArray(descriptor?.enum)) {
+      // Schema enum → dropdown. A current value outside the vocabulary (hand-edited
+      // config) stays selectable so opening the page never silently rewrites it.
+      inputElement = (
+        <select
+          id={fieldId}
+          className="form-select"
+          value={value}
+          onChange={e =>
+            handleSettingChange(
+              path,
+              typeof value === 'number' ? Number(e.target.value) : e.target.value
+            )
+          }
+        >
+          {!descriptor.enum.includes(value) && <option value={value}>{String(value)}</option>}
+          {descriptor.enum.map(option => (
+            <option key={option} value={option}>
+              {String(option)}
+            </option>
+          ))}
+        </select>
+      );
+    } else if (isArray) {
+      inputElement = (
+        <textarea
+          id={fieldId}
+          className="form-control"
+          rows="6"
+          value={value.join('\n')}
+          onChange={e => handleSettingChange(path, e.target.value.split('\n'))}
+        />
+      );
+    } else {
+      // Empty string is a meaningful default on some fields ("resolve at runtime") —
+      // the schema description states what empty resolves to, surfaced as placeholder.
+      inputElement = (
+        <input
+          id={fieldId}
+          className="form-control"
+          type={typeof value === 'number' ? 'number' : 'text'}
+          value={value}
+          min={typeof value === 'number' ? descriptor?.min : undefined}
+          max={typeof value === 'number' ? descriptor?.max : undefined}
+          placeholder={value === '' && help ? help : undefined}
+          onChange={e =>
+            handleSettingChange(
+              path,
+              typeof value === 'number' ? Number(e.target.value) : e.target.value
+            )
+          }
+        />
+      );
+    }
 
     return (
       <div key={fieldId} className={isArray ? 'col-12' : 'col-12 col-lg-6'}>
@@ -701,6 +786,7 @@ const AgentSettings = () => {
             {key.replace(/_/g, ' ')}
           </label>
           {inputElement}
+          {help && <p className="form-text text-muted mb-0">{help}</p>}
         </div>
       </div>
     );
@@ -710,11 +796,13 @@ const AgentSettings = () => {
   const renderItems = items =>
     items.map(item => {
       if (item.type === 'subsection') {
+        const subHelp = schemaNodeForPath(item.path)?.description;
         return (
           <div key={item.name} className="col-12">
             <h4 className="fs-6 fw-semibold text-muted mt-2 mb-2">
               {item.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
             </h4>
+            {subHelp && <p className="form-text text-muted">{subHelp}</p>}
             <div className="row g-3">{renderItems(item.fields)}</div>
           </div>
         );
@@ -732,51 +820,46 @@ const AgentSettings = () => {
       {/* Use consistent toggle switch styling with main Hyperweaver settings */}
       <div className="container-fluid p-0">
         <div className="card">
-          <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div>
-              <strong>Agent System Settings</strong>
-            </div>
-            <div className="d-flex gap-2">
-              <button
-                type="button"
-                className="btn btn-sm btn-primary"
-                onClick={saveSettings}
-                disabled={loading || !settings}
-              >
-                <i className="fas fa-save me-2" />
-                <span>Save</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm btn-info"
-                onClick={createBackup}
-                disabled={loading}
-              >
-                <i className="fas fa-download me-2" />
-                <span>Backup</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm btn-warning"
-                onClick={() => setShowBackupModal(true)}
-                disabled={loading}
-              >
-                <i className="fas fa-history me-2" />
-                <span>Restore</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm btn-danger"
-                onClick={requestRestartServer}
-                disabled={loading}
-              >
-                <i className="fas fa-redo me-2" />
-                <span>Restart</span>
-              </button>
-            </div>
-          </div>
+          <HostPageHeader title="Agent Settings">
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              onClick={saveSettings}
+              disabled={loading || !settings}
+            >
+              <i className="fas fa-save me-2" />
+              <span>Save</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-info"
+              onClick={createBackup}
+              disabled={loading}
+            >
+              <i className="fas fa-download me-2" />
+              <span>Backup</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-warning"
+              onClick={() => setShowBackupModal(true)}
+              disabled={loading}
+            >
+              <i className="fas fa-history me-2" />
+              <span>Restore</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-danger"
+              onClick={requestRestartServer}
+              disabled={loading}
+            >
+              <i className="fas fa-redo me-2" />
+              <span>Restart</span>
+            </button>
+          </HostPageHeader>
           {settings && currentServer && (
-            <ul className="nav nav-tabs px-3 pt-2 mb-0">
+            <ul className="nav nav-tabs pt-2 mb-0">
               {organizeBySection(settings).map(section => (
                 <li key={section.name} className="nav-item">
                   <button
@@ -819,11 +902,22 @@ const AgentSettings = () => {
                 {organizeBySection(settings).map(section => {
                   const directFields = section.content.filter(i => i.type === 'field');
                   const subsections = section.content.filter(i => i.type === 'subsection');
+                  const sectionNode = schemaNodeForPath([section.name]);
+                  const sectionHelp = sectionNode?.description;
                   return (
                     <div
                       key={section.name}
                       className={`tab-pane ${activeTab === section.name ? 'active' : ''}`}
                     >
+                      {/* Schema section descriptors carry requires_restart (D13 shape) —
+                          surfaced per Mark's go (sync OPEN ITEM 1). */}
+                      {sectionNode?.requires_restart && (
+                        <div className="alert alert-warning py-2 mb-3">
+                          <i className="fas fa-triangle-exclamation me-2" />
+                          Changes in this section require an agent restart to take effect.
+                        </div>
+                      )}
+
                       {/* Special handling for orchestration sections */}
                       {isOrchestrationSection(section.name) && renderOrchestrationControls()}
 
@@ -839,6 +933,7 @@ const AgentSettings = () => {
                                 {directFields.length !== 1 ? 's' : ''}
                               </span>
                             </h2>
+                            {sectionHelp && <p className="form-text text-muted">{sectionHelp}</p>}
                             <div className="row g-3">{renderItems(directFields)}</div>
                           </div>
                         </div>
@@ -846,6 +941,7 @@ const AgentSettings = () => {
 
                       {subsections.map(sub => {
                         const subFieldCount = sub.fields.filter(i => i.type === 'field').length;
+                        const subCardHelp = schemaNodeForPath(sub.path)?.description;
                         return (
                           <div key={sub.name} className="card mb-4">
                             <div className="card-body">
@@ -858,6 +954,7 @@ const AgentSettings = () => {
                                   </span>
                                 )}
                               </h3>
+                              {subCardHelp && <p className="form-text text-muted">{subCardHelp}</p>}
                               <div className="row g-3">{renderItems(sub.fields)}</div>
                             </div>
                           </div>

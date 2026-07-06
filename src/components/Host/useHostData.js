@@ -85,6 +85,70 @@ export const useHostData = currentServer => {
     getStorageDatasets,
   } = useServers();
 
+  // CPU usage for the Resource Utilization row, computed from /stats `cpus`
+  // cumulative times (both agents emit the os.cpus() shape — sync entry
+  // 2026-07-05; load averages don't exist on Windows, so loadavg can't drive
+  // this row). A percentage needs a DELTA between two samples: the first
+  // sample only baselines, and a one-shot 3s /stats re-poll follows it so the
+  // row shows a real number seconds after load instead of waiting out a full
+  // refresh interval.
+  const [cpuUsagePct, setCpuUsagePct] = useState(null);
+  const prevCpuSampleRef = useRef(null); // { hostname, idle, total }
+  const cpuResampleTimerRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (cpuResampleTimerRef.current) {
+        clearTimeout(cpuResampleTimerRef.current);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    const cpus = serverStats?.cpus;
+    const hostname = currentServer?.hostname;
+    if (!Array.isArray(cpus) || cpus.length === 0 || !hostname) {
+      return;
+    }
+
+    let idle = 0;
+    let total = 0;
+    cpus.forEach(cpu => {
+      Object.values(cpu.times || {}).forEach(value => {
+        total += value;
+      });
+      idle += cpu.times?.idle || 0;
+    });
+
+    const prev = prevCpuSampleRef.current;
+    if (prev && prev.hostname === hostname && total > prev.total && idle >= prev.idle) {
+      const totalDelta = total - prev.total;
+      const busyPct = ((totalDelta - (idle - prev.idle)) / totalDelta) * 100;
+      setCpuUsagePct(Math.min(100, Math.max(0, busyPct)));
+    } else if (!prev || prev.hostname !== hostname) {
+      // New host (or very first sample): baseline now, quick-resample for the delta.
+      setCpuUsagePct(null);
+      if (cpuResampleTimerRef.current) {
+        clearTimeout(cpuResampleTimerRef.current);
+      }
+      cpuResampleTimerRef.current = setTimeout(async () => {
+        const result = await makeAgentRequest(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          'stats'
+        );
+        if (result.success) {
+          setServerStats(result.data);
+        }
+      }, 3000);
+    }
+    // A same-host non-increasing counter (agent restart) falls through to a
+    // silent rebaseline below.
+    prevCpuSampleRef.current = { hostname, idle, total };
+  }, [serverStats, currentServer, makeAgentRequest]);
+
   // Wrapper functions for chart updaters that use state setters
   const updatePoolIOChartData = useCallback(
     poolIOData => {
@@ -297,6 +361,7 @@ export const useHostData = currentServer => {
 
   return {
     serverStats,
+    cpuUsagePct,
     monitoringHealth,
     monitoringStatus,
     networkInterfaces,

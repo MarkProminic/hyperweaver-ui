@@ -41,22 +41,7 @@ const UserSettingsProvider = ({ children }) => {
     const saved = localStorage.getItem('hyperweaver_task_visible_columns');
     return saved
       ? JSON.parse(saved)
-      : ['operation', 'zone_name', 'status', 'progress', 'priority', 'created_at'];
-  });
-
-  const [hostsExpanded, setHostsExpanded] = useState(() => {
-    const saved = localStorage.getItem('hyperweaver_hosts_expanded');
-    return saved ? JSON.parse(saved) : false;
-  });
-
-  const [zonesExpanded, setZonesExpanded] = useState(() => {
-    const saved = localStorage.getItem('hyperweaver_zones_expanded');
-    return saved ? JSON.parse(saved) : false;
-  });
-
-  const [settingsExpanded, setSettingsExpanded] = useState(() => {
-    const saved = localStorage.getItem('hyperweaver_settings_expanded');
-    return saved ? JSON.parse(saved) : false;
+      : ['operation', 'machine_name', 'status', 'progress', 'priority', 'created_at'];
   });
 
   // Save settings to localStorage whenever they change
@@ -91,18 +76,6 @@ const UserSettingsProvider = ({ children }) => {
     localStorage.setItem('hyperweaver_task_visible_columns', JSON.stringify(taskVisibleColumns));
   }, [taskVisibleColumns]);
 
-  useEffect(() => {
-    localStorage.setItem('hyperweaver_hosts_expanded', JSON.stringify(hostsExpanded));
-  }, [hostsExpanded]);
-
-  useEffect(() => {
-    localStorage.setItem('hyperweaver_zones_expanded', JSON.stringify(zonesExpanded));
-  }, [zonesExpanded]);
-
-  useEffect(() => {
-    localStorage.setItem('hyperweaver_settings_expanded', JSON.stringify(settingsExpanded));
-  }, [settingsExpanded]);
-
   return (
     <UserSettings.Provider
       value={{
@@ -122,12 +95,6 @@ const UserSettingsProvider = ({ children }) => {
         setTaskMinPriority,
         taskVisibleColumns,
         setTaskVisibleColumns,
-        hostsExpanded,
-        setHostsExpanded,
-        zonesExpanded,
-        setZonesExpanded,
-        settingsExpanded,
-        setSettingsExpanded,
       }}
     >
       {children}

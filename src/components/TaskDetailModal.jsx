@@ -59,7 +59,7 @@ InfoRow.propTypes = {
 const SubtaskRow = ({ task, onSelect }) => (
   <tr onClick={() => onSelect(task)} style={{ cursor: 'pointer' }}>
     <td>{task.operation}</td>
-    <td>{task.zone_name}</td>
+    <td>{task.machine_name}</td>
     <td>{renderStatusBadge(task.status)}</td>
     <td>
       {task.progress_percent !== null && task.progress_percent !== undefined
@@ -81,6 +81,36 @@ const TaskDetailModal = ({ task, onClose }) => {
   const [childTask, setChildTask] = useState(null);
   const outputRef = useRef(null);
   const wsRef = useRef(null);
+
+  // REST output backfill + poll (sync-file bug, 2026-07-05). The WS stream below only
+  // delivers entries emitted AFTER it connects — completed tasks showed nothing — and
+  // the Go agent serves no WS surfaces at all until its Phase E. GET tasks/{id}/output
+  // returns the full buffer (live in-memory while running, persisted after), shape
+  // {task_id, status, output: [{stream, data, timestamp}]}. Each fetch REPLACES the
+  // list, so interleaved WS appends never accumulate duplicates.
+  const fetchOutput = useCallback(async () => {
+    if (!currentServer) {
+      return;
+    }
+    const result = await makeAgentRequest(
+      currentServer.hostname,
+      currentServer.port,
+      currentServer.protocol,
+      `tasks/${task.id}/output`
+    );
+    if (result.success && Array.isArray(result.data?.output)) {
+      setOutput(result.data.output.map((entry, index) => ({ ...entry, _ui_id: `rest-${index}` })));
+    }
+  }, [currentServer, makeAgentRequest, task.id]);
+
+  useEffect(() => {
+    fetchOutput();
+    if (task.status !== 'running') {
+      return undefined;
+    }
+    const interval = setInterval(fetchOutput, 2000);
+    return () => clearInterval(interval);
+  }, [fetchOutput, task.status]);
 
   // Fetch subtasks if this is a parent task
   useEffect(() => {
@@ -173,7 +203,7 @@ const TaskDetailModal = ({ task, onClose }) => {
             <h6 className="fs-6 fw-bold">Details</h6>
             <InfoRow label="ID">{task.id}</InfoRow>
             <InfoRow label="Operation">{task.operation}</InfoRow>
-            <InfoRow label="Target">{task.zone_name}</InfoRow>
+            <InfoRow label="Target">{task.machine_name}</InfoRow>
             <InfoRow label="Status">{renderStatusBadge(task.status)}</InfoRow>
             <InfoRow label="Priority">{renderPriorityBadge(task.priority)}</InfoRow>
             <InfoRow label="Created By">{task.created_by || '-'}</InfoRow>

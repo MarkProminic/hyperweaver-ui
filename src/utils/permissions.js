@@ -11,12 +11,12 @@ export const PERMISSION_LEVELS = {
 export const hasMinPermission = (userRole, minLevel) =>
   PERMISSION_LEVELS[userRole] >= PERMISSION_LEVELS[minLevel];
 
-// Zone Management Permissions
-export const canControlZones = userRole => hasMinPermission(userRole, 'user'); // Users can control zones
-export const canAccessZoneConsole = userRole => hasMinPermission(userRole, 'user'); // Users can access console
-export const canStartStopZones = userRole => hasMinPermission(userRole, 'user'); // Users can start/stop zones
-export const canRestartZones = userRole => hasMinPermission(userRole, 'user'); // Users can restart zones
-export const canDestroyZones = userRole => hasMinPermission(userRole, 'admin'); // Only admins can destroy zones
+// Machine Management Permissions
+export const canControlMachines = userRole => hasMinPermission(userRole, 'user'); // Users can control machines
+export const canAccessMachineConsole = userRole => hasMinPermission(userRole, 'user'); // Users can access console
+export const canStartStopMachines = userRole => hasMinPermission(userRole, 'user'); // Users can start/stop machines
+export const canRestartMachines = userRole => hasMinPermission(userRole, 'user'); // Users can restart machines
+export const canDestroyMachines = userRole => hasMinPermission(userRole, 'admin'); // Only admins can destroy machines
 
 // Host Management Permissions
 export const canViewHosts = userRole => hasMinPermission(userRole, 'user'); // Users can view hosts (read-only)

@@ -44,7 +44,7 @@ VncErrorDisplay.propTypes = {
 const VncControls = ({
   connected,
   connecting,
-  zoneName,
+  machineName,
   onCtrlAltDel,
   onConnect,
   onDisconnect,
@@ -56,7 +56,7 @@ const VncControls = ({
         {connected && 'Connected'}
         {connecting && !connected && 'Connecting...'}
         {!connected && !connecting && 'Disconnected'}
-        {connected && ` • ${zoneName}`}
+        {connected && ` • ${machineName}`}
       </span>
     </div>
 
@@ -97,7 +97,7 @@ const VncControls = ({
 VncControls.propTypes = {
   connected: PropTypes.bool.isRequired,
   connecting: PropTypes.bool.isRequired,
-  zoneName: PropTypes.string,
+  machineName: PropTypes.string,
   onCtrlAltDel: PropTypes.func.isRequired,
   onConnect: PropTypes.func.isRequired,
   onDisconnect: PropTypes.func.isRequired,
@@ -125,7 +125,7 @@ const VncViewerReact = forwardRef(
   (
     {
       server,
-      zoneName,
+      machineName,
       viewOnly = false,
       autoConnect = true,
       quality = 6,
@@ -159,18 +159,21 @@ const VncViewerReact = forwardRef(
       refreshTicket();
     }, [refreshTicket]);
 
-    // Mode-aware WebSocket URL (dual-mode plan §4.2/§4.3):
-    // Aggregated → /api/agents/{id}/zones/{z}/vnc/websockify (Server proxies)
-    // Direct     → /zones/{z}/vnc/websockify (agent's own WS, same origin)
+    // Mode-aware WebSocket URL (dual-mode plan §4.2/§4.3), canonical machine path:
+    // Aggregated → /api/agents/{id}/machines/{m}/vnc/websockify (Server proxies)
+    // Direct     → /machines/{m}/vnc/websockify (agent's own WS, same origin)
     const basePath = server ? getAgentBasePath(server) : null;
     const wsUrl =
-      server && zoneName && ticket && basePath !== null
-        ? buildWsUrl(`${basePath}/zones/${encodeURIComponent(zoneName)}/vnc/websockify`, ticket)
+      server && machineName && ticket && basePath !== null
+        ? buildWsUrl(
+            `${basePath}/machines/${encodeURIComponent(machineName)}/vnc/websockify`,
+            ticket
+          )
         : '';
 
     const handleRefresh = useCallback(() => {
       if (vncRef.current) {
-        console.log(`🔄 REACT-VNC: Refreshing connection to ${zoneName}`);
+        console.log(`🔄 REACT-VNC: Refreshing connection to ${machineName}`);
         if (connected) {
           vncRef.current.disconnect();
         }
@@ -180,28 +183,28 @@ const VncViewerReact = forwardRef(
           vncRef.current.connect();
         }, 1000);
       }
-    }, [connected, zoneName]);
+    }, [connected, machineName]);
 
     // Enhanced control handlers
     const handleConnect = useCallback(() => {
       if (vncRef.current && !connected && !connecting) {
-        console.log(`🔌 REACT-VNC: Manually connecting to ${zoneName}`);
+        console.log(`🔌 REACT-VNC: Manually connecting to ${machineName}`);
         setConnecting(true);
         setError('');
         vncRef.current.connect();
       }
-    }, [connected, connecting, zoneName]);
+    }, [connected, connecting, machineName]);
 
     const handleDisconnect = useCallback(() => {
       if (vncRef.current && connected) {
-        console.log(`🔌 REACT-VNC: Manually disconnecting from ${zoneName}`);
+        console.log(`🔌 REACT-VNC: Manually disconnecting from ${machineName}`);
         vncRef.current.disconnect();
       }
-    }, [connected, zoneName]);
+    }, [connected, machineName]);
 
     const handleCtrlAltDel = useCallback(() => {
       if (vncRef.current && connected) {
-        console.log(`⌨️ REACT-VNC: Sending Ctrl+Alt+Del to ${zoneName}`);
+        console.log(`⌨️ REACT-VNC: Sending Ctrl+Alt+Del to ${machineName}`);
         vncRef.current.sendCtrlAltDel();
       }
 
@@ -209,7 +212,7 @@ const VncViewerReact = forwardRef(
       if (onCtrlAltDel) {
         onCtrlAltDel();
       }
-    }, [connected, zoneName, onCtrlAltDel]);
+    }, [connected, machineName, onCtrlAltDel]);
 
     // Expose control functions to parent component
     useEffect(() => {
@@ -223,7 +226,7 @@ const VncViewerReact = forwardRef(
 
     // Connection event handlers
     const handleVncConnect = () => {
-      console.log(`✅ REACT-VNC: Connected to ${zoneName}`);
+      console.log(`✅ REACT-VNC: Connected to ${machineName}`);
       setConnected(true);
       setConnecting(false);
       setError('');
@@ -234,7 +237,7 @@ const VncViewerReact = forwardRef(
     };
 
     const handleVncDisconnect = event => {
-      console.log(`❌ REACT-VNC: Disconnected from ${zoneName}:`, event);
+      console.log(`❌ REACT-VNC: Disconnected from ${machineName}:`, event);
       // Only refresh the ticket after a real drop (we were connected), so a failing
       // initial connect can't spin refetch→reconnect. react-vnc paces its own retries.
       if (connected) {
@@ -249,19 +252,19 @@ const VncViewerReact = forwardRef(
     };
 
     const handleCredentialsRequired = () => {
-      console.log(`🔐 REACT-VNC: Credentials required for ${zoneName}`);
+      console.log(`🔐 REACT-VNC: Credentials required for ${machineName}`);
       setError('VNC authentication required - this should not happen with zadm vnc');
     };
 
     const handleSecurityFailure = event => {
-      console.error(`🔒 REACT-VNC: Security failure for ${zoneName}:`, event);
+      console.error(`🔒 REACT-VNC: Security failure for ${machineName}:`, event);
       setError('VNC security failure - check server configuration');
       setConnecting(false);
     };
 
     // Clipboard event handler
     const handleClipboard = event => {
-      console.log(`📋 REACT-VNC: Clipboard event for ${zoneName}:`, event);
+      console.log(`📋 REACT-VNC: Clipboard event for ${machineName}:`, event);
       if (onClipboard) {
         onClipboard(event);
       }
@@ -312,12 +315,12 @@ const VncViewerReact = forwardRef(
     }, [connected, onConnect, handleClipboardPaste]);
 
     // Validate required parameters (Render error if missing, but hooks are already called)
-    if (!server || !zoneName) {
+    if (!server || !machineName) {
       return (
         <VncErrorDisplay
           className={className}
           style={style}
-          message="Missing required parameters: server and zoneName"
+          message="Missing required parameters: server and machineName"
         />
       );
     }
@@ -340,7 +343,7 @@ const VncViewerReact = forwardRef(
           <VncControls
             connected={connected}
             connecting={connecting}
-            zoneName={zoneName}
+            machineName={machineName}
             onCtrlAltDel={handleCtrlAltDel}
             onConnect={handleConnect}
             onDisconnect={handleDisconnect}
@@ -393,7 +396,7 @@ VncViewerReact.propTypes = {
     port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     protocol: PropTypes.string,
   }),
-  zoneName: PropTypes.string,
+  machineName: PropTypes.string,
   viewOnly: PropTypes.bool,
   autoConnect: PropTypes.bool,
   quality: PropTypes.number,

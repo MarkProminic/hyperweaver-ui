@@ -9,6 +9,7 @@ import { hasFeature } from '../utils/capabilities';
 import BootEnvironmentManagement from './Host/BootEnvironmentManagement';
 import FaultManagement from './Host/FaultManagement';
 import EnhancedFileManager from './Host/FileManager/EnhancedFileManager';
+import HostPageHeader from './Host/HostPageHeader';
 import NetworkHostnameManagement from './Host/NetworkHostnameManagement';
 import PackageManagement from './Host/Package/Management';
 import ProcessManagement from './Host/ProcessManagement';
@@ -17,12 +18,12 @@ import StorageManagement from './Host/StorageManagement';
 import TimeNTPManagement from './Host/TimeNTPManagement';
 import UserGroupManagement from './Host/UserGroupManagement';
 
-// Tabs gate on the agent's capability feature tokens (dual-mode plan §3.1) where a
-// token exists; the rest stay ungated until Agent API v1 grows the vocabulary
-// (same gap as the Devices/PPT page). Legacy agents without a features array
-// render everything — hasFeature's render-all rule.
+// Every tab gates on an agent feature token (hasFeature; legacy agents with no
+// features array render everything). Token names are the agents' real vocabulary
+// (sync-file ACK 2026-07-05) — `services` is newly minted and zoneweaver-agent
+// advertises it from its next session; the rest already exist.
 const TABS = [
-  { id: 'services', label: 'Services', icon: 'fas fa-cogs' },
+  { id: 'services', label: 'Services', icon: 'fas fa-cogs', feature: 'services' },
   { id: 'network', label: 'Network', icon: 'fas fa-network-wired', feature: 'vnics' },
   { id: 'packages', label: 'Package Management', icon: 'fas fa-box', feature: 'packages' },
   {
@@ -32,16 +33,16 @@ const TABS = [
     feature: 'boot-environments',
   },
   { id: 'storage', label: 'Storage', icon: 'fas fa-database', feature: 'zfs' },
-  { id: 'time-ntp', label: 'Time', icon: 'fas fa-clock' },
-  { id: 'processes', label: 'Processes', icon: 'fas fa-tasks' },
+  { id: 'time-ntp', label: 'Time', icon: 'fas fa-clock', feature: 'time-sync' },
+  { id: 'processes', label: 'Processes', icon: 'fas fa-tasks', feature: 'processes' },
   {
     id: 'fault-management',
     label: 'Fault Management',
     icon: 'fas fa-exclamation-triangle',
     feature: 'fault-management',
   },
-  { id: 'file-manager', label: 'File Manager', icon: 'fas fa-folder' },
-  { id: 'user-group', label: 'User and Groups', icon: 'fas fa-users' },
+  { id: 'file-manager', label: 'File Manager', icon: 'fas fa-folder', feature: 'file-browser' },
+  { id: 'user-group', label: 'User and Groups', icon: 'fas fa-users', feature: 'system-users' },
 ];
 
 const HostManage = () => {
@@ -82,19 +83,16 @@ const HostManage = () => {
         </Helmet>
         <div className="container-fluid p-0">
           <div className="card">
-            <div className="titlebar card-header active d-flex justify-content-between align-items-center mb-0 p-3">
-              <div>
-                <strong>Host Management</strong>
-              </div>
-              <div>
-                <button className="btn" onClick={() => navigate('/ui/hosts')}>
-                  <span className="me-1">
-                    <i className="fas fa-arrow-left" />
-                  </span>
-                  <span>Back to Hosts</span>
-                </button>
-              </div>
-            </div>
+            <HostPageHeader title="Host Management">
+              <button
+                type="button"
+                className="btn btn-sm btn-info"
+                onClick={() => navigate('/ui/hosts')}
+              >
+                <i className="fas fa-arrow-left me-2" />
+                <span>Back to Hosts</span>
+              </button>
+            </HostPageHeader>
             <div className="px-4">
               <div className="alert alert-info">
                 <p>Please select a server from the navbar to manage its services.</p>
@@ -114,14 +112,7 @@ const HostManage = () => {
       </Helmet>
       <div className="container-fluid p-0">
         <div className="card">
-          {/* Server Header */}
-          <div className="titlebar card-header active d-flex justify-content-between align-items-center mb-0 p-3">
-            <div>
-              <div>
-                <strong>Host Management: {currentServer.hostname}</strong>
-              </div>
-            </div>
-          </div>
+          <HostPageHeader title="Host Management" />
 
           {/* Tab Navigation */}
           <div className="mb-0">

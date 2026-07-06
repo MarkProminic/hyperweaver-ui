@@ -13,10 +13,10 @@ import {
 import * as consoleAPI from '../api/consoleAPI';
 import * as deviceAPI from '../api/deviceAPI';
 import * as hostManagementAPI from '../api/hostManagementAPI';
+import * as machineAPI from '../api/machineAPI';
 import * as monitoringAPI from '../api/monitoringAPI';
 import { configureAgentAddressing, makeAgentRequest } from '../api/serverUtils';
 import * as vlanAPI from '../api/vlanAPI';
-import * as zoneAPI from '../api/zoneAPI';
 
 import { useAuth } from './AuthContext';
 import { useMode } from './ModeContext';
@@ -64,13 +64,13 @@ export const ServerProvider = ({ children }) => {
     }
   });
 
-  const [currentZone, setCurrentZone] = useState(() => {
-    // Restore currentZone from localStorage on initialization
+  const [currentMachine, setCurrentMachine] = useState(() => {
+    // Restore currentMachine from localStorage on initialization
     try {
-      const saved = localStorage.getItem('hyperweaver_currentZone');
+      const saved = localStorage.getItem('hyperweaver_currentMachine');
       return saved ? JSON.parse(saved) : null;
-    } catch (restoreZoneErr) {
-      console.warn('Failed to restore currentZone from localStorage:', restoreZoneErr);
+    } catch (restoreMachineErr) {
+      console.warn('Failed to restore currentMachine from localStorage:', restoreMachineErr);
       return null;
     }
   });
@@ -187,18 +187,18 @@ export const ServerProvider = ({ children }) => {
     }
   }, [currentServer]);
 
-  // Persist currentZone to localStorage whenever it changes
+  // Persist currentMachine to localStorage whenever it changes
   useEffect(() => {
     try {
-      if (currentZone) {
-        localStorage.setItem('hyperweaver_currentZone', JSON.stringify(currentZone));
+      if (currentMachine) {
+        localStorage.setItem('hyperweaver_currentMachine', JSON.stringify(currentMachine));
       } else {
-        localStorage.removeItem('hyperweaver_currentZone');
+        localStorage.removeItem('hyperweaver_currentMachine');
       }
-    } catch (saveZoneErr) {
-      console.warn('Failed to save currentZone to localStorage:', saveZoneErr);
+    } catch (saveMachineErr) {
+      console.warn('Failed to save currentMachine to localStorage:', saveMachineErr);
     }
-  }, [currentZone]);
+  }, [currentMachine]);
 
   /**
    * Establish the server list once authenticated.
@@ -300,7 +300,7 @@ export const ServerProvider = ({ children }) => {
           '❌ SERVER RE-ESTABLISHMENT: Previously selected server no longer exists, clearing selection'
         );
         setCurrentServer(null);
-        setCurrentZone(null);
+        setCurrentMachine(null);
       }
     } else if (servers.length > 0 && !currentServer) {
       console.log('📝 SERVER RE-ESTABLISHMENT: No currentServer to restore');
@@ -317,30 +317,33 @@ export const ServerProvider = ({ children }) => {
    * @param {string} [serverData.description] - Description
    * @returns {Promise<Object>} Add result
    */
-  const addServer = async serverData => {
-    if (isDirect) {
-      return { success: false, message: 'Server management is not available in Direct mode' };
-    }
-    try {
-      setLoading(true);
-      const response = await axios.post('/api/servers', serverData);
-
-      if (response.data.success) {
-        // Reload servers to get the new one
-        await loadServers();
-        return { success: true, message: response.data.message };
+  const addServer = useCallback(
+    async serverData => {
+      if (isDirect) {
+        return { success: false, message: 'Server management is not available in Direct mode' };
       }
-      return { success: false, message: response.data.message };
-    } catch (addErr) {
-      console.error('Add server error:', addErr);
-      return {
-        success: false,
-        message: addErr.response?.data?.message || 'Failed to add server',
-      };
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        setLoading(true);
+        const response = await axios.post('/api/servers', serverData);
+
+        if (response.data.success) {
+          // Reload servers to get the new one
+          await loadServers();
+          return { success: true, message: response.data.message };
+        }
+        return { success: false, message: response.data.message };
+      } catch (addErr) {
+        console.error('Add server error:', addErr);
+        return {
+          success: false,
+          message: addErr.response?.data?.message || 'Failed to add server',
+        };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isDirect, loadServers]
+  );
 
   /**
    * Test server connectivity
@@ -350,26 +353,29 @@ export const ServerProvider = ({ children }) => {
    * @param {string} serverData.protocol - Server protocol (http/https)
    * @returns {Promise<Object>} Test result
    */
-  const testServer = async serverData => {
-    if (isDirect) {
-      return { success: false, message: 'Server management is not available in Direct mode' };
-    }
-    try {
-      const response = await axios.post('/api/servers/test', serverData);
+  const testServer = useCallback(
+    async serverData => {
+      if (isDirect) {
+        return { success: false, message: 'Server management is not available in Direct mode' };
+      }
+      try {
+        const response = await axios.post('/api/servers/test', serverData);
 
-      return {
-        success: response.data.success,
-        message: response.data.message,
-        serverInfo: response.data.serverInfo,
-      };
-    } catch (testErr) {
-      console.error('Test server error:', testErr);
-      return {
-        success: false,
-        message: testErr.response?.data?.message || 'Connection test failed',
-      };
-    }
-  };
+        return {
+          success: response.data.success,
+          message: response.data.message,
+          serverInfo: response.data.serverInfo,
+        };
+      } catch (testErr) {
+        console.error('Test server error:', testErr);
+        return {
+          success: false,
+          message: testErr.response?.data?.message || 'Connection test failed',
+        };
+      }
+    },
+    [isDirect]
+  );
 
   /**
    * Update a server's editable settings (Admin only). allow_insecure is the only
@@ -379,66 +385,72 @@ export const ServerProvider = ({ children }) => {
    * @param {boolean} allowInsecure - Accept self-signed TLS certificates
    * @returns {Promise<Object>} Update result
    */
-  const updateServer = async (serverId, allowInsecure) => {
-    if (isDirect) {
-      return { success: false, message: 'Server management is not available in Direct mode' };
-    }
-    try {
-      setLoading(true);
-      const response = await axios.patch(`/api/servers/${serverId}`, { allowInsecure });
-
-      if (response.data.success) {
-        // Reload servers so the row reflects the new flag
-        await loadServers();
-        return { success: true, message: response.data.message };
+  const updateServer = useCallback(
+    async (serverId, allowInsecure) => {
+      if (isDirect) {
+        return { success: false, message: 'Server management is not available in Direct mode' };
       }
-      return { success: false, message: response.data.message };
-    } catch (updateErr) {
-      console.error('Update server error:', updateErr);
-      return {
-        success: false,
-        message: updateErr.response?.data?.message || 'Failed to update server',
-      };
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        setLoading(true);
+        const response = await axios.patch(`/api/servers/${serverId}`, { allowInsecure });
+
+        if (response.data.success) {
+          // Reload servers so the row reflects the new flag
+          await loadServers();
+          return { success: true, message: response.data.message };
+        }
+        return { success: false, message: response.data.message };
+      } catch (updateErr) {
+        console.error('Update server error:', updateErr);
+        return {
+          success: false,
+          message: updateErr.response?.data?.message || 'Failed to update server',
+        };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isDirect, loadServers]
+  );
 
   /**
    * Remove a server (Admin only)
    * @param {number} serverId - Server ID
    * @returns {Promise<Object>} Remove result
    */
-  const removeServer = async serverId => {
-    if (isDirect) {
-      return { success: false, message: 'Server management is not available in Direct mode' };
-    }
-    try {
-      setLoading(true);
-      const response = await axios.delete(`/api/servers/${serverId}`);
-
-      if (response.data.success) {
-        // Reload servers to reflect the change
-        await loadServers();
-
-        // Clear current server if it was the one removed
-        if (currentServer && currentServer.id === serverId) {
-          setCurrentServer(null);
-        }
-
-        return { success: true, message: response.data.message };
+  const removeServer = useCallback(
+    async serverId => {
+      if (isDirect) {
+        return { success: false, message: 'Server management is not available in Direct mode' };
       }
-      return { success: false, message: response.data.message };
-    } catch (removeErr) {
-      console.error('Remove server error:', removeErr);
-      return {
-        success: false,
-        message: removeErr.response?.data?.message || 'Failed to remove server',
-      };
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        setLoading(true);
+        const response = await axios.delete(`/api/servers/${serverId}`);
+
+        if (response.data.success) {
+          // Reload servers to reflect the change
+          await loadServers();
+
+          // Clear current server if it was the one removed
+          if (currentServer && currentServer.id === serverId) {
+            setCurrentServer(null);
+          }
+
+          return { success: true, message: response.data.message };
+        }
+        return { success: false, message: response.data.message };
+      } catch (removeErr) {
+        console.error('Remove server error:', removeErr);
+        return {
+          success: false,
+          message: removeErr.response?.data?.message || 'Failed to remove server',
+        };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isDirect, loadServers, currentServer]
+  );
 
   /**
    * Get all available servers
@@ -455,33 +467,33 @@ export const ServerProvider = ({ children }) => {
    * Set the current server for operations
    * @param {Object} server - Server object
    */
-  const selectServer = server => {
+  const selectServer = useCallback(server => {
     setCurrentServer(server);
-    // Clear current zone when server changes
-    setCurrentZone(null);
-  };
+    // Clear current machine when server changes
+    setCurrentMachine(null);
+  }, []);
 
   /**
-   * Set the current zone for operations
-   * @param {string} zoneName - Zone name
+   * Set the current machine for operations
+   * @param {string} machineName - Machine name
    */
-  const selectZone = zoneName => {
-    setCurrentZone(zoneName);
-  };
+  const selectMachine = useCallback(machineName => {
+    setCurrentMachine(machineName);
+  }, []);
 
   /**
-   * Clear the current zone selection
+   * Clear the current machine selection
    */
-  const clearZone = () => {
-    setCurrentZone(null);
-  };
+  const clearMachine = useCallback(() => {
+    setCurrentMachine(null);
+  }, []);
 
   // ========================================
   // API KEY MANAGEMENT FUNCTIONS
   // Kept in context because they depend on currentServer state
   // ========================================
 
-  const getApiKeys = async () => {
+  const getApiKeys = useCallback(async () => {
     if (!currentServer) {
       return { success: false, message: 'No server selected' };
     }
@@ -492,23 +504,26 @@ export const ServerProvider = ({ children }) => {
       'api-keys',
       'GET'
     );
-  };
+  }, [currentServer]);
 
-  const generateApiKey = async (name, description) => {
-    if (!currentServer) {
-      return { success: false, message: 'No server selected' };
-    }
-    return await makeAgentRequest(
-      currentServer.hostname,
-      currentServer.port,
-      currentServer.protocol,
-      'api-keys/generate',
-      'POST',
-      { name, description }
-    );
-  };
+  const generateApiKey = useCallback(
+    async (name, description) => {
+      if (!currentServer) {
+        return { success: false, message: 'No server selected' };
+      }
+      return await makeAgentRequest(
+        currentServer.hostname,
+        currentServer.port,
+        currentServer.protocol,
+        'api-keys/generate',
+        'POST',
+        { name, description }
+      );
+    },
+    [currentServer]
+  );
 
-  const bootstrapApiKey = async () => {
+  const bootstrapApiKey = useCallback(async () => {
     if (!currentServer) {
       return { success: false, message: 'No server selected' };
     }
@@ -520,82 +535,110 @@ export const ServerProvider = ({ children }) => {
       'POST',
       { name: 'Initial-Setup', description: 'Initial bootstrap API key' }
     );
-  };
+  }, [currentServer]);
 
-  const deleteApiKey = async id => {
-    if (!currentServer) {
-      return { success: false, message: 'No server selected' };
-    }
-    return await makeAgentRequest(
-      currentServer.hostname,
-      currentServer.port,
-      currentServer.protocol,
-      `api-keys/${id}`,
-      'DELETE'
-    );
-  };
+  const deleteApiKey = useCallback(
+    async id => {
+      if (!currentServer) {
+        return { success: false, message: 'No server selected' };
+      }
+      return await makeAgentRequest(
+        currentServer.hostname,
+        currentServer.port,
+        currentServer.protocol,
+        `api-keys/${id}`,
+        'DELETE'
+      );
+    },
+    [currentServer]
+  );
 
-  const value = {
-    servers,
-    loading,
-    currentServer,
-    currentZone,
-    loadServers,
-    refreshServers: loadServers,
-    addServer,
-    testServer,
-    updateServer,
-    removeServer,
-    getServers,
-    selectServer,
-    selectZone,
-    clearZone,
-    makeAgentRequest,
-    // Zone Management Functions
-    ...zoneAPI,
-    // VNC Console Functions
-    startVncSession: consoleAPI.startVncSession,
-    getVncSessionInfo: consoleAPI.getVncSessionInfo,
-    stopVncSession: consoleAPI.stopVncSession,
-    getAllVncSessions: consoleAPI.getAllVncSessions,
-    // Zlogin Console Functions
-    startZloginSession: consoleAPI.startZloginSession,
-    getZloginSessionInfo: consoleAPI.getZloginSessionInfo,
-    stopZloginSession: consoleAPI.stopZloginSession,
-    getAllZloginSessions: consoleAPI.getAllZloginSessions,
-    // Host Monitoring Functions
-    getMonitoringStatus: monitoringAPI.getMonitoringStatus,
-    getMonitoringHealth: monitoringAPI.getMonitoringHealth,
-    triggerMonitoringCollection: monitoringAPI.triggerMonitoringCollection,
-    getMonitoringHost: monitoringAPI.getMonitoringHost,
-    getMonitoringSummary: monitoringAPI.getMonitoringSummary,
-    // Network Monitoring Functions
-    getNetworkInterfaces: monitoringAPI.getNetworkInterfaces,
-    getNetworkUsage: monitoringAPI.getNetworkUsage,
-    getNetworkIPAddresses: monitoringAPI.getNetworkIPAddresses,
-    getNetworkRoutes: monitoringAPI.getNetworkRoutes,
-    // Storage Monitoring Functions
-    getStoragePools: monitoringAPI.getStoragePools,
-    getStorageDatasets: monitoringAPI.getStorageDatasets,
-    getStorageDisks: monitoringAPI.getStorageDisks,
-    getStoragePoolIO: monitoringAPI.getStoragePoolIO,
-    getStorageDiskIO: monitoringAPI.getStorageDiskIO,
-    getStorageARC: monitoringAPI.getStorageARC,
-    // System Monitoring Functions
-    getSystemCPU: monitoringAPI.getSystemCPU,
-    getSystemMemory: monitoringAPI.getSystemMemory,
-    // Device Management Functions
-    ...deviceAPI,
-    // VLAN Management Functions
-    ...vlanAPI,
-    // Host Management Functions
-    ...hostManagementAPI,
-    // API Key Management Functions
-    getApiKeys,
-    generateApiKey,
-    bootstrapApiKey,
-    deleteApiKey,
-  };
+  // Memoized: the value's identity only changes when actual state changes. An inline
+  // object literal here re-rendered EVERY useServers consumer on every provider render
+  // (visible as page-wide re-render churn). The API-module spreads are static imports —
+  // stable by definition, not deps.
+  const value = useMemo(
+    () => ({
+      servers,
+      loading,
+      currentServer,
+      currentMachine,
+      loadServers,
+      refreshServers: loadServers,
+      addServer,
+      testServer,
+      updateServer,
+      removeServer,
+      getServers,
+      selectServer,
+      selectMachine,
+      clearMachine,
+      makeAgentRequest,
+      // Machine Management Functions (canonical /machines/* — startMachine, stopMachine, …)
+      ...machineAPI,
+      // VNC Console Functions
+      startVncSession: consoleAPI.startVncSession,
+      getVncSessionInfo: consoleAPI.getVncSessionInfo,
+      stopVncSession: consoleAPI.stopVncSession,
+      getAllVncSessions: consoleAPI.getAllVncSessions,
+      // Zlogin Console Functions
+      startZloginSession: consoleAPI.startZloginSession,
+      getZloginSessionInfo: consoleAPI.getZloginSessionInfo,
+      stopZloginSession: consoleAPI.stopZloginSession,
+      getAllZloginSessions: consoleAPI.getAllZloginSessions,
+      // Host Monitoring Functions
+      getMonitoringStatus: monitoringAPI.getMonitoringStatus,
+      getMonitoringHealth: monitoringAPI.getMonitoringHealth,
+      triggerMonitoringCollection: monitoringAPI.triggerMonitoringCollection,
+      getMonitoringHost: monitoringAPI.getMonitoringHost,
+      getMonitoringSummary: monitoringAPI.getMonitoringSummary,
+      // Network Monitoring Functions
+      getNetworkInterfaces: monitoringAPI.getNetworkInterfaces,
+      getNetworkUsage: monitoringAPI.getNetworkUsage,
+      getNetworkIPAddresses: monitoringAPI.getNetworkIPAddresses,
+      getNetworkRoutes: monitoringAPI.getNetworkRoutes,
+      // Storage Monitoring Functions
+      getStoragePools: monitoringAPI.getStoragePools,
+      getStorageDatasets: monitoringAPI.getStorageDatasets,
+      getStorageDisks: monitoringAPI.getStorageDisks,
+      getStoragePoolIO: monitoringAPI.getStoragePoolIO,
+      getStorageDiskIO: monitoringAPI.getStorageDiskIO,
+      getStorageARC: monitoringAPI.getStorageARC,
+      // System Monitoring Functions
+      getSystemCPU: monitoringAPI.getSystemCPU,
+      getSystemMemory: monitoringAPI.getSystemMemory,
+      // Device Management Functions
+      ...deviceAPI,
+      // VLAN Management Functions
+      ...vlanAPI,
+      // Host Management Functions
+      ...hostManagementAPI,
+      // API Key Management Functions
+      getApiKeys,
+      generateApiKey,
+      bootstrapApiKey,
+      deleteApiKey,
+    }),
+    [
+      servers,
+      loading,
+      currentServer,
+      currentMachine,
+      loadServers,
+      addServer,
+      testServer,
+      updateServer,
+      removeServer,
+      getServers,
+      selectServer,
+      selectMachine,
+      clearMachine,
+      getApiKeys,
+      generateApiKey,
+      bootstrapApiKey,
+      deleteApiKey,
+    ]
+  );
 
   return <ServerContext.Provider value={value}>{children}</ServerContext.Provider>;
 };

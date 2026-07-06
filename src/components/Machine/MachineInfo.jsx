@@ -1,24 +1,53 @@
 import PropTypes from 'prop-types';
 
-const ZoneInfo = ({ zoneDetails, monitoringHealth, getZoneStatus, selectedZone }) => {
-  if (!zoneDetails || !zoneDetails.zone_info) {
+// VirtualBox-flavored status vocabulary rides in VALUES (sync-file ruling):
+// configured | running | stopped | suspended | paused | aborted | starting | stopping | unknown.
+// bhyve reports its own set (running/installed/...). Color by meaning, not by hypervisor.
+const statusClass = status => {
+  switch ((status || '').toLowerCase()) {
+    case 'running':
+      return 'text-success';
+    case 'starting':
+    case 'stopping':
+      return 'text-info';
+    case 'suspended':
+    case 'paused':
+    case 'configured':
+      return 'text-warning';
+    case 'stopped':
+    case 'aborted':
+    case 'incomplete':
+      return 'text-danger';
+    default:
+      return 'text-muted';
+  }
+};
+
+const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selectedMachine }) => {
+  if (!machineDetails || !machineDetails.machine_info) {
     return null;
   }
 
-  const { zone_info, configuration } = zoneDetails;
+  const { machine_info, configuration } = machineDetails;
 
-  const getHealthClass = status => {
-    if (status === 'healthy') {
+  // Prefer the detail payload's status (full vocabulary); fall back to the
+  // stats-derived running/stopped binary when the agent doesn't report one.
+  const status = machine_info.status || getMachineStatus(selectedMachine);
+
+  const getHealthClass = healthStatus => {
+    if (healthStatus === 'healthy') {
       return 'text-success';
     }
-    if (status === 'warning') {
+    if (healthStatus === 'warning') {
       return 'text-warning';
     }
     return 'text-danger';
   };
 
   const renderConfigurationRows = () => {
-    if (!configuration) {
+    // Structured rows are the zadm (bhyve) configuration shape only — the VirtualBox
+    // flat showvminfo map renders via the generic table on the Machines page instead.
+    if (!configuration?.zonename) {
       return null;
     }
 
@@ -26,7 +55,7 @@ const ZoneInfo = ({ zoneDetails, monitoringHealth, getZoneStatus, selectedZone }
       <>
         <tr>
           <td className="px-3 py-2">
-            <strong>Zone Name</strong>
+            <strong>Name</strong>
           </td>
           <td className="px-3 py-2">
             <code className="small">{configuration.zonename}</code>
@@ -34,7 +63,7 @@ const ZoneInfo = ({ zoneDetails, monitoringHealth, getZoneStatus, selectedZone }
         </tr>
         <tr>
           <td className="px-3 py-2">
-            <strong>Zone Path</strong>
+            <strong>Path</strong>
           </td>
           <td className="px-3 py-2">
             <code className="small">{configuration.zonepath}</code>
@@ -113,7 +142,7 @@ const ZoneInfo = ({ zoneDetails, monitoringHealth, getZoneStatus, selectedZone }
       <div className="card-body">
         <h4 className="fs-6 fw-bold mb-3">
           <i className="fas fa-info-circle me-2" />
-          Zone Information
+          Machine Information
         </h4>
         <div className="table-responsive">
           <table className="table table-striped small">
@@ -123,13 +152,31 @@ const ZoneInfo = ({ zoneDetails, monitoringHealth, getZoneStatus, selectedZone }
                   <strong>System Status</strong>
                 </td>
                 <td className="px-3 py-2">
-                  <span
-                    className={`fw-semibold ${getZoneStatus(selectedZone) === 'running' ? 'text-success' : 'text-danger'}`}
-                  >
-                    {getZoneStatus(selectedZone) === 'running' ? 'Running' : 'Stopped'}
+                  <span className={`fw-semibold text-capitalize ${statusClass(status)}`}>
+                    {status || 'Unknown'}
                   </span>
                 </td>
               </tr>
+              {machine_info.backing && (
+                <tr>
+                  <td className="px-3 py-2">
+                    <strong>Backing</strong>
+                  </td>
+                  <td className="px-3 py-2">
+                    <span
+                      className="badge text-bg-secondary"
+                      title="How lifecycle operations reach the hypervisor"
+                    >
+                      {machine_info.backing}
+                    </span>
+                    {machine_info.home && (
+                      <code className="small ms-2" title="Vagrant project directory">
+                        {machine_info.home}
+                      </code>
+                    )}
+                  </td>
+                </tr>
+              )}
               {Object.keys(monitoringHealth).length > 0 && (
                 <tr>
                   <td className="px-3 py-2">
@@ -165,21 +212,23 @@ const ZoneInfo = ({ zoneDetails, monitoringHealth, getZoneStatus, selectedZone }
                 </td>
                 <td className="px-3 py-2">
                   <span className="text-muted">
-                    {zone_info.last_seen ? new Date(zone_info.last_seen).toLocaleString() : 'N/A'}
+                    {machine_info.last_seen
+                      ? new Date(machine_info.last_seen).toLocaleString()
+                      : 'N/A'}
                   </span>
                 </td>
               </tr>
-              {(zone_info.is_orphaned || zone_info.auto_discovered) && (
+              {(machine_info.is_orphaned || machine_info.auto_discovered) && (
                 <tr>
                   <td className="px-3 py-2">
                     <strong>Flags</strong>
                   </td>
                   <td className="px-3 py-2">
                     <div className="d-flex flex-wrap gap-1">
-                      {zone_info.is_orphaned && (
+                      {machine_info.is_orphaned && (
                         <span className="badge text-bg-warning">Orphaned</span>
                       )}
-                      {zone_info.auto_discovered && (
+                      {machine_info.auto_discovered && (
                         <span className="badge text-bg-info">Auto-discovered</span>
                       )}
                     </div>
@@ -195,9 +244,12 @@ const ZoneInfo = ({ zoneDetails, monitoringHealth, getZoneStatus, selectedZone }
   );
 };
 
-ZoneInfo.propTypes = {
-  zoneDetails: PropTypes.shape({
-    zone_info: PropTypes.shape({
+MachineInfo.propTypes = {
+  machineDetails: PropTypes.shape({
+    machine_info: PropTypes.shape({
+      status: PropTypes.string,
+      backing: PropTypes.string,
+      home: PropTypes.string,
       last_seen: PropTypes.string,
       is_orphaned: PropTypes.bool,
       auto_discovered: PropTypes.bool,
@@ -218,8 +270,8 @@ ZoneInfo.propTypes = {
     networkErrors: PropTypes.number,
     storageErrors: PropTypes.number,
   }),
-  getZoneStatus: PropTypes.func.isRequired,
-  selectedZone: PropTypes.string,
+  getMachineStatus: PropTypes.func.isRequired,
+  selectedMachine: PropTypes.string,
 };
 
-export default ZoneInfo;
+export default MachineInfo;

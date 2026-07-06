@@ -7,8 +7,8 @@ import VncActionsDropdown from './VncActionsDropdown';
 import VncViewerReact from './VncViewerReact';
 
 const VncConsoleDisplay = ({
-  zoneDetails,
-  selectedZone,
+  machineDetails,
+  selectedMachine,
   currentServer,
   user,
   loading,
@@ -21,7 +21,7 @@ const VncConsoleDisplay = ({
   setLoading,
   setError,
   setPreviewVncViewOnly,
-  setZoneDetails,
+  setMachineDetails,
   setActiveConsoleType,
   startZloginSessionExplicitly,
   handleVncConsole,
@@ -41,7 +41,7 @@ const VncConsoleDisplay = ({
   // console (VirtualBox/UTM style). Falls back to the placeholder if the zone
   // isn't running or has no framebuffer.
   useEffect(() => {
-    if (zoneDetails.vnc_session_info || !currentServer || !selectedZone) {
+    if (machineDetails.vnc_session_info || !currentServer || !selectedMachine) {
       setScreenshotUrl(null);
       return undefined;
     }
@@ -54,7 +54,7 @@ const VncConsoleDisplay = ({
         currentServer.hostname,
         currentServer.port,
         currentServer.protocol,
-        `zones/${selectedZone}/vnc/screenshot`,
+        `machines/${selectedMachine}/vnc/screenshot`,
         'GET',
         null,
         null,
@@ -81,7 +81,7 @@ const VncConsoleDisplay = ({
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [zoneDetails.vnc_session_info, currentServer, selectedZone, makeAgentRequest]);
+  }, [machineDetails.vnc_session_info, currentServer, selectedMachine, makeAgentRequest]);
 
   return (
     <div className="hw-console-container">
@@ -89,11 +89,11 @@ const VncConsoleDisplay = ({
       <div className="bg-dark text-white p-3 d-flex justify-content-between align-items-center">
         <div>
           <h6 className="fs-6 fw-bold text-white mb-1">Active VNC Session</h6>
-          {zoneDetails.vnc_session_info && zoneDetails.vnc_session_info.web_port && (
+          {machineDetails.vnc_session_info && machineDetails.vnc_session_info.web_port && (
             <p className="small text-white-50 mb-0">
-              Port: {zoneDetails.vnc_session_info.web_port} | Started:{' '}
-              {zoneDetails.vnc_session_info.created_at
-                ? new Date(zoneDetails.vnc_session_info.created_at).toLocaleString()
+              Port: {machineDetails.vnc_session_info.web_port} | Started:{' '}
+              {machineDetails.vnc_session_info.created_at
+                ? new Date(machineDetails.vnc_session_info.created_at).toLocaleString()
                 : 'Unknown'}
             </p>
           )}
@@ -115,7 +115,7 @@ const VncConsoleDisplay = ({
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
                   a.href = url;
-                  a.download = `vnc-screenshot-${selectedZone}-${Date.now()}.png`;
+                  a.download = `vnc-screenshot-${selectedMachine}-${Date.now()}.png`;
                   document.body.appendChild(a);
                   a.click();
                   document.body.removeChild(a);
@@ -123,8 +123,8 @@ const VncConsoleDisplay = ({
                 });
               }
             }}
-            onNewTab={() => handleVncConsole(selectedZone, true)}
-            onKillSession={() => handleKillVncSession(selectedZone)}
+            onNewTab={() => handleVncConsole(selectedMachine, true)}
+            onKillSession={() => handleKillVncSession(selectedMachine)}
             isReadOnly={previewVncViewOnly}
             isAdmin={
               user?.role === 'admin' ||
@@ -166,7 +166,7 @@ const VncConsoleDisplay = ({
           <button
             type="button"
             className="btn btn-sm btn-primary"
-            onClick={() => handleVncConsole(selectedZone)}
+            onClick={() => handleVncConsole(selectedMachine)}
             disabled={loading || loadingVnc}
             title="Expand VNC Console"
           >
@@ -192,9 +192,9 @@ const VncConsoleDisplay = ({
                 console.log(`🚀 START ZLOGIN: Starting zlogin for preview from VNC`);
                 try {
                   setLoading(true);
-                  const result = await startZloginSessionExplicitly(currentServer, selectedZone);
+                  const result = await startZloginSessionExplicitly(currentServer, selectedMachine);
                   if (result) {
-                    setZoneDetails(prev => ({
+                    setMachineDetails(prev => ({
                       ...prev,
                       zlogin_session: result,
                       active_zlogin_session: true,
@@ -220,13 +220,13 @@ const VncConsoleDisplay = ({
       {/* VNC Console Content */}
       <div className="hw-console-content">
         {(() => {
-          if (zoneDetails.vnc_session_info) {
+          if (machineDetails.vnc_session_info) {
             return (
               <VncViewerReact
                 ref={vncRef}
-                key={`vnc-preview-${selectedZone}-${previewVncViewOnly}-${vncReconnectKey}`}
+                key={`vnc-preview-${selectedMachine}-${previewVncViewOnly}-${vncReconnectKey}`}
                 server={currentServer}
-                zoneName={selectedZone}
+                machineName={selectedMachine}
                 viewOnly={previewVncViewOnly}
                 autoConnect
                 showControls={false}
@@ -246,7 +246,7 @@ const VncConsoleDisplay = ({
             return (
               <img
                 src={screenshotUrl}
-                alt={`Console preview of ${selectedZone}`}
+                alt={`Console preview of ${selectedMachine}`}
                 className="hw-console-screenshot"
               />
             );
@@ -273,7 +273,7 @@ const VncConsoleDisplay = ({
 };
 
 VncConsoleDisplay.propTypes = {
-  zoneDetails: PropTypes.shape({
+  machineDetails: PropTypes.shape({
     vnc_session_info: PropTypes.shape({
       web_port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
       created_at: PropTypes.string,
@@ -284,7 +284,7 @@ VncConsoleDisplay.propTypes = {
       zonepath: PropTypes.string,
     }),
   }).isRequired,
-  selectedZone: PropTypes.string,
+  selectedMachine: PropTypes.string,
   currentServer: PropTypes.shape({
     hostname: PropTypes.string,
     port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -303,7 +303,7 @@ VncConsoleDisplay.propTypes = {
   setLoading: PropTypes.func,
   setError: PropTypes.func,
   setPreviewVncViewOnly: PropTypes.func,
-  setZoneDetails: PropTypes.func,
+  setMachineDetails: PropTypes.func,
   setActiveConsoleType: PropTypes.func,
   startZloginSessionExplicitly: PropTypes.func,
   handleVncConsole: PropTypes.func,

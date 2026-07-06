@@ -30,9 +30,6 @@ const SidebarHeader = () => {
           <img src="/ui/images/hyperweaver-glyph.svg" alt="Hyperweaver" className="logo-lg" />
         </span>
         <span>Hyperweaver</span>
-        <span className="ms-auto flex-grow-0 pe-2">
-          <i className="fa fa-angle-left" />
-        </span>
       </>
     );
   };
@@ -48,7 +45,7 @@ const SidebarHeader = () => {
     <div
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`btn w-100 d-flex align-items-center gap-2 ${isIconOnly ? 'justify-content-center px-0' : 'justify-content-between hw-sidebar-brand'}`}
+      className={`btn w-100 d-flex align-items-center gap-2 ${isIconOnly ? 'justify-content-center px-0' : 'justify-content-start hw-sidebar-brand'}`}
       role="button"
       tabIndex={0}
     >

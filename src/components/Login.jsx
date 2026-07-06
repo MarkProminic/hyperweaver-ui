@@ -449,6 +449,11 @@ const Login = () => {
   // where bootstrap stays open even though keys already exist).
   const directFirstBoot = isDirect && !!serverInfo?.bootstrapAvailable && !showKeyEntry;
 
+  // Desktop handoff (hwa:// protocol handler): only meaningful when the page is served
+  // from this machine — hwa://open asks the LOCAL agent to mint a tray-style single-use
+  // token and open a signed-in tab (claimed by AuthContext's claimTrayToken).
+  const isLoopback = ['127.0.0.1', 'localhost', '[::1]'].includes(window.location.hostname);
+
   // The login form depends on the serving mode (user accounts vs API key), so wait
   // for the origin probe before rendering any fields.
   if (!modeReady) {
@@ -558,12 +563,6 @@ const Login = () => {
                 <div className="d-flex justify-content-center my-2">
                   <Logo />
                 </div>
-                {isDirect && (
-                  <p className="text-muted small mb-3">
-                    Direct mode — managing{' '}
-                    <strong>{serverInfo?.hostname || window.location.hostname}</strong>
-                  </p>
-                )}
                 {msg && (
                   <div className={`alert ${isError ? 'alert-danger' : 'alert-info'}`}>
                     <p className="mb-0">{msg}</p>
@@ -583,6 +582,27 @@ const Login = () => {
                     setApiKey={setApiKey}
                     loading={loading}
                   />
+                )}
+
+                {/* Desktop sign-in via the agent's hwa:// handler — loopback only (the handler
+                    reaches the agent on THIS machine). Renders in both Direct states (first-boot
+                    and key entry): on a desktop install it skips the setup token entirely. If no
+                    handler is installed, the browser shows its own notice — acceptable. */}
+                {isDirect && isLoopback && (
+                  <div className="mb-3">
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary w-100"
+                      onClick={() => window.location.assign('hwa://open')}
+                      disabled={loading}
+                    >
+                      Sign in with the desktop agent
+                    </button>
+                    <div className="form-text text-muted">
+                      Asks the Hyperweaver Agent running on this machine to open a signed-in session
+                      — no key needed.
+                    </div>
+                  </div>
                 )}
 
                 {/* Show username/password fields only for local/LDAP authentication */}

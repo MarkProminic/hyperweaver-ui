@@ -15,7 +15,7 @@ const ServerHelpPanel = ({ useExistingApiKey }) => (
           Click &quot;{useExistingApiKey ? 'Add Server' : 'Bootstrap Server'}
           &quot; to complete setup
         </li>
-        <li>Start managing zones!</li>
+        <li>Start managing machines!</li>
       </ol>
 
       <p className="mt-4">

@@ -1,30 +1,28 @@
 import PropTypes from 'prop-types';
 
+import HostPageHeader from './HostPageHeader';
+
 const DeviceHeader = ({ selectedServer, loading, loadDeviceData }) => (
-  <div className="titlebar card-header active d-flex justify-content-end align-items-center flex-wrap gap-2 p-3">
-    <div className="d-flex align-items-center gap-2">
-      <button
-        type="button"
-        className="btn btn-sm btn-info"
-        onClick={() => selectedServer && loadDeviceData(selectedServer)}
-        disabled={loading}
-      >
-        {loading && (
-          <span
-            className="spinner-border spinner-border-sm me-2"
-            role="status"
-            aria-hidden="true"
-          />
-        )}
-        <i className="fas fa-sync me-2" />
-        Refresh
-      </button>
-    </div>
-  </div>
+  <HostPageHeader title="Device Monitoring">
+    <button
+      type="button"
+      className="btn btn-sm btn-info"
+      onClick={() => selectedServer && loadDeviceData(selectedServer)}
+      disabled={loading}
+    >
+      {loading && (
+        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+      )}
+      <i className="fas fa-sync me-2" />
+      Refresh
+    </button>
+  </HostPageHeader>
 );
 
 DeviceHeader.propTypes = {
-  selectedServer: PropTypes.object,
+  selectedServer: PropTypes.shape({
+    hostname: PropTypes.string,
+  }),
   loading: PropTypes.bool.isRequired,
   loadDeviceData: PropTypes.func.isRequired,
 };

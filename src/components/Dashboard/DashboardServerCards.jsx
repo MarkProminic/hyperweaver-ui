@@ -1,5 +1,8 @@
 import PropTypes from 'prop-types';
 
+import { hasMachines } from '../../utils/capabilities';
+import { resourceLabel } from '../../utils/resourceLabel';
+
 import { getServerHealthStatus, getStatusColor } from './dashboardUtils';
 
 /**
@@ -43,9 +46,13 @@ const ServerCard = ({ serverResult, onNavigateToServer }) => {
 
               <div className="row mb-3">
                 <div className="col text-center">
-                  <div className="text-uppercase small fw-semibold text-muted">Zones</div>
+                  <div className="text-uppercase small fw-semibold text-muted">
+                    {resourceLabel(server)}
+                  </div>
                   <div className="fs-4 fw-bold">
-                    {data.runningzones?.length || 0} / {data.allzones?.length || 0}
+                    {hasMachines(server)
+                      ? `${data.runningmachines?.length || 0} / ${data.allmachines?.length || 0}`
+                      : '—'}
                   </div>
                 </div>
                 <div className="col text-center">
@@ -79,7 +86,9 @@ const ServerCard = ({ serverResult, onNavigateToServer }) => {
 
               <div className="row mb-3">
                 <div className="col text-center">
-                  <div className="text-uppercase small fw-semibold text-muted">Zones</div>
+                  <div className="text-uppercase small fw-semibold text-muted">
+                    {resourceLabel(server)}
+                  </div>
                   <div className="fs-4 fw-bold text-muted">-</div>
                 </div>
                 <div className="col text-center">

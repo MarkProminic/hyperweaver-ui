@@ -166,7 +166,7 @@ export const ZoneTerminalProvider = ({ children }) => {
           'zlogin/sessions'
         );
         if (sessionsResult.success && Array.isArray(sessionsResult.data)) {
-          const existing = sessionsResult.data.find(s => s.zone_name === zoneName);
+          const existing = sessionsResult.data.find(s => s.machine_name === zoneName);
           if (existing) {
             console.log(`🔁 ZLOGIN SESSION: Stopping existing session ${existing.id}`);
             await makeAgentRequest(
@@ -183,7 +183,7 @@ export const ZoneTerminalProvider = ({ children }) => {
           server.hostname,
           server.port,
           server.protocol,
-          `zones/${zoneName}/zlogin/start`,
+          `machines/${zoneName}/zlogin/start`,
           'POST'
         );
 

@@ -236,7 +236,7 @@ const HyperweaverSettings = () => {
           </div>
 
           {/* Tab navigation */}
-          <ul className="nav nav-tabs px-3 pt-2 mb-0">
+          <ul className="nav nav-tabs pt-2 mb-0">
             <li className="nav-item">
               <button
                 type="button"

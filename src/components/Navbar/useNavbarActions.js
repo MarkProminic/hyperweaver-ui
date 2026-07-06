@@ -29,14 +29,15 @@ export const useNavbarActions = () => {
     servers: allServers,
     currentServer,
     selectServer,
-    currentZone,
-    selectZone,
-    clearZone,
+    currentMachine,
+    selectMachine,
+    clearMachine,
     makeAgentRequest,
-    startZone,
-    stopZone,
-    restartZone,
-    deleteZone,
+    startMachine,
+    stopMachine,
+    restartMachine,
+    suspendMachine,
+    deleteMachine,
     restartHost,
     shutdownHost,
   } = useServers();
@@ -47,8 +48,8 @@ export const useNavbarActions = () => {
     setModalState(!isModal);
   };
 
-  const handleZoneAction = async action => {
-    if (!currentServer || !currentZone) {
+  const handleMachineAction = async action => {
+    if (!currentServer || !currentMachine) {
       return;
     }
 
@@ -58,44 +59,57 @@ export const useNavbarActions = () => {
 
       switch (action) {
         case 'start':
-          result = await startZone(
+          result = await startMachine(
             currentServer.hostname,
             currentServer.port,
             currentServer.protocol,
-            currentZone
+            currentMachine
           );
           break;
         case 'shutdown':
-          result = await stopZone(
+          result = await stopMachine(
             currentServer.hostname,
             currentServer.port,
             currentServer.protocol,
-            currentZone
+            currentMachine
           );
           break;
         case 'restart':
-          result = await restartZone(
+          result = await restartMachine(
             currentServer.hostname,
             currentServer.port,
             currentServer.protocol,
-            currentZone
+            currentMachine
+          );
+          break;
+        case 'suspend':
+          // VirtualBox-backed agents only (the dropdown gates the menu item);
+          // the agent answers 400 unless the machine is running.
+          result = await suspendMachine(
+            currentServer.hostname,
+            currentServer.port,
+            currentServer.protocol,
+            currentMachine
           );
           break;
         case 'kill':
-          result = await stopZone(
+          result = await stopMachine(
             currentServer.hostname,
             currentServer.port,
             currentServer.protocol,
-            currentZone,
+            currentMachine,
             true
           );
           break;
         case 'destroy':
-          result = await deleteZone(
+          // force=true: the user already confirmed a destructive intent in the modal —
+          // a running machine is stopped first instead of answering 400.
+          result = await deleteMachine(
             currentServer.hostname,
             currentServer.port,
             currentServer.protocol,
-            currentZone
+            currentMachine,
+            true
           );
           break;
         default:
@@ -104,7 +118,7 @@ export const useNavbarActions = () => {
       }
 
       if (result.success) {
-        console.log(`Zone ${action} initiated successfully`);
+        console.log(`Machine ${action} initiated successfully`);
         setTimeout(() => {
           if (currentServer) {
             makeAgentRequest(
@@ -124,10 +138,10 @@ export const useNavbarActions = () => {
           }
         }, 2000);
       } else {
-        console.error(`Failed to ${action} zone:`, result.message);
+        console.error(`Failed to ${action} machine:`, result.message);
       }
-    } catch (zoneActionError) {
-      console.error(`Error during zone ${action}:`, zoneActionError);
+    } catch (machineActionError) {
+      console.error(`Error during machine ${action}:`, machineActionError);
     } finally {
       setLoading(false);
       handleModalClick();
@@ -230,7 +244,7 @@ export const useNavbarActions = () => {
       window.location.origin,
       location.pathname,
       currentServer,
-      currentZone
+      currentMachine
     );
 
     try {
@@ -287,7 +301,7 @@ export const useNavbarActions = () => {
     recoveryFailed,
     setRecoveryFailed,
     handleModalClick,
-    handleZoneAction,
+    handleMachineAction,
     handleHostAction,
     handleShareCurrentPage,
     navigate,
@@ -295,9 +309,9 @@ export const useNavbarActions = () => {
     user,
     allServers,
     currentServer,
-    currentZone,
+    currentMachine,
     selectServer,
-    selectZone,
-    clearZone,
+    selectMachine,
+    clearMachine,
   };
 };

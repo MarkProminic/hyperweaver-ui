@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useMode } from '../contexts/ModeContext';
 import { useServers } from '../contexts/ServerContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
+import { hasMachines } from '../utils/capabilities';
 
 /**
  * SidebarTree — the single-select navigation tree (contract §2 / I2D-1).
@@ -20,18 +21,18 @@ import { UserSettings } from '../contexts/UserSettingsContext';
  * routes: Datacenter → Dashboard, Host → Host Overview, Machine → Zone Overview.
  */
 
-// A running machine gets a filled green dot; a stopped one an outline dot (matches ZoneManager).
+// A running machine gets a filled green dot; a stopped one an outline dot (matches MachineManager).
 const MachineNode = ({ server, name, running }) => {
-  const { currentServer, currentZone, selectServer, selectZone } = useServers();
+  const { currentServer, currentMachine, selectServer, selectMachine } = useServers();
   const navigate = useNavigate();
-  const active = currentServer?.id === server.id && currentZone === name;
+  const active = currentServer?.id === server.id && currentMachine === name;
 
   const handleClick = () => {
     if (currentServer?.id !== server.id) {
-      selectServer(server); // clears zone, so set it after
+      selectServer(server); // clears the machine selection, so set it after
     }
-    selectZone(name);
-    navigate('/ui/zones');
+    selectMachine(name);
+    navigate('/ui/machines');
   };
 
   return (
@@ -57,20 +58,23 @@ MachineNode.propTypes = {
 };
 
 // A host row: caret toggles lazy-loaded machines; the name selects the host + its Overview.
+// Machine expansion is capability-gated (hasMachines): agents that don't offer machine
+// management yet render as a plain host row — no caret, no machine fetch.
 const HostNode = ({ server, autoExpanded = false }) => {
-  const { currentServer, currentZone, selectServer, makeAgentRequest } = useServers();
+  const { currentServer, currentMachine, selectServer, makeAgentRequest } = useServers();
   const { sidebarMinimized } = useContext(UserSettings);
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(autoExpanded);
   const [machines, setMachines] = useState(null);
   const [loadError, setLoadError] = useState(false);
 
-  const hostActive = currentServer?.id === server.id && !currentZone;
+  const hostActive = currentServer?.id === server.id && !currentMachine;
+  const machinesAvailable = hasMachines(server);
 
   // Lazy-load this host's machines the first time it's expanded (contract C8 pattern).
   useEffect(() => {
     let cancelled = false;
-    if (!expanded || machines !== null || sidebarMinimized) {
+    if (!machinesAvailable || !expanded || machines !== null || sidebarMinimized) {
       return undefined;
     }
     makeAgentRequest(server.hostname, server.port, server.protocol, 'stats')
@@ -80,8 +84,8 @@ const HostNode = ({ server, autoExpanded = false }) => {
         }
         if (res.success) {
           setMachines({
-            all: res.data.allzones || [],
-            running: res.data.runningzones || [],
+            all: res.data.allmachines || [],
+            running: res.data.runningmachines || [],
           });
         } else {
           setLoadError(true);
@@ -91,7 +95,7 @@ const HostNode = ({ server, autoExpanded = false }) => {
     return () => {
       cancelled = true;
     };
-  }, [expanded, machines, sidebarMinimized, makeAgentRequest, server]);
+  }, [machinesAvailable, expanded, machines, sidebarMinimized, makeAgentRequest, server]);
 
   const handleSelectHost = () => {
     selectServer(server);
@@ -117,15 +121,22 @@ const HostNode = ({ server, autoExpanded = false }) => {
       <div
         className={`d-flex align-items-center hw-tree-row hw-tree-host hw-tree-rowflex ${hostActive ? 'active' : ''}`}
       >
-        <button
-          type="button"
-          className="btn px-1"
-          onClick={() => setExpanded(prev => !prev)}
-          title={expanded ? 'Collapse' : 'Expand'}
-          aria-label={expanded ? 'Collapse host' : 'Expand host'}
-        >
-          <i className={`fas fa-angle-${expanded ? 'down' : 'right'}`} />
-        </button>
+        {machinesAvailable ? (
+          <button
+            type="button"
+            className="btn px-1"
+            onClick={() => setExpanded(prev => !prev)}
+            title={expanded ? 'Collapse' : 'Expand'}
+            aria-label={expanded ? 'Collapse host' : 'Expand host'}
+          >
+            <i className={`fas fa-angle-${expanded ? 'down' : 'right'}`} />
+          </button>
+        ) : (
+          // Invisible caret keeps host names column-aligned next to expandable hosts.
+          <span className="btn px-1 invisible" aria-hidden="true">
+            <i className="fas fa-angle-right" />
+          </span>
+        )}
         <button
           type="button"
           onClick={handleSelectHost}
@@ -137,7 +148,7 @@ const HostNode = ({ server, autoExpanded = false }) => {
         </button>
       </div>
 
-      {expanded && !sidebarMinimized && (
+      {machinesAvailable && expanded && !sidebarMinimized && (
         <div className="hw-tree-children">
           {machines === null && !loadError && (
             <div className="hw-tree-row hw-tree-machine text-muted small py-1">
@@ -186,11 +197,11 @@ const DatacenterNode = ({ label, canAddHost }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { sidebarMinimized } = useContext(UserSettings);
-  const { currentServer, currentZone } = useServers();
-  // Datacenter is "focused" when nothing host/zone-specific is selected and we're on the dashboard.
+  const { currentServer, currentMachine } = useServers();
+  // Datacenter is "focused" when nothing host/machine-specific is selected and we're on the dashboard.
   const active =
     !currentServer &&
-    !currentZone &&
+    !currentMachine &&
     (location.pathname === '/ui' || location.pathname === '/ui/dashboard');
 
   if (sidebarMinimized) {

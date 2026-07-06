@@ -38,7 +38,10 @@ const App = () => (
                     <Route path="/register" element={<Register />} />
                     <Route path="/setup" element={<ServerSetup />} />
                     <Route path="/ui/auth/callback" element={<AuthCallback />} />
-                    <Route path="/ui/console/:agentId/:zoneName" element={<StandaloneConsole />} />
+                    <Route
+                      path="/ui/console/:agentId/:machineName"
+                      element={<StandaloneConsole />}
+                    />
                     <Route
                       path="/ui/settings"
                       element={<Navigate to="/ui/settings/hyperweaver" />}

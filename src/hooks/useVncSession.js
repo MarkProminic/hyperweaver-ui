@@ -3,20 +3,20 @@ import { useState, useCallback } from 'react';
 import { useServers } from '../contexts/ServerContext';
 
 /**
- * Custom hook to manage all VNC session state and logic for a zone.
+ * Custom hook to manage all VNC session state and logic for a machine.
  * @param {object} currentServer - The currently selected server object.
- * @param {string} currentZone - The name of the currently selected zone.
- * @param {function} setZoneDetails - The state setter function for the parent component's zoneDetails.
+ * @param {string} currentMachine - The name of the currently selected machine.
+ * @param {function} setMachineDetails - The state setter function for the parent component's details.
  * @returns {object} An object containing all VNC-related state and handler functions.
  */
 export const useVncSession = (
   currentServer,
-  currentZone,
-  setZoneDetails,
+  currentMachine,
+  setMachineDetails,
   previewVncRef,
   modalVncRef
 ) => {
-  void currentZone;
+  void currentMachine;
 
   const [vncSession, setVncSession] = useState(null);
   const [loadingVnc, setLoadingVnc] = useState(false);
@@ -56,7 +56,7 @@ export const useVncSession = (
   };
 
   const waitForVncSessionReady = useCallback(
-    async (zoneName, maxAttempts = 10) => {
+    async (machineName, maxAttempts = 10) => {
       if (!currentServer) {
         return { ready: false, reason: 'No current server selected' };
       }
@@ -74,7 +74,7 @@ export const useVncSession = (
             currentServer.hostname,
             currentServer.port,
             currentServer.protocol,
-            `zones/${zoneName}/vnc/info?_ready_check=${Date.now()}`,
+            `machines/${machineName}/vnc/info?_ready_check=${Date.now()}`,
             'GET',
             null,
             null,
@@ -109,7 +109,7 @@ export const useVncSession = (
   );
 
   const handleVncConsole = useCallback(
-    async (zoneName, openInNewTab = false) => {
+    async (machineName, openInNewTab = false) => {
       if (!currentServer) {
         return '';
       }
@@ -120,11 +120,11 @@ export const useVncSession = (
           currentServer.hostname,
           currentServer.port,
           currentServer.protocol,
-          zoneName
+          machineName
         );
 
         if (result.success && typeof result.data === 'object') {
-          const readinessResult = await waitForVncSessionReady(zoneName);
+          const readinessResult = await waitForVncSessionReady(machineName);
           if (readinessResult.ready) {
             setVncSession(result.data);
             if (openInNewTab) {
@@ -132,7 +132,7 @@ export const useVncSession = (
               // reuses the same websockify-backed viewer as the embedded console
               // and connects to the session we just started above. Addressed by
               // registry id ('self' in Direct mode) per the /api/agents scheme.
-              const consoleUrl = `/ui/console/${encodeURIComponent(currentServer.id)}/${encodeURIComponent(zoneName)}`;
+              const consoleUrl = `/ui/console/${encodeURIComponent(currentServer.id)}/${encodeURIComponent(machineName)}`;
               window.open(
                 consoleUrl,
                 '_blank',
@@ -141,7 +141,7 @@ export const useVncSession = (
             } else {
               setShowVncConsole(true);
             }
-            setZoneDetails(prev => ({
+            setMachineDetails(prev => ({
               ...prev,
               active_vnc_session: true,
               vnc_session_info: {
@@ -153,17 +153,17 @@ export const useVncSession = (
             errorMsg = `VNC session started but not ready: ${readinessResult.reason}`;
           }
         } else {
-          errorMsg = `Failed to start VNC console for ${zoneName}: ${result.message}`;
+          errorMsg = `Failed to start VNC console for ${machineName}: ${result.message}`;
         }
       } catch (error) {
         console.error('VNC CONSOLE: Error starting:', error);
-        errorMsg = `Error starting VNC console for ${zoneName}`;
+        errorMsg = `Error starting VNC console for ${machineName}`;
       } finally {
         setLoadingVnc(false);
       }
       return errorMsg; // Return error message to be set by the component
     },
-    [currentServer, startVncSession, waitForVncSessionReady, setZoneDetails]
+    [currentServer, startVncSession, waitForVncSessionReady, setMachineDetails]
   );
 
   const closeVncConsole = () => {
@@ -173,7 +173,7 @@ export const useVncSession = (
   };
 
   const handleKillVncSession = useCallback(
-    async zoneName => {
+    async machineName => {
       if (!currentServer || killInProgress) {
         return {
           success: false,
@@ -187,10 +187,10 @@ export const useVncSession = (
           currentServer.hostname,
           currentServer.port,
           currentServer.protocol,
-          zoneName
+          machineName
         );
         if (apiResult.success) {
-          setZoneDetails(prev => ({
+          setMachineDetails(prev => ({
             ...prev,
             active_vnc_session: false,
             vnc_session_info: null,
@@ -209,22 +209,22 @@ export const useVncSession = (
       }
       return result;
     },
-    [currentServer, killInProgress, stopVncSession, setZoneDetails]
+    [currentServer, killInProgress, stopVncSession, setMachineDetails]
   );
 
   const refreshVncSessionStatus = useCallback(
-    async zoneName => {
+    async machineName => {
       if (!currentServer) {
         return;
       }
       try {
-        console.log(`🔍 VNC STATUS: Checking session status for zone: ${zoneName}`);
+        console.log(`🔍 VNC STATUS: Checking session status for zone: ${machineName}`);
 
         const vncResult = await makeAgentRequest(
           currentServer.hostname,
           currentServer.port,
           currentServer.protocol,
-          `zones/${zoneName}/vnc/info?_t=${Date.now()}`,
+          `machines/${machineName}/vnc/info?_t=${Date.now()}`,
           'GET',
           null,
           null,
@@ -239,8 +239,8 @@ export const useVncSession = (
 
         if (vncResult.success && vncResult.data && vncResult.data.active_vnc_session) {
           // Session is active - backend verified PID file and process
-          console.log(`✅ VNC STATUS: Active session found for ${zoneName}`);
-          setZoneDetails(prev => {
+          console.log(`✅ VNC STATUS: Active session found for ${machineName}`);
+          setMachineDetails(prev => {
             console.log(`🔍 ZONE STATE: VNC update - BEFORE:`, {
               hasZloginSession: !!prev.zlogin_session,
               hasActiveZloginSession: prev.active_zlogin_session,
@@ -267,8 +267,8 @@ export const useVncSession = (
           });
         } else {
           // No session found - backend returned active_vnc_session: false
-          console.log(`❌ VNC STATUS: No active session for ${zoneName}`);
-          setZoneDetails(prev => {
+          console.log(`❌ VNC STATUS: No active session for ${machineName}`);
+          setMachineDetails(prev => {
             console.log(`🔍 ZONE STATE: VNC clear - BEFORE:`, {
               hasZloginSession: !!prev.zlogin_session,
               hasActiveZloginSession: prev.active_zlogin_session,
@@ -296,7 +296,7 @@ export const useVncSession = (
         }
       } catch (error) {
         console.error('💥 VNC STATUS: Error checking session status:', error);
-        setZoneDetails(prev => {
+        setMachineDetails(prev => {
           // 🛡️ DEFENSIVE STATE MERGE: Only clear VNC fields, explicitly preserve zlogin state
           const newState = {
             ...prev,
@@ -310,11 +310,11 @@ export const useVncSession = (
         });
       }
     },
-    [currentServer, makeAgentRequest, setZoneDetails]
+    [currentServer, makeAgentRequest, setMachineDetails]
   );
 
   const validateVncSession = useCallback(
-    async (zoneName, maxAttempts = 3) => {
+    async (machineName, maxAttempts = 3) => {
       if (!currentServer) {
         return { valid: false, reason: 'No current server selected' };
       }
@@ -336,7 +336,7 @@ export const useVncSession = (
             currentServer.hostname,
             currentServer.port,
             currentServer.protocol,
-            `zones/${zoneName}/vnc/info?_validation=true&_t=${Date.now()}`,
+            `machines/${machineName}/vnc/info?_validation=true&_t=${Date.now()}`,
             'GET',
             null,
             null,
@@ -383,7 +383,7 @@ export const useVncSession = (
   );
 
   const verifyKillCompletion = useCallback(
-    async (zoneName, maxAttempts = 3) => {
+    async (machineName, maxAttempts = 3) => {
       const pollKill = async attemptsLeft => {
         if (attemptsLeft === 0) {
           console.warn(`VNC KILL VERIFY: Verification failed after ${maxAttempts} attempts`);
@@ -399,7 +399,7 @@ export const useVncSession = (
             currentServer.hostname,
             currentServer.port,
             currentServer.protocol,
-            `zones/${zoneName}/vnc/info?_kill_check=${Date.now()}`,
+            `machines/${machineName}/vnc/info?_kill_check=${Date.now()}`,
             'GET',
             null,
             null,
@@ -407,7 +407,7 @@ export const useVncSession = (
           );
 
           if (!statusResult.success || statusResult.status === 404) {
-            setZoneDetails(prev => ({
+            setMachineDetails(prev => ({
               ...prev,
               active_vnc_session: false,
               vnc_session_info: null,
@@ -429,7 +429,7 @@ export const useVncSession = (
 
       await pollKill(maxAttempts);
     },
-    [currentServer, makeAgentRequest, setZoneDetails, showVncConsole]
+    [currentServer, makeAgentRequest, setMachineDetails, showVncConsole]
   );
 
   const handleVncClipboardPaste = text => {

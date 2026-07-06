@@ -34,7 +34,7 @@ const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) =
         <i className="fas fa-server fa-3x mb-3 text-muted" />
         <h3 className="fs-4 text-muted">No Servers Configured</h3>
         <p className="text-muted mb-4">
-          You haven&apos;t added any Servers yet. Add a server to start managing zones.
+          You haven&apos;t added any Servers yet. Add a server to start managing machines.
         </p>
       </div>
     );

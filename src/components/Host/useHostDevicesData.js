@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { useServers } from '../../contexts/ServerContext';
@@ -45,13 +45,20 @@ export const useHostDevicesData = () => {
     refreshDeviceDiscovery,
   } = useServers();
 
+  // In-flight guard kept in a ref (NOT the `loading` state) so loadDeviceData's identity
+  // stays stable. With `loading` in the deps, every fetch completion minted a new callback,
+  // re-fired the load effect below, and the page refetched in an endless loop (visible as
+  // the Devices tab flickering). Same pattern as useHostData's isLoadingRef.
+  const isLoadingRef = useRef(false);
+
   const loadDeviceData = useCallback(
     async server => {
-      if (!server || loading) {
+      if (!server || isLoadingRef.current) {
         return;
       }
 
       try {
+        isLoadingRef.current = true;
         setLoading(true);
         setError('');
 
@@ -102,9 +109,10 @@ export const useHostDevicesData = () => {
         setError('Error loading device data');
       } finally {
         setLoading(false);
+        isLoadingRef.current = false;
       }
     },
-    [loading, getHostDevices, getDeviceCategories, getPPTStatus, getAvailableDevices]
+    [getHostDevices, getDeviceCategories, getPPTStatus, getAvailableDevices]
   );
 
   useEffect(() => {

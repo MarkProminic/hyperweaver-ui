@@ -2,8 +2,10 @@ import { Helmet } from '@dr.pogodin/react-helmet';
 import { useState } from 'react';
 
 import { useServers } from '../contexts/ServerContext.jsx';
+import { hasFeature, hasMachines } from '../utils/capabilities';
 
 import HostHeader from './Host/HostHeader.jsx';
+import MachineManager from './Host/MachineManager.jsx';
 import NetworkStorageSummary from './Host/NetworkStorageSummary.jsx';
 import ZfsArcChart from './Host/PerformanceCharts/Arc.jsx';
 import CpuChart from './Host/PerformanceCharts/Cpu.jsx';
@@ -14,7 +16,6 @@ import StorageIOChart from './Host/PerformanceCharts/StorageIO.jsx';
 import ProvisioningStatus from './Host/ProvisioningStatus.jsx';
 import SystemInfo from './Host/SystemInfo.jsx';
 import { useHostData } from './Host/useHostData.js';
-import ZoneManager from './Host/ZoneManager.jsx';
 
 /**
  * Host Overview Dashboard Component
@@ -23,10 +24,11 @@ import ZoneManager from './Host/ZoneManager.jsx';
  * No server selection sidebar - uses global currentServer from ServerContext.
  */
 const Hosts = () => {
-  const { currentServer, servers, startZone, stopZone, restartZone } = useServers();
+  const { currentServer, servers, startMachine, stopMachine, restartMachine } = useServers();
 
   const {
     serverStats,
+    cpuUsagePct,
     monitoringHealth,
     monitoringStatus,
     storageSummary,
@@ -91,61 +93,63 @@ const Hosts = () => {
     setExpandedChartType(null);
   };
 
-  // Zone management functions
-  const handleZoneAction = async (action, zoneName = null) => {
+  // Machine management functions
+  const handleMachineAction = async (action, machineName = null) => {
     if (!currentServer) {
       return;
     }
 
     try {
-      let zonesToProcess;
-      if (zoneName) {
-        zonesToProcess = [zoneName];
+      let machinesToProcess;
+      if (machineName) {
+        machinesToProcess = [machineName];
       } else if (action === 'startAll') {
-        zonesToProcess =
-          serverStats.allzones?.filter(zone => !serverStats.runningzones?.includes(zone)) || [];
+        machinesToProcess =
+          serverStats.allmachines?.filter(
+            machine => !serverStats.runningmachines?.includes(machine)
+          ) || [];
       } else if (action === 'stopAll') {
-        zonesToProcess = serverStats.runningzones || [];
+        machinesToProcess = serverStats.runningmachines || [];
       } else {
-        zonesToProcess = [];
+        machinesToProcess = [];
       }
 
-      const zoneActionPromises = zonesToProcess.map(zone => {
+      const machineActionPromises = machinesToProcess.map(machine => {
         switch (action) {
           case 'start':
           case 'startAll':
-            return startZone(
+            return startMachine(
               currentServer.hostname,
               currentServer.port,
               currentServer.protocol,
-              zone
+              machine
             );
           case 'stop':
           case 'stopAll':
-            return stopZone(
+            return stopMachine(
               currentServer.hostname,
               currentServer.port,
               currentServer.protocol,
-              zone
+              machine
             );
           case 'restart':
-            return restartZone(
+            return restartMachine(
               currentServer.hostname,
               currentServer.port,
               currentServer.protocol,
-              zone
+              machine
             );
           default:
             return Promise.resolve();
         }
       });
 
-      await Promise.all(zoneActionPromises);
+      await Promise.all(machineActionPromises);
 
       // Refresh data after action
       setTimeout(() => loadHostData(currentServer), 2000);
     } catch (err) {
-      console.error(`Error performing zone action ${action}:`, err);
+      console.error(`Error performing machine action ${action}:`, err);
     }
   };
 
@@ -170,7 +174,7 @@ const Hosts = () => {
                 <h2 className="fs-4 fw-bold">No Servers</h2>
                 <p>
                   You haven&apos;t added any Servers yet. Add a server to start managing hosts and
-                  zones.
+                  machines.
                 </p>
                 <div className="mt-4">
                   <a href="/ui/settings/hyperweaver?tab=servers" className="btn btn-primary">
@@ -249,6 +253,7 @@ const Hosts = () => {
             {/* Host Overview - Progressive Loading (like networking page) */}
             <SystemInfo
               serverStats={serverStats}
+              cpuUsagePct={cpuUsagePct}
               monitoringStatus={monitoringStatus}
               monitoringHealth={monitoringHealth}
               taskStats={taskStats}
@@ -256,69 +261,84 @@ const Hosts = () => {
               loading={loading}
             />
 
-            <ZoneManager
-              serverStats={serverStats}
-              currentServer={currentServer}
-              handleZoneAction={handleZoneAction}
-              loading={loading}
-            />
+            {/* Capability-gated (hasMachines) — hidden until the agent offers machine management */}
+            {hasMachines(currentServer) && (
+              <MachineManager
+                serverStats={serverStats}
+                currentServer={currentServer}
+                handleMachineAction={handleMachineAction}
+                loading={loading}
+              />
+            )}
 
-            <NetworkStorageSummary
-              serverStats={serverStats}
-              storageSummary={storageSummary}
-              loading={loading}
-            />
+            {/* Monitoring-fed panels (sync OPEN ITEM 4b): the summary cards and the
+                performance charts all render /monitoring/* data — hidden on agents
+                that don't advertise the `monitoring` token (their fetches are
+                skipped by the loaders for the same reason). */}
+            {hasFeature(currentServer, 'monitoring') && (
+              <>
+                <NetworkStorageSummary
+                  serverStats={serverStats}
+                  storageSummary={storageSummary}
+                  loading={loading}
+                />
 
-            {/* Performance Monitoring Charts Section */}
-            <div className="card mb-5">
-              <div className="card-body">
-                <h5 className="h5 mb-4 d-flex align-items-center gap-2">
-                  <i className="fas fa-chart-area" />
-                  <span>Performance Monitoring</span>
-                </h5>
+                {/* Performance Monitoring Charts Section */}
+                <div className="card mb-5">
+                  <div className="card-body">
+                    <h5 className="h5 mb-4 d-flex align-items-center gap-2">
+                      <i className="fas fa-chart-area" />
+                      <span>Performance Monitoring</span>
+                    </h5>
 
-                <div className="row g-3">
-                  <StorageIOChart
-                    chartData={chartData}
-                    storageSeriesVisibility={storageSeriesVisibility}
-                    setStorageSeriesVisibility={setStorageSeriesVisibility}
-                    expandChart={expandChart}
-                    loading={loading}
-                  />
+                    <div className="row g-3">
+                      <StorageIOChart
+                        chartData={chartData}
+                        storageSeriesVisibility={storageSeriesVisibility}
+                        setStorageSeriesVisibility={setStorageSeriesVisibility}
+                        expandChart={expandChart}
+                        loading={loading}
+                      />
 
-                  <ZfsArcChart
-                    arcChartData={arcChartData}
-                    expandChart={expandChart}
-                    loading={loading}
-                  />
+                      <ZfsArcChart
+                        arcChartData={arcChartData}
+                        expandChart={expandChart}
+                        loading={loading}
+                      />
 
-                  <NetworkChart
-                    networkChartData={networkChartData}
-                    networkSeriesVisibility={networkSeriesVisibility}
-                    setNetworkSeriesVisibility={setNetworkSeriesVisibility}
-                    expandChart={expandChart}
-                    loading={loading}
-                  />
+                      <NetworkChart
+                        networkChartData={networkChartData}
+                        networkSeriesVisibility={networkSeriesVisibility}
+                        setNetworkSeriesVisibility={setNetworkSeriesVisibility}
+                        expandChart={expandChart}
+                        loading={loading}
+                      />
 
-                  <CpuChart
-                    cpuChartData={cpuChartData}
-                    cpuSeriesVisibility={cpuSeriesVisibility}
-                    setCpuSeriesVisibility={setCpuSeriesVisibility}
-                    expandChart={expandChart}
-                    loading={loading}
-                  />
+                      <CpuChart
+                        cpuChartData={cpuChartData}
+                        cpuSeriesVisibility={cpuSeriesVisibility}
+                        setCpuSeriesVisibility={setCpuSeriesVisibility}
+                        expandChart={expandChart}
+                        loading={loading}
+                      />
 
-                  <MemoryChart
-                    memoryChartData={memoryChartData}
-                    memorySeriesVisibility={memorySeriesVisibility}
-                    expandChart={expandChart}
-                    loading={loading}
-                  />
+                      <MemoryChart
+                        memoryChartData={memoryChartData}
+                        memorySeriesVisibility={memorySeriesVisibility}
+                        expandChart={expandChart}
+                        loading={loading}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
 
-            <ProvisioningStatus currentServer={currentServer} />
+            {/* Token-gated per Mark's go (sync OPEN ITEM 1) — render-gating also
+                stops the widget's own fetches on agents without provisioning. */}
+            {hasFeature(currentServer, 'provisioning') && (
+              <ProvisioningStatus currentServer={currentServer} />
+            )}
           </div>
         </div>
       </div>

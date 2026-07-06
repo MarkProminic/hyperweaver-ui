@@ -1,3 +1,5 @@
+import { hasFeature } from '../../../../utils/capabilities';
+
 const processNetworkInterfaces = interfacesResult => {
   if (interfacesResult.status !== 'fulfilled') {
     return [];
@@ -141,6 +143,12 @@ const processGenericNetworkItems = (result, key, idField = 'name') => {
 export const fetchNetworkData = async (currentServer, makeAgentRequest) => {
   console.log('🔍 NETWORKING: Loading complete network data for', currentServer.hostname);
 
+  // The monitoring/network/* fetches are token-gated (sync OPEN ITEM 4b) — the
+  // topology fetches below (aggregates/etherstubs/vnics/machines) are not, so a
+  // vnics-capable agent without host monitoring still draws its topology.
+  const monitoringAvailable = hasFeature(currentServer, 'monitoring');
+  const skipped = Promise.resolve({ success: false, message: 'monitoring not advertised' });
+
   const [
     interfacesResult,
     usageResult,
@@ -151,30 +159,38 @@ export const fetchNetworkData = async (currentServer, makeAgentRequest) => {
     vnicsResult,
     zonesResult,
   ] = await Promise.allSettled([
-    makeAgentRequest(
-      currentServer.hostname,
-      currentServer.port,
-      currentServer.protocol,
-      'monitoring/network/interfaces'
-    ),
-    makeAgentRequest(
-      currentServer.hostname,
-      currentServer.port,
-      currentServer.protocol,
-      'monitoring/network/usage?limit=1&per_interface=true'
-    ),
-    makeAgentRequest(
-      currentServer.hostname,
-      currentServer.port,
-      currentServer.protocol,
-      'monitoring/network/ipaddresses'
-    ),
-    makeAgentRequest(
-      currentServer.hostname,
-      currentServer.port,
-      currentServer.protocol,
-      'monitoring/network/routes'
-    ),
+    monitoringAvailable
+      ? makeAgentRequest(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          'monitoring/network/interfaces'
+        )
+      : skipped,
+    monitoringAvailable
+      ? makeAgentRequest(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          'monitoring/network/usage?limit=1&per_interface=true'
+        )
+      : skipped,
+    monitoringAvailable
+      ? makeAgentRequest(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          'monitoring/network/ipaddresses'
+        )
+      : skipped,
+    monitoringAvailable
+      ? makeAgentRequest(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          'monitoring/network/routes'
+        )
+      : skipped,
     makeAgentRequest(
       currentServer.hostname,
       currentServer.port,
@@ -193,7 +209,12 @@ export const fetchNetworkData = async (currentServer, makeAgentRequest) => {
       currentServer.protocol,
       'network/vnics'
     ),
-    makeAgentRequest(currentServer.hostname, currentServer.port, currentServer.protocol, 'zones'),
+    makeAgentRequest(
+      currentServer.hostname,
+      currentServer.port,
+      currentServer.protocol,
+      'machines'
+    ),
   ]);
 
   return {
@@ -204,6 +225,6 @@ export const fetchNetworkData = async (currentServer, makeAgentRequest) => {
     aggregates: processAggregates(aggregatesResult),
     etherstubs: processGenericNetworkItems(etherstubsResult, 'etherstubs'),
     vnics: processGenericNetworkItems(vnicsResult, 'vnics'),
-    zones: processGenericNetworkItems(zonesResult, 'zones', 'zonename'),
+    zones: processGenericNetworkItems(zonesResult, 'machines', 'name'),
   };
 };

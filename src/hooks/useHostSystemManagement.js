@@ -216,7 +216,7 @@ export const useHostSystemManagement = () => {
    */
   const getZoneOrchestrationStatus = useCallback(
     async (hostname, port, protocol) =>
-      await makeAgentRequest(hostname, port, protocol, 'zones/orchestration/status'),
+      await makeAgentRequest(hostname, port, protocol, 'machines/orchestration/status'),
     [makeAgentRequest]
   );
 
@@ -229,7 +229,7 @@ export const useHostSystemManagement = () => {
    */
   const enableZoneOrchestration = useCallback(
     async (hostname, port, protocol) =>
-      await makeAgentRequest(hostname, port, protocol, 'zones/orchestration/enable', 'POST', {
+      await makeAgentRequest(hostname, port, protocol, 'machines/orchestration/enable', 'POST', {
         confirm: true,
       }),
     [makeAgentRequest]
@@ -244,7 +244,7 @@ export const useHostSystemManagement = () => {
    */
   const disableZoneOrchestration = useCallback(
     async (hostname, port, protocol) =>
-      await makeAgentRequest(hostname, port, protocol, 'zones/orchestration/disable', 'POST'),
+      await makeAgentRequest(hostname, port, protocol, 'machines/orchestration/disable', 'POST'),
     [makeAgentRequest]
   );
 
@@ -257,7 +257,7 @@ export const useHostSystemManagement = () => {
    */
   const getZonePriorities = useCallback(
     async (hostname, port, protocol) =>
-      await makeAgentRequest(hostname, port, protocol, 'zones/priorities'),
+      await makeAgentRequest(hostname, port, protocol, 'machines/priorities'),
     [makeAgentRequest]
   );
 
@@ -271,7 +271,7 @@ export const useHostSystemManagement = () => {
    */
   const testZoneOrchestration = useCallback(
     async (hostname, port, protocol, strategy = 'parallel_by_priority') =>
-      await makeAgentRequest(hostname, port, protocol, 'zones/orchestration/test', 'POST', {
+      await makeAgentRequest(hostname, port, protocol, 'machines/orchestration/test', 'POST', {
         strategy,
       }),
     [makeAgentRequest]

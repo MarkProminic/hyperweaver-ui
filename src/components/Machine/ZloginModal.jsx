@@ -8,11 +8,11 @@ const ZloginModal = ({
   setShowZloginConsole,
   isZloginFullScreen,
   setIsZloginFullScreen,
-  selectedZone,
+  selectedMachine,
   handleZloginConsole,
   handleZloginModalPaste,
   user,
-  zoneDetails,
+  machineDetails,
   setShowVncConsole,
   handleVncConsole,
   loadingVnc,
@@ -55,7 +55,7 @@ const ZloginModal = ({
             className={`flex-grow-1 mb-0 ${isZloginFullScreen ? 'hw-modal-title-fullscreen' : 'hw-modal-title-normal'}`}
           >
             <i className="fas fa-terminal me-2" />
-            <span>zlogin Console - {selectedZone}</span>
+            <span>zlogin Console - {selectedMachine}</span>
           </p>
           <div className="d-flex gap-1 m-0">
             <ZloginActionsDropdown
@@ -69,7 +69,7 @@ const ZloginModal = ({
               onNewSession={() => {
                 setShowZloginConsole(false);
                 setTimeout(() => {
-                  handleZloginConsole(selectedZone).then(result => {
+                  handleZloginConsole(selectedMachine).then(result => {
                     if (!result.success) {
                       setError(result.message);
                     }
@@ -77,7 +77,7 @@ const ZloginModal = ({
                 }, 100);
               }}
               onKillSession={async () => {
-                if (!currentServer || !selectedZone) {
+                if (!currentServer || !selectedMachine) {
                   return;
                 }
                 try {
@@ -92,20 +92,21 @@ const ZloginModal = ({
                     const activeSessions = Array.isArray(sessionsResult.data)
                       ? sessionsResult.data
                       : sessionsResult.data.sessions || [];
-                    const activeZoneSession = activeSessions.find(
-                      session => session.zone_name === selectedZone && session.status === 'active'
+                    const activeMachineSession = activeSessions.find(
+                      session =>
+                        session.machine_name === selectedMachine && session.status === 'active'
                     );
-                    if (activeZoneSession) {
+                    if (activeMachineSession) {
                       const killResult = await makeAgentRequest(
                         currentServer.hostname,
                         currentServer.port,
                         currentServer.protocol,
-                        `zlogin/sessions/${activeZoneSession.id}/stop`,
+                        `zlogin/sessions/${activeMachineSession.id}/stop`,
                         'DELETE'
                       );
                       if (killResult.success) {
-                        await forceZoneSessionCleanup(currentServer, selectedZone);
-                        await refreshZloginSessionStatus(selectedZone);
+                        await forceZoneSessionCleanup(currentServer, selectedMachine);
+                        await refreshZloginSessionStatus(selectedMachine);
                       } else {
                         setError(`Failed to kill zlogin session: ${killResult.message}`);
                       }
@@ -128,7 +129,7 @@ const ZloginModal = ({
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
                   a.href = url;
-                  a.download = `zlogin-output-${selectedZone}-${Date.now()}.txt`;
+                  a.download = `zlogin-output-${selectedMachine}-${Date.now()}.txt`;
                   document.body.appendChild(a);
                   a.click();
                   document.body.removeChild(a);
@@ -156,19 +157,21 @@ const ZloginModal = ({
               type="button"
               className="btn btn-sm btn-warning"
               onClick={async () => {
-                if (zoneDetails.active_vnc_session) {
+                if (machineDetails.active_vnc_session) {
                   setShowZloginConsole(false);
                   setShowVncConsole(true);
                 } else {
                   setShowZloginConsole(false);
-                  const errorMsg = await handleVncConsole(selectedZone);
+                  const errorMsg = await handleVncConsole(selectedMachine);
                   if (errorMsg) {
                     setError(errorMsg);
                   }
                 }
               }}
               disabled={loadingVnc}
-              title={zoneDetails.active_vnc_session ? 'Switch to VNC Console' : 'Start VNC Console'}
+              title={
+                machineDetails.active_vnc_session ? 'Switch to VNC Console' : 'Start VNC Console'
+              }
             >
               <i className={`fas ${loadingVnc ? 'fa-spinner fa-pulse' : 'fa-desktop'} me-2`} />
               <span>{loadingVnc ? 'Starting...' : 'VNC'}</span>
@@ -195,8 +198,8 @@ const ZloginModal = ({
         </header>
         <section className="p-0 hw-modal-body">
           <ZoneShell
-            key={`zlogin-modal-${selectedZone}-${modalReadOnly ? 'ro' : 'rw'}`}
-            zoneName={selectedZone}
+            key={`zlogin-modal-${selectedMachine}-${modalReadOnly ? 'ro' : 'rw'}`}
+            zoneName={selectedMachine}
             readOnly={modalReadOnly}
             context="modal"
           />
@@ -211,13 +214,13 @@ ZloginModal.propTypes = {
   setShowZloginConsole: PropTypes.func.isRequired,
   isZloginFullScreen: PropTypes.bool.isRequired,
   setIsZloginFullScreen: PropTypes.func.isRequired,
-  selectedZone: PropTypes.string,
+  selectedMachine: PropTypes.string,
   handleZloginConsole: PropTypes.func.isRequired,
   handleZloginModalPaste: PropTypes.func.isRequired,
   user: PropTypes.shape({
     role: PropTypes.string,
   }),
-  zoneDetails: PropTypes.shape({
+  machineDetails: PropTypes.shape({
     active_vnc_session: PropTypes.bool,
   }),
   setShowVncConsole: PropTypes.func.isRequired,

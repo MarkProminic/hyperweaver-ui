@@ -16,7 +16,7 @@ const Dashboard = React.lazy(() => import('./Dashboard'));
 const HyperweaverSettings = React.lazy(() => import('./HyperweaverSettings'));
 const AgentSettings = React.lazy(() => import('./AgentSettings'));
 const Hosts = React.lazy(() => import('./Hosts'));
-const Zones = React.lazy(() => import('./Zones'));
+const Machines = React.lazy(() => import('./Machines'));
 const HostManage = React.lazy(() => import('./HostManage'));
 const HostNetworking = React.lazy(() => import('./HostNetworking'));
 const HostStorage = React.lazy(() => import('./HostStorage'));
@@ -41,7 +41,7 @@ const LayoutContent = () => {
   const { isDirect } = useMode();
   const userSettings = useContext(UserSettings);
 
-  const { servers, selectServer, selectZone, currentServer, currentZone } = useServers();
+  const { servers, selectServer, selectMachine, currentServer, currentMachine } = useServers();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
@@ -57,9 +57,9 @@ const LayoutContent = () => {
     }
 
     const hostParam = searchParams.get('host');
-    const zoneParam = searchParams.get('zone');
+    const machineParam = searchParams.get('machine');
 
-    if (!hostParam && !zoneParam) {
+    if (!hostParam && !machineParam) {
       console.log('🔗 LAYOUT: No URL parameters to process');
       sessionStorage.setItem(sessionKey, 'true');
       return;
@@ -71,8 +71,8 @@ const LayoutContent = () => {
         selectServer(matchingServer);
       }
 
-      if (zoneParam && matchingServer && (!currentZone || currentZone !== zoneParam)) {
-        selectZone(zoneParam);
+      if (machineParam && matchingServer && (!currentMachine || currentMachine !== machineParam)) {
+        selectMachine(machineParam);
       }
     }
 
@@ -83,8 +83,8 @@ const LayoutContent = () => {
     searchParams,
     currentServer,
     selectServer,
-    currentZone,
-    selectZone,
+    currentMachine,
+    selectMachine,
   ]);
 
   const handleResize = (e, { size }) => {
@@ -132,7 +132,7 @@ const LayoutContent = () => {
                 element={isDirect ? <Navigate to="/ui" replace /> : <HyperweaverSettings />}
               />
               <Route path="settings/agent" element={<AgentSettings />} />
-              <Route path="zones" element={<Zones />} />
+              <Route path="machines" element={<Machines />} />
               <Route path="hosts" element={<Hosts />} />
               <Route path="host-manage" element={<HostManage />} />
               <Route path="host-networking" element={<HostNetworking />} />

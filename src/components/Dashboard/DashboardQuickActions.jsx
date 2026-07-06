@@ -1,17 +1,23 @@
 import PropTypes from 'prop-types';
 
+import { useMode } from '../../contexts/ModeContext';
+import { useServers } from '../../contexts/ServerContext';
+import { hasFeature, hasMachines } from '../../utils/capabilities';
+import { resourceLabel } from '../../utils/resourceLabel';
+
 /**
- * Quick action buttons and zone distribution sidebar.
+ * Quick action buttons and machine distribution sidebar. All "Zones"/"Machines" wording is
+ * capability-driven via resourceLabel (contract C7) — never hardcoded.
  */
-const ZoneDistribution = ({ servers, summary }) => (
+const ZoneDistribution = ({ servers, summary, label }) => (
   <div>
     {servers && servers.length > 0 ? (
       <>
         {servers
           .filter(s => s.success && s.data)
           .map(serverResult => {
-            const zoneCount = serverResult.data.allzones?.length || 0;
-            const runningCount = serverResult.data.runningzones?.length || 0;
+            const zoneCount = serverResult.data.allmachines?.length || 0;
+            const runningCount = serverResult.data.runningmachines?.length || 0;
             const percentage =
               summary.totalZones > 0 ? Math.round((zoneCount / summary.totalZones) * 100) : 0;
 
@@ -23,7 +29,8 @@ const ZoneDistribution = ({ servers, summary }) => (
                 <div className="d-flex justify-content-between mb-1">
                   <strong className="small">{serverResult.server.hostname}</strong>
                   <span className="small">
-                    {zoneCount} zones ({percentage}%)
+                    {zoneCount} {resourceLabel(serverResult.server).toLowerCase()} ({percentage}
+                    %)
                   </span>
                 </div>
                 <div
@@ -52,13 +59,15 @@ const ZoneDistribution = ({ servers, summary }) => (
 
         <div className="text-center">
           <p className="text-uppercase small fw-semibold text-muted mb-1">Total Infrastructure</p>
-          <p className="h5 mb-1">{summary?.totalZones || 0} Zones</p>
+          <p className="h5 mb-1">
+            {summary?.totalZones || 0} {label}
+          </p>
           <p className="small text-muted mb-0">Across {summary?.onlineServers || 0} active hosts</p>
         </div>
       </>
     ) : (
       <div className="text-center text-muted">
-        <p className="mb-0">No zone data available</p>
+        <p className="mb-0">No {label.toLowerCase()} data available</p>
       </div>
     )}
   </div>
@@ -70,6 +79,7 @@ ZoneDistribution.propTypes = {
     totalZones: PropTypes.number,
     onlineServers: PropTypes.number,
   }).isRequired,
+  label: PropTypes.string.isRequired,
 };
 
 const DashboardQuickActions = ({
@@ -79,71 +89,96 @@ const DashboardQuickActions = ({
   onNavigateZones,
   onNavigateServerRegister,
   onNavigateSettings,
-}) => (
-  <div className="row g-3 mb-3">
-    <div className="col-12 col-lg-8">
-      <div className="card h-100">
-        <div className="card-body">
-          <h2 className="h4 mb-4 d-flex align-items-center gap-2">
-            <i className="fas fa-bolt" />
-            <span>Quick Actions</span>
-          </h2>
+}) => {
+  const { isDirect } = useMode();
+  const { servers: registryServers } = useServers();
+  const plural = resourceLabel(registryServers);
+  const singular = resourceLabel(registryServers, { plural: false });
+  // Capability-gated (hasMachines): machine actions/distribution hide until at least one
+  // agent in scope offers machine management.
+  const machinesAvailable = registryServers.some(hasMachines);
+  // Create gates on the op-level `machine-create` token (sync-file AGREED): show when
+  // any agent in scope advertises it.
+  const createAvailable = registryServers.some(server => hasFeature(server, 'machine-create'));
 
-          <div className="row g-3">
-            <div className="col-12 col-sm-6">
-              <button
-                type="button"
-                className="btn btn-primary w-100"
-                onClick={onNavigateZoneRegister}
-              >
-                <i className="fas fa-plus me-2" />
-                Create New Zone
-              </button>
-            </div>
-            <div className="col-12 col-sm-6">
-              <button type="button" className="btn btn-info w-100" onClick={onNavigateZones}>
-                <i className="fas fa-list me-2" />
-                Manage Zones
-              </button>
-            </div>
-            <div className="col-12 col-sm-6">
-              <button
-                type="button"
-                className="btn btn-success w-100"
-                onClick={onNavigateServerRegister}
-              >
-                <i className="fas fa-server me-2" />
-                Add New Host
-              </button>
-            </div>
-            <div className="col-12 col-sm-6">
-              <button
-                type="button"
-                className="btn btn-secondary w-100"
-                onClick={onNavigateSettings}
-              >
-                <i className="fas fa-cog me-2" />
-                Settings
-              </button>
+  return (
+    <div className="row g-3 mb-3">
+      <div className={machinesAvailable ? 'col-12 col-lg-8' : 'col-12'}>
+        <div className="card h-100">
+          <div className="card-body">
+            <h2 className="h4 mb-4 d-flex align-items-center gap-2">
+              <i className="fas fa-bolt" />
+              <span>Quick Actions</span>
+            </h2>
+
+            <div className="row g-3">
+              {machinesAvailable && (
+                <>
+                  {createAvailable && (
+                    <div className="col-12 col-sm-6">
+                      <button
+                        type="button"
+                        className="btn btn-primary w-100"
+                        onClick={onNavigateZoneRegister}
+                      >
+                        <i className="fas fa-plus me-2" />
+                        Create New {singular}
+                      </button>
+                    </div>
+                  )}
+                  <div className="col-12 col-sm-6">
+                    <button type="button" className="btn btn-info w-100" onClick={onNavigateZones}>
+                      <i className="fas fa-list me-2" />
+                      Manage {plural}
+                    </button>
+                  </div>
+                </>
+              )}
+              {/* Adding hosts is the aggregator's job (D11) — a Direct-mode agent is
+                  single-host by design, so the affordance hides there. */}
+              {!isDirect && (
+                <div className="col-12 col-sm-6">
+                  <button
+                    type="button"
+                    className="btn btn-success w-100"
+                    onClick={onNavigateServerRegister}
+                  >
+                    <i className="fas fa-server me-2" />
+                    Add New Host
+                  </button>
+                </div>
+              )}
+              <div className="col-12 col-sm-6">
+                <button
+                  type="button"
+                  className="btn btn-secondary w-100"
+                  onClick={onNavigateSettings}
+                >
+                  <i className="fas fa-cog me-2" />
+                  Settings
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div className="col-12 col-lg-4">
-      <div className="card h-100">
-        <div className="card-body">
-          <h2 className="h4 mb-4 d-flex align-items-center gap-2">
-            <i className="fas fa-chart-pie" />
-            <span>Zone Distribution</span>
-          </h2>
-          <ZoneDistribution servers={servers} summary={summary} />
+      {machinesAvailable && (
+        <div className="col-12 col-lg-4">
+          <div className="card h-100">
+            <div className="card-body">
+              <h2 className="h4 mb-4 d-flex align-items-center gap-2">
+                <i className="fas fa-chart-pie" />
+                <span>{singular} Distribution</span>
+              </h2>
+              <ZoneDistribution servers={servers} summary={summary} label={plural} />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 DashboardQuickActions.propTypes = {
   servers: PropTypes.arrayOf(PropTypes.object).isRequired,

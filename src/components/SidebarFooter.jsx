@@ -13,8 +13,10 @@ import { UserSettings } from '../contexts/UserSettingsContext.jsx';
 import GravatarImage from './GravatarImage.jsx';
 
 // Custom dropdown toggle: the profile avatar (plus username when expanded) opens the menu,
-// with no Bootstrap caret/button chrome. react-bootstrap supplies onClick + ref.
-const ProfileToggle = forwardRef(({ children, onClick }, ref) => {
+// with no Bootstrap caret/button chrome. react-bootstrap supplies onClick + ref. When the
+// sidebar is minimized the row centers icon-only with no side padding — the default button
+// padding would squeeze the 32px avatar inside the 38px rail (same rule as SidebarHeader).
+const ProfileToggle = forwardRef(({ children, onClick, minimized }, ref) => {
   const handleKeyDown = e => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -30,7 +32,7 @@ const ProfileToggle = forwardRef(({ children, onClick }, ref) => {
       role="button"
       tabIndex={0}
       aria-haspopup="true"
-      className="btn d-flex align-items-center gap-2"
+      className={`btn d-flex align-items-center gap-2 ${minimized ? 'justify-content-center px-0 w-100' : ''}`}
     >
       {children}
     </div>
@@ -42,6 +44,7 @@ ProfileToggle.displayName = 'ProfileToggle';
 ProfileToggle.propTypes = {
   children: PropTypes.node,
   onClick: PropTypes.func,
+  minimized: PropTypes.bool,
 };
 
 // One logout row (BoxVault-style). For OIDC the ICON is a toggle (globe = everywhere / house =
@@ -233,7 +236,7 @@ const SidebarFooter = () => {
   return (
     <div className="has-z-index-sidebar">
       <Dropdown drop="up">
-        <Dropdown.Toggle as={ProfileToggle}>
+        <Dropdown.Toggle as={ProfileToggle} minimized={isMinimized}>
           <GravatarImage />
           {!isMinimized && (
             <span className="d-flex flex-column text-start lh-sm ms-1 hw-profile-id">

@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 
 import { getAgentBasePath, fetchWsTicket } from '../api/serverUtils';
+import { hasFeature } from '../utils/capabilities';
 import { randomId } from '../utils/randomId';
 import { buildWsUrl } from '../utils/websocket';
 
@@ -31,6 +32,11 @@ export const FooterProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
   const [tasksError, setTasksError] = useState('');
   const [session, setSession] = useState(null);
+
+  // Capability gates (v1 feature tokens): agents that don't offer these surfaces get
+  // neither the 1s task polling nor the terminal/start session attempt.
+  const tasksAvailable = hasFeature(currentServer, 'tasks');
+  const shellAvailable = hasFeature(currentServer, 'host-terminal');
 
   // Use ref to track current tasks for since parameter
   const tasksRef = useRef([]);
@@ -151,7 +157,8 @@ export const FooterProvider = ({ children }) => {
       intervalRef.current = null;
     }
 
-    const shouldPoll = currentServer && footerIsActive && footerActiveView === 'tasks';
+    const shouldPoll =
+      currentServer && tasksAvailable && footerIsActive && footerActiveView === 'tasks';
 
     if (currentServer) {
       // Clear tasks when server changes
@@ -165,11 +172,16 @@ export const FooterProvider = ({ children }) => {
           // Wait for initial load to complete
           await fetchTasks();
           // Only start the interval after initial load is done and if conditions are still met
-          if (currentServer && footerIsActive && footerActiveView === 'tasks') {
+          if (currentServer && tasksAvailable && footerIsActive && footerActiveView === 'tasks') {
             console.log('⏰ FOOTER: Starting 1-second polling interval');
             intervalRef.current = setInterval(() => {
               // Double-check conditions before each fetch to prevent unnecessary requests
-              if (currentServer && footerIsActive && footerActiveView === 'tasks') {
+              if (
+                currentServer &&
+                tasksAvailable &&
+                footerIsActive &&
+                footerActiveView === 'tasks'
+              ) {
                 fetchTasks();
               } else {
                 console.log('🛑 FOOTER: Stopping interval due to changed conditions');
@@ -200,7 +212,7 @@ export const FooterProvider = ({ children }) => {
         intervalRef.current = null;
       }
     };
-  }, [currentServer, footerIsActive, footerActiveView, fetchTasks]);
+  }, [currentServer, tasksAvailable, footerIsActive, footerActiveView, fetchTasks]);
 
   // Clean up session when server changes
   useEffect(() => {
@@ -248,8 +260,13 @@ export const FooterProvider = ({ children }) => {
       timestamp: new Date().toISOString(),
     });
 
-    if (!currentServer || persistentSession.current || terminalCreating.current) {
-      console.log('🚫 FOOTER: Session creation blocked - already exists or creating');
+    if (
+      !currentServer ||
+      !shellAvailable ||
+      persistentSession.current ||
+      terminalCreating.current
+    ) {
+      console.log('🚫 FOOTER: Session creation blocked - unavailable, already exists, or creating');
       return;
     }
 
@@ -344,7 +361,7 @@ export const FooterProvider = ({ children }) => {
     } finally {
       terminalCreating.current = false;
     }
-  }, [currentServer, makeAgentRequest]);
+  }, [currentServer, shellAvailable, makeAgentRequest]);
 
   // Create session when server is available
   useEffect(() => {

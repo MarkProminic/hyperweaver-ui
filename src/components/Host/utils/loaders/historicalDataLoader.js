@@ -1,3 +1,4 @@
+import { hasFeature } from '../../../../utils/capabilities';
 import {
   processStorageIOHistoricalData,
   processCPUHistoricalData,
@@ -315,7 +316,8 @@ export const loadHistoricalChartData = async ({
   getHistoricalTimestamp,
   getResolutionLimit,
 }) => {
-  if (!currentServer || !makeAgentRequest) {
+  // Every fetch below is /monitoring/* — a token-gated surface (sync OPEN ITEM 4b).
+  if (!currentServer || !makeAgentRequest || !hasFeature(currentServer, 'monitoring')) {
     return;
   }
 

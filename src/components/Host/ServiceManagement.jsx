@@ -40,13 +40,13 @@ const ServiceManagement = ({ server }) => {
         server.hostname,
         server.port,
         server.protocol,
-        'zones',
+        'machines',
         'GET'
       );
 
-      if (result.success && result.data?.zones) {
-        // Extract unique zone names from zones data
-        const zones = result.data.zones.map(zone => zone.name).filter(Boolean);
+      if (result.success && result.data?.machines) {
+        // Extract unique zone names from the machine list (canonical wire keys)
+        const zones = result.data.machines.map(zone => zone.name).filter(Boolean);
         const uniqueZones = [...new Set(zones)].sort();
         setAvailableZones(uniqueZones);
       }

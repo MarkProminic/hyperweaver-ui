@@ -1,6 +1,6 @@
 import { FileManager } from '@cubone/react-file-manager';
 import PropTypes from 'prop-types';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import '@cubone/react-file-manager/dist/style.css';
 
 import { getAgentBasePath } from '../../../api/serverUtils';
@@ -26,7 +26,10 @@ const EnhancedFileManager = ({ server }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentPath, setCurrentPath] = useState('/');
   const [error, setError] = useState('');
-  const [directoryCache, setDirectoryCache] = useState(new Map());
+  // Pure fetch cache, never rendered — a ref, NOT state. As state, every cache write gave
+  // loadFiles a new identity, re-fired the load effect, and every navigation double-loaded
+  // (spinner flicker). Mutating a ref keeps loadFiles stable.
+  const directoryCacheRef = useRef(new Map());
 
   // Modal states for custom actions
   const [showTextEditor, setShowTextEditor] = useState(false);
@@ -41,8 +44,15 @@ const EnhancedFileManager = ({ server }) => {
   const { user } = useAuth();
   const serverContext = useServers();
 
-  // Initialize API instance
-  const api = useMemo(() => new AgentFileManagerAPI(serverContext), [serverContext]);
+  // Initialize API instance. Built from ONLY the two context fields the API class reads
+  // (currentServer + the module-stable makeAgentRequest) — keying the memo on the whole
+  // context object made the API (and everything downstream: loadFiles, the load effect)
+  // churn and reload the listing whenever the provider re-rendered.
+  const { currentServer: apiServer, makeAgentRequest: apiRequest } = serverContext;
+  const api = useMemo(
+    () => new AgentFileManagerAPI({ currentServer: apiServer, makeAgentRequest: apiRequest }),
+    [apiServer, apiRequest]
+  );
 
   // Load files with navigation support
   const loadFiles = useCallback(
@@ -60,13 +70,13 @@ const EnhancedFileManager = ({ server }) => {
         const currentFiles = await api.loadFiles(path);
 
         // Maintain root directories for navigation
-        let cachedDirectories = directoryCache.get('/') || [];
+        let cachedDirectories = directoryCacheRef.current.get('/') || [];
 
         if (cachedDirectories.length === 0) {
           try {
             const rootFiles = await api.loadFiles('/');
             cachedDirectories = rootFiles.filter(file => file.isDirectory);
-            setDirectoryCache(prev => new Map(prev).set('/', cachedDirectories));
+            directoryCacheRef.current.set('/', cachedDirectories);
           } catch {
             // Root directory loading failed, continue without it
           }
@@ -99,7 +109,7 @@ const EnhancedFileManager = ({ server }) => {
           // Load uncached parent directories in parallel
           const parentDirResults = await Promise.all(
             parentPaths.map(async parentPath => {
-              const cached = directoryCache.get(parentPath);
+              const cached = directoryCacheRef.current.get(parentPath);
               if (cached) {
                 return { path: parentPath, dirs: cached, isNew: false };
               }
@@ -114,16 +124,11 @@ const EnhancedFileManager = ({ server }) => {
           );
 
           // Update cache for newly loaded directories
-          const newCacheEntries = parentDirResults.filter(r => r.isNew);
-          if (newCacheEntries.length > 0) {
-            setDirectoryCache(prev => {
-              const next = new Map(prev);
-              newCacheEntries.forEach(entry => {
-                next.set(entry.path, entry.dirs);
-              });
-              return next;
+          parentDirResults
+            .filter(r => r.isNew)
+            .forEach(entry => {
+              directoryCacheRef.current.set(entry.path, entry.dirs);
             });
-          }
 
           // Add all parent directories to combined files
           parentDirResults.forEach(result => {
@@ -143,7 +148,7 @@ const EnhancedFileManager = ({ server }) => {
         setIsLoading(false);
       }
     },
-    [server, currentPath, api, directoryCache]
+    [server, currentPath, api]
   );
 
   // Load files when component mounts or dependencies change

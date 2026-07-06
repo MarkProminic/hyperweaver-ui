@@ -1,3 +1,5 @@
+import { hasFeature } from '../../../../utils/capabilities';
+
 /**
  * Helper: Deduplicate pools by name/pool field
  */
@@ -97,20 +99,40 @@ export const loadHostData = async ({
     setLoading(true);
     setError('');
 
+    // /monitoring/* is a token-gated surface (sync OPEN ITEM 4b): agents that don't
+    // advertise `monitoring` are never asked — those widgets render their empty states.
+    // Same for the swap summary on the `swap` token (sync OPEN ITEM 6) — the swap row
+    // self-hides on empty data, so skipping the fetch is the whole gate.
+    const monitoringAvailable = hasFeature(server, 'monitoring');
+    const swapAvailable = hasFeature(server, 'swap');
+    const skipped = Promise.resolve({ success: false, message: 'token not advertised' });
+
     const results = await Promise.allSettled([
       makeAgentRequest(server.hostname, server.port, server.protocol, 'stats'),
-      getMonitoringHealth(server.hostname, server.port, server.protocol),
-      getMonitoringStatus(server.hostname, server.port, server.protocol),
-      makeAgentRequest(
-        server.hostname,
-        server.port,
-        server.protocol,
-        'monitoring/network/interfaces'
-      ),
-      getStoragePools(server.hostname, server.port, server.protocol),
-      getStorageDatasets(server.hostname, server.port, server.protocol),
+      monitoringAvailable
+        ? getMonitoringHealth(server.hostname, server.port, server.protocol)
+        : skipped,
+      monitoringAvailable
+        ? getMonitoringStatus(server.hostname, server.port, server.protocol)
+        : skipped,
+      monitoringAvailable
+        ? makeAgentRequest(
+            server.hostname,
+            server.port,
+            server.protocol,
+            'monitoring/network/interfaces'
+          )
+        : skipped,
+      monitoringAvailable
+        ? getStoragePools(server.hostname, server.port, server.protocol)
+        : skipped,
+      monitoringAvailable
+        ? getStorageDatasets(server.hostname, server.port, server.protocol)
+        : skipped,
       makeAgentRequest(server.hostname, server.port, server.protocol, 'tasks/stats'),
-      makeAgentRequest(server.hostname, server.port, server.protocol, 'system/swap/summary'),
+      swapAvailable
+        ? makeAgentRequest(server.hostname, server.port, server.protocol, 'system/swap/summary')
+        : skipped,
     ]);
 
     const [
@@ -161,10 +183,13 @@ export const loadHostData = async ({
       setSwapSummaryData(swapSummaryResult.value.data);
     } else {
       setSwapSummaryData({});
-      console.error(
-        'Failed to fetch swap summary:',
-        swapSummaryResult.value?.message || 'Unknown error'
-      );
+      // A skipped (token-gated) fetch is by design — only log real failures.
+      if (swapAvailable) {
+        console.error(
+          'Failed to fetch swap summary:',
+          swapSummaryResult.value?.message || 'Unknown error'
+        );
+      }
     }
   } catch (error) {
     console.error('Error fetching host data:', error);

@@ -2,7 +2,10 @@ import { Helmet } from '@dr.pogodin/react-helmet';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useMode } from '../../contexts/ModeContext';
 import { useServers } from '../../contexts/ServerContext';
+import { hasMachines } from '../../utils/capabilities';
+import { resourceLabel } from '../../utils/resourceLabel';
 
 import DashboardHealthModal from './DashboardHealthModal';
 import DashboardQuickActions from './DashboardQuickActions';
@@ -29,8 +32,18 @@ const Dashboard = () => {
     servers,
     loading: serversLoading,
     selectServer,
+    clearMachine,
   } = useServers();
+  const { isDirect } = useMode();
   const navigate = useNavigate();
+
+  // The Dashboard is datacenter/host scope — a machine selection carried in from
+  // /ui/machines would keep that machine highlighted in the tree (and in the
+  // breadcrumb) while looking at the dashboard. Clear it on arrival, whatever the
+  // navigation path (sidebar button, Datacenter node, breadcrumb, typed URL).
+  useEffect(() => {
+    clearMachine();
+  }, [clearMachine]);
 
   const fetchInfrastructureData = useCallback(async () => {
     if (!servers || servers.length === 0) {
@@ -105,7 +118,7 @@ const Dashboard = () => {
   );
 
   const navigateToZones = useCallback(() => {
-    navigate('/ui/zones');
+    navigate('/ui/machines');
   }, [navigate]);
 
   const navigateToServerRegister = useCallback(() => {
@@ -116,9 +129,12 @@ const Dashboard = () => {
     navigate('/ui/zone-register');
   }, [navigate]);
 
+  // Direct mode has no Hyperweaver (Server) settings — the agent's own settings page is
+  // THE settings page there. Without this, the button redirected to /ui/settings/hyperweaver,
+  // which Layout bounces straight back to the dashboard in Direct mode: a silent no-op.
   const navigateToSettings = useCallback(() => {
-    navigate('/ui/settings');
-  }, [navigate]);
+    navigate(isDirect ? '/ui/settings/agent' : '/ui/settings');
+  }, [navigate, isDirect]);
 
   useEffect(() => {
     if (!serversLoading && servers && servers.length > 0) {
@@ -196,8 +212,13 @@ const Dashboard = () => {
                 <div>
                   <h1 className="h3 mb-1">Infrastructure Overview</h1>
                   <p className="text-muted mb-0">
-                    Managing {summary?.totalServers || 0} servers with {summary?.totalZones || 0}{' '}
-                    zones
+                    Managing {summary?.totalServers || 0} servers
+                    {servers.some(hasMachines) && (
+                      <>
+                        {' '}
+                        with {summary?.totalZones || 0} {resourceLabel(servers).toLowerCase()}
+                      </>
+                    )}
                     {lastRefresh && (
                       <span className="ms-2">
                         • Last updated {lastRefresh.toLocaleTimeString()}

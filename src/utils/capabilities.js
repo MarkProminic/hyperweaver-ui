@@ -40,3 +40,36 @@ export const hasConsole = (server, token) => {
   }
   return consoles.includes(token);
 };
+
+/**
+ * Whether the agent behind `server` offers machine management — the `machines` feature
+ * token, advertised by BOTH agents (sync-file AGREED, 2026-07-05). hasFeature's
+ * render-all rule still covers agents with no features array at all.
+ * @param {Object} server - Server object (registry row or Direct self-server)
+ * @returns {boolean} True if machine surfaces (page, tree expansion, counts) should render
+ */
+export const hasMachines = server => hasFeature(server, 'machines');
+
+// The Manage page's sub-tab tokens — keep in sync with TABS in HostManage.jsx (the
+// same parallel-list convention as Navbar's HOST_CONTROL_ROUTES ↔ ContextTabs'
+// HOST_TABS). Used to hide the Manage navbar tab when an agent offers none of them.
+const MANAGE_FEATURES = [
+  'services',
+  'vnics',
+  'packages',
+  'boot-environments',
+  'zfs',
+  'time-sync',
+  'processes',
+  'fault-management',
+  'file-browser',
+  'system-users',
+];
+
+/**
+ * Whether the agent behind `server` offers ANY Manage-page surface. Legacy agents
+ * with no features array render everything (hasFeature's render-all rule).
+ * @param {Object} server - Server object (registry row or Direct self-server)
+ * @returns {boolean} True if the Manage navbar tab should render
+ */
+export const hasManageSurface = server => MANAGE_FEATURES.some(token => hasFeature(server, token));

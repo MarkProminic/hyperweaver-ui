@@ -9,7 +9,7 @@
  *
  * @param {string} path - Absolute path (and optional query), built client-side as
  *   `${getAgentBasePath(server)}/{suffix}` (see serverUtils) — e.g. Direct:
- *   "/zlogin/abc123"; Aggregated: "/api/agents/7/zones/z/vnc/websockify".
+ *   "/zlogin/abc123"; Aggregated: "/api/agents/7/machines/m/vnc/websockify".
  * @param {string} [ticket] - Phase H WS auth ticket (from GET /ws-ticket). Appended
  *   as ?ticket= (or &ticket= if the path already has a query). The agent requires it
  *   at every WS upgrade; the Server forwards the query string verbatim to the agent.

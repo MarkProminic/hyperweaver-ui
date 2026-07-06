@@ -15,7 +15,7 @@ import { useServers } from '../../contexts/ServerContext';
 const Breadcrumb = () => {
   const navigate = useNavigate();
   const { isDirect } = useMode();
-  const { currentServer, currentZone } = useServers();
+  const { currentServer, currentMachine } = useServers();
   const { datacenterLabel } = useAuth();
 
   const crumbs = [];
@@ -33,8 +33,8 @@ const Breadcrumb = () => {
       to: '/ui/hosts',
     });
   }
-  if (currentZone) {
-    crumbs.push({ icon: 'fab fa-hive', label: currentZone, to: null });
+  if (currentMachine) {
+    crumbs.push({ icon: 'fab fa-hive', label: currentMachine, to: null });
   }
 
   if (crumbs.length === 0) {

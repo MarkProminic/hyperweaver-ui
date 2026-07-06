@@ -2,14 +2,14 @@ import PropTypes from 'prop-types';
 import React from 'react';
 
 const InactiveConsoleDisplay = ({
-  selectedZone,
+  selectedMachine,
   currentServer,
   loading,
   loadingVnc,
   setLoading,
   setLoadingVnc,
   setError,
-  setZoneDetails,
+  setMachineDetails,
   setActiveConsoleType,
   startVncSession,
   waitForVncSessionReady,
@@ -27,20 +27,20 @@ const InactiveConsoleDisplay = ({
           type="button"
           className="btn btn-sm btn-info"
           onClick={async () => {
-            console.log(`🚀 START VNC: Starting VNC for preview in ${selectedZone}`);
+            console.log(`🚀 START VNC: Starting VNC for preview in ${selectedMachine}`);
             try {
               setLoadingVnc(true);
               const result = await startVncSession(
                 currentServer.hostname,
                 currentServer.port,
                 currentServer.protocol,
-                selectedZone
+                selectedMachine
               );
 
               if (result.success) {
-                const readinessResult = await waitForVncSessionReady(selectedZone);
+                const readinessResult = await waitForVncSessionReady(selectedMachine);
                 if (readinessResult.ready) {
-                  setZoneDetails(prev => ({
+                  setMachineDetails(prev => ({
                     ...prev,
                     active_vnc_session: true,
                     vnc_session_info: {
@@ -68,15 +68,15 @@ const InactiveConsoleDisplay = ({
           type="button"
           className="btn btn-sm btn-success"
           onClick={async () => {
-            if (!currentServer || !selectedZone) {
+            if (!currentServer || !selectedMachine) {
               return;
             }
-            console.log(`🚀 START ZLOGIN: Starting zlogin for preview in ${selectedZone}`);
+            console.log(`🚀 START ZLOGIN: Starting zlogin for preview in ${selectedMachine}`);
             try {
               setLoading(true);
-              const result = await startZloginSessionExplicitly(currentServer, selectedZone);
+              const result = await startZloginSessionExplicitly(currentServer, selectedMachine);
               if (result) {
-                setZoneDetails(prev => ({
+                setMachineDetails(prev => ({
                   ...prev,
                   zlogin_session: result,
                   active_zlogin_session: true,
@@ -115,7 +115,7 @@ const InactiveConsoleDisplay = ({
 );
 
 InactiveConsoleDisplay.propTypes = {
-  selectedZone: PropTypes.string,
+  selectedMachine: PropTypes.string,
   currentServer: PropTypes.shape({
     hostname: PropTypes.string,
     port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -126,7 +126,7 @@ InactiveConsoleDisplay.propTypes = {
   setLoading: PropTypes.func,
   setLoadingVnc: PropTypes.func,
   setError: PropTypes.func,
-  setZoneDetails: PropTypes.func,
+  setMachineDetails: PropTypes.func,
   setActiveConsoleType: PropTypes.func,
   startVncSession: PropTypes.func,
   waitForVncSessionReady: PropTypes.func,

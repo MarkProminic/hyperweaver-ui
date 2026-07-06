@@ -14,12 +14,12 @@ import VncViewerReact from './VncViewerReact';
  * opening this tab. This tab shares the origin's auth (localStorage token).
  */
 const StandaloneConsole = () => {
-  const { agentId, zoneName } = useParams();
+  const { agentId, machineName } = useParams();
   const { isDirect, ready: modeReady } = useMode();
   const { servers } = useServers();
-  const zone = zoneName ? decodeURIComponent(zoneName) : '';
+  const machine = machineName ? decodeURIComponent(machineName) : '';
 
-  if (!agentId || !zone) {
+  if (!agentId || !machine) {
     return (
       <div className="hw-standalone-console hw-standalone-console-error">
         Invalid console address.
@@ -57,7 +57,7 @@ const StandaloneConsole = () => {
     <div className="hw-standalone-console">
       <VncViewerReact
         server={server}
-        zoneName={zone}
+        machineName={machine}
         autoConnect
         showControls
         resize="scale"

@@ -1,3 +1,5 @@
+import { hasFeature } from '../../../../utils/capabilities';
+
 /**
  * Helper: Process network recent data
  */
@@ -127,7 +129,8 @@ export const loadRecentChartData = async ({
   loadHistoricalChartDataFn,
   getResolutionLimit,
 }) => {
-  if (!currentServer || !makeAgentRequest) {
+  // Every fetch below is /monitoring/* — a token-gated surface (sync OPEN ITEM 4b).
+  if (!currentServer || !makeAgentRequest || !hasFeature(currentServer, 'monitoring')) {
     return;
   }
 

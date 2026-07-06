@@ -25,7 +25,7 @@ const ACTIONS = {
 const keyFor = (server, name) => `${server.id ?? server.hostname}:${name}`;
 
 const BulkActionsModal = ({ show, onClose, action, servers }) => {
-  const { makeAgentRequest, startZone, stopZone, restartZone } = useServers();
+  const { makeAgentRequest, startMachine, stopMachine, restartMachine } = useServers();
   const cfg = ACTIONS[action] || ACTIONS.start;
   const multiHost = servers.length > 1;
   const noun = resourceLabel(servers, { plural: true }).toLowerCase();
@@ -56,10 +56,10 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
         makeAgentRequest(server.hostname, server.port, server.protocol, 'stats')
           .then(res =>
             res.success
-              ? (res.data.allzones || []).map(name => ({
+              ? (res.data.allmachines || []).map(name => ({
                   server,
                   name,
-                  running: (res.data.runningzones || []).includes(name),
+                  running: (res.data.runningmachines || []).includes(name),
                 }))
               : []
           )
@@ -133,14 +133,14 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
     (server, name) => {
       const args = [server.hostname, server.port, server.protocol, name];
       if (action === 'stop') {
-        return stopZone(...args);
+        return stopMachine(...args);
       }
       if (action === 'restart') {
-        return restartZone(...args);
+        return restartMachine(...args);
       }
-      return startZone(...args);
+      return startMachine(...args);
     },
-    [action, startZone, stopZone, restartZone]
+    [action, startMachine, stopMachine, restartMachine]
   );
 
   const handleConfirm = async () => {

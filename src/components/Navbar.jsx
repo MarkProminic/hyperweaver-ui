@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import Dropdown from 'react-bootstrap/Dropdown';
 
+import { hasFeature } from '../utils/capabilities';
 import {
-  canStartStopZones,
-  canRestartZones,
-  canDestroyZones,
+  canStartStopMachines,
+  canRestartMachines,
+  canDestroyMachines,
   canControlHosts,
   canPowerOffHosts,
 } from '../utils/permissions';
+import { resourceLabel } from '../utils/resourceLabel';
 
 import { FormModal } from './common';
 import Breadcrumb from './Navbar/Breadcrumb';
@@ -23,18 +25,20 @@ import { useNavbarActions } from './Navbar/useNavbarActions';
  *   row 2: context tabs for the focused node (ContextTabs)
  *
  * Selection moved to the SidebarTree, so the old Host/Zone selector dropdowns are gone; the
- * breadcrumb takes over their labeling role. The Controls dropdown (Zone/Host actions) and its
+ * breadcrumb takes over their labeling role. The Controls dropdown (Machine/Host actions) and its
  * confirm modal are unchanged.
  */
 // Routes whose top-right control is the Host Actions dropdown (host context). Explicit, so it's
-// obvious which routes count — matches ContextTabs' host set (minus the Settings tab, which
-// needs no power controls). Dashboard → Datacenter controls; /ui/zones → Zone controls.
+// obvious which routes count — matches ContextTabs' host set, INCLUDING the Agent settings tab:
+// omitting it dropped the dropdown there, which shrank navbar row 1 and made the layout jump
+// between tabs. Dashboard → Datacenter controls; /ui/machines → Machine controls.
 const HOST_CONTROL_ROUTES = [
   '/ui/hosts',
   '/ui/host-manage',
   '/ui/host-networking',
   '/ui/host-devices',
   '/ui/host-storage',
+  '/ui/settings/agent',
 ];
 
 const Navbar = () => {
@@ -50,7 +54,7 @@ const Navbar = () => {
     recoveryFailed,
     setRecoveryFailed,
     handleModalClick,
-    handleZoneAction,
+    handleMachineAction,
     handleHostAction,
     handleShareCurrentPage,
     navigate,
@@ -58,19 +62,26 @@ const Navbar = () => {
     user,
     allServers,
     currentServer,
-    currentZone,
+    currentMachine,
   } = useNavbarActions();
 
   // Bulk Actions modal target: { action, servers } or null (phase B). Servers = one host
   // (host scope) or all registered hosts (Datacenter scope).
   const [bulk, setBulk] = useState(null);
 
-  const ZoneControlDropdown = () => {
+  // Capability-driven noun (contract C7): "Zone" on all-bhyve scopes, "Machine" otherwise.
+  const machineNoun = resourceLabel(currentServer, { plural: false });
+
+  // Suspend gates on the op-level `machine-suspend` feature token (sync-file AGREED) —
+  // any hypervisor that supports it advertises it; no hypervisor-value checks.
+  const canSuspend = hasFeature(currentServer, 'machine-suspend');
+
+  const MachineControlDropdown = () => {
     const userRole = user?.role;
 
     return (
       <Dropdown align="end">
-        <Dropdown.Toggle variant="outline-secondary">Zone Controls</Dropdown.Toggle>
+        <Dropdown.Toggle variant="outline-secondary">{machineNoun} Controls</Dropdown.Toggle>
         <Dropdown.Menu>
           {isShareableRoute(location.pathname) && currentServer && (
             <>
@@ -87,7 +98,7 @@ const Navbar = () => {
             </>
           )}
 
-          {canStartStopZones(userRole) && (
+          {canStartStopMachines(userRole) && (
             <>
               <Dropdown.Item
                 as="button"
@@ -95,7 +106,7 @@ const Navbar = () => {
                 onClick={() => {
                   handleModalClick();
                   setCurrentAction('shutdown');
-                  setCurrentMode('zone');
+                  setCurrentMode('machine');
                 }}
               >
                 <i className="fas fa-stop text-danger me-2" />
@@ -107,7 +118,7 @@ const Navbar = () => {
                 onClick={() => {
                   handleModalClick();
                   setCurrentAction('start');
-                  setCurrentMode('zone');
+                  setCurrentMode('machine');
                 }}
               >
                 <i className="fas fa-play text-success me-2" />
@@ -116,14 +127,14 @@ const Navbar = () => {
             </>
           )}
 
-          {canRestartZones(userRole) && (
+          {canRestartMachines(userRole) && (
             <Dropdown.Item
               as="button"
               type="button"
               onClick={() => {
                 handleModalClick();
                 setCurrentAction('restart');
-                setCurrentMode('zone');
+                setCurrentMode('machine');
               }}
             >
               <i className="fas fa-redo text-warning me-2" />
@@ -131,7 +142,22 @@ const Navbar = () => {
             </Dropdown.Item>
           )}
 
-          {canDestroyZones(userRole) && (
+          {canSuspend && canStartStopMachines(userRole) && (
+            <Dropdown.Item
+              as="button"
+              type="button"
+              onClick={() => {
+                handleModalClick();
+                setCurrentAction('suspend');
+                setCurrentMode('machine');
+              }}
+            >
+              <i className="fas fa-pause text-warning me-2" />
+              Suspend
+            </Dropdown.Item>
+          )}
+
+          {canDestroyMachines(userRole) && (
             <>
               <Dropdown.Divider />
               <Dropdown.Item
@@ -140,7 +166,7 @@ const Navbar = () => {
                 onClick={() => {
                   handleModalClick();
                   setCurrentAction('kill');
-                  setCurrentMode('zone');
+                  setCurrentMode('machine');
                 }}
               >
                 <i className="fas fa-skull text-danger me-2" />
@@ -156,7 +182,7 @@ const Navbar = () => {
                 onClick={() => {
                   handleModalClick();
                   setCurrentAction('provision');
-                  setCurrentMode('zone');
+                  setCurrentMode('machine');
                 }}
               >
                 <i className="fas fa-cogs me-2" />
@@ -168,7 +194,7 @@ const Navbar = () => {
                 onClick={() => {
                   handleModalClick();
                   setCurrentAction('destroy');
-                  setCurrentMode('zone');
+                  setCurrentMode('machine');
                 }}
               >
                 <i className="fas fa-trash text-danger me-2" />
@@ -177,7 +203,7 @@ const Navbar = () => {
             </>
           )}
 
-          {!canDestroyZones(userRole) && (
+          {!canDestroyMachines(userRole) && (
             <>
               <Dropdown.Divider />
               <div className="text-muted text-center p-2 small">
@@ -251,7 +277,7 @@ const Navbar = () => {
             </>
           )}
 
-          {canStartStopZones(userRole) && (
+          {canStartStopMachines(userRole) && (
             <>
               <Dropdown.Divider />
               <Dropdown.Header>Bulk machine actions</Dropdown.Header>
@@ -271,7 +297,7 @@ const Navbar = () => {
                 <i className="fas fa-stop text-danger me-2" />
                 Shutdown machines…
               </Dropdown.Item>
-              {canRestartZones(userRole) && (
+              {canRestartMachines(userRole) && (
                 <Dropdown.Item
                   as="button"
                   type="button"
@@ -306,7 +332,7 @@ const Navbar = () => {
       <Dropdown align="end">
         <Dropdown.Toggle variant="outline-secondary">Bulk Actions</Dropdown.Toggle>
         <Dropdown.Menu>
-          {canStartStopZones(userRole) ? (
+          {canStartStopMachines(userRole) ? (
             <>
               <Dropdown.Header>Across all hosts</Dropdown.Header>
               <Dropdown.Item
@@ -325,7 +351,7 @@ const Navbar = () => {
                 <i className="fas fa-stop text-danger me-2" />
                 Shutdown machines…
               </Dropdown.Item>
-              {canRestartZones(userRole) && (
+              {canRestartMachines(userRole) && (
                 <Dropdown.Item
                   as="button"
                   type="button"
@@ -351,8 +377,8 @@ const Navbar = () => {
   // Dashboard → cross-host bulk. Other pages (accounts/settings/profile) → no controls.
   const renderControls = () => {
     const path = location.pathname;
-    if (path === '/ui/zones') {
-      return <ZoneControlDropdown />;
+    if (path === '/ui/machines') {
+      return <MachineControlDropdown />;
     }
     if (path === '/ui' || path === '/ui/dashboard') {
       return <DatacenterControlDropdown />;
@@ -373,9 +399,9 @@ const Navbar = () => {
           onSubmit={() =>
             currentMode === 'host'
               ? handleHostAction(currentAction)
-              : handleZoneAction(currentAction)
+              : handleMachineAction(currentAction)
           }
-          title={`Confirm ${currentMode} ${currentAction}`}
+          title={`Confirm ${currentMode === 'machine' ? machineNoun.toLowerCase() : currentMode} ${currentAction}`}
           icon={getActionIcon(currentAction)}
           submitText={loading ? 'Processing...' : currentAction}
           submitVariant={getActionVariant(currentAction)}
@@ -412,12 +438,12 @@ const Navbar = () => {
               )}
             </div>
           )}
-          {currentMode === 'zone' && currentZone && (
+          {currentMode === 'machine' && currentMachine && (
             <div className="alert alert-info">
               <p>
-                <strong>Target:</strong> {currentZone}
+                <strong>Target:</strong> {currentMachine}
               </p>
-              <p>This action will be performed on the selected zone.</p>
+              <p>This action will be performed on the selected {machineNoun.toLowerCase()}.</p>
             </div>
           )}
         </FormModal>

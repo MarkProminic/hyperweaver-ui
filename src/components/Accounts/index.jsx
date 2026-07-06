@@ -96,7 +96,7 @@ const Accounts = () => {
                       </p>
                       <ul>
                         <li>
-                          <strong>User:</strong> Basic access to zones and hosts
+                          <strong>User:</strong> Basic access to machines and hosts
                         </li>
                         <li>
                           <strong>Admin:</strong> Can manage users and organization settings

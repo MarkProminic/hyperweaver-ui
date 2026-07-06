@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 
-const ZoneNetwork = ({ configuration }) => {
+const MachineNetwork = ({ configuration }) => {
   if (!configuration || !configuration.net || configuration.net.length === 0) {
     return null;
   }
@@ -98,7 +98,7 @@ const ZoneNetwork = ({ configuration }) => {
   );
 };
 
-ZoneNetwork.propTypes = {
+MachineNetwork.propTypes = {
   configuration: PropTypes.shape({
     netif: PropTypes.string,
     'ip-type': PropTypes.string,
@@ -114,4 +114,4 @@ ZoneNetwork.propTypes = {
   }),
 };
 
-export default ZoneNetwork;
+export default MachineNetwork;

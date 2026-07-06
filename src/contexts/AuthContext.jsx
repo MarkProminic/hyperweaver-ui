@@ -14,6 +14,10 @@ import { useMode } from './ModeContext';
  */
 const AuthContext = createContext();
 
+// Module scope: survives React StrictMode's double effect invocation — the
+// tray token is single-use, so only the first attempt may consume it.
+let trayClaimStarted = false;
+
 /**
  * Custom hook to use authentication context
  * @returns {Object} Authentication context value
@@ -86,6 +90,33 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   /**
+   * Direct-mode tray handoff: the agent's tray "Open" click mints a single-use
+   * 60s token and puts it in the URL fragment (#tray=...) — fragments never hit
+   * server logs or Referer headers. Exchange it for a fresh API key so the
+   * local user is signed in without any login screen (local presence IS the
+   * credential). Returns the API key, or null when there is no token / the
+   * claim fails (expired, reused, agent restarted) — callers fall through to
+   * the normal stored-key / login flow.
+   */
+  const claimTrayToken = useCallback(async () => {
+    const match = window.location.hash.match(/[#&]tray=(?<token>[A-Za-z0-9_-]+)/);
+    if (!match || trayClaimStarted) {
+      return null;
+    }
+    trayClaimStarted = true;
+    // Strip the fragment immediately so the single-use token never lingers in
+    // the address bar, browser history, or a copied link.
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    try {
+      const response = await axios.post('/auth/tray-claim', { token: match.groups.token });
+      return response.data?.api_key || null;
+    } catch (claimErr) {
+      console.error('Tray token claim failed:', claimErr);
+      return null;
+    }
+  }, []);
+
+  /**
    * Clear authentication state
    */
   const clearAuth = useCallback(() => {
@@ -103,6 +134,55 @@ export const AuthProvider = ({ children }) => {
    * Aggregated → JWT verified via the Server's /api/auth/verify.
    */
   const initializeAuth = useCallback(async () => {
+    // Tray/protocol handoff (Direct mode). Every tray claim mints a PERMANENT key on the
+    // agent, so a still-valid stored key outranks claiming: validate it first, strip the
+    // fragment UNCLAIMED (the single-use token just expires server-side), and reuse the
+    // session. Claim only when no key is stored or the stored one no longer validates —
+    // otherwise the agent's key list grows by one per tray/hwa:// open.
+    if (isDirect) {
+      const hasTrayToken = /[#&]tray=[A-Za-z0-9_-]+/.test(window.location.hash);
+      const storedKey = localStorage.getItem('authToken');
+
+      if (hasTrayToken && storedKey) {
+        try {
+          const storedUser = await validateApiKey(storedKey);
+          if (storedUser) {
+            window.history.replaceState(
+              null,
+              '',
+              window.location.pathname + window.location.search
+            );
+            setUser(storedUser);
+            setToken(storedKey);
+            setIsAuthenticated(true);
+            axios.defaults.headers.common.Authorization = `Bearer ${storedKey}`;
+            setLoading(false);
+            return;
+          }
+        } catch (storedErr) {
+          console.error('Stored key validation failed, falling back to tray claim:', storedErr);
+        }
+      }
+
+      const trayKey = await claimTrayToken();
+      if (trayKey) {
+        try {
+          const trayUser = await validateApiKey(trayKey);
+          if (trayUser) {
+            localStorage.setItem('authToken', trayKey);
+            setToken(trayKey);
+            setUser(trayUser);
+            setIsAuthenticated(true);
+            axios.defaults.headers.common.Authorization = `Bearer ${trayKey}`;
+            setLoading(false);
+            return;
+          }
+        } catch (trayErr) {
+          console.error('Tray key validation failed:', trayErr);
+        }
+      }
+    }
+
     const storedToken = localStorage.getItem('authToken');
 
     if (storedToken) {
@@ -155,7 +235,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     setLoading(false);
-  }, [isDirect, validateApiKey, clearAuth, fetchGravatarData]);
+  }, [isDirect, claimTrayToken, validateApiKey, clearAuth, fetchGravatarData]);
 
   /**
    * Initialize authentication state once the serving mode is known

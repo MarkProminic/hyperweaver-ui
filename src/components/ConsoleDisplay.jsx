@@ -6,9 +6,9 @@ import VncConsoleDisplay from './VncConsoleDisplay';
 import ZloginConsoleDisplay from './ZloginConsoleDisplay';
 
 const ConsoleDisplay = ({
-  zoneDetails,
+  machineDetails,
   activeConsoleType,
-  selectedZone,
+  selectedMachine,
   currentServer,
   user,
   loading,
@@ -24,7 +24,7 @@ const ConsoleDisplay = ({
   setError,
   setPreviewReadOnly,
   setPreviewVncViewOnly,
-  setZoneDetails,
+  setMachineDetails,
   startVncSession,
   startZloginSessionExplicitly,
   waitForVncSessionReady,
@@ -42,23 +42,23 @@ const ConsoleDisplay = ({
 }) => {
   const previewVncRef = useRef(null);
 
-  const hasVnc = zoneDetails.active_vnc_session;
-  const hasZlogin = zoneDetails.zlogin_session && zoneDetails.zlogin_session.id;
+  const hasVnc = machineDetails.active_vnc_session;
+  const hasZlogin = machineDetails.zlogin_session && machineDetails.zlogin_session.id;
 
   console.log(`🔍 CONSOLE DISPLAY: Determining which console to show:`, {
     hasVnc,
     hasZlogin,
     activeConsoleType,
-    zloginSessionId: zoneDetails.zlogin_session?.id,
+    zloginSessionId: machineDetails.zlogin_session?.id,
     vncSessionInfo: hasVnc ? 'present' : 'absent',
-    vncSessionInfoExists: !!zoneDetails.vnc_session_info,
+    vncSessionInfoExists: !!machineDetails.vnc_session_info,
     timestamp: Date.now(),
   });
 
   // Common props for all console components
   const commonProps = {
-    zoneDetails,
-    selectedZone,
+    machineDetails,
+    selectedMachine,
     currentServer,
     user,
     loading,
@@ -69,7 +69,7 @@ const ConsoleDisplay = ({
     setLoading,
     setLoadingVnc,
     setError,
-    setZoneDetails,
+    setMachineDetails,
     setActiveConsoleType,
     startVncSession,
     startZloginSessionExplicitly,
@@ -144,9 +144,9 @@ const ConsoleDisplay = ({
 };
 
 ConsoleDisplay.propTypes = {
-  zoneDetails: PropTypes.object.isRequired,
+  machineDetails: PropTypes.object.isRequired,
   activeConsoleType: PropTypes.string,
-  selectedZone: PropTypes.string,
+  selectedMachine: PropTypes.string,
   currentServer: PropTypes.object,
   user: PropTypes.object,
   loading: PropTypes.bool,
@@ -162,7 +162,7 @@ ConsoleDisplay.propTypes = {
   setError: PropTypes.func.isRequired,
   setPreviewReadOnly: PropTypes.func.isRequired,
   setPreviewVncViewOnly: PropTypes.func.isRequired,
-  setZoneDetails: PropTypes.func.isRequired,
+  setMachineDetails: PropTypes.func.isRequired,
   startVncSession: PropTypes.func.isRequired,
   startZloginSessionExplicitly: PropTypes.func.isRequired,
   waitForVncSessionReady: PropTypes.func.isRequired,

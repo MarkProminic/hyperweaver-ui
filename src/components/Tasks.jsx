@@ -90,7 +90,7 @@ const truncate = (str, max = 40) => {
 export const TASK_COLUMNS = [
   { key: 'id', label: 'ID', render: task => task.id },
   { key: 'operation', label: 'Operation', render: task => task.operation },
-  { key: 'zone_name', label: 'Target', render: task => task.zone_name },
+  { key: 'machine_name', label: 'Target', render: task => task.machine_name },
   { key: 'status', label: 'Status', render: renderStatus },
   { key: 'progress', label: 'Progress', render: renderProgress },
   { key: 'priority', label: 'Priority', render: renderPriority },

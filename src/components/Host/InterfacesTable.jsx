@@ -143,7 +143,7 @@ const InterfacesTable = ({
                           type="button"
                           className="btn btn-sm btn-warning py-1 px-2 small"
                           onClick={() =>
-                            (window.location.href = `/ui/zones?zone=${encodeURIComponent(iface.zone)}`)
+                            (window.location.href = `/ui/machines?machine=${encodeURIComponent(iface.zone)}`)
                           }
                           title={`Go to zone: ${iface.zone}`}
                         >

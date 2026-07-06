@@ -5,8 +5,8 @@ import ZloginActionsDropdown from './ZloginActionsDropdown';
 import ZoneShell from './ZoneShell';
 
 const ZloginConsoleDisplay = ({
-  zoneDetails,
-  selectedZone,
+  machineDetails,
+  selectedMachine,
   currentServer,
   user,
   loading,
@@ -18,7 +18,7 @@ const ZloginConsoleDisplay = ({
   setLoadingVnc,
   setError,
   setPreviewReadOnly,
-  setZoneDetails,
+  setMachineDetails,
   setActiveConsoleType,
   setShowZloginConsole,
   startVncSession,
@@ -32,11 +32,11 @@ const ZloginConsoleDisplay = ({
     <div className="bg-dark text-white p-3 d-flex justify-content-between align-items-center">
       <div>
         <h6 className="fs-6 fw-bold text-white mb-1">Active zlogin Session</h6>
-        {zoneDetails.zlogin_session && (
+        {machineDetails.zlogin_session && (
           <p className="small text-white-50 mb-0">
-            Session ID: {zoneDetails.zlogin_session.id?.substring(0, 8) || 'Unknown'} | Started:{' '}
-            {zoneDetails.zlogin_session.created_at
-              ? new Date(zoneDetails.zlogin_session.created_at).toLocaleString()
+            Session ID: {machineDetails.zlogin_session.id?.substring(0, 8) || 'Unknown'} | Started:{' '}
+            {machineDetails.zlogin_session.created_at
+              ? new Date(machineDetails.zlogin_session.created_at).toLocaleString()
               : 'Unknown'}
           </p>
         )}
@@ -50,15 +50,15 @@ const ZloginConsoleDisplay = ({
             );
             setPreviewReadOnly(!previewReadOnly);
           }}
-          onNewSession={() => handleZloginConsole(selectedZone)}
+          onNewSession={() => handleZloginConsole(selectedMachine)}
           onKillSession={async () => {
-            if (!currentServer || !selectedZone) {
+            if (!currentServer || !selectedMachine) {
               return;
             }
             try {
               setLoading(true);
-              await forceZoneSessionCleanup(currentServer, selectedZone);
-              setZoneDetails(prev => ({
+              await forceZoneSessionCleanup(currentServer, selectedMachine);
+              setMachineDetails(prev => ({
                 ...prev,
                 zlogin_session: null,
                 active_zlogin_session: false,
@@ -78,7 +78,7 @@ const ZloginConsoleDisplay = ({
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = `zlogin-output-${selectedZone}-${Date.now()}.txt`;
+              a.download = `zlogin-output-${selectedMachine}-${Date.now()}.txt`;
               document.body.appendChild(a);
               a.click();
               document.body.removeChild(a);
@@ -100,9 +100,9 @@ const ZloginConsoleDisplay = ({
               try {
                 if (navigator.clipboard && navigator.clipboard.readText) {
                   const text = await navigator.clipboard.readText();
-                  if (text && currentServer && selectedZone) {
+                  if (text && currentServer && selectedMachine) {
                     console.log(`📋 ZLOGIN PREVIEW PASTE: Pasting ${text.length} characters`);
-                    await pasteTextToZone(currentServer, selectedZone, text);
+                    await pasteTextToZone(currentServer, selectedMachine, text);
                   }
                 }
               } catch (error) {
@@ -118,10 +118,10 @@ const ZloginConsoleDisplay = ({
           type="button"
           className="btn btn-sm btn-primary"
           onClick={() => {
-            if (zoneDetails.zlogin_session) {
+            if (machineDetails.zlogin_session) {
               setShowZloginConsole(true);
             } else {
-              handleZloginConsole(selectedZone);
+              handleZloginConsole(selectedMachine);
             }
           }}
           disabled={loading}
@@ -153,13 +153,13 @@ const ZloginConsoleDisplay = ({
                   currentServer.hostname,
                   currentServer.port,
                   currentServer.protocol,
-                  selectedZone
+                  selectedMachine
                 );
 
                 if (result.success) {
-                  const readinessResult = await waitForVncSessionReady(selectedZone);
+                  const readinessResult = await waitForVncSessionReady(selectedMachine);
                   if (readinessResult.ready) {
-                    setZoneDetails(prev => ({
+                    setMachineDetails(prev => ({
                       ...prev,
                       active_vnc_session: true,
                       vnc_session_info: {
@@ -189,8 +189,8 @@ const ZloginConsoleDisplay = ({
     {/* zlogin Console Content */}
     <div className="hw-console-content">
       <ZoneShell
-        key={`preview-zlogin-${selectedZone}-${previewReconnectKey}-${previewReadOnly ? 'ro' : 'rw'}`}
-        zoneName={selectedZone}
+        key={`preview-zlogin-${selectedMachine}-${previewReconnectKey}-${previewReadOnly ? 'ro' : 'rw'}`}
+        zoneName={selectedMachine}
         readOnly={previewReadOnly}
         context="preview"
         className="hw-console-zone-shell"
@@ -199,23 +199,23 @@ const ZloginConsoleDisplay = ({
       <div className="hw-console-status-overlay">
         <i
           className={`fas fa-circle hw-console-status-icon has-margin-right-3px ${
-            zoneDetails.zlogin_session ? 'hw-status-icon-active' : 'hw-status-icon-inactive'
+            machineDetails.zlogin_session ? 'hw-status-icon-active' : 'hw-status-icon-inactive'
           }`}
         />
-        {zoneDetails.zlogin_session ? 'Live' : 'Offline'}
+        {machineDetails.zlogin_session ? 'Live' : 'Offline'}
       </div>
     </div>
   </div>
 );
 
 ZloginConsoleDisplay.propTypes = {
-  zoneDetails: PropTypes.shape({
+  machineDetails: PropTypes.shape({
     zlogin_session: PropTypes.shape({
       id: PropTypes.string,
       created_at: PropTypes.string,
     }),
   }).isRequired,
-  selectedZone: PropTypes.string,
+  selectedMachine: PropTypes.string,
   currentServer: PropTypes.shape({
     hostname: PropTypes.string,
     port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -233,7 +233,7 @@ ZloginConsoleDisplay.propTypes = {
   setLoadingVnc: PropTypes.func,
   setError: PropTypes.func,
   setPreviewReadOnly: PropTypes.func,
-  setZoneDetails: PropTypes.func,
+  setMachineDetails: PropTypes.func,
   setActiveConsoleType: PropTypes.func,
   setShowZloginConsole: PropTypes.func,
   startVncSession: PropTypes.func,

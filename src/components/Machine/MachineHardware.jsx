@@ -1,11 +1,13 @@
 import PropTypes from 'prop-types';
 
-const ZoneHardware = ({ zoneDetails }) => {
-  if (!zoneDetails?.configuration || Object.keys(zoneDetails.configuration).length === 0) {
+const MachineHardware = ({ machineDetails }) => {
+  // Structured hardware rows are the zadm (bhyve) configuration shape only — the
+  // VirtualBox flat showvminfo map renders via the generic table on the Machines page.
+  if (!machineDetails?.configuration?.zonename) {
     return null;
   }
 
-  const { configuration } = zoneDetails;
+  const { configuration } = machineDetails;
 
   const renderStatusBadge = (value, trueCondition, onLabel = 'Enabled', offLabel = 'Disabled') => (
     <span className={`fw-semibold ${value === trueCondition ? 'text-success' : 'text-danger'}`}>
@@ -14,14 +16,16 @@ const ZoneHardware = ({ zoneDetails }) => {
   );
 
   const renderVncPort = () => {
-    if (zoneDetails.vnc_session_info?.web_port) {
+    if (machineDetails.vnc_session_info?.web_port) {
       return (
-        <span className="text-muted font-monospace">{zoneDetails.vnc_session_info.web_port}</span>
+        <span className="text-muted font-monospace">
+          {machineDetails.vnc_session_info.web_port}
+        </span>
       );
     }
 
     const configPort = configuration?.vnc?.port;
-    const infoPort = zoneDetails.zone_info?.vnc_port;
+    const infoPort = machineDetails.machine_info?.vnc_port;
 
     if (configPort || infoPort) {
       return <span className="text-muted font-monospace">{configPort || infoPort}</span>;
@@ -122,9 +126,9 @@ const ZoneHardware = ({ zoneDetails }) => {
                 </td>
                 <td className="px-3 py-2">
                   <span
-                    className={`fw-semibold ${zoneDetails.vnc_session_info ? 'text-success' : 'text-danger'}`}
+                    className={`fw-semibold ${machineDetails.vnc_session_info ? 'text-success' : 'text-danger'}`}
                   >
-                    {zoneDetails.vnc_session_info ? 'Active' : 'Inactive'}
+                    {machineDetails.vnc_session_info ? 'Active' : 'Inactive'}
                   </span>
                 </td>
                 <td className="px-3 py-2">
@@ -138,9 +142,9 @@ const ZoneHardware = ({ zoneDetails }) => {
                 </td>
                 <td className="px-3 py-2">
                   <span
-                    className={`fw-semibold ${zoneDetails.zlogin_session ? 'text-success' : 'text-danger'}`}
+                    className={`fw-semibold ${machineDetails.zlogin_session ? 'text-success' : 'text-danger'}`}
                   >
-                    {zoneDetails.zlogin_session ? 'Active' : 'Inactive'}
+                    {machineDetails.zlogin_session ? 'Active' : 'Inactive'}
                   </span>
                 </td>
               </tr>
@@ -152,9 +156,10 @@ const ZoneHardware = ({ zoneDetails }) => {
   );
 };
 
-ZoneHardware.propTypes = {
-  zoneDetails: PropTypes.shape({
+MachineHardware.propTypes = {
+  machineDetails: PropTypes.shape({
     configuration: PropTypes.shape({
+      zonename: PropTypes.string,
       ram: PropTypes.string,
       acpi: PropTypes.string,
       vcpus: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -174,11 +179,11 @@ ZoneHardware.propTypes = {
     vnc_session_info: PropTypes.shape({
       web_port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     }),
-    zone_info: PropTypes.shape({
+    machine_info: PropTypes.shape({
       vnc_port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     }),
     zlogin_session: PropTypes.object,
   }),
 };
 
-export default ZoneHardware;
+export default MachineHardware;

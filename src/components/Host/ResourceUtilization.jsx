@@ -1,47 +1,44 @@
 import PropTypes from 'prop-types';
 
-import { bytesToSize, getCpuCount } from './utils';
+import { bytesToSize } from './utils';
 
-const ResourceUtilization = ({ serverStats, swapSummaryData }) => (
+const ResourceUtilization = ({ serverStats, cpuUsagePct, swapSummaryData }) => (
   <div className="col-12 col-lg-6">
     <h6 className="h6 mb-3 d-flex align-items-center gap-2">
       <i className="fas fa-chart-pie text-warning" />
       <span>Resource Utilization</span>
     </h6>
-    {/* CPU Usage */}
+    {/* CPU Usage — cumulative-time deltas from /stats `cpus` (both agents emit
+        the array; useHostData computes the percentage between polls). The very
+        first sample only baselines, so N/A shows briefly until the re-poll. */}
     <div className="d-flex justify-content-between align-items-center mb-3">
       <div>
         <i className="fas fa-microchip me-2" />
         CPU Usage
+        <span className="small text-muted ms-2">
+          (Cores:{' '}
+          {Array.isArray(serverStats.cpus) && serverStats.cpus.length > 0
+            ? serverStats.cpus.length
+            : 'N/A'}
+          )
+        </span>
       </div>
       <div>
-        <span>
-          {serverStats.loadavg && getCpuCount(serverStats) !== 'N/A'
-            ? `${((parseFloat(serverStats.loadavg[0]) / getCpuCount(serverStats)) * 100).toFixed(1)}%`
-            : '0%'}
-        </span>
+        <span>{typeof cpuUsagePct === 'number' ? `${cpuUsagePct.toFixed(1)}%` : 'N/A'}</span>
       </div>
     </div>
     <div
       className="progress mb-4"
       style={{ height: '0.5rem' }}
       role="progressbar"
-      aria-valuenow={
-        serverStats.loadavg && getCpuCount(serverStats) !== 'N/A'
-          ? Math.min((parseFloat(serverStats.loadavg[0]) / getCpuCount(serverStats)) * 100, 100)
-          : 0
-      }
+      aria-valuenow={typeof cpuUsagePct === 'number' ? Math.round(cpuUsagePct) : 0}
       aria-valuemin={0}
       aria-valuemax={100}
     >
       <div
         className="progress-bar bg-info"
         style={{
-          width: `${
-            serverStats.loadavg && getCpuCount(serverStats) !== 'N/A'
-              ? Math.min((parseFloat(serverStats.loadavg[0]) / getCpuCount(serverStats)) * 100, 100)
-              : 0
-          }%`,
+          width: `${typeof cpuUsagePct === 'number' ? cpuUsagePct : 0}%`,
         }}
       />
     </div>
@@ -138,6 +135,7 @@ const ResourceUtilization = ({ serverStats, swapSummaryData }) => (
 
 ResourceUtilization.propTypes = {
   serverStats: PropTypes.object,
+  cpuUsagePct: PropTypes.number,
   swapSummaryData: PropTypes.object,
 };
 

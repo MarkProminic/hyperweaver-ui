@@ -5,6 +5,7 @@ import { formatUptime } from './utils.js';
 
 const SystemInfo = ({
   serverStats,
+  cpuUsagePct,
   monitoringStatus,
   monitoringHealth,
   taskStats,
@@ -125,7 +126,11 @@ const SystemInfo = ({
           </div>
 
           {/* Resource Utilization */}
-          <ResourceUtilization serverStats={serverStats} swapSummaryData={swapSummaryData} />
+          <ResourceUtilization
+            serverStats={serverStats}
+            cpuUsagePct={cpuUsagePct}
+            swapSummaryData={swapSummaryData}
+          />
         </div>
       </div>
     </div>
@@ -140,10 +145,11 @@ SystemInfo.propTypes = {
     arch: PropTypes.string,
     version: PropTypes.string,
     uptime: PropTypes.number,
-    loadavg: PropTypes.array,
+    cpus: PropTypes.array,
     totalmem: PropTypes.number,
     freemem: PropTypes.number,
   }),
+  cpuUsagePct: PropTypes.number,
   monitoringStatus: PropTypes.shape({
     isRunning: PropTypes.bool,
     isInitialized: PropTypes.bool,

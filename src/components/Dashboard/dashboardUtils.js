@@ -64,8 +64,8 @@ const calculateInfrastructureSummary = serverResults => {
     if (result.success && result.data) {
       summary.onlineServers++;
 
-      const allZones = result.data.allzones || [];
-      const runningZones = result.data.runningzones || [];
+      const allZones = result.data.allmachines || [];
+      const runningZones = result.data.runningmachines || [];
 
       summary.totalZones += allZones.length;
       summary.runningZones += runningZones.length;

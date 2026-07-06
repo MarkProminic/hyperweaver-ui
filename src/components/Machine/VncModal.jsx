@@ -12,7 +12,7 @@ const VncModal = ({
   openDirectVncFallback,
   setVncLoadError,
   currentServer,
-  selectedZone,
+  selectedMachine,
   vncReconnectKey,
   modalVncRef,
   modalVncViewOnly,
@@ -21,7 +21,7 @@ const VncModal = ({
   handleVncConsole,
   handleKillVncSession,
   user,
-  zoneDetails,
+  machineDetails,
   setShowZloginConsole,
   handleZloginConsole,
   loading,
@@ -61,7 +61,7 @@ const VncModal = ({
             className={`flex-grow-1 mb-0 ${isVncFullScreen ? 'hw-modal-title-fullscreen' : 'hw-modal-title-normal'}`}
           >
             <i className="fas fa-terminal me-2" />
-            <span>Console - {selectedZone}</span>
+            <span>Console - {selectedMachine}</span>
           </p>
           <div className="d-flex gap-1 m-0">
             <VncActionsDropdown
@@ -81,7 +81,7 @@ const VncModal = ({
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `vnc-screenshot-${selectedZone}-${Date.now()}.png`;
+                    a.download = `vnc-screenshot-${selectedMachine}-${Date.now()}.png`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
@@ -89,8 +89,8 @@ const VncModal = ({
                   });
                 }
               }}
-              onNewTab={() => handleVncConsole(selectedZone, true)}
-              onKillSession={() => handleKillVncSession(selectedZone)}
+              onNewTab={() => handleVncConsole(selectedMachine, true)}
+              onKillSession={() => handleKillVncSession(selectedMachine)}
               isReadOnly={modalVncViewOnly}
               isAdmin={
                 user?.role === 'admin' ||
@@ -121,12 +121,12 @@ const VncModal = ({
               type="button"
               className="btn btn-sm btn-warning"
               onClick={async () => {
-                if (zoneDetails.zlogin_session) {
+                if (machineDetails.zlogin_session) {
                   closeVncConsole();
                   setTimeout(() => setShowZloginConsole(true), 100);
                 } else {
                   closeVncConsole();
-                  const result = await handleZloginConsole(selectedZone);
+                  const result = await handleZloginConsole(selectedMachine);
                   if (!result.success) {
                     // Handle error appropriately
                   }
@@ -134,7 +134,7 @@ const VncModal = ({
               }}
               disabled={loading}
               title={
-                zoneDetails.zlogin_session ? 'Switch to zlogin Console' : 'Start zlogin Console'
+                machineDetails.zlogin_session ? 'Switch to zlogin Console' : 'Start zlogin Console'
               }
             >
               <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'} me-2`} />
@@ -195,13 +195,13 @@ const VncModal = ({
               );
             }
 
-            if (currentServer && selectedZone) {
+            if (currentServer && selectedMachine) {
               return (
                 <VncViewerReact
                   ref={modalVncRef}
-                  key={`vnc-modal-${selectedZone}-${modalVncViewOnly}-${vncReconnectKey}`}
+                  key={`vnc-modal-${selectedMachine}-${modalVncViewOnly}-${vncReconnectKey}`}
                   server={currentServer}
-                  zoneName={selectedZone}
+                  machineName={selectedMachine}
                   viewOnly={modalVncViewOnly}
                   autoConnect
                   showControls={false}
@@ -252,7 +252,7 @@ VncModal.propTypes = {
     port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     protocol: PropTypes.string,
   }),
-  selectedZone: PropTypes.string,
+  selectedMachine: PropTypes.string,
   vncReconnectKey: PropTypes.number.isRequired,
   modalVncRef: PropTypes.object,
   modalVncViewOnly: PropTypes.bool.isRequired,
@@ -263,7 +263,7 @@ VncModal.propTypes = {
   user: PropTypes.shape({
     role: PropTypes.string,
   }),
-  zoneDetails: PropTypes.shape({
+  machineDetails: PropTypes.shape({
     zlogin_session: PropTypes.object,
   }),
   setShowZloginConsole: PropTypes.func.isRequired,

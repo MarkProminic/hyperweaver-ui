@@ -593,9 +593,11 @@ button::-moz-focus-inner {
   transform: none !important;
   margin-top: 0 !important;
 
+  // Tertiary sits BETWEEN the sidebar's body background and the main content's
+  // secondary-bg wash, so the handle reads as its own affordance in both themes.
   &:hover {
     opacity: 1;
-    background: var(--bs-secondary-bg);
+    background: var(--bs-tertiary-bg);
   }
 
   // Add grip lines using CSS
@@ -621,7 +623,7 @@ button::-moz-focus-inner {
   background: transparent;
 
   &:hover {
-    background: var(--bs-secondary-bg);
+    background: var(--bs-tertiary-bg);
   }
 }
 
@@ -1490,6 +1492,13 @@ button::-moz-focus-inner {
 // Long favorite labels ellipsize (they carry .text-truncate) rather than widening the menu.
 .hw-profile-menu {
   width: 260px;
+}
+
+// Uniform host-page header band (HostPageHeader): pages whose header carries no controls
+// still match the height of one carrying btn-sm controls (~31px content), so switching
+// navbar tabs never shifts the layout.
+.hw-page-header {
+  min-height: calc(31px + 2rem);
 }
 
 // NOTE: prefer Bootstrap utilities/components over new custom CSS. The `.hw-*` classes above

@@ -4,13 +4,13 @@ import { useServers } from '../contexts/ServerContext';
 import { useZoneTerminal } from '../contexts/ZoneTerminalContext';
 
 /**
- * Custom hook to manage all zlogin session state and logic for a zone.
+ * Custom hook to manage all zlogin session state and logic for a machine.
  * @param {object} currentServer - The currently selected server object.
- * @param {string} currentZone - The name of the currently selected zone.
- * @param {function} setZoneDetails - The state setter function for the parent component's zoneDetails.
+ * @param {string} currentMachine - The name of the currently selected machine.
+ * @param {function} setMachineDetails - The state setter function for the parent component's details.
  * @returns {object} An object containing all zlogin-related state and handler functions.
  */
-export const useZloginSession = (currentServer, currentZone, setZoneDetails) => {
+export const useZloginSession = (currentServer, currentMachine, setMachineDetails) => {
   const [showZloginConsole, setShowZloginConsole] = useState(false);
   const [isZloginFullScreen, setIsZloginFullScreen] = useState(false);
 
@@ -18,7 +18,7 @@ export const useZloginSession = (currentServer, currentZone, setZoneDetails) => 
   const { initializeSessionFromExisting, pasteTextToZone } = useZoneTerminal();
 
   const handleZloginConsole = useCallback(
-    async zoneName => {
+    async machineName => {
       if (!currentServer) {
         return { success: false, message: 'No server selected.' };
       }
@@ -27,10 +27,10 @@ export const useZloginSession = (currentServer, currentZone, setZoneDetails) => 
           currentServer.hostname,
           currentServer.port,
           currentServer.protocol,
-          zoneName
+          machineName
         );
         if (result.success) {
-          setZoneDetails(prev => ({
+          setMachineDetails(prev => ({
             ...prev,
             zlogin_session: result.session,
           }));
@@ -46,16 +46,16 @@ export const useZloginSession = (currentServer, currentZone, setZoneDetails) => 
         return { success: false, message: 'Error starting zlogin console.' };
       }
     },
-    [currentServer, startZloginSession, setZoneDetails]
+    [currentServer, startZloginSession, setMachineDetails]
   );
 
   const refreshZloginSessionStatus = useCallback(
-    async zoneName => {
+    async machineName => {
       if (!currentServer) {
         return;
       }
       try {
-        console.log(`🔍 ZLOGIN STATUS: Checking session status for zone: ${zoneName}`);
+        console.log(`🔍 ZLOGIN STATUS: Checking session status for zone: ${machineName}`);
 
         const sessionsResult = await makeAgentRequest(
           currentServer.hostname,
@@ -80,22 +80,22 @@ export const useZloginSession = (currentServer, currentZone, setZoneDetails) => 
             ? sessionsResult.data
             : sessionsResult.data.sessions || [];
 
-          const activeZoneSession = activeSessions.find(
-            session => session.zone_name === zoneName && session.status === 'active'
+          const activeMachineSession = activeSessions.find(
+            session => session.machine_name === machineName && session.status === 'active'
           );
 
-          if (activeZoneSession) {
+          if (activeMachineSession) {
             console.log(
-              `✅ ZLOGIN STATUS: Active session found for ${zoneName}:`,
-              activeZoneSession.id
+              `✅ ZLOGIN STATUS: Active session found for ${machineName}:`,
+              activeMachineSession.id
             );
 
             // Initialize context state for existing session
             if (currentServer) {
-              initializeSessionFromExisting(currentServer, zoneName, activeZoneSession);
+              initializeSessionFromExisting(currentServer, machineName, activeMachineSession);
             }
 
-            setZoneDetails(prev => {
+            setMachineDetails(prev => {
               console.log(`🔍 ZONE STATE: ZLOGIN update - BEFORE:`, {
                 hasVncSession: !!prev.active_vnc_session,
                 hasVncSessionInfo: !!prev.vnc_session_info,
@@ -105,7 +105,7 @@ export const useZloginSession = (currentServer, currentZone, setZoneDetails) => 
               // 🛡️ DEFENSIVE STATE MERGE: Only update zlogin fields, explicitly preserve VNC state
               const newState = {
                 ...prev,
-                zlogin_session: activeZoneSession,
+                zlogin_session: activeMachineSession,
                 active_zlogin_session: true,
                 // CRITICAL: Explicitly preserve VNC session state to prevent overwrites
                 active_vnc_session: prev.active_vnc_session || false,
@@ -121,8 +121,8 @@ export const useZloginSession = (currentServer, currentZone, setZoneDetails) => 
               return newState;
             });
           } else {
-            console.log(`❌ ZLOGIN STATUS: No active session for ${zoneName}`);
-            setZoneDetails(prev => {
+            console.log(`❌ ZLOGIN STATUS: No active session for ${machineName}`);
+            setMachineDetails(prev => {
               console.log(`🔍 ZONE STATE: ZLOGIN clear - BEFORE:`, {
                 hasVncSession: !!prev.active_vnc_session,
                 hasVncSessionInfo: !!prev.vnc_session_info,
@@ -150,8 +150,8 @@ export const useZloginSession = (currentServer, currentZone, setZoneDetails) => 
           }
         } else {
           // No sessions or API error
-          console.log(`❌ ZLOGIN STATUS: No sessions found or API error for ${zoneName}`);
-          setZoneDetails(prev => {
+          console.log(`❌ ZLOGIN STATUS: No sessions found or API error for ${machineName}`);
+          setMachineDetails(prev => {
             // 🛡️ DEFENSIVE STATE MERGE: Only clear zlogin fields, explicitly preserve VNC state
             const newState = {
               ...prev,
@@ -166,7 +166,7 @@ export const useZloginSession = (currentServer, currentZone, setZoneDetails) => 
         }
       } catch (error) {
         console.error('💥 ZLOGIN STATUS: Error checking session status:', error);
-        setZoneDetails(prev => {
+        setMachineDetails(prev => {
           // 🛡️ DEFENSIVE STATE MERGE: Only clear zlogin fields, explicitly preserve VNC state
           const newState = {
             ...prev,
@@ -180,15 +180,15 @@ export const useZloginSession = (currentServer, currentZone, setZoneDetails) => 
         });
       }
     },
-    [currentServer, makeAgentRequest, setZoneDetails, initializeSessionFromExisting]
+    [currentServer, makeAgentRequest, setMachineDetails, initializeSessionFromExisting]
   );
 
   const handleZloginPreviewPaste = async () => {
     try {
       if (navigator.clipboard && navigator.clipboard.readText) {
         const text = await navigator.clipboard.readText();
-        if (text && currentServer && currentZone) {
-          await pasteTextToZone(currentServer, currentZone, text);
+        if (text && currentServer && currentMachine) {
+          await pasteTextToZone(currentServer, currentMachine, text);
         }
       }
     } catch (error) {
@@ -200,8 +200,8 @@ export const useZloginSession = (currentServer, currentZone, setZoneDetails) => 
     try {
       if (navigator.clipboard && navigator.clipboard.readText) {
         const text = await navigator.clipboard.readText();
-        if (text && currentServer && currentZone) {
-          await pasteTextToZone(currentServer, currentZone, text);
+        if (text && currentServer && currentMachine) {
+          await pasteTextToZone(currentServer, currentMachine, text);
         }
       }
     } catch (error) {

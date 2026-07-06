@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 
-const ZoneStorage = ({ configuration }) => {
+const MachineStorage = ({ configuration }) => {
   if (!configuration || (!configuration.diskif && !configuration.bootdisk && !configuration.disk)) {
     return null;
   }
@@ -123,7 +123,7 @@ const ZoneStorage = ({ configuration }) => {
   );
 };
 
-ZoneStorage.propTypes = {
+MachineStorage.propTypes = {
   configuration: PropTypes.shape({
     diskif: PropTypes.string,
     bootdisk: PropTypes.shape({
@@ -143,4 +143,4 @@ ZoneStorage.propTypes = {
   }),
 };
 
-export default ZoneStorage;
+export default MachineStorage;

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { useServers } from '../../contexts/ServerContext';
+import { hasFeature } from '../../utils/capabilities';
 
 import { fetchNetworkData } from './utils/loaders/networkingDataLoader';
 import { fetchHistoricalNetworkData } from './utils/loaders/networkingHistoricalLoader';
@@ -128,7 +129,8 @@ export const useHostNetworkingData = () => {
 
   // This is a new function to handle the real-time chart updates.
   const loadRecentNetworkData = useCallback(async () => {
-    if (!currentServer || loading) {
+    // The usage refresh is /monitoring/* — token-gated (sync OPEN ITEM 4b).
+    if (!currentServer || loading || !hasFeature(currentServer, 'monitoring')) {
       return;
     }
 

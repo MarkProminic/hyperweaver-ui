@@ -31,15 +31,6 @@ export const resourceLabel = (servers, { plural = true } = {}) => {
   return plural ? `${noun}s` : noun;
 };
 
-/**
- * Convenience: the machines API sub-path for an agent, capability-driven (C8).
- * bhyve agents expose `zones`; virtualbox agents expose `machines`.
- * @param {Object|null} server - a single server/registry row carrying `capabilities`.
- * @returns {string} `'zones'` | `'machines'`
- */
-export const machinesPath = server => {
-  const hypervisors = server?.capabilities?.hypervisors ?? [];
-  return hypervisors.length > 0 && hypervisors.every(hypervisor => hypervisor === 'bhyve')
-    ? 'zones'
-    : 'machines';
-};
+// NOTE: the former machinesPath() dual-path helper is deliberately GONE — the UI calls
+// the canonical /machines/* paths unconditionally on every agent (sync-file ruling,
+// 2026-07-05: one path, one vocabulary, no fallback).

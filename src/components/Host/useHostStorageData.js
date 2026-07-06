@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { useServers } from '../../contexts/ServerContext';
+import { hasFeature } from '../../utils/capabilities';
 
 import {
   buildIOChartData,
@@ -65,7 +66,9 @@ export const useHostStorageData = () => {
   };
 
   const loadStorageData = async server => {
-    if (!server || loading) {
+    // Everything this page fetches is /monitoring/storage/* — token-gated
+    // (sync OPEN ITEM 4b); agents without `monitoring` are never asked.
+    if (!server || loading || !hasFeature(server, 'monitoring')) {
       return;
     }
 
@@ -112,7 +115,7 @@ export const useHostStorageData = () => {
   };
 
   const loadDiskIOStats = async server => {
-    if (!server || loading) {
+    if (!server || loading || !hasFeature(server, 'monitoring')) {
       return;
     }
 
@@ -143,7 +146,7 @@ export const useHostStorageData = () => {
   };
 
   const loadPoolIOStats = async server => {
-    if (!server || loading) {
+    if (!server || loading || !hasFeature(server, 'monitoring')) {
       return;
     }
 
@@ -178,7 +181,7 @@ export const useHostStorageData = () => {
   };
 
   const loadArcStats = async server => {
-    if (!server || loading) {
+    if (!server || loading || !hasFeature(server, 'monitoring')) {
       return;
     }
 

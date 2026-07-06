@@ -1,40 +1,44 @@
 import axios from 'axios';
 
-export const getZoneStatus = (zones, zoneName) => {
-  if (!zones || !zones.data) {
+export const getMachineStatus = (stats, machineName) => {
+  if (!stats || !stats.data) {
     return 'unknown';
   }
 
-  if (zones.data.zoneDetails && zones.data.zoneDetails[zoneName]) {
-    return zones.data.zoneDetails[zoneName].state || zones.data.zoneDetails[zoneName].status;
-  }
+  const runningMachines = stats.data.runningmachines || [];
+  const allMachines = stats.data.allmachines || [];
 
-  const runningZones = zones.data.runningzones || [];
-  const allZones = zones.data.allzones || [];
-
-  if (runningZones.includes(zoneName)) {
+  if (runningMachines.includes(machineName)) {
     return 'running';
-  } else if (allZones.includes(zoneName)) {
+  } else if (allMachines.includes(machineName)) {
     return 'installed';
   }
 
   return 'unknown';
 };
 
+// Status vocabulary is hypervisor-flavored VALUES on one shared shape: bhyve reports
+// running/installed/ready/...; VirtualBox reports configured/running/stopped/suspended/
+// paused/aborted/starting/stopping/unknown.
 export const getStatusDotColor = status => {
   switch (status?.toLowerCase()) {
     case 'running':
       return 'text-success';
     case 'ready':
+    case 'starting':
+    case 'stopping':
       return 'text-info';
     case 'installed':
       return 'text-primary';
     case 'configured':
+    case 'suspended':
+    case 'paused':
       return 'text-warning';
     case 'shutting_down':
     case 'shutting-down':
       return 'text-warning';
     case 'incomplete':
+    case 'aborted':
       return 'text-danger';
     case 'down':
     case 'stopped':
@@ -49,6 +53,7 @@ export const getActionVariant = action => {
     case 'start':
       return 'is-success';
     case 'restart':
+    case 'suspend':
       return 'is-warning';
     case 'shutdown':
     case 'kill':
@@ -65,6 +70,8 @@ export const getActionIcon = action => {
       return 'fas fa-play';
     case 'restart':
       return 'fas fa-redo';
+    case 'suspend':
+      return 'fas fa-pause';
     case 'shutdown':
       return 'fas fa-stop';
     case 'kill':
@@ -83,9 +90,9 @@ export const isShareableRoute = pathname =>
   pathname === '/ui/host-storage' ||
   pathname === '/ui/host-devices' ||
   pathname.startsWith('/ui/zone') ||
-  pathname === '/ui/zones';
+  pathname === '/ui/machines';
 
-export const buildShareUrl = (origin, pathname, currentServer, currentZone) => {
+export const buildShareUrl = (origin, pathname, currentServer, currentMachine) => {
   const baseUrl = `${origin}${pathname}`;
   const params = new URLSearchParams();
 
@@ -93,8 +100,8 @@ export const buildShareUrl = (origin, pathname, currentServer, currentZone) => {
     params.set('host', currentServer.hostname);
   }
 
-  if (currentZone) {
-    params.set('zone', currentZone);
+  if (currentMachine) {
+    params.set('machine', currentMachine);
   }
 
   return params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;

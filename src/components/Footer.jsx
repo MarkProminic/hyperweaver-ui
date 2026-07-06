@@ -5,7 +5,9 @@ import Dropdown from 'react-bootstrap/Dropdown';
 import { ResizableBox } from 'react-resizable';
 
 import { useFooter } from '../contexts/FooterContext';
+import { useServers } from '../contexts/ServerContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
+import { hasFeature } from '../utils/capabilities';
 
 import HostShell from './Host/HostShell';
 import Tasks, { TASK_COLUMNS } from './Tasks';
@@ -55,11 +57,26 @@ const Footer = () => {
     setTaskVisibleColumns,
   } = userSettings;
   const { restartShell } = useFooter();
+  const { currentServer } = useServers();
   const [showShellDropdown, setShowShellDropdown] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showColumnsDropdown, setShowColumnsDropdown] = useState(false);
   const [versionClickCount, setVersionClickCount] = useState(0);
   const resizeTimeoutRef = useRef(null);
+
+  // Both footer panes are capability-gated on v1 feature tokens (the Node agent already
+  // advertises these; the Go agent adds them as its surfaces ship). The saved view is
+  // honored when its surface exists, otherwise we fall to whichever one is available.
+  const shellAvailable = hasFeature(currentServer, 'host-terminal');
+  const tasksAvailable = hasFeature(currentServer, 'tasks');
+  const anyPane = shellAvailable || tasksAvailable;
+  let effectiveView = footerActiveView;
+  if (effectiveView === 'tasks' && !tasksAvailable) {
+    effectiveView = 'shell';
+  }
+  if (effectiveView === 'shell' && !shellAvailable) {
+    effectiveView = 'tasks';
+  }
 
   const handleToggle = () => {
     if (!footerIsActive) {
@@ -99,7 +116,7 @@ const Footer = () => {
       setFooterIsActive(true);
       handleViewChange('shell');
       setShowShellDropdown(false);
-    } else if (footerActiveView === 'shell') {
+    } else if (effectiveView === 'shell') {
       setShowShellDropdown(nextShow);
     } else {
       handleViewChange('shell');
@@ -164,7 +181,7 @@ const Footer = () => {
   );
 
   const effectiveHeight = footerIsActive ? userSettings.footerHeight : 0;
-  const isTasksView = footerActiveView === 'tasks' && footerIsActive;
+  const isTasksView = effectiveView === 'tasks' && footerIsActive && tasksAvailable;
   const currentPriorityLabel =
     PRIORITY_OPTIONS.find(o => o.value === taskMinPriority)?.label || 'Low+';
 
@@ -218,141 +235,149 @@ const Footer = () => {
 
         <div className="hw-footer-grip-visual" />
 
-        <div className="btn-group">
-          {/* Shell view toggle + restart menu (drops up so it stays in the viewport) */}
-          <Dropdown
-            as={ButtonGroup}
-            drop="up"
-            align="end"
-            show={showShellDropdown && footerIsActive && footerActiveView === 'shell'}
-            onToggle={handleShellToggle}
-          >
-            <Dropdown.Toggle as={FooterToggle} active={footerActiveView === 'shell'} title="Shell">
-              <i className="fas fa-terminal" />
-            </Dropdown.Toggle>
-            <Dropdown.Menu>
-              <Dropdown.Item as="button" type="button" onClick={handleRestartShell}>
-                <i className="fas fa-refresh me-2" />
-                Restart Shell
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
-
-          {/* Tasks view toggle */}
-          <button
-            type="button"
-            className={`btn btn-sm border-0 ${footerActiveView === 'tasks' ? 'btn-info' : 'bg-body-secondary text-body'}`}
-            onClick={handleTasksClick}
-            title="Tasks"
-          >
-            <i className="fas fa-tasks" />
-          </button>
-
-          {isTasksView && (
-            <>
-              {/* Priority filter */}
+        {anyPane && (
+          <div className="btn-group">
+            {/* Shell view toggle + restart menu (drops up so it stays in the viewport) */}
+            {shellAvailable && (
               <Dropdown
                 as={ButtonGroup}
                 drop="up"
                 align="end"
-                show={showFilterDropdown}
-                onToggle={nextShow => {
-                  setShowFilterDropdown(nextShow);
-                  if (nextShow) {
-                    setShowColumnsDropdown(false);
-                  }
-                }}
+                show={showShellDropdown && footerIsActive && effectiveView === 'shell'}
+                onToggle={handleShellToggle}
               >
-                <Dropdown.Toggle
-                  as={FooterToggle}
-                  active={showFilterDropdown}
-                  title={`Priority filter: ${currentPriorityLabel}`}
-                >
-                  <i className="fas fa-filter" />
+                <Dropdown.Toggle as={FooterToggle} active={effectiveView === 'shell'} title="Shell">
+                  <i className="fas fa-terminal" />
                 </Dropdown.Toggle>
                 <Dropdown.Menu>
-                  {PRIORITY_OPTIONS.map(option => (
-                    <Dropdown.Item
-                      as="button"
-                      type="button"
-                      key={option.value}
-                      active={taskMinPriority === option.value}
-                      onClick={() => setTaskMinPriority(option.value)}
-                    >
-                      {option.label}
-                    </Dropdown.Item>
-                  ))}
+                  <Dropdown.Item as="button" type="button" onClick={handleRestartShell}>
+                    <i className="fas fa-refresh me-2" />
+                    Restart Shell
+                  </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
+            )}
 
-              {/* Column visibility — stays open while toggling (autoClose outside only) */}
-              <Dropdown
-                as={ButtonGroup}
-                drop="up"
-                align="end"
-                autoClose="outside"
-                show={showColumnsDropdown}
-                onToggle={nextShow => {
-                  setShowColumnsDropdown(nextShow);
-                  if (nextShow) {
-                    setShowFilterDropdown(false);
-                  }
-                }}
+            {/* Tasks view toggle */}
+            {tasksAvailable && (
+              <button
+                type="button"
+                className={`btn btn-sm border-0 ${effectiveView === 'tasks' ? 'btn-info' : 'bg-body-secondary text-body'}`}
+                onClick={handleTasksClick}
+                title="Tasks"
               >
-                <Dropdown.Toggle
-                  as={FooterToggle}
-                  active={showColumnsDropdown}
-                  title="Toggle columns"
-                >
-                  <i className="fas fa-table-columns" />
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  {TASK_COLUMNS.map(col => (
-                    <label
-                      key={col.key}
-                      className="dropdown-item d-flex align-items-center gap-2 mb-0 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        className="form-check-input m-0"
-                        checked={taskVisibleColumns.includes(col.key)}
-                        onChange={() => handleColumnToggle(col.key)}
-                      />
-                      {col.label}
-                    </label>
-                  ))}
-                </Dropdown.Menu>
-              </Dropdown>
-            </>
-          )}
+                <i className="fas fa-tasks" />
+              </button>
+            )}
 
-          {/* Expand / collapse the footer */}
-          <button
-            type="button"
-            className="btn btn-sm border-0 bg-body-secondary text-body"
-            onClick={handleToggle}
-            title={footerIsActive ? 'Collapse' : 'Expand'}
-          >
-            <i className={`fa ${footerIsActive ? 'fa-angle-down' : 'fa-angle-up'}`} />
-          </button>
-        </div>
+            {isTasksView && (
+              <>
+                {/* Priority filter */}
+                <Dropdown
+                  as={ButtonGroup}
+                  drop="up"
+                  align="end"
+                  show={showFilterDropdown}
+                  onToggle={nextShow => {
+                    setShowFilterDropdown(nextShow);
+                    if (nextShow) {
+                      setShowColumnsDropdown(false);
+                    }
+                  }}
+                >
+                  <Dropdown.Toggle
+                    as={FooterToggle}
+                    active={showFilterDropdown}
+                    title={`Priority filter: ${currentPriorityLabel}`}
+                  >
+                    <i className="fas fa-filter" />
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu>
+                    {PRIORITY_OPTIONS.map(option => (
+                      <Dropdown.Item
+                        as="button"
+                        type="button"
+                        key={option.value}
+                        active={taskMinPriority === option.value}
+                        onClick={() => setTaskMinPriority(option.value)}
+                      >
+                        {option.label}
+                      </Dropdown.Item>
+                    ))}
+                  </Dropdown.Menu>
+                </Dropdown>
+
+                {/* Column visibility — stays open while toggling (autoClose outside only) */}
+                <Dropdown
+                  as={ButtonGroup}
+                  drop="up"
+                  align="end"
+                  autoClose="outside"
+                  show={showColumnsDropdown}
+                  onToggle={nextShow => {
+                    setShowColumnsDropdown(nextShow);
+                    if (nextShow) {
+                      setShowFilterDropdown(false);
+                    }
+                  }}
+                >
+                  <Dropdown.Toggle
+                    as={FooterToggle}
+                    active={showColumnsDropdown}
+                    title="Toggle columns"
+                  >
+                    <i className="fas fa-table-columns" />
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu>
+                    {TASK_COLUMNS.map(col => (
+                      <label
+                        key={col.key}
+                        className="dropdown-item d-flex align-items-center gap-2 mb-0 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          className="form-check-input m-0"
+                          checked={taskVisibleColumns.includes(col.key)}
+                          onChange={() => handleColumnToggle(col.key)}
+                        />
+                        {col.label}
+                      </label>
+                    ))}
+                  </Dropdown.Menu>
+                </Dropdown>
+              </>
+            )}
+
+            {/* Expand / collapse the footer */}
+            <button
+              type="button"
+              className="btn btn-sm border-0 bg-body-secondary text-body"
+              onClick={handleToggle}
+              title={footerIsActive ? 'Collapse' : 'Expand'}
+            >
+              <i className={`fa ${footerIsActive ? 'fa-angle-down' : 'fa-angle-up'}`} />
+            </button>
+          </div>
+        )}
       </div>
 
-      <ResizableBox
-        onResize={handleResize}
-        className={!footerIsActive ? 'is-footer-minimized' : ''}
-        height={effectiveHeight}
-        width={Infinity}
-        resizeHandles={footerIsActive ? ['n'] : []}
-        axis="y"
-        maxConstraints={[Infinity, Math.floor(window.innerHeight * 0.9)]}
-        minConstraints={[Infinity, 0]}
-        handle={FooterHandle}
-      >
-        <div className="log-console text-white h-100">
-          {footerActiveView === 'shell' ? <HostShell /> : <Tasks />}
-        </div>
-      </ResizableBox>
+      {anyPane && (
+        <ResizableBox
+          onResize={handleResize}
+          className={!footerIsActive ? 'is-footer-minimized' : ''}
+          height={effectiveHeight}
+          width={Infinity}
+          resizeHandles={footerIsActive ? ['n'] : []}
+          axis="y"
+          maxConstraints={[Infinity, Math.floor(window.innerHeight * 0.9)]}
+          minConstraints={[Infinity, 0]}
+          handle={FooterHandle}
+        >
+          <div className="log-console text-white h-100">
+            {effectiveView === 'shell' ? <HostShell /> : <Tasks />}
+          </div>
+        </ResizableBox>
+      )}
     </div>
   );
 };

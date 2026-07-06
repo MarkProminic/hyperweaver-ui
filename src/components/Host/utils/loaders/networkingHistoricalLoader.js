@@ -1,3 +1,5 @@
+import { hasFeature } from '../../../../utils/capabilities';
+
 // Helper function to calculate historical timestamp based on time window
 const getHistoricalTimestamp = timeWindow => {
   const now = new Date();
@@ -34,6 +36,10 @@ export const fetchHistoricalNetworkData = async (
   timeWindow,
   resolution
 ) => {
+  // The usage history is /monitoring/* — a token-gated surface (sync OPEN ITEM 4b).
+  if (!hasFeature(currentServer, 'monitoring')) {
+    return {};
+  }
   console.log(
     '📊 HISTORICAL CHARTS: Loading historical data for time window:',
     timeWindow,
