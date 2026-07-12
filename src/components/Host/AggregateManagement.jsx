@@ -119,7 +119,6 @@ const AggregateManagement = ({ server, onError }) => {
         null,
         {
           temporary: false,
-          created_by: 'api',
         }
       );
 

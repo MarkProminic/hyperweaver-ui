@@ -179,7 +179,6 @@ const PackageSection = ({ server, onError }) => {
         dry_run: options.dryRun || false,
         accept_licenses: options.acceptLicenses || false,
         be_name: options.beName || '',
-        created_by: 'api',
       };
 
       const result = await makeAgentRequest(

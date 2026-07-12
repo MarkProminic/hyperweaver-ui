@@ -26,5 +26,6 @@
 @use 'styles/layout'; // content grid, resizable sidebar/footer, page header band
 @use 'styles/utilities'; // sizing/layering/status utility classes
 @use 'styles/console'; // xterm/VNC/console cards, console modal, standalone console
+@use 'styles/machine-editor'; // machine hardware device-tree panels/editors
 @use 'styles/topology'; // network topology nodes/edges/legend + chart container
 @use 'styles/sidebar'; // sidebar tree + profile drop-up

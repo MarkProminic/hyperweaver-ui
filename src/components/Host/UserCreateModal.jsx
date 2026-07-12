@@ -22,7 +22,6 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
     create_home: true,
     force_zfs: false,
     create_personal_group: true,
-    created_by: 'api_admin',
   });
 
   const { makeAgentRequest } = useServers();
@@ -175,9 +174,6 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
         }
         if (formData.force_zfs) {
           payload.force_zfs = true;
-        }
-        if (formData.created_by.trim()) {
-          payload.created_by = formData.created_by.trim();
         }
       }
 
@@ -398,21 +394,6 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
               onChange={e => handleInputChange('project', e.target.value)}
               disabled={loading}
               placeholder="admin_project"
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="form-label" htmlFor="user-create-created-by">
-              Created By
-            </label>
-            <input
-              id="user-create-created-by"
-              className="form-control"
-              type="text"
-              value={formData.created_by}
-              onChange={e => handleInputChange('created_by', e.target.value)}
-              disabled={loading}
-              placeholder="api_admin"
             />
           </div>
         </>

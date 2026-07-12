@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
 
 import { useServers } from '../../contexts/ServerContext';
+import { hasHypervisor } from '../../utils/capabilities';
 import { useDebounce } from '../../utils/debounce';
 
 import ProcessActionModals from './ProcessActionModals';
@@ -30,11 +31,17 @@ const ProcessManagement = ({ server }) => {
 
   const { makeAgentRequest } = useServers();
 
+  // The zone filter is an illumos concept — the Go agent has no `zone`
+  // field and ignores `?zone=`.
+  const isBhyve = hasHypervisor(server, 'bhyve');
+  // gopsutil on a Windows host delivers only TERM/KILL signals.
+  const limitedSignals = server?.capabilities?.platform === 'windows';
+
   // Debounce the pattern filter to avoid excessive API calls
   const debouncedPattern = useDebounce(filters.pattern, 500);
 
   const loadZones = useCallback(async () => {
-    if (!server || !makeAgentRequest) {
+    if (!server || !makeAgentRequest || !isBhyve) {
       return;
     }
 
@@ -43,19 +50,19 @@ const ProcessManagement = ({ server }) => {
         server.hostname,
         server.port,
         server.protocol,
-        'zones',
+        'machines',
         'GET'
       );
 
-      if (result.success && result.data?.zones) {
-        const zones = result.data.zones.map(zone => zone.name).filter(Boolean);
+      if (result.success && result.data?.machines) {
+        const zones = result.data.machines.map(machine => machine.name).filter(Boolean);
         const uniqueZones = [...new Set(zones)].sort();
         setAvailableZones(['global', ...uniqueZones]);
       }
     } catch (err) {
       console.error('Error loading zones:', err);
     }
-  }, [server, makeAgentRequest]);
+  }, [server, makeAgentRequest, isBhyve]);
 
   const loadProcesses = useCallback(async () => {
     if (!server || !makeAgentRequest) {
@@ -272,26 +279,28 @@ const ProcessManagement = ({ server }) => {
                 />
               </div>
             </div>
-            <div className="col">
-              <div className="mb-3">
-                <label className="form-label" htmlFor="zone-filter">
-                  Filter by Zone
-                </label>
-                <select
-                  id="zone-filter"
-                  className="form-select"
-                  value={filters.zone}
-                  onChange={e => handleFilterChange('zone', e.target.value)}
-                >
-                  <option value="">All Zones</option>
-                  {availableZones.map(zone => (
-                    <option key={zone} value={zone}>
-                      {zone}
-                    </option>
-                  ))}
-                </select>
+            {isBhyve && (
+              <div className="col">
+                <div className="mb-3">
+                  <label className="form-label" htmlFor="zone-filter">
+                    Filter by Zone
+                  </label>
+                  <select
+                    id="zone-filter"
+                    className="form-select"
+                    value={filters.zone}
+                    onChange={e => handleFilterChange('zone', e.target.value)}
+                  >
+                    <option value="">All Zones</option>
+                    {availableZones.map(zone => (
+                      <option key={zone} value={zone}>
+                        {zone}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="user-filter">
@@ -451,6 +460,7 @@ const ProcessManagement = ({ server }) => {
         showSignalModal={showSignalModal}
         showBatchKillModal={showBatchKillModal}
         availableZones={availableZones}
+        limitedSignals={limitedSignals}
         onCloseKillModal={() => {
           setShowKillModal(false);
           setSelectedProcess(null);
@@ -472,6 +482,9 @@ ProcessManagement.propTypes = {
     hostname: PropTypes.string.isRequired,
     port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     protocol: PropTypes.string.isRequired,
+    capabilities: PropTypes.shape({
+      platform: PropTypes.string,
+    }),
   }).isRequired,
 };
 

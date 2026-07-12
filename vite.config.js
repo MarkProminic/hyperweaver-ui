@@ -93,6 +93,12 @@ export default defineConfig({
             return 'terminal';
           }
 
+          // IronRDP browser client (WASM-carrying, large, independent) —
+          // loaded only by the RDP console.
+          if (id.includes('node_modules/@devolutions')) {
+            return 'rdp-console';
+          }
+
           // Flow/diagram libraries (large, independent)
           if (
             id.includes('node_modules/@xyflow') ||
@@ -137,5 +143,8 @@ export default defineConfig({
       '@xterm/addon-search',
       '@xterm/addon-webgl',
     ],
+    // wasm-bindgen output resolves its .wasm beside the JS via
+    // import.meta.url — dev prebundling would relocate the JS and break it.
+    exclude: ['@devolutions/iron-remote-desktop', '@devolutions/iron-remote-desktop-rdp'],
   },
 });

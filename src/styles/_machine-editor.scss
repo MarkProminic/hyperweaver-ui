@@ -1,0 +1,101 @@
+// Machine device-tree editor (.hw-device-tree) — the hypervisor-manager-style
+// hardware inventory: the machine Overview panel and the Settings Storage/NICs
+// editors. Controllers/adapters are group rows; attached media and tuning
+// grids are indented child rows with a guide line. Palette rides --hw-* /
+// --bs-* custom properties only.
+
+.hw-device-tree {
+  border: 1px solid var(--hw-border-light);
+  border-radius: var(--bs-border-radius);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.hw-device-tree-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--hw-editor-head-bg);
+  font-weight: 600;
+}
+
+.hw-device-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-top: 1px solid var(--hw-border-light);
+
+  &:hover {
+    background: var(--hw-editor-row-hover);
+  }
+}
+
+// Controller / adapter header row inside the tree.
+.hw-device-group {
+  font-weight: 600;
+}
+
+// Indented device / tuning row under its group, with a vertical guide line.
+.hw-device-child {
+  position: relative;
+  padding-left: 2rem;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 1.05rem;
+    top: 0;
+    bottom: 0;
+    border-left: 1px solid var(--hw-border-light);
+  }
+}
+
+// Editable child rows (pending additions, tuning grids) need to wrap, and
+// breathe slightly before the next entry's row.
+.hw-device-child-form {
+  display: block;
+  padding-bottom: 0.5rem;
+
+  &:hover {
+    background: none;
+  }
+}
+
+.hw-device-path {
+  font-family: var(--bs-font-monospace);
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.hw-device-meta {
+  color: var(--bs-secondary-color);
+  font-size: 0.8125rem;
+}
+
+.hw-device-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+// Marked for removal — the strike toggles back off on unmark.
+.hw-device-removed {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.hw-device-tree-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--hw-border-light);
+}

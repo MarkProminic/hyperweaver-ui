@@ -66,15 +66,15 @@ const EnhancedFileManager = ({ server }) => {
       setError('');
 
       try {
-        // Load current directory files
-        const currentFiles = await api.loadFiles(path);
+        // Load current directory files — loadFiles answers {items, currentPath}
+        const { items: currentFiles, currentPath: answeredPath } = await api.loadFiles(path);
 
         // Maintain root directories for navigation
         let cachedDirectories = directoryCacheRef.current.get('/') || [];
 
         if (cachedDirectories.length === 0) {
           try {
-            const rootFiles = await api.loadFiles('/');
+            const { items: rootFiles } = await api.loadFiles('/');
             cachedDirectories = rootFiles.filter(file => file.isDirectory);
             directoryCacheRef.current.set('/', cachedDirectories);
           } catch {
@@ -114,7 +114,7 @@ const EnhancedFileManager = ({ server }) => {
                 return { path: parentPath, dirs: cached, isNew: false };
               }
               try {
-                const parentFiles = await api.loadFiles(parentPath);
+                const { items: parentFiles } = await api.loadFiles(parentPath);
                 const dirs = parentFiles.filter(f => f.isDirectory);
                 return { path: parentPath, dirs, isNew: true };
               } catch {
@@ -141,6 +141,12 @@ const EnhancedFileManager = ({ server }) => {
         }
 
         setFiles(combinedFiles);
+        // Track the RESOLVED path the agent answered — '/' resolves to a
+        // drive root (C:/) on Windows agents, and cubone's content pane
+        // only matches items against the path it was told is current.
+        if (answeredPath && answeredPath !== path) {
+          setCurrentPath(answeredPath);
+        }
       } catch (loadErr) {
         setError(`Failed to load files: ${loadErr.message}`);
         setFiles([]);

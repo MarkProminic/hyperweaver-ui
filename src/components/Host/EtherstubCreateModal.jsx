@@ -90,7 +90,6 @@ const EtherstubCreateModal = ({ server, existingEtherstubs, onClose, onSuccess, 
       const requestData = {
         name: formData.name.trim(),
         temporary: formData.temporary,
-        created_by: 'api',
       };
 
       const result = await makeAgentRequest(

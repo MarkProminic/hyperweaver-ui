@@ -2,97 +2,149 @@ import PropTypes from 'prop-types';
 import { useState } from 'react';
 
 import {
-  uploadArtifact,
+  prepareArtifactUpload,
+  uploadArtifactFile,
   registerArtifact,
   downloadArtifact,
   hclDownloadArtifact,
 } from '../../api/provisioningAPI';
-import { FormModal } from '../common';
+import { FormModal, PathInput } from '../common';
 
-/**
- * Installer Files modals (sync item 12): the four ways a file enters the
- * cache — browser upload, agent-host path registration, URL download
- * (optionally through a custom_resource_url secret's Basic auth), and the
- * HCL portal download (key_name = an hcl_download_portal_api_keys secret;
- * the filename must match the HCL catalog EXACTLY). Every entry point hashes
- * on the agent; downloads are tasks with live progress in the footer.
- */
+// The ways a file enters a storage location: browser upload (prepare →
+// bytes), agent-host path registration, URL download, and the HCL portal
+// download. Installer-family locations require a role; iso/image do not.
 
-const KINDS = ['installer', 'fixpack', 'hotfix'];
+const ROLE_TYPES = ['installer', 'fixpack', 'hotfix'];
 
-// Role + kind selects shared by all four modals. Roles are suggestions from
-// the current cache (datalist) — new role directories are legal.
-const RoleKindFields = ({ idPrefix, role, setRole, kind, setKind, roleOptions }) => (
-  <div className="row g-3 mb-3">
-    <div className="col-12 col-md-6">
-      <label className="form-label" htmlFor={`${idPrefix}-role`}>
-        Role
-      </label>
-      <input
-        id={`${idPrefix}-role`}
-        className="form-control"
-        type="text"
-        list={`${idPrefix}-role-options`}
-        value={role}
-        onChange={e => setRole(e.target.value)}
-        required
-      />
-      <datalist id={`${idPrefix}-role-options`}>
-        {roleOptions.map(option => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
+const locationType = (locations, id) => locations.find(entry => entry.id === id)?.type || '';
+
+/** Location select + role input (role only for installer-family locations). */
+const LocationRoleFields = ({
+  idPrefix,
+  locations,
+  locationId,
+  setLocationId,
+  role,
+  setRole,
+  roleOptions,
+}) => {
+  const needsRole = ROLE_TYPES.includes(locationType(locations, locationId));
+  return (
+    <div className="row g-3 mb-3">
+      <div className="col-12 col-md-6">
+        <label className="form-label" htmlFor={`${idPrefix}-location`}>
+          Storage Location
+        </label>
+        <select
+          id={`${idPrefix}-location`}
+          className="form-select"
+          value={locationId}
+          onChange={e => setLocationId(e.target.value)}
+          required
+        >
+          <option value="">Select…</option>
+          {locations
+            .filter(entry => entry.enabled !== false)
+            .map(entry => (
+              <option key={entry.id} value={entry.id}>
+                {entry.name} ({entry.type})
+              </option>
+            ))}
+        </select>
+      </div>
+      {needsRole && (
+        <div className="col-12 col-md-6">
+          <label className="form-label" htmlFor={`${idPrefix}-role`}>
+            Role
+          </label>
+          <input
+            id={`${idPrefix}-role`}
+            className="form-control"
+            type="text"
+            list={`${idPrefix}-role-options`}
+            value={role}
+            onChange={e => setRole(e.target.value)}
+            required
+          />
+          <datalist id={`${idPrefix}-role-options`}>
+            {roleOptions.map(option => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+        </div>
+      )}
     </div>
-    <div className="col-12 col-md-6">
-      <label className="form-label" htmlFor={`${idPrefix}-kind`}>
-        Kind
-      </label>
-      <select
-        id={`${idPrefix}-kind`}
-        className="form-select"
-        value={kind}
-        onChange={e => setKind(e.target.value)}
-      >
-        {KINDS.map(k => (
-          <option key={k} value={k}>
-            {k}
-          </option>
-        ))}
-      </select>
-    </div>
-  </div>
-);
+  );
+};
 
-RoleKindFields.propTypes = {
+LocationRoleFields.propTypes = {
   idPrefix: PropTypes.string.isRequired,
+  locations: PropTypes.array.isRequired,
+  locationId: PropTypes.string.isRequired,
+  setLocationId: PropTypes.func.isRequired,
   role: PropTypes.string.isRequired,
   setRole: PropTypes.func.isRequired,
-  kind: PropTypes.string.isRequired,
-  setKind: PropTypes.func.isRequired,
   roleOptions: PropTypes.arrayOf(PropTypes.string).isRequired,
 };
 
-export const UploadModal = ({ isOpen, onClose, server, roleOptions, onDone }) => {
+const validTarget = (locations, locationId, role) => {
+  if (!locationId) {
+    return 'Pick a storage location.';
+  }
+  if (ROLE_TYPES.includes(locationType(locations, locationId)) && !role.trim()) {
+    return 'This location type stores per role — a role is required.';
+  }
+  return '';
+};
+
+export const UploadModal = ({ isOpen, onClose, server, locations, roleOptions, onDone }) => {
+  const [locationId, setLocationId] = useState('');
   const [role, setRole] = useState('');
-  const [kind, setKind] = useState('installer');
   const [file, setFile] = useState(null);
+  const [checksum, setChecksum] = useState('');
+  const [overwrite, setOverwrite] = useState(false);
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    if (!role.trim() || !file) {
-      setError('A role and a file are required.');
+    const targetError = validTarget(locations, locationId, role);
+    if (targetError || !file) {
+      setError(targetError || 'A file is required.');
       return;
     }
     setLoading(true);
     setError('');
-    setProgress(0);
-    const result = await uploadArtifact(
+    const body = {
+      filename: file.name,
+      size: file.size,
+      storage_path_id: locationId,
+      overwrite_existing: overwrite,
+    };
+    if (checksum.trim()) {
+      body.checksum = checksum.trim();
+    }
+    if (role.trim()) {
+      body.role = role.trim();
+    }
+    const prepared = await prepareArtifactUpload(
       server.hostname,
       server.port,
       server.protocol,
-      { role: role.trim(), kind, file },
+      body
+    );
+    if (!prepared.success || !prepared.data?.task_id) {
+      setLoading(false);
+      setError(prepared.message || 'Upload prepare failed.');
+      return;
+    }
+    setProgress(0);
+    const result = await uploadArtifactFile(
+      server.hostname,
+      server.port,
+      server.protocol,
+      prepared.data.task_id,
+      file,
       event => {
         if (event.total) {
           setProgress(Math.round((event.loaded / event.total) * 100));
@@ -103,7 +155,7 @@ export const UploadModal = ({ isOpen, onClose, server, roleOptions, onDone }) =>
     setProgress(null);
     if (result.success) {
       onDone(
-        `${result.data?.message || 'Uploaded'} — ${result.data?.verified ? 'verified' : 'hashed (no expectation on record)'}`
+        `${result.data?.message || 'Upload queued'} (task ${prepared.data.task_id}) — the executor hashes and registers it`
       );
       setFile(null);
       onClose();
@@ -124,12 +176,13 @@ export const UploadModal = ({ isOpen, onClose, server, roleOptions, onDone }) =>
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
-      <RoleKindFields
+      <LocationRoleFields
         idPrefix="artifact-upload"
+        locations={locations}
+        locationId={locationId}
+        setLocationId={setLocationId}
         role={role}
         setRole={setRole}
-        kind={kind}
-        setKind={setKind}
         roleOptions={roleOptions}
       />
       <div className="mb-3">
@@ -143,6 +196,37 @@ export const UploadModal = ({ isOpen, onClose, server, roleOptions, onDone }) =>
           onChange={e => setFile(e.target.files?.[0] || null)}
           disabled={loading}
         />
+      </div>
+      <div className="row g-3 mb-3">
+        <div className="col-12 col-md-8">
+          <label className="form-label" htmlFor="artifact-upload-checksum">
+            Expected SHA-256 (optional — mismatches fail the upload)
+          </label>
+          <input
+            id="artifact-upload-checksum"
+            className="form-control font-monospace"
+            type="text"
+            value={checksum}
+            onChange={e => setChecksum(e.target.value)}
+            disabled={loading}
+          />
+        </div>
+        <div className="col-12 col-md-4">
+          <div className="form-check form-switch mt-4">
+            <input
+              id="artifact-upload-overwrite"
+              className="form-check-input"
+              type="checkbox"
+              role="switch"
+              checked={overwrite}
+              onChange={e => setOverwrite(e.target.checked)}
+              disabled={loading}
+            />
+            <label className="form-check-label" htmlFor="artifact-upload-overwrite">
+              Overwrite existing
+            </label>
+          </div>
+        </div>
       </div>
       {progress !== null && (
         <div
@@ -165,36 +249,35 @@ UploadModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   server: PropTypes.object.isRequired,
+  locations: PropTypes.array.isRequired,
   roleOptions: PropTypes.arrayOf(PropTypes.string).isRequired,
   onDone: PropTypes.func.isRequired,
 };
 
-export const RegisterModal = ({ isOpen, onClose, server, roleOptions, onDone }) => {
+export const RegisterModal = ({ isOpen, onClose, server, locations, roleOptions, onDone }) => {
+  const [locationId, setLocationId] = useState('');
   const [role, setRole] = useState('');
-  const [kind, setKind] = useState('installer');
   const [path, setPath] = useState('');
   const [move, setMove] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    if (!role.trim() || !path.trim()) {
-      setError('A role and an agent-host file path are required.');
+    const targetError = validTarget(locations, locationId, role);
+    if (targetError || !path.trim()) {
+      setError(targetError || 'An agent-host file path is required.');
       return;
     }
     setLoading(true);
     setError('');
-    const result = await registerArtifact(server.hostname, server.port, server.protocol, {
-      path: path.trim(),
-      role: role.trim(),
-      kind,
-      move,
-    });
+    const body = { path: path.trim(), storage_path_id: locationId, move };
+    if (role.trim()) {
+      body.role = role.trim();
+    }
+    const result = await registerArtifact(server.hostname, server.port, server.protocol, body);
     setLoading(false);
     if (result.success) {
-      onDone(
-        `${result.data?.message || 'Registered'} — ${result.data?.verified ? 'verified' : 'hashed (no expectation on record)'}`
-      );
+      onDone(result.data?.message || 'Registered');
       setPath('');
       onClose();
     } else {
@@ -214,24 +297,26 @@ export const RegisterModal = ({ isOpen, onClose, server, roleOptions, onDone }) 
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
-      <RoleKindFields
+      <LocationRoleFields
         idPrefix="artifact-register"
+        locations={locations}
+        locationId={locationId}
+        setLocationId={setLocationId}
         role={role}
         setRole={setRole}
-        kind={kind}
-        setKind={setKind}
         roleOptions={roleOptions}
       />
       <div className="mb-3">
         <label className="form-label" htmlFor="artifact-register-path">
           Path (on the agent host)
         </label>
-        <input
+        <PathInput
           id="artifact-register-path"
-          className="form-control"
-          type="text"
           value={path}
-          onChange={e => setPath(e.target.value)}
+          onChange={setPath}
+          server={server}
+          mode="file"
+          pickTitle="Pick the file to register"
           disabled={loading}
         />
       </div>
@@ -246,7 +331,7 @@ export const RegisterModal = ({ isOpen, onClose, server, roleOptions, onDone }) 
           disabled={loading}
         />
         <label className="form-check-label" htmlFor="artifact-register-move">
-          Move (delete the source after copying into the cache)
+          Move (delete the source after copying into the location)
         </label>
       </div>
     </FormModal>
@@ -255,29 +340,42 @@ export const RegisterModal = ({ isOpen, onClose, server, roleOptions, onDone }) 
 
 RegisterModal.propTypes = UploadModal.propTypes;
 
-export const DownloadModal = ({ isOpen, onClose, server, roleOptions, resourceNames, onDone }) => {
+export const DownloadModal = ({
+  isOpen,
+  onClose,
+  server,
+  locations,
+  roleOptions,
+  resourceNames,
+  onDone,
+}) => {
+  const [locationId, setLocationId] = useState('');
   const [role, setRole] = useState('');
-  const [kind, setKind] = useState('installer');
   const [url, setUrl] = useState('');
   const [filename, setFilename] = useState('');
-  const [expected, setExpected] = useState('');
+  const [checksum, setChecksum] = useState('');
+  const [overwrite, setOverwrite] = useState(false);
   const [resourceName, setResourceName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    if (!role.trim() || !url.trim()) {
-      setError('A role and a URL are required.');
+    const targetError = validTarget(locations, locationId, role);
+    if (targetError || !url.trim()) {
+      setError(targetError || 'A URL is required.');
       return;
     }
     setLoading(true);
     setError('');
-    const body = { url: url.trim(), role: role.trim(), kind };
+    const body = { url: url.trim(), storage_path_id: locationId, overwrite_existing: overwrite };
     if (filename.trim()) {
       body.filename = filename.trim();
     }
-    if (expected.trim()) {
-      body.expected_sha256 = expected.trim();
+    if (checksum.trim()) {
+      body.checksum = checksum.trim();
+    }
+    if (role.trim()) {
+      body.role = role.trim();
     }
     if (resourceName.trim()) {
       body.resource_name = resourceName.trim();
@@ -288,7 +386,7 @@ export const DownloadModal = ({ isOpen, onClose, server, roleOptions, resourceNa
       onDone(`${result.data?.message || 'Download queued'} (task ${result.data?.task_id})`);
       setUrl('');
       setFilename('');
-      setExpected('');
+      setChecksum('');
       onClose();
     } else {
       setError(result.message);
@@ -307,12 +405,13 @@ export const DownloadModal = ({ isOpen, onClose, server, roleOptions, resourceNa
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
-      <RoleKindFields
+      <LocationRoleFields
         idPrefix="artifact-download"
+        locations={locations}
+        locationId={locationId}
+        setLocationId={setLocationId}
         role={role}
         setRole={setRole}
-        kind={kind}
-        setKind={setKind}
         roleOptions={roleOptions}
       />
       <div className="mb-3">
@@ -330,7 +429,7 @@ export const DownloadModal = ({ isOpen, onClose, server, roleOptions, resourceNa
         />
       </div>
       <div className="row g-3 mb-3">
-        <div className="col-12 col-md-6">
+        <div className="col-12 col-md-5">
           <label className="form-label" htmlFor="artifact-download-filename">
             Filename (blank = from URL)
           </label>
@@ -343,7 +442,7 @@ export const DownloadModal = ({ isOpen, onClose, server, roleOptions, resourceNa
             disabled={loading}
           />
         </div>
-        <div className="col-12 col-md-6">
+        <div className="col-12 col-md-5">
           <label className="form-label" htmlFor="artifact-download-sha">
             Expected SHA-256 (optional — mismatches are discarded)
           </label>
@@ -351,10 +450,26 @@ export const DownloadModal = ({ isOpen, onClose, server, roleOptions, resourceNa
             id="artifact-download-sha"
             className="form-control font-monospace"
             type="text"
-            value={expected}
-            onChange={e => setExpected(e.target.value)}
+            value={checksum}
+            onChange={e => setChecksum(e.target.value)}
             disabled={loading}
           />
+        </div>
+        <div className="col-12 col-md-2">
+          <div className="form-check form-switch mt-4">
+            <input
+              id="artifact-download-overwrite"
+              className="form-check-input"
+              type="checkbox"
+              role="switch"
+              checked={overwrite}
+              onChange={e => setOverwrite(e.target.checked)}
+              disabled={loading}
+            />
+            <label className="form-check-label" htmlFor="artifact-download-overwrite">
+              Overwrite
+            </label>
+          </div>
         </div>
       </div>
       <div className="mb-3">
@@ -394,6 +509,10 @@ DownloadModal.propTypes = {
   ...UploadModal.propTypes,
   resourceNames: PropTypes.arrayOf(PropTypes.string),
 };
+
+// The HCL portal download keeps the SHI body verbatim ({key_name, filename,
+// role, kind}); the catalog's sha256 is authoritative.
+const HCL_KINDS = ['installer', 'fixpack', 'hotfix'];
 
 export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyNames, onDone }) => {
   const [role, setRole] = useState('');
@@ -438,14 +557,44 @@ export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyN
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
-      <RoleKindFields
-        idPrefix="artifact-hcl"
-        role={role}
-        setRole={setRole}
-        kind={kind}
-        setKind={setKind}
-        roleOptions={roleOptions}
-      />
+      <div className="row g-3 mb-3">
+        <div className="col-12 col-md-6">
+          <label className="form-label" htmlFor="artifact-hcl-role">
+            Role
+          </label>
+          <input
+            id="artifact-hcl-role"
+            className="form-control"
+            type="text"
+            list="artifact-hcl-role-options"
+            value={role}
+            onChange={e => setRole(e.target.value)}
+            required
+          />
+          <datalist id="artifact-hcl-role-options">
+            {roleOptions.map(option => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+        </div>
+        <div className="col-12 col-md-6">
+          <label className="form-label" htmlFor="artifact-hcl-kind">
+            Kind
+          </label>
+          <select
+            id="artifact-hcl-kind"
+            className="form-select"
+            value={kind}
+            onChange={e => setKind(e.target.value)}
+          >
+            {HCL_KINDS.map(k => (
+              <option key={k} value={k}>
+                {k}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
       <div className="mb-3">
         <label className="form-label" htmlFor="artifact-hcl-filename">
           Filename (must match the HCL catalog EXACTLY)
@@ -498,6 +647,10 @@ export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyN
 };
 
 HclDownloadModal.propTypes = {
-  ...UploadModal.propTypes,
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  server: PropTypes.object.isRequired,
+  roleOptions: PropTypes.arrayOf(PropTypes.string).isRequired,
   hclKeyNames: PropTypes.arrayOf(PropTypes.string),
+  onDone: PropTypes.func.isRequired,
 };

@@ -23,7 +23,7 @@ const getParentPath = path => {
  */
 export const transformAgentToFile = hwItem => ({
   name: hwItem.name,
-  path: hwItem.path, // Use agent API paths exactly as provided
+  path: hwItem.path, // Contract: forward-slash absolute paths (both agents)
   isDirectory: hwItem.isDirectory,
   updatedAt: hwItem.mtime || hwItem.atime || new Date().toISOString(),
   size: hwItem.size || 0,

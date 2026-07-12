@@ -15,6 +15,7 @@ export default [
       'dist/**/*',
       'build/**/*',
       'coverage/**/*',
+      'vendor/**/*',
       '*.min.js',
       '.next/**/*',
       '.vite/**/*',

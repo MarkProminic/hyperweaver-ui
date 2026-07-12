@@ -126,7 +126,9 @@ const Dashboard = () => {
   }, [navigate]);
 
   const navigateToZoneRegister = useCallback(() => {
-    navigate('/ui/zone-register');
+    // The machine-create wizard lives on the Machines page (?create=1 opens
+    // it) — /ui/zone-register is the legacy setup form, not machine creation.
+    navigate('/ui/machines?create=1');
   }, [navigate]);
 
   // Direct mode has no Hyperweaver (Server) settings — the agent's own settings page is

@@ -88,7 +88,6 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
         sticky: formData.sticky,
         search_first: formData.searchFirst,
         refresh: formData.refresh,
-        created_by: 'api',
       };
 
       const originsToAdd = extractValues(formData.originsToAdd);

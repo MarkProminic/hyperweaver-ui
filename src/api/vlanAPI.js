@@ -54,7 +54,7 @@ export const createVlan = async (hostname, port, protocol, vlanData) => {
  * @param {number} port - Server port
  * @param {string} protocol - Server protocol
  * @param {string} vlanName - VLAN link name to delete
- * @param {Object} options - Delete options (temporary, created_by)
+ * @param {Object} options - Delete options (temporary)
  * @returns {Promise<Object>} Delete result
  */
 export const deleteVlan = async (hostname, port, protocol, vlanName, options = {}) => {

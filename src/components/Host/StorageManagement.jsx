@@ -5,6 +5,8 @@ import { hasFeature } from '../../utils/capabilities';
 
 import ArcConfiguration from './ArcConfiguration';
 import { ArtifactManagement } from './ArtifactStorage';
+import ZfsDatasetsPanel from './ZfsDatasetsPanel';
+import ZfsPoolsPanel from './ZfsPoolsPanel';
 
 const StorageManagement = ({ server }) => {
   const [activeTab, setActiveTab] = useState('arc');
@@ -68,13 +70,41 @@ const StorageManagement = ({ server }) => {
           </li>
         )}
         <li className="nav-item">
-          <button type="button" className="nav-link" disabled>
+          <button
+            type="button"
+            tabIndex={0}
+            onClick={e => {
+              e.preventDefault();
+              setActiveTab('pools');
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setActiveTab('pools');
+              }
+            }}
+            className={`nav-link ${activeTab === 'pools' ? 'active' : ''}`}
+          >
             <i className="fas fa-database me-2" />
             ZFS Pools
           </button>
         </li>
         <li className="nav-item">
-          <button type="button" className="nav-link" disabled>
+          <button
+            type="button"
+            tabIndex={0}
+            onClick={e => {
+              e.preventDefault();
+              setActiveTab('datasets');
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setActiveTab('datasets');
+              }
+            }}
+            className={`nav-link ${activeTab === 'datasets' ? 'active' : ''}`}
+          >
             <i className="fas fa-folder-tree me-2" />
             ZFS Datasets
           </button>
@@ -120,17 +150,39 @@ const StorageManagement = ({ server }) => {
           </div>
         )}
 
-        {/* Future: ZFS Pools tab content */}
         {activeTab === 'pools' && (
-          <div className="alert alert-info">
-            <p>ZFS Pool management will be available in a future update.</p>
+          <div>
+            <div className="mb-4">
+              <h3 className="fs-6 fw-bold">
+                <i className="fas fa-database me-2" />
+                ZFS Pools
+              </h3>
+              <p>
+                Manage ZFS storage pools on <strong>{server.hostname}</strong> — health and
+                capacity, scrubs, vdev and device operations, properties, import/export, create and
+                destroy. Every change runs as an agent task; the Tasks page carries the outcome.
+              </p>
+            </div>
+
+            <ZfsPoolsPanel server={server} />
           </div>
         )}
 
-        {/* Future: ZFS Datasets tab content */}
         {activeTab === 'datasets' && (
-          <div className="alert alert-info">
-            <p>ZFS Dataset management will be available in a future update.</p>
+          <div>
+            <div className="mb-4">
+              <h3 className="fs-6 fw-bold">
+                <i className="fas fa-folder-tree me-2" />
+                ZFS Datasets
+              </h3>
+              <p>
+                Manage filesystems, volumes, and snapshots on <strong>{server.hostname}</strong> —
+                create, snapshot, rename, clone, promote, roll back, hold, tune properties, and
+                destroy. Every change runs as an agent task; the Tasks page carries the outcome.
+              </p>
+            </div>
+
+            <ZfsDatasetsPanel server={server} />
           </div>
         )}
       </div>

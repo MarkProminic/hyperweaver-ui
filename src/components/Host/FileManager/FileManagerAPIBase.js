@@ -14,6 +14,50 @@ import {
 class FileManagerAPIBase {
   constructor(serverContext) {
     this.serverContext = serverContext;
+    // The agent-side directory backing the file manager's '/' — discovered
+    // from the first browse answer. cubone REQUIRES '/'-rooted paths (root
+    // children match `/${name}`, the nav tree roots on ''), but a Windows
+    // agent answers drive paths like C:/Users — which can never match, so
+    // nothing renders. Listings therefore map onto '/'-rooted display
+    // paths and requests map back:
+    //   - root '/' + drive-shaped paths (the unset-root Windows drive
+    //     listing): drives mount under '/' — C:/ ↔ /C:, C:/Users ↔ /C:/Users
+    //   - a named root (file_browser.root, or older builds' CWD answer):
+    //     paths are root-relative — <root>/x ↔ /x
+    //   - zoneweaver: root '/', real '/'-rooted paths — identity
+    this.rootPath = null;
+  }
+
+  /** Agent path → the '/'-rooted display path cubone can match. */
+  toDisplayPath(agentPath) {
+    if (!agentPath) {
+      return agentPath;
+    }
+    const base = this.rootPath ? this.rootPath.replace(/\/+$/u, '') : '';
+    if (base === '') {
+      return /^[A-Za-z]:/u.test(agentPath) ? `/${agentPath.replace(/\/+$/u, '')}` : agentPath;
+    }
+    if (agentPath === base || agentPath === this.rootPath) {
+      return '/';
+    }
+    return agentPath.startsWith(`${base}/`) ? agentPath.slice(base.length) : agentPath;
+  }
+
+  /** Display path → the agent path the wire takes. */
+  toAgentPath(displayPath) {
+    const base = this.rootPath ? this.rootPath.replace(/\/+$/u, '') : '';
+    if (base === '') {
+      // A bare "C:" is drive-RELATIVE on Windows — the drive root keeps
+      // its slash on the wire.
+      const match = /^\/(?<drive>[A-Za-z]:)(?<rest>\/.*)?$/u.exec(displayPath);
+      if (match) {
+        return match.groups.rest
+          ? `${match.groups.drive}${match.groups.rest}`
+          : `${match.groups.drive}/`;
+      }
+      return displayPath;
+    }
+    return displayPath === '/' ? this.rootPath : `${base}${displayPath}`;
   }
 
   /**
@@ -22,6 +66,40 @@ class FileManagerAPIBase {
    */
   getCurrentServer() {
     return this.serverContext.currentServer;
+  }
+
+  /** The agent host's OS ('windows'|'darwin'|'linux'|'omnios'|undefined). */
+  platform() {
+    return this.getCurrentServer()?.capabilities?.platform;
+  }
+
+  isWindowsAgent() {
+    return this.platform() === 'windows';
+  }
+
+  /** POSIX ownership defaults — omitted on Windows agents (uid/gid 400 there). */
+  ownershipFields() {
+    return this.isWindowsAgent() ? {} : { uid: 1000, gid: 1000 };
+  }
+
+  /** Archive-create formats the agent supports — Go's bzip2 is decompress-only. */
+  archiveFormats() {
+    const formats = [
+      { value: 'tar.gz', label: 'tar.gz (Compressed tar archive)' },
+      { value: 'tar', label: 'tar (Uncompressed tar archive)' },
+      { value: 'zip', label: 'zip (ZIP archive)' },
+    ];
+    if (
+      this.platform() !== 'windows' &&
+      this.platform() !== 'darwin' &&
+      this.platform() !== 'linux'
+    ) {
+      formats.push(
+        { value: 'tar.bz2', label: 'tar.bz2 (BZip2 compressed tar)' },
+        { value: 'gz', label: 'gz (GZip compressed)' }
+      );
+    }
+    return formats;
   }
 
   /**
@@ -51,15 +129,18 @@ class FileManagerAPIBase {
   }
 
   /**
-   * Browse directory and return files in cubone format
-   * @param {string} path - Directory path to browse
+   * Browse directory and return files in cubone format. Item paths and the
+   * answered `current_path` come back in DISPLAY space ('/'-rooted,
+   * relative to the discovered rootPath) so cubone's parent/child matching
+   * works on every agent.
+   * @param {string} path - Directory path to browse (display space)
    * @param {Object} options - Browse options
-   * @returns {Promise<Array>} Array of file objects
+   * @returns {Promise<Object>} { items, currentPath }
    */
   async loadFiles(path = '/', options = {}) {
     try {
       const params = {
-        path,
+        path: this.toAgentPath(path),
         show_hidden: options.showHidden || false,
         sort_by: options.sortBy || 'name',
         sort_order: options.sortOrder || 'asc',
@@ -68,11 +149,21 @@ class FileManagerAPIBase {
       const result = await this.makeRequest('filesystem', 'GET', null, params);
 
       if (result.success && result.data && result.data.items) {
-        return transformFilesToHierarchy(result.data.items);
+        // The '/' answer's current_path IS the root every display path is
+        // relative to — set it before mapping this response's own items.
+        if (this.rootPath === null && path === '/' && result.data.current_path) {
+          this.rootPath = result.data.current_path;
+        }
+        return {
+          items: transformFilesToHierarchy(
+            result.data.items.map(item => ({ ...item, path: this.toDisplayPath(item.path) }))
+          ),
+          currentPath: this.toDisplayPath(result.data.current_path) || path,
+        };
       }
-      return [];
+      return { items: [], currentPath: path };
     } catch {
-      return [];
+      return { items: [], currentPath: path };
     }
   }
 
@@ -91,8 +182,7 @@ class FileManagerAPIBase {
         path: parentPath,
         name,
         mode: '755',
-        uid: 1000,
-        gid: 1000,
+        ...this.ownershipFields(),
       };
 
       const result = await this.makeRequest('filesystem/folder', 'POST', data);

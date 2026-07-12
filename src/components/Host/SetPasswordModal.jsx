@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { useState } from 'react';
 
 import FormModal from '../common/FormModal';
+import RevealInput from '../common/RevealInput';
 
 const SetPasswordModal = ({ user, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -80,16 +81,13 @@ const SetPasswordModal = ({ user, onClose, onSuccess }) => {
         <label className="form-label" htmlFor="new-password-input">
           New Password <span className="text-danger">*</span>
         </label>
-        <input
+        <RevealInput
           id="new-password-input"
-          className="form-control"
-          type="password"
           value={formData.password}
           onChange={e => handleInputChange('password', e.target.value)}
           required
           disabled={loading}
           placeholder="Enter new password"
-          autoComplete="new-password"
         />
         <p className="form-text text-muted">Password must be at least 8 characters long</p>
       </div>
@@ -98,16 +96,13 @@ const SetPasswordModal = ({ user, onClose, onSuccess }) => {
         <label className="form-label" htmlFor="confirm-password-input">
           Confirm Password <span className="text-danger">*</span>
         </label>
-        <input
+        <RevealInput
           id="confirm-password-input"
-          className="form-control"
-          type="password"
           value={formData.confirmPassword}
           onChange={e => handleInputChange('confirmPassword', e.target.value)}
           required
           disabled={loading}
           placeholder="Confirm new password"
-          autoComplete="new-password"
         />
       </div>
 

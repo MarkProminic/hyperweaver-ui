@@ -14,7 +14,7 @@ import PropTypes from 'prop-types';
  */
 
 // The role files vocabulary (wire keys → labels), grouped for layout. The
-// group's first key doubles as the file-cache `kind` its picker queries.
+// group's first key doubles as the artifact `file_type` its picker queries.
 const ROLE_FILE_GROUPS = [
   [
     ['installer', 'Installer'],
@@ -225,16 +225,19 @@ export const RolesEditor = ({ roles, onRolesChange, loading, artifacts }) => {
     onRolesChange(roles.map((role, i) => (i === index ? { ...role, ...patch } : role)));
   };
 
-  // File-cache suggestions for a role's picker (sync item 12) — present files
-  // only; picking a known filename auto-fills its hash and version.
+  // Registry suggestions for a role's picker — present files only; picking
+  // a known filename auto-fills its hash and version.
   const suggestionsFor = (roleName, kind) =>
-    (artifacts || []).filter(artifact => artifact.role === roleName && artifact.kind === kind);
+    (artifacts || []).filter(
+      artifact =>
+        artifact.role === roleName && artifact.file_type === kind && artifact.file_exists !== false
+    );
 
   const handleFileChange = (index, role, kind, fileKey, value) => {
     const patch = { [fileKey]: value };
     const match = suggestionsFor(role.name, kind).find(artifact => artifact.filename === value);
     if (match) {
-      patch[`${kind}_hash`] = match.expected_sha256 || match.sha256 || '';
+      patch[`${kind}_hash`] = match.expected_sha256 || match.checksum || '';
       if (match.version) {
         patch[`${kind}_version`] = match.version;
       }

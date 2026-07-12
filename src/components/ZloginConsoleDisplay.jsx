@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 
+import { hasConsole } from '../utils/capabilities';
+
 import ZloginActionsDropdown from './ZloginActionsDropdown';
 import ZoneShell from './ZoneShell';
 
@@ -44,12 +46,7 @@ const ZloginConsoleDisplay = ({
       <div className="d-flex gap-1 m-0">
         <ZloginActionsDropdown
           variant="button"
-          onToggleReadOnly={() => {
-            console.log(
-              `🔧 ZLOGIN READ-ONLY: Toggling from ${previewReadOnly} to ${!previewReadOnly}`
-            );
-            setPreviewReadOnly(!previewReadOnly);
-          }}
+          onToggleReadOnly={() => setPreviewReadOnly(!previewReadOnly)}
           onNewSession={() => handleZloginConsole(selectedMachine)}
           onKillSession={async () => {
             if (!currentServer || !selectedMachine) {
@@ -101,7 +98,6 @@ const ZloginConsoleDisplay = ({
                 if (navigator.clipboard && navigator.clipboard.readText) {
                   const text = await navigator.clipboard.readText();
                   if (text && currentServer && selectedMachine) {
-                    console.log(`📋 ZLOGIN PREVIEW PASTE: Pasting ${text.length} characters`);
                     await pasteTextToZone(currentServer, selectedMachine, text);
                   }
                 }
@@ -129,60 +125,57 @@ const ZloginConsoleDisplay = ({
         >
           <i className="fas fa-expand" />
         </button>
-        {hasVnc ? (
-          <button
-            type="button"
-            className="btn btn-sm btn-warning"
-            onClick={() => {
-              console.log(`🔄 PREVIEW SWITCH: Switching to VNC preview from zlogin`);
-              setActiveConsoleType('vnc');
-            }}
-            title="Switch to VNC Console"
-          >
-            <i className="fas fa-desktop" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="btn btn-sm btn-warning"
-            onClick={async () => {
-              console.log(`🚀 START VNC: Starting VNC for preview from zlogin`);
-              try {
-                setLoadingVnc(true);
-                const result = await startVncSession(
-                  currentServer.hostname,
-                  currentServer.port,
-                  currentServer.protocol,
-                  selectedMachine
-                );
+        {hasConsole(currentServer, 'vnc') &&
+          (hasVnc ? (
+            <button
+              type="button"
+              className="btn btn-sm btn-warning"
+              onClick={() => setActiveConsoleType('vnc')}
+              title="Switch to VNC Console"
+            >
+              <i className="fas fa-desktop" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-sm btn-warning"
+              onClick={async () => {
+                try {
+                  setLoadingVnc(true);
+                  const result = await startVncSession(
+                    currentServer.hostname,
+                    currentServer.port,
+                    currentServer.protocol,
+                    selectedMachine
+                  );
 
-                if (result.success) {
-                  const readinessResult = await waitForVncSessionReady(selectedMachine);
-                  if (readinessResult.ready) {
-                    setMachineDetails(prev => ({
-                      ...prev,
-                      active_vnc_session: true,
-                      vnc_session_info: {
-                        ...result.data,
-                        ...readinessResult.sessionInfo,
-                      },
-                    }));
-                    setActiveConsoleType('vnc');
+                  if (result.success) {
+                    const readinessResult = await waitForVncSessionReady(selectedMachine);
+                    if (readinessResult.ready) {
+                      setMachineDetails(prev => ({
+                        ...prev,
+                        active_vnc_session: true,
+                        vnc_session_info: {
+                          ...result.data,
+                          ...readinessResult.sessionInfo,
+                        },
+                      }));
+                      setActiveConsoleType('vnc');
+                    }
                   }
+                } catch (error) {
+                  console.error('Error starting VNC:', error);
+                  setError('Error starting VNC console');
+                } finally {
+                  setLoadingVnc(false);
                 }
-              } catch (error) {
-                console.error('Error starting VNC:', error);
-                setError('Error starting VNC console');
-              } finally {
-                setLoadingVnc(false);
-              }
-            }}
-            disabled={loadingVnc}
-            title="Start VNC Console"
-          >
-            <i className={`fas ${loadingVnc ? 'fa-spinner fa-pulse' : 'fa-desktop'}`} />
-          </button>
-        )}
+              }}
+              disabled={loadingVnc}
+              title="Start VNC Console"
+            >
+              <i className={`fas ${loadingVnc ? 'fa-spinner fa-pulse' : 'fa-desktop'}`} />
+            </button>
+          ))}
       </div>
     </div>
 

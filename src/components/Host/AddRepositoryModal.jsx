@@ -75,7 +75,6 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
         enabled: formData.enabled,
         sticky: formData.sticky,
         search_first: formData.searchFirst,
-        created_by: 'api',
       };
 
       // Add optional fields only if they have values

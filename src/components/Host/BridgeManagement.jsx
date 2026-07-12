@@ -80,7 +80,6 @@ const BridgeManagement = ({ server, onError }) => {
         null,
         {
           force: false,
-          created_by: 'api',
         }
       );
 

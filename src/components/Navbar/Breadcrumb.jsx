@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMode } from '../../contexts/ModeContext';
 import { useServers } from '../../contexts/ServerContext';
+import { useAgentHostname } from '../../hooks/useAgentHostname';
 
 /**
  * Breadcrumb — navbar row 1, left (contract §2). Replaces the labeling role the old Host/Zone
@@ -17,6 +18,7 @@ const Breadcrumb = () => {
   const { isDirect } = useMode();
   const { currentServer, currentMachine } = useServers();
   const { datacenterLabel } = useAuth();
+  const hostLabel = useAgentHostname(currentServer);
 
   const crumbs = [];
   if (!isDirect) {
@@ -29,7 +31,7 @@ const Breadcrumb = () => {
   if (currentServer) {
     crumbs.push({
       icon: 'fas fa-server',
-      label: currentServer.entityName || currentServer.hostname,
+      label: hostLabel,
       to: '/ui/hosts',
     });
   }

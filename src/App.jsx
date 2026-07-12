@@ -8,6 +8,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import ServerSetup from './components/ServerSetup';
 import StandaloneConsole from './components/StandaloneConsole';
+import StandaloneRdpConsole from './components/StandaloneRdpConsole';
 import { AuthProvider } from './contexts/AuthContext';
 import { ModeProvider } from './contexts/ModeContext';
 import { ServerProvider } from './contexts/ServerContext';
@@ -41,6 +42,10 @@ const App = () => (
                     <Route
                       path="/ui/console/:agentId/:machineName"
                       element={<StandaloneConsole />}
+                    />
+                    <Route
+                      path="/ui/rdp/:agentId/:machineName"
+                      element={<StandaloneRdpConsole />}
                     />
                     <Route
                       path="/ui/settings"

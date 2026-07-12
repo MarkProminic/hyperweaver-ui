@@ -1,5 +1,7 @@
 import PropTypes from 'prop-types';
 
+import RevealInput from '../common/RevealInput';
+
 const PasswordManagement = ({
   showPasswordChange,
   setShowPasswordChange,
@@ -30,10 +32,9 @@ const PasswordManagement = ({
             <label className="form-label" htmlFor="currentPassword">
               Current Password
             </label>
-            <input
+            <RevealInput
               id="currentPassword"
-              className="form-control"
-              type="password"
+              autoComplete="current-password"
               value={passwordData.currentPassword}
               onChange={e =>
                 setPasswordData({
@@ -49,10 +50,8 @@ const PasswordManagement = ({
             <label className="form-label" htmlFor="newPassword">
               New Password
             </label>
-            <input
+            <RevealInput
               id="newPassword"
-              className="form-control"
-              type="password"
               value={passwordData.newPassword}
               onChange={e =>
                 setPasswordData({
@@ -70,10 +69,8 @@ const PasswordManagement = ({
             <label className="form-label" htmlFor="confirmPassword">
               Confirm New Password
             </label>
-            <input
+            <RevealInput
               id="confirmPassword"
-              className="form-control"
-              type="password"
               value={passwordData.confirmPassword}
               onChange={e =>
                 setPasswordData({

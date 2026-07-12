@@ -31,6 +31,10 @@
   // UI chrome colors - Light theme
   --hw-border-light: #{$hw-border-light-l}; // Component borders
   --hw-controls-bg: #{$hw-controls-bg-l}; // VNC controls background
+
+  // Machine device-tree editor - Light theme
+  --hw-editor-head-bg: #{$hw-editor-head-bg-l};
+  --hw-editor-row-hover: #{$hw-editor-row-hover-l};
 }
 
 @mixin hw-dark-theme {
@@ -54,6 +58,10 @@
   // UI chrome colors - Dark theme
   --hw-border-light: #{$hw-border-light-d}; // Darker borders for dark theme
   --hw-controls-bg: #{$hw-controls-bg-d}; // Darker VNC controls background
+
+  // Machine device-tree editor - Dark theme
+  --hw-editor-head-bg: #{$hw-editor-head-bg-d};
+  --hw-editor-row-hover: #{$hw-editor-row-hover-d};
 }
 
 :root {

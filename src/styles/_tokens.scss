@@ -76,3 +76,9 @@ $hw-modal-surface: white !default; // console modal chrome background
 $hw-slider-primary: #007bff !default;
 $hw-slider-info: #17a2b8 !default;
 $hw-slider-track: #ccc !default;
+
+// --- Machine device-tree editor (hardware inventory panels + Settings editors) ---
+$hw-editor-head-bg-l: #f1f3f5 !default; // panel/group header bands (light theme)
+$hw-editor-head-bg-d: #2d3748 !default; // panel/group header bands (dark theme)
+$hw-editor-row-hover-l: rgba(0, 0, 0, 0.04) !default;
+$hw-editor-row-hover-d: rgba(255, 255, 255, 0.05) !default;

@@ -1,6 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect } from 'react';
 
+import { PathInput } from './common';
+
+// Path-ish string settings (dir, local_storage_path, log_file, …) get the
+// agent-host browse button; keys ending in "file" pick files.
+const PATH_KEY = /(?:^|_)(?:path|dir|file|directory|folder|root)s?$/iu;
+
 // Organize the flat GET /settings document into tab sections (top-level objects)
 // holding fields + nested subsections.
 export const organizeBySection = settingsData => {
@@ -136,7 +142,7 @@ JsonField.propTypes = {
   description: PropTypes.string,
 };
 
-const renderField = (item, schema, onSettingChange) => {
+const renderField = (item, schema, onSettingChange, server) => {
   const { key, value, path } = item;
   const fieldId = path.join('.');
   const descriptor = schemaNodeForPath(schema, path);
@@ -214,6 +220,17 @@ const renderField = (item, schema, onSettingChange) => {
         onChange={e => onSettingChange(path, e.target.value.split('\n'))}
       />
     );
+  } else if (typeof value === 'string' && PATH_KEY.test(key)) {
+    inputElement = (
+      <PathInput
+        id={fieldId}
+        value={value}
+        onChange={next => onSettingChange(path, next)}
+        server={server}
+        mode={/file$/iu.test(key) ? 'file' : 'directory'}
+        placeholder={value === '' && help ? help : undefined}
+      />
+    );
   } else {
     // Empty string is a meaningful default on some fields ("resolve at runtime") —
     // the schema description states what empty resolves to, surfaced as placeholder.
@@ -247,7 +264,7 @@ const renderField = (item, schema, onSettingChange) => {
 };
 
 // Render a list of items (fields + nested subsections) as grid columns in a row.
-const renderItems = (items, schema, onSettingChange) =>
+const renderItems = (items, schema, onSettingChange, server) =>
   items.map(item => {
     if (item.type === 'subsection') {
       const subHelp = schemaNodeForPath(schema, item.path)?.description;
@@ -257,25 +274,26 @@ const renderItems = (items, schema, onSettingChange) =>
             {item.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
           </h4>
           {subHelp && <p className="form-text text-muted">{subHelp}</p>}
-          <div className="row g-3">{renderItems(item.fields, schema, onSettingChange)}</div>
+          <div className="row g-3">{renderItems(item.fields, schema, onSettingChange, server)}</div>
         </div>
       );
     }
-    return renderField(item, schema, onSettingChange);
+    return renderField(item, schema, onSettingChange, server);
   });
 
 /**
  * Schema-decorated settings field list: values from GET /settings drive structure,
  * the schema only decorates (enum→dropdown, min/max, description help text).
  */
-const SettingsFieldList = ({ items, schema, onSettingChange }) => (
-  <>{renderItems(items, schema, onSettingChange)}</>
+const SettingsFieldList = ({ items, schema, onSettingChange, server }) => (
+  <>{renderItems(items, schema, onSettingChange, server)}</>
 );
 
 SettingsFieldList.propTypes = {
   items: PropTypes.array.isRequired,
   schema: PropTypes.object,
   onSettingChange: PropTypes.func.isRequired,
+  server: PropTypes.object,
 };
 
 export default SettingsFieldList;

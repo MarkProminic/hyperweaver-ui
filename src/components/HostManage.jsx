@@ -7,16 +7,21 @@ import { useServers } from '../contexts/ServerContext';
 import { hasFeature } from '../utils/capabilities';
 
 import BootEnvironmentManagement from './Host/BootEnvironmentManagement';
+import DatabasePanel from './Host/DatabasePanel';
 import FaultManagement from './Host/FaultManagement';
 import EnhancedFileManager from './Host/FileManager/EnhancedFileManager';
 import HostPageHeader from './Host/HostPageHeader';
 import InstallerFiles from './Host/InstallerFiles';
 import NetworkHostnameManagement from './Host/NetworkHostnameManagement';
+import OrchestrationPanel from './Host/OrchestrationPanel';
 import PackageManagement from './Host/Package/Management';
 import ProcessManagement from './Host/ProcessManagement';
 import ProvisionerManagement from './Host/ProvisionerManagement';
+import ProvisioningNetworkPanel from './Host/ProvisioningNetworkPanel';
+import ProvisioningProfiles from './Host/ProvisioningProfiles';
 import ServiceManagement from './Host/ServiceManagement';
 import StorageManagement from './Host/StorageManagement';
+import TemplatesManagement from './Host/TemplatesManagement';
 import TimeNTPManagement from './Host/TimeNTPManagement';
 import UserGroupManagement from './Host/UserGroupManagement';
 
@@ -45,17 +50,49 @@ const TABS = [
   },
   { id: 'file-manager', label: 'File Manager', icon: 'fas fa-folder', feature: 'file-browser' },
   { id: 'user-group', label: 'User and Groups', icon: 'fas fa-users', feature: 'system-users' },
-  { id: 'provisioning', label: 'Provisioners', icon: 'fas fa-cubes', feature: 'provisioning' },
-  // Both tokens required (sync item 12): `artifacts` alone also names the
-  // zoneweaver ISO/storage-location surface (its own sub-tab under Storage);
-  // the file-cache page exists for the provisioning pipeline, so it lights up
-  // only where both ship.
+  // Token regate (Mark's option-(a) word): the registry surface rides its
+  // own `provisioner-registry` token — zoneweaver's always-on `provisioning`
+  // names its pipeline, not a registry, and gains this token at parity.
+  {
+    id: 'provisioning',
+    label: 'Provisioners',
+    icon: 'fas fa-cubes',
+    feature: 'provisioner-registry',
+  },
+  // The dormant-but-available host-side provisioning network (Mark's
+  // ruling) — rides the existing `provisioning` token, no gate of its own.
+  {
+    id: 'provisioning-network',
+    label: 'Provisioning Network',
+    icon: 'fas fa-diagram-project',
+    feature: 'provisioning',
+  },
+  { id: 'templates', label: 'Templates', icon: 'fas fa-compact-disc', feature: 'templates' },
+  // Host-level ordered boot/shutdown (catalog §8) — rides `machines`.
+  {
+    id: 'orchestration',
+    label: 'Orchestration',
+    icon: 'fas fa-arrow-down-1-9',
+    feature: 'machines',
+  },
+  // Reusable provisioning bundles (catalog §9) — rides `provisioning`.
+  {
+    id: 'provisioning-profiles',
+    label: 'Provisioning Profiles',
+    icon: 'fas fa-layer-group',
+    feature: 'provisioning',
+  },
+  // `artifacts` alone also names the zoneweaver ISO/storage-location surface
+  // (its own sub-tab under Storage); the file cache lights up only where the
+  // registry ships too — the agreed convergence gate.
   {
     id: 'installer-files',
     label: 'Installer Files',
     icon: 'fas fa-box-archive',
-    features: ['artifacts', 'provisioning'],
+    features: ['artifacts', 'provisioner-registry'],
   },
+  // Agent database maintenance — /database/* ships ungated on both agents.
+  { id: 'database', label: 'Database', icon: 'fas fa-database' },
 ];
 
 const HostManage = () => {
@@ -159,12 +196,11 @@ const HostManage = () => {
             </ul>
           </div>
 
-          <div className="px-4">
+          <div className="px-4 pt-3">
             {/* Services Tab */}
             {effectiveTab === 'services' && (
               <div>
                 <div className="mb-4">
-                  <h2 className="fs-5 fw-bold">Service Management</h2>
                   <p>
                     Manage OmniOS services on <strong>{currentServer.hostname}</strong>. You can
                     view, start, stop, restart, and refresh services running on this host.
@@ -179,7 +215,6 @@ const HostManage = () => {
             {effectiveTab === 'network' && (
               <div>
                 <div className="mb-4">
-                  <h2 className="fs-5 fw-bold">Network</h2>
                   <p>
                     Manage network configuration and hostname settings on{' '}
                     <strong>{currentServer.hostname}</strong>. Configure VNICs, IP addresses, link
@@ -195,7 +230,6 @@ const HostManage = () => {
             {effectiveTab === 'packages' && (
               <div>
                 <div className="mb-4">
-                  <h2 className="fs-5 fw-bold">Package Management</h2>
                   <p>
                     Manage packages, repositories, and system updates on{' '}
                     <strong>{currentServer.hostname}</strong>. Install, uninstall, and search for
@@ -211,7 +245,6 @@ const HostManage = () => {
             {effectiveTab === 'boot-environments' && (
               <div>
                 <div className="mb-4">
-                  <h2 className="fs-5 fw-bold">Boot Environment Management</h2>
                   <p>
                     Manage boot environments on <strong>{currentServer.hostname}</strong>. Create,
                     activate, mount, and delete boot environments for system administration and
@@ -227,7 +260,6 @@ const HostManage = () => {
             {effectiveTab === 'storage' && (
               <div>
                 <div className="mb-4">
-                  <h2 className="fs-5 fw-bold">Storage</h2>
                   <p>
                     Manage ZFS storage configuration on <strong>{currentServer.hostname}</strong>.
                     Configure ZFS ARC settings, manage pools, datasets, and storage resources.
@@ -242,7 +274,6 @@ const HostManage = () => {
             {effectiveTab === 'time-ntp' && (
               <div>
                 <div className="mb-4">
-                  <h2 className="fs-5 fw-bold">Time</h2>
                   <p>
                     Manage time synchronization services, NTP configuration, and timezone settings
                     on <strong>{currentServer.hostname}</strong>. Monitor time server peers,
@@ -258,7 +289,6 @@ const HostManage = () => {
             {effectiveTab === 'processes' && (
               <div>
                 <div className="mb-4">
-                  <h2 className="fs-5 fw-bold">Process Management</h2>
                   <p>
                     Monitor and manage system processes on <strong>{currentServer.hostname}</strong>
                     . View running processes, send signals, terminate processes, and analyze process
@@ -274,7 +304,6 @@ const HostManage = () => {
             {effectiveTab === 'fault-management' && (
               <div>
                 <div className="mb-4">
-                  <h2 className="fs-5 fw-bold">Fault Management</h2>
                   <p>
                     Monitor and manage system faults on <strong>{currentServer.hostname}</strong>.
                     View active faults, review system logs, manage fault resolution, and monitor
@@ -290,7 +319,6 @@ const HostManage = () => {
             {effectiveTab === 'file-manager' && (
               <div>
                 <div className="mb-4">
-                  <h2 className="fs-5 fw-bold">File Manager</h2>
                   <p>
                     Browse and manage files on <strong>{currentServer.hostname}</strong>. Upload,
                     download, create folders, edit text files, and perform file operations with
@@ -307,7 +335,6 @@ const HostManage = () => {
             {effectiveTab === 'provisioning' && (
               <div>
                 <div className="mb-4">
-                  <h2 className="fs-5 fw-bold">Provisioners</h2>
                   <p>
                     Manage provisioner packages on <strong>{currentServer.hostname}</strong>. Import
                     package families from a folder, archive, or git repository; delete versions no
@@ -320,11 +347,72 @@ const HostManage = () => {
               </div>
             )}
 
+            {/* Provisioning Network Tab */}
+            {effectiveTab === 'provisioning-network' && (
+              <div>
+                <div className="mb-4">
+                  <p>
+                    Each host has <strong>one</strong> provisioning network — a host-side interface
+                    and DHCP server machines can use during provisioning, defined by the
+                    agent&apos;s <code>provisioning.network</code> settings (subnet, host IP, DHCP
+                    range). This page controls that one network&apos;s lifecycle on{' '}
+                    <strong>{currentServer.hostname}</strong>; it is dormant by default.
+                  </p>
+                </div>
+
+                <ProvisioningNetworkPanel server={currentServer} />
+              </div>
+            )}
+
+            {/* Orchestration Tab */}
+            {effectiveTab === 'orchestration' && (
+              <div>
+                <div className="mb-4">
+                  <p>
+                    Ordered machine boot and shutdown on <strong>{currentServer.hostname}</strong>.
+                    When enabled, autostart machines boot highest-priority-first at agent start;
+                    shutdown at agent exit runs lowest first. Priority edits apply immediately.
+                  </p>
+                </div>
+
+                <OrchestrationPanel server={currentServer} />
+              </div>
+            )}
+
+            {/* Provisioning Profiles Tab */}
+            {effectiveTab === 'provisioning-profiles' && (
+              <div>
+                <div className="mb-4">
+                  <p>
+                    Reusable provisioning bundles on <strong>{currentServer.hostname}</strong> —
+                    credentials, sync folders, provisioners, and variables you can apply to any
+                    machine without a provisioner package.
+                  </p>
+                </div>
+
+                <ProvisioningProfiles server={currentServer} />
+              </div>
+            )}
+
+            {/* Templates Tab */}
+            {effectiveTab === 'templates' && (
+              <div>
+                <div className="mb-4">
+                  <p>
+                    The local template registry on <strong>{currentServer.hostname}</strong> — the
+                    base boxes machine creation clones from. Pull boxes here ahead of time, or let
+                    creation chain the download automatically.
+                  </p>
+                </div>
+
+                <TemplatesManagement server={currentServer} />
+              </div>
+            )}
+
             {/* Installer Files Tab */}
             {effectiveTab === 'installer-files' && (
               <div>
                 <div className="mb-4">
-                  <h2 className="fs-5 fw-bold">Installer Files</h2>
                   <p>
                     The hash-verified file cache on <strong>{currentServer.hostname}</strong> —
                     installers, fixpacks, and hotfixes that machine creation mounts into working
@@ -337,11 +425,25 @@ const HostManage = () => {
               </div>
             )}
 
+            {/* Database Tab */}
+            {effectiveTab === 'database' && (
+              <div>
+                <div className="mb-4">
+                  <p>
+                    The agent&apos;s own storage on <strong>{currentServer.hostname}</strong> —
+                    per-database file sizes and row counts, with vacuum, analyze, and retention
+                    cleanup maintenance.
+                  </p>
+                </div>
+
+                <DatabasePanel server={currentServer} />
+              </div>
+            )}
+
             {/* User & Group Management Tab */}
             {effectiveTab === 'user-group' && (
               <div>
                 <div className="mb-4">
-                  <h2 className="fs-5 fw-bold">User and Groups</h2>
                   <p>
                     Manage system users, groups, and roles on{' '}
                     <strong>{currentServer.hostname}</strong>. Create, modify, and delete user

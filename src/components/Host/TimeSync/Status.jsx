@@ -93,10 +93,7 @@ const TimeSyncStatus = ({ server, onError }) => {
         server.port,
         server.protocol,
         'system/time-sync/sync',
-        'POST',
-        {
-          created_by: 'api',
-        }
+        'POST'
       );
 
       if (result.success) {
@@ -139,7 +136,6 @@ const TimeSyncStatus = ({ server, onError }) => {
           target_system: targetService, // 'ntp', 'chrony', or 'ntpsec'
           preserve_servers: true,
           install_if_needed: true,
-          created_by: 'api',
         }
       );
 

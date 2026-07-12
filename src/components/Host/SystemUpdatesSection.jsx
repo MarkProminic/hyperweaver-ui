@@ -368,7 +368,6 @@ const SystemUpdatesSection = ({ server, onError }) => {
         {
           full: false,
           publishers: ['omnios'],
-          created_by: 'api',
         }
       );
       if (response.success) {
@@ -400,7 +399,6 @@ const SystemUpdatesSection = ({ server, onError }) => {
           accept_licenses: true,
           backup_be: true,
           reject_packages: [],
-          created_by: 'api',
         }
       );
       if (response.success) {

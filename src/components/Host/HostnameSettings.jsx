@@ -73,7 +73,6 @@ const HostnameSettings = ({ server, onError }) => {
         {
           hostname: newHostname.trim(),
           apply_immediately: applyImmediately,
-          created_by: 'api',
         }
       );
 

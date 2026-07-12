@@ -134,7 +134,6 @@ const TimezoneSettings = ({ server, onError }) => {
         'PUT',
         {
           timezone: selectedTimezone,
-          created_by: 'api',
         }
       );
 

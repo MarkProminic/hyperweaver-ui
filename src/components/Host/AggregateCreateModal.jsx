@@ -169,7 +169,6 @@ const AggregateCreateModal = ({
       {
         action: 'disable',
         fmri: 'svc:/network/cdp:default',
-        created_by: 'api',
       }
     );
 
@@ -190,7 +189,6 @@ const AggregateCreateModal = ({
       lacp_mode: formData.lacp_mode,
       lacp_timer: formData.lacp_timer,
       temporary: formData.temporary,
-      created_by: 'api',
     };
 
     if (formData.unicast_address.trim()) {

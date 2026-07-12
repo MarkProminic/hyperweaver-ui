@@ -173,7 +173,6 @@ const VncViewerReact = forwardRef(
 
     const handleRefresh = useCallback(() => {
       if (vncRef.current) {
-        console.log(`🔄 REACT-VNC: Refreshing connection to ${machineName}`);
         if (connected) {
           vncRef.current.disconnect();
         }
@@ -183,28 +182,25 @@ const VncViewerReact = forwardRef(
           vncRef.current.connect();
         }, 1000);
       }
-    }, [connected, machineName]);
+    }, [connected]);
 
     // Enhanced control handlers
     const handleConnect = useCallback(() => {
       if (vncRef.current && !connected && !connecting) {
-        console.log(`🔌 REACT-VNC: Manually connecting to ${machineName}`);
         setConnecting(true);
         setError('');
         vncRef.current.connect();
       }
-    }, [connected, connecting, machineName]);
+    }, [connected, connecting]);
 
     const handleDisconnect = useCallback(() => {
       if (vncRef.current && connected) {
-        console.log(`🔌 REACT-VNC: Manually disconnecting from ${machineName}`);
         vncRef.current.disconnect();
       }
-    }, [connected, machineName]);
+    }, [connected]);
 
     const handleCtrlAltDel = useCallback(() => {
       if (vncRef.current && connected) {
-        console.log(`⌨️ REACT-VNC: Sending Ctrl+Alt+Del to ${machineName}`);
         vncRef.current.sendCtrlAltDel();
       }
 
@@ -212,7 +208,7 @@ const VncViewerReact = forwardRef(
       if (onCtrlAltDel) {
         onCtrlAltDel();
       }
-    }, [connected, machineName, onCtrlAltDel]);
+    }, [connected, onCtrlAltDel]);
 
     // Expose control functions to parent component
     useEffect(() => {
@@ -226,7 +222,6 @@ const VncViewerReact = forwardRef(
 
     // Connection event handlers
     const handleVncConnect = () => {
-      console.log(`✅ REACT-VNC: Connected to ${machineName}`);
       setConnected(true);
       setConnecting(false);
       setError('');
@@ -237,7 +232,6 @@ const VncViewerReact = forwardRef(
     };
 
     const handleVncDisconnect = event => {
-      console.log(`❌ REACT-VNC: Disconnected from ${machineName}:`, event);
       // Only refresh the ticket after a real drop (we were connected), so a failing
       // initial connect can't spin refetch→reconnect. react-vnc paces its own retries.
       if (connected) {
@@ -252,7 +246,6 @@ const VncViewerReact = forwardRef(
     };
 
     const handleCredentialsRequired = () => {
-      console.log(`🔐 REACT-VNC: Credentials required for ${machineName}`);
       setError('VNC authentication required - this should not happen with zadm vnc');
     };
 
@@ -264,7 +257,6 @@ const VncViewerReact = forwardRef(
 
     // Clipboard event handler
     const handleClipboard = event => {
-      console.log(`📋 REACT-VNC: Clipboard event for ${machineName}:`, event);
       if (onClipboard) {
         onClipboard(event);
       }

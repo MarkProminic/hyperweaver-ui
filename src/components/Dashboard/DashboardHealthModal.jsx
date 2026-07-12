@@ -4,12 +4,9 @@ import { ContentModal } from '../common';
 
 import { getServerHealthStatus } from './dashboardUtils';
 
-/**
- * Modal showing detailed health issues for unhealthy servers.
- */
-const HealthIssueCard = ({ serverResult }) => {
+/** Every displayable issue on one server result — the card just renders these. */
+const collectIssues = serverResult => {
   const status = getServerHealthStatus(serverResult);
-  const statusColor = status === 'offline' ? 'alert-danger' : 'alert-warning';
   const issues = [];
   const rebootInfo = serverResult.healthData?.reboot_info;
 
@@ -50,12 +47,23 @@ const HealthIssueCard = ({ serverResult }) => {
     );
   }
 
+  return { status, issues };
+};
+
+/**
+ * Modal showing detailed health issues for unhealthy servers.
+ */
+const HealthIssueCard = ({ serverResult }) => {
+  const { status, issues } = collectIssues(serverResult);
+  const statusColor = status === 'offline' ? 'alert-danger' : 'alert-warning';
+
   return (
     <div
       className={`alert ${serverResult.healthData?.reboot_required ? 'alert-warning' : statusColor} mb-3`}
     >
       <div className="d-flex justify-content-between align-items-center">
-        <strong>{serverResult.server.hostname}</strong>
+        {/* The agent's self-reported hostname beats the registered address. */}
+        <strong>{serverResult.data?.hostname || serverResult.server.hostname}</strong>
         {serverResult.healthData?.reboot_required && (
           <span className="badge text-bg-warning d-inline-flex align-items-center gap-1">
             <i className="fas fa-redo" />

@@ -13,6 +13,7 @@ import SettingsFieldList, { organizeBySection, schemaNodeForPath } from './Agent
 import { AgentSettingsBackupModal, AgentSettingsConfirmModal } from './AgentSettingsModals';
 import AgentSettingsOrchestration, { isOrchestrationSection } from './AgentSettingsOrchestration';
 import ApiKeysTab from './ApiKeysTab';
+import ApplicationsTab from './ApplicationsTab';
 import HostPageHeader from './Host/HostPageHeader';
 
 const AgentSettings = () => {
@@ -595,9 +596,9 @@ const AgentSettings = () => {
                   <span>API Management</span>
                 </button>
               </li>
-              {/* Global secrets ride the provisioning surface (sync item 11) —
-                  a store of its own, deliberately OUT of GET /settings. */}
-              {hasFeature(currentServer, 'provisioning') && (
+              {/* Global secrets store — its own `secrets` token (Mark's
+                  option-(a) word), deliberately OUT of GET /settings. */}
+              {hasFeature(currentServer, 'secrets') && (
                 <li className="nav-item">
                   <button
                     type="button"
@@ -607,6 +608,22 @@ const AgentSettings = () => {
                     aria-selected={activeTab === 'secrets'}
                   >
                     <span>Global Secrets</span>
+                  </button>
+                </li>
+              )}
+              {/* External applications — top-level `applications[]`, which the
+                  schema-section tabs never render (it's an array, not an
+                  object); its own friendly editor, gated on host-launchers. */}
+              {hasFeature(currentServer, 'host-launchers') && (
+                <li className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === 'applications' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('applications')}
+                    role="tab"
+                    aria-selected={activeTab === 'applications'}
+                  >
+                    <span>Applications</span>
                   </button>
                 </li>
               )}
@@ -673,6 +690,7 @@ const AgentSettings = () => {
                                 items={directFields}
                                 schema={schema}
                                 onSettingChange={handleSettingChange}
+                                server={currentServer}
                               />
                             </div>
                           </div>
@@ -700,6 +718,7 @@ const AgentSettings = () => {
                                   items={sub.fields}
                                   schema={schema}
                                   onSettingChange={handleSettingChange}
+                                  server={currentServer}
                                 />
                               </div>
                             </div>
@@ -712,9 +731,18 @@ const AgentSettings = () => {
                 <div className={`tab-pane ${activeTab === 'api_management' ? 'active' : ''}`}>
                   <ApiKeysTab />
                 </div>
-                {hasFeature(currentServer, 'provisioning') && (
+                {hasFeature(currentServer, 'secrets') && (
                   <div className={`tab-pane ${activeTab === 'secrets' ? 'active' : ''}`}>
                     <AgentSecretsTab />
+                  </div>
+                )}
+                {hasFeature(currentServer, 'host-launchers') && (
+                  <div className={`tab-pane ${activeTab === 'applications' ? 'active' : ''}`}>
+                    <ApplicationsTab
+                      applications={settings.applications || []}
+                      onChange={next => handleSettingChange(['applications'], next)}
+                      server={currentServer}
+                    />
                   </div>
                 )}
               </div>

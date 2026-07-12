@@ -1,25 +1,56 @@
 import PropTypes from 'prop-types';
 
 /**
- * Minimal networks editor for the machine-create wizard (sync item 12): one
- * row per spec `networks[]` entry — bridge (picker fed by the agent's
+ * Networks editor for the machine-create wizard: one row per spec
+ * `networks[]` entry — type (external = the user's bridged network,
+ * host = host-only), bridge (picker fed by the agent's
  * GET /provisioning/bridged-interfaces, free text preserved), DHCP toggle,
- * and static addressing. Entries pass to the agent VERBATIM, so keys a row
- * already carries beyond these fields (an edited spec's mac, dns, type, …)
- * survive the round-trip untouched.
+ * static addressing, MAC (auto = the hypervisor assigns), and two DNS
+ * entries (the networking role's netplan template reads dns[0] AND dns[1],
+ * even under DHCP — proven sequence, sync 2026-07-07). Entries pass to the
+ * agent VERBATIM, so keys a row already carries beyond these fields survive
+ * the round-trip untouched.
  */
 
-const FIELDS = [
+const ADDRESS_FIELDS = [
   { key: 'address', label: 'Address' },
   { key: 'netmask', label: 'Netmask' },
   { key: 'gateway', label: 'Gateway' },
 ];
 
-const NetworksEditor = ({ networks, onNetworksChange, bridgeOptions, loading }) => {
+// Per-adapter tuning keys the create wire takes on each networks[] entry.
+const TUNING_FIELDS = [
+  { key: 'promisc', label: 'Promiscuous', suggest: ['deny', 'allow-vms', 'allow-all'] },
+  { key: 'speed', label: 'Speed (kbps)', type: 'number' },
+  { key: 'boot_prio', label: 'Boot prio', type: 'number' },
+  { key: 'bandwidth_group', label: 'Bandwidth group' },
+  {
+    key: 'nic_type',
+    label: 'NIC type',
+    suggest: ['Am79C970A', 'Am79C973', '82540EM', '82543GC', '82545EM', 'virtio'],
+  },
+];
+
+const NetworksEditor = ({
+  networks,
+  onNetworksChange,
+  bridgeOptions,
+  nicEnums = null,
+  loading,
+}) => {
   const setNetwork = (index, patch) => {
     onNetworksChange(
       networks.map((network, i) => (i === index ? { ...network, ...patch } : network))
     );
+  };
+
+  const setDns = (index, dnsIndex, value) => {
+    const dns = Array.isArray(networks[index].dns) ? [...networks[index].dns] : [];
+    while (dns.length < 2) {
+      dns.push('');
+    }
+    dns[dnsIndex] = value;
+    setNetwork(index, { dns });
   };
 
   return (
@@ -31,10 +62,35 @@ const NetworksEditor = ({ networks, onNetworksChange, bridgeOptions, loading }) 
       )}
       {networks.map((network, index) => {
         const rowKey = `network-${index}`;
+        const dns = Array.isArray(network.dns) ? network.dns : [];
         return (
           <div className="border rounded p-2" key={rowKey}>
+            {index === 0 && (
+              <p className="form-text text-muted mt-0 mb-2">
+                The first network becomes the {`machine's`} real network after provisioning —
+                usually your bridged external.
+              </p>
+            )}
             <div className="row g-2 align-items-end">
-              <div className="col-12 col-md-3">
+              <div className="col-6 col-md-2">
+                <label className="form-label small mb-1" htmlFor={`${rowKey}-type`}>
+                  Type
+                </label>
+                <input
+                  id={`${rowKey}-type`}
+                  className="form-control form-control-sm"
+                  type="text"
+                  list={`${rowKey}-type-options`}
+                  value={network.type ?? ''}
+                  onChange={e => setNetwork(index, { type: e.target.value })}
+                  disabled={loading}
+                />
+                <datalist id={`${rowKey}-type-options`}>
+                  <option value="external" />
+                  <option value="host" />
+                </datalist>
+              </div>
+              <div className="col-6 col-md-3">
                 <label className="form-label small mb-1" htmlFor={`${rowKey}-bridge`}>
                   Bridge / NIC
                 </label>
@@ -56,6 +112,20 @@ const NetworksEditor = ({ networks, onNetworksChange, bridgeOptions, loading }) 
                 )}
               </div>
               <div className="col-6 col-md-2">
+                <label className="form-label small mb-1" htmlFor={`${rowKey}-mac`}>
+                  MAC
+                </label>
+                <input
+                  id={`${rowKey}-mac`}
+                  className="form-control form-control-sm"
+                  type="text"
+                  placeholder="auto"
+                  value={network.mac ?? ''}
+                  onChange={e => setNetwork(index, { mac: e.target.value })}
+                  disabled={loading}
+                />
+              </div>
+              <div className="col-6 col-md-2">
                 <div className="form-check form-switch mb-1">
                   <input
                     id={`${rowKey}-dhcp`}
@@ -71,21 +141,6 @@ const NetworksEditor = ({ networks, onNetworksChange, bridgeOptions, loading }) 
                   </label>
                 </div>
               </div>
-              {FIELDS.map(field => (
-                <div className="col-6 col-md-2" key={field.key}>
-                  <label className="form-label small mb-1" htmlFor={`${rowKey}-${field.key}`}>
-                    {field.label}
-                  </label>
-                  <input
-                    id={`${rowKey}-${field.key}`}
-                    className="form-control form-control-sm"
-                    type="text"
-                    value={network[field.key] ?? ''}
-                    onChange={e => setNetwork(index, { [field.key]: e.target.value })}
-                    disabled={loading || !!network.dhcp4}
-                  />
-                </div>
-              ))}
               <div className="col-auto ms-auto">
                 <button
                   type="button"
@@ -100,6 +155,98 @@ const NetworksEditor = ({ networks, onNetworksChange, bridgeOptions, loading }) 
                 </button>
               </div>
             </div>
+            <div className="row g-2 align-items-end mt-0">
+              {ADDRESS_FIELDS.map(field => (
+                <div className="col-6 col-md-2" key={field.key}>
+                  <label className="form-label small mb-1" htmlFor={`${rowKey}-${field.key}`}>
+                    {field.label}
+                  </label>
+                  <input
+                    id={`${rowKey}-${field.key}`}
+                    className="form-control form-control-sm"
+                    type="text"
+                    value={network[field.key] ?? ''}
+                    onChange={e => setNetwork(index, { [field.key]: e.target.value })}
+                    disabled={loading || !!network.dhcp4}
+                  />
+                </div>
+              ))}
+              {[0, 1].map(dnsIndex => (
+                <div className="col-6 col-md-2" key={`dns-${dnsIndex}`}>
+                  <label className="form-label small mb-1" htmlFor={`${rowKey}-dns-${dnsIndex}`}>
+                    DNS {dnsIndex + 1}
+                  </label>
+                  <input
+                    id={`${rowKey}-dns-${dnsIndex}`}
+                    className="form-control form-control-sm"
+                    type="text"
+                    placeholder={dnsIndex === 0 ? '1.1.1.1' : '1.0.0.1'}
+                    value={dns[dnsIndex] ?? ''}
+                    onChange={e => setDns(index, dnsIndex, e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              ))}
+            </div>
+            <details className="mt-1">
+              <summary className="small text-muted">Adapter tuning</summary>
+              <div className="row g-2 align-items-end mt-0">
+                <div className="col-6 col-md-2">
+                  <label className="form-label small mb-1" htmlFor={`${rowKey}-cable`}>
+                    Cable
+                  </label>
+                  <select
+                    id={`${rowKey}-cable`}
+                    className="form-select form-select-sm"
+                    value={network.cable_connected ?? ''}
+                    onChange={e => setNetwork(index, { cable_connected: e.target.value })}
+                    disabled={loading}
+                  >
+                    <option value="">(default)</option>
+                    <option value="on">connected</option>
+                    <option value="off">disconnected</option>
+                  </select>
+                </div>
+                {TUNING_FIELDS.map(field => {
+                  // knob_values (flat dotted keys) beats the hardcoded list
+                  // when the agent maps it.
+                  const vocabulary = nicEnums?.[`nics.${field.key}`] || field.suggest;
+                  return (
+                    <div className="col-6 col-md-2" key={field.key}>
+                      <label className="form-label small mb-1" htmlFor={`${rowKey}-${field.key}`}>
+                        {field.label}
+                      </label>
+                      {vocabulary ? (
+                        <select
+                          id={`${rowKey}-${field.key}`}
+                          className="form-select form-select-sm"
+                          value={network[field.key] ?? ''}
+                          onChange={e => setNetwork(index, { [field.key]: e.target.value })}
+                          disabled={loading}
+                        >
+                          <option value="">(default)</option>
+                          {vocabulary.map(option => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id={`${rowKey}-${field.key}`}
+                          className="form-control form-control-sm"
+                          type={field.type || 'text'}
+                          placeholder="(default)"
+                          value={network[field.key] ?? ''}
+                          onChange={e => setNetwork(index, { [field.key]: e.target.value })}
+                          disabled={loading}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </details>
           </div>
         );
       })}
@@ -107,7 +254,9 @@ const NetworksEditor = ({ networks, onNetworksChange, bridgeOptions, loading }) 
         <button
           type="button"
           className="btn btn-sm btn-outline-secondary"
-          onClick={() => onNetworksChange([...networks, { dhcp4: true }])}
+          onClick={() =>
+            onNetworksChange([...networks, { type: '', dhcp4: true, mac: 'auto', dns: ['', ''] }])
+          }
           disabled={loading}
         >
           <i className="fas fa-plus me-2" />
@@ -122,6 +271,7 @@ NetworksEditor.propTypes = {
   networks: PropTypes.array.isRequired,
   onNetworksChange: PropTypes.func.isRequired,
   bridgeOptions: PropTypes.arrayOf(PropTypes.string).isRequired,
+  nicEnums: PropTypes.object,
   loading: PropTypes.bool,
 };
 

@@ -207,7 +207,6 @@ const VlanCreateModal = ({ server, onClose, onSuccess, onError }) => {
         link: formData.link.trim(),
         force: formData.force,
         temporary: formData.temporary,
-        created_by: 'api',
       };
 
       // Calculate what the auto-generated name should be

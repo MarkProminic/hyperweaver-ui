@@ -1,15 +1,25 @@
 import PropTypes from 'prop-types';
+import { useNavigate } from 'react-router-dom';
 
+import { useAuth } from '../../contexts/AuthContext';
 import { hasFeature } from '../../utils/capabilities';
+import { canCreateMachines } from '../../utils/permissions';
 import { resourceLabel } from '../../utils/resourceLabel';
 
 const MachineManager = ({ serverStats, currentServer, handleMachineAction }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const plural = resourceLabel(currentServer);
   const singular = resourceLabel(currentServer, { plural: false });
 
-  // Create gates on the op-level `machine-create` feature token (sync-file AGREED) —
-  // agents advertise it when their create surface exists; no hypervisor-value checks.
-  const createAvailable = hasFeature(currentServer, 'machine-create');
+  // Create opens the machine-create wizard on the Machines page (?create=1) —
+  // the SAME gate as its header button: machine-create ∧ provisioner-registry
+  // tokens + admin. (Previously this linked to /ui/zone-register, the legacy
+  // setup form — a dead-wrong target.)
+  const createAvailable =
+    hasFeature(currentServer, 'machine-create') &&
+    hasFeature(currentServer, 'provisioner-registry') &&
+    canCreateMachines(user?.role);
 
   return (
     <div className="card mb-5">
@@ -87,10 +97,14 @@ const MachineManager = ({ serverStats, currentServer, handleMachineAction }) => 
                 <span>View All {plural}</span>
               </a>
               {createAvailable && (
-                <a href="/ui/zone-register" className="btn btn-success">
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  onClick={() => navigate('/ui/machines?create=1')}
+                >
                   <i className="fas fa-plus me-2" />
-                  <span>Create {singular}</span>
-                </a>
+                  <span>New {singular}</span>
+                </button>
               )}
               {(serverStats.allmachines?.length || 0) - (serverStats.runningmachines?.length || 0) >
                 0 && (

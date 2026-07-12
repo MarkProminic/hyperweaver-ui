@@ -44,7 +44,7 @@ const useHostFileManagerHandlers = ({
         console.log('Loading files for path:', path);
 
         // Load current directory files
-        const currentFiles = await api.loadFiles(path);
+        const { items: currentFiles, currentPath: answeredPath } = await api.loadFiles(path);
 
         // Always maintain root directories for navigation
         let cachedDirectories = directoryCache.get('/') || [];
@@ -52,7 +52,7 @@ const useHostFileManagerHandlers = ({
         // Load root directories if not cached
         if (cachedDirectories.length === 0) {
           try {
-            const rootFiles = await api.loadFiles('/');
+            const { items: rootFiles } = await api.loadFiles('/');
             cachedDirectories = rootFiles.filter(file => file.isDirectory);
             setDirectoryCache(prev => new Map(prev).set('/', cachedDirectories));
           } catch (rootErr) {
@@ -88,7 +88,7 @@ const useHostFileManagerHandlers = ({
               let parentDirs = directoryCache.get(searchPath);
               if (!parentDirs) {
                 try {
-                  const parentFiles = await api.loadFiles(searchPath);
+                  const { items: parentFiles } = await api.loadFiles(searchPath);
                   parentDirs = parentFiles.filter(file => file.isDirectory);
                   setDirectoryCache(prev => new Map(prev).set(searchPath, parentDirs));
                 } catch (parentErr) {
@@ -113,6 +113,12 @@ const useHostFileManagerHandlers = ({
 
         console.log('Combined files for cubone:', combinedFiles.length, 'files');
         setFiles(combinedFiles);
+        // Track the RESOLVED path the agent answered — '/' resolves to a
+        // drive root (C:/) on Windows agents, and cubone's content pane
+        // only matches items against the path it was told is current.
+        if (answeredPath && answeredPath !== path) {
+          setCurrentPath(answeredPath);
+        }
       } catch (loadErr) {
         console.error('Error loading files:', loadErr);
         setError(`Failed to load files: ${loadErr.message}`);
@@ -121,7 +127,17 @@ const useHostFileManagerHandlers = ({
         setIsLoading(false);
       }
     },
-    [server, currentPath, api, directoryCache, setDirectoryCache, setFiles, setIsLoading, setError]
+    [
+      server,
+      currentPath,
+      api,
+      directoryCache,
+      setDirectoryCache,
+      setFiles,
+      setIsLoading,
+      setError,
+      setCurrentPath,
+    ]
   );
 
   // Create folder handler

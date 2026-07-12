@@ -18,6 +18,46 @@ const AuthContext = createContext();
 // tray token is single-use, so only the first attempt may consume it.
 let trayClaimStarted = false;
 
+// One id per tab: BroadcastChannel delivers to OTHER channel instances in the
+// SAME tab too, so every message carries its sender and handlers drop their
+// own echoes.
+const TAB_ID = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const AUTH_CHANNEL = 'hw-auth';
+
+/**
+ * Tray/hwa:// handoff epilogue (Mark's design, 2026-07-07): tell every other
+ * open tab the session is live — they reload into it, since localStorage
+ * already carries the key — then close THIS agent-spawned tab, but ONLY when
+ * a sibling actually answered the ping. The same handoff serves the
+ * tray-icon open where this tab is the only one and must stay. A browser
+ * that refuses window.close() just leaves a working logged-in tab.
+ */
+const announceHandoffAndMaybeClose = () => {
+  let channel;
+  try {
+    channel = new BroadcastChannel(AUTH_CHANNEL);
+  } catch {
+    return; // no BroadcastChannel — the storage event still refreshes siblings
+  }
+  let sibling = false;
+  channel.onmessage = event => {
+    if (event.data?.type === 'auth-pong' && event.data.senderId !== TAB_ID) {
+      sibling = true;
+    }
+  };
+  channel.postMessage({ type: 'auth-ping', senderId: TAB_ID });
+  setTimeout(() => {
+    channel.postMessage({ type: 'auth-updated', senderId: TAB_ID });
+    // A beat for the update to leave before the channel (and maybe tab) dies.
+    setTimeout(() => {
+      channel.close();
+      if (sibling) {
+        window.close();
+      }
+    }, 100);
+  }, 400);
+};
+
 /**
  * Custom hook to use authentication context
  * @returns {Object} Authentication context value
@@ -157,6 +197,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             axios.defaults.headers.common.Authorization = `Bearer ${storedKey}`;
             setLoading(false);
+            announceHandoffAndMaybeClose();
             return;
           }
         } catch (storedErr) {
@@ -175,6 +216,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             axios.defaults.headers.common.Authorization = `Bearer ${trayKey}`;
             setLoading(false);
+            announceHandoffAndMaybeClose();
             return;
           }
         } catch (trayErr) {
@@ -280,6 +322,50 @@ export const AuthProvider = ({ children }) => {
     );
     return () => axios.interceptors.response.eject(interceptorId);
   }, [isAuthenticated, clearAuth]);
+
+  /**
+   * Multi-tab session handoff (Mark's design, 2026-07-07): when ANOTHER tab
+   * completes the tray/hwa:// handoff, this tab reloads into the session —
+   * localStorage already carries the key, so the reload comes up signed in.
+   * auth-ping is answered so the handoff tab knows a sibling exists before
+   * self-closing. The storage event (fires only in OTHER tabs) is the
+   * no-BroadcastChannel fallback. One-to-many by nature: every open tab
+   * hears the broadcast and refreshes.
+   */
+  useEffect(() => {
+    const stale = () => !isAuthenticated || localStorage.getItem('authToken') !== token;
+
+    let channel = null;
+    try {
+      channel = new BroadcastChannel(AUTH_CHANNEL);
+      channel.onmessage = event => {
+        const { type, senderId } = event.data || {};
+        if (senderId === TAB_ID) {
+          return;
+        }
+        if (type === 'auth-ping') {
+          channel.postMessage({ type: 'auth-pong', senderId: TAB_ID });
+        } else if (type === 'auth-updated' && stale()) {
+          window.location.reload();
+        }
+      };
+    } catch {
+      // BroadcastChannel unavailable — the storage listener below covers it.
+    }
+
+    const onStorage = event => {
+      if (event.key === 'authToken' && event.newValue && stale()) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => {
+      if (channel) {
+        channel.close();
+      }
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [isAuthenticated, token]);
 
   /**
    * Login user with credentials

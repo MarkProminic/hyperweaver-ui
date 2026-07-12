@@ -140,7 +140,6 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
         forward_delay: parseInt(formData.forward_delay),
         force_protocol: parseInt(formData.force_protocol),
         links: formData.links,
-        created_by: 'api',
       };
 
       const result = await makeAgentRequest(

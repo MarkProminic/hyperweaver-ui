@@ -35,7 +35,12 @@ const ServerCard = ({ serverResult, onNavigateToServer }) => {
             <span className={statusColor} title={statusTooltip}>
               <i className="fas fa-circle small" />
             </span>
-            <span>{server.hostname}</span>
+            {/* A user-set entityName wins; then the agent's self-reported
+                hostname beats the registered address (127.0.0.1 in Direct
+                mode); a dead connection falls back. */}
+            <span title={`Registered as ${server.hostname}:${server.port}`}>
+              {server.entityName || data?.hostname || server.hostname}
+            </span>
           </h2>
 
           {success && data ? (

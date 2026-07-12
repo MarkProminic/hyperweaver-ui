@@ -1,4 +1,5 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
+import PropTypes from 'prop-types';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -9,17 +10,28 @@ import { useMachineDetails } from '../hooks/useMachineDetails';
 import { useMachineManager } from '../hooks/useMachineManager';
 import { useVncSession } from '../hooks/useVncSession';
 import { useZloginSession } from '../hooks/useZloginSession';
-import { hasConsole, hasFeature, hasMachines } from '../utils/capabilities';
-import { canCreateMachines } from '../utils/permissions';
+import { hasConsole, hasFeature, hasHypervisor, hasMachines } from '../utils/capabilities';
+import { canCreateMachines, canStartStopMachines } from '../utils/permissions';
 import { resourceLabel } from '../utils/resourceLabel';
 
+import { DismissibleAlert } from './common';
 import ConsoleDisplay from './ConsoleDisplay';
+import CloneMachineModal from './Machine/CloneMachineModal';
+import { CurrentHardwarePanel, parseHardware } from './Machine/CurrentHardware';
+import DisplayResizeModal from './Machine/DisplayResizeModal';
+import GuestExecModal from './Machine/GuestExecModal';
+import ImportMachineModal from './Machine/ImportMachineModal';
 import MachineCreateModal from './Machine/MachineCreateModal';
+import MachineGuestAgent from './Machine/MachineGuestAgent';
+import MachineGuestInfo from './Machine/MachineGuestInfo';
 import MachineHardware from './Machine/MachineHardware';
 import MachineInfo from './Machine/MachineInfo';
-import MachineNetwork from './Machine/MachineNetwork';
+import MachineListPanel from './Machine/MachineListPanel';
 import MachineProvisioning from './Machine/MachineProvisioning';
-import MachineStorage from './Machine/MachineStorage';
+import MachineSettings from './Machine/MachineSettings';
+import MachineSnapshots from './Machine/MachineSnapshots';
+import MoveMachineModal from './Machine/MoveMachineModal';
+import UnattendedInstallModal from './Machine/UnattendedInstallModal';
 import VncModal from './Machine/VncModal';
 import ZloginModal from './Machine/ZloginModal';
 
@@ -34,13 +46,114 @@ import ZloginModal from './Machine/ZloginModal';
  * This component automatically responds to these global selections and displays
  * details for the currently selected machine on the currently selected server.
  */
+
+/** The page-top alert stack — extracted to keep Machines under the complexity cap. */
+const PageAlerts = ({ error, machinesError, detailsError, notice, onDismissNotice }) => (
+  <>
+    {error && <DismissibleAlert variant="alert-danger" text={error} />}
+    {machinesError && <DismissibleAlert variant="alert-danger" text={machinesError} />}
+    {detailsError && <DismissibleAlert variant="alert-danger" text={detailsError} />}
+    {notice && (
+      <DismissibleAlert
+        variant={notice.warning ? 'alert-warning' : 'alert-info'}
+        text={notice.text}
+        onHide={onDismissNotice}
+      />
+    )}
+  </>
+);
+
+PageAlerts.propTypes = {
+  error: PropTypes.string,
+  machinesError: PropTypes.string,
+  detailsError: PropTypes.string,
+  notice: PropTypes.object,
+  onDismissNotice: PropTypes.func.isRequired,
+};
+
+// List view's New/Import buttons — the detail view's actions live in the
+// navbar's {Machine} Controls dropdown, its tabs in the navbar's context strip.
+const HeaderActions = ({
+  selectedMachine,
+  singular,
+  wizardAvailable,
+  importAvailable,
+  onNew,
+  onImport,
+}) =>
+  !selectedMachine ? (
+    <div className="d-flex gap-2">
+      {importAvailable && (
+        <button type="button" className="btn btn-sm btn-outline-primary" onClick={onImport}>
+          <i className="fas fa-file-import me-2" />
+          Import
+        </button>
+      )}
+      {wizardAvailable && (
+        <button type="button" className="btn btn-sm btn-primary" onClick={onNew}>
+          <i className="fas fa-plus me-2" />
+          New {singular}
+        </button>
+      )}
+    </div>
+  ) : null;
+
+HeaderActions.propTypes = {
+  selectedMachine: PropTypes.string,
+  singular: PropTypes.string.isRequired,
+  wizardAvailable: PropTypes.bool,
+  importAvailable: PropTypes.bool,
+  onNew: PropTypes.func.isRequired,
+  onImport: PropTypes.func.isRequired,
+};
+
+// Detail panes: Overview | Settings (machine-modify + create permission) |
+// Snapshots (machine-snapshots token) | Provisioning (every machine — a bare
+// one gets the enable path there). The navbar's ContextTabs strip drives
+// selection via ?tab=; an unavailable or unknown tab falls back to Overview,
+// so the panes carry no gates of their own.
+const availableDetailTabs = (editAvailable, snapshotsViewable) => [
+  'overview',
+  ...(editAvailable ? ['settings'] : []),
+  ...(snapshotsViewable ? ['snapshots'] : []),
+  'provisioning',
+];
+
+const resolveDetailTab = (tabs, wanted) => (tabs.includes(wanted) ? wanted : 'overview');
+
+const machinePageGates = (currentServer, role) => ({
+  wizardAvailable:
+    hasFeature(currentServer, 'machine-create') &&
+    hasFeature(currentServer, 'provisioner-registry') &&
+    canCreateMachines(role),
+  editAvailable: hasFeature(currentServer, 'machine-modify') && canCreateMachines(role),
+  cloneAvailable: hasFeature(currentServer, 'machine-create') && canCreateMachines(role),
+  snapshotsAvailable: hasFeature(currentServer, 'machine-snapshots') && canCreateMachines(role),
+  unattendedAvailable: hasHypervisor(currentServer, 'virtualbox') && canCreateMachines(role),
+  guestControlAvailable: hasHypervisor(currentServer, 'virtualbox') && canStartStopMachines(role),
+  // Run-in-Guest rides two transports: Guest Additions on VirtualBox, the
+  // QEMU guest agent (guest-agent feature token) on bhyve.
+  guestExecAvailable:
+    (hasHypervisor(currentServer, 'virtualbox') ||
+      (hasHypervisor(currentServer, 'bhyve') && hasFeature(currentServer, 'guest-agent'))) &&
+    canStartStopMachines(role),
+  guestExecFlavor: hasHypervisor(currentServer, 'virtualbox') ? 'additions' : 'qga',
+  // Console column renders only when the agent offers a console surface at all
+  // (vnc/zlogin/rdp console tokens or the ssh feature) — otherwise a placeholder.
+  consoleAvailable:
+    hasConsole(currentServer, 'vnc') ||
+    hasFeature(currentServer, 'ssh') ||
+    hasConsole(currentServer, 'rdp') ||
+    hasConsole(currentServer, 'zlogin'),
+});
+
 const Machines = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedMachine, setSelectedMachine] = useState(null);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeConsoleType, setActiveConsoleType] = useState('vnc'); // 'vnc' or 'zlogin'
+  const [activeConsoleType, setActiveConsoleType] = useState('vnc'); // 'vnc' | 'zlogin' | 'ssh' | 'rdp'
   const [previewReadOnly, setPreviewReadOnly] = useState(true); // Track preview terminal read-only state
   const [previewReconnectKey, setPreviewReconnectKey] = useState(0); // Force preview reconnection
   const [previewVncViewOnly, setPreviewVncViewOnly] = useState(true); // Track preview VNC view-only state
@@ -77,30 +190,51 @@ const Machines = () => {
     reloadMachineDetails,
   } = useMachineDetails(currentServer, currentMachine);
 
-  // Machine-create wizard (sync item 10): shared create/modify modal —
-  // gated on the machine-create + provisioning tokens (forms render from
-  // provisioner metadata, so both must be live) and NEVER on hypervisor
-  // (D14). editTarget null = create; set = modify that machine's spec.
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState(null);
-  // {text, warning} — warning styling carries the requires_restart answer
-  // ("changes apply on the next start") the way settings sections do.
+  // {text, warning} — warning flags a chained download or requires_restart.
   const [provisioningNotice, setProvisioningNotice] = useState(null);
-  const wizardAvailable =
-    hasFeature(currentServer, 'machine-create') &&
-    hasFeature(currentServer, 'provisioning') &&
-    canCreateMachines(user?.role);
+  const [cloneOpen, setCloneOpen] = useState(false);
+  // Take Snapshot lives in the page header; the Snapshots TAB lists/restores/deletes.
+  const [snapshotTakeOpen, setSnapshotTakeOpen] = useState(false);
+  const [installOpen, setInstallOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [execOpen, setExecOpen] = useState(false);
+  const [displayOpen, setDisplayOpen] = useState(false);
+  const {
+    wizardAvailable,
+    editAvailable,
+    cloneAvailable,
+    snapshotsAvailable,
+    consoleAvailable,
+    unattendedAvailable,
+    guestControlAvailable,
+    guestExecAvailable,
+    guestExecFlavor,
+  } = machinePageGates(currentServer, user?.role);
 
-  const handleWizardCompleted = ({ message, machineName, taskId, requiresRestart }) => {
-    const suffix = taskId ? ` (task ${taskId})` : '';
-    setProvisioningNotice({ text: `${message}${suffix}`, warning: requiresRestart });
-    loadMachines();
-    if (editTarget) {
-      reloadMachineDetails();
-    } else if (machineName) {
-      selectMachine(machineName);
+  // Provisioning pipeline intents handed over by the navbar Controls menu (?run=).
+  const [provisionAction, setProvisionAction] = useState(null);
+
+  const detailTabs = availableDetailTabs(
+    editAvailable,
+    hasFeature(currentServer, 'machine-snapshots')
+  );
+  const activeDetailTab = resolveDetailTab(detailTabs, searchParams.get('tab') || 'overview');
+
+  const handleWizardCompleted = ({ message, taskId, requiresDownload }) => {
+    const parts = [message];
+    if (taskId) {
+      parts.push(`(task ${taskId})`);
     }
-    setEditTarget(null);
+    if (requiresDownload) {
+      parts.push('— the base box downloads first');
+    }
+    setProvisioningNotice({ text: parts.join(' '), warning: requiresDownload });
+    // The machine row only exists once the finalize child completes — stay
+    // on the LIST (nothing selected) instead of a detail page for a machine
+    // that is not there yet; the notice above carries the task id.
+    loadMachines();
   };
 
   const {
@@ -144,13 +278,6 @@ const Machines = () => {
   const plural = resourceLabel(currentServer);
   const singular = resourceLabel(currentServer, { plural: false });
 
-  // Console column renders only when the agent offers a console surface at all
-  // (vnc console token or the zlogin feature) — otherwise a plain placeholder.
-  const consoleAvailable = hasConsole(currentServer, 'vnc') || hasFeature(currentServer, 'zlogin');
-  // zadm (bhyve) configuration shape vs the VirtualBox flat showvminfo map — the
-  // structured panels only understand zadm; flat maps render as a generic table.
-  const isZadmConfig = !!machineDetails.configuration?.zonename;
-
   const handleMachineSelect = useCallback(
     machineName => {
       selectMachine(machineName);
@@ -184,12 +311,72 @@ const Machines = () => {
       setSearchParams({});
     }
 
+    // Entry points elsewhere (Host page, Dashboard) open the wizard here via
+    // ?create=1 — the gate is the same wizardAvailable the header button uses.
+    if (searchParams.get('create')) {
+      if (wizardAvailable) {
+        setWizardOpen(true);
+      }
+      setSearchParams({});
+    }
+
+    // Navbar Machine Controls: ?take=1 opens the take-snapshot dialog on the
+    // Snapshots tab; ?clone=1 opens the clone modal (the ?create=1 pattern).
+    if (searchParams.get('take')) {
+      if (currentMachine && snapshotsAvailable) {
+        setSnapshotTakeOpen(true);
+      }
+      setSearchParams({ tab: 'snapshots' });
+    }
+
+    if (searchParams.get('clone')) {
+      if (currentMachine && cloneAvailable) {
+        setCloneOpen(true);
+      }
+      const tabParam = searchParams.get('tab');
+      setSearchParams(tabParam ? { tab: tabParam } : {});
+    }
+
+    if (searchParams.get('install')) {
+      if (currentMachine && unattendedAvailable) {
+        setInstallOpen(true);
+      }
+      setSearchParams({});
+    }
+
+    if (searchParams.get('move')) {
+      if (currentMachine && unattendedAvailable) {
+        setMoveOpen(true);
+      }
+      setSearchParams({});
+    }
+
+    if (searchParams.get('exec')) {
+      if (currentMachine && guestExecAvailable) {
+        setExecOpen(true);
+      }
+      setSearchParams({});
+    }
+
+    if (searchParams.get('display')) {
+      if (currentMachine && guestControlAvailable) {
+        setDisplayOpen(true);
+      }
+      setSearchParams({});
+    }
+
+    // Provisioning actions from the Controls menu — the pane executes them.
+    const runParam = searchParams.get('run');
+    if (runParam) {
+      setProvisionAction(runParam);
+      setSearchParams({ tab: 'provisioning' });
+    }
+
     const machineParam = searchParams.get('machine');
     if (machineParam && machines.length > 0) {
       // Check if the machine exists in the current list
       const machineExists = machines.includes(machineParam);
       if (machineExists) {
-        console.log(`🔗 URL PARAM: Auto-selecting machine from URL parameter: ${machineParam}`);
         handleMachineSelect(machineParam);
         // Clear the URL parameter after selection to clean up the URL
         setSearchParams({});
@@ -205,6 +392,13 @@ const Machines = () => {
     handleMachineSelect,
     handleZloginConsole,
     handleVncConsole,
+    wizardAvailable,
+    currentMachine,
+    snapshotsAvailable,
+    cloneAvailable,
+    unattendedAvailable,
+    guestControlAvailable,
+    guestExecAvailable,
   ]);
 
   // Sync local selectedMachine with the global machine selection
@@ -217,12 +411,14 @@ const Machines = () => {
     const hasVnc = machineDetails.active_vnc_session;
     const hasZlogin = machineDetails.zlogin_session;
 
-    console.log(`🔧 CONSOLE AUTO-SWITCH CHECK:`, {
-      hasVnc,
-      hasZlogin,
-      currentType: activeConsoleType,
-      zloginSessionId: machineDetails.zlogin_session?.id,
-    });
+    // SSH and RDP selections are always manual choices over live sessions —
+    // the vnc/zlogin availability logic below must never stomp them.
+    if (
+      (activeConsoleType === 'ssh' && machineDetails.ssh_session?.id) ||
+      (activeConsoleType === 'rdp' && machineDetails.rdp_session)
+    ) {
+      return;
+    }
 
     // LOOP PREVENTION: Only change console type if there's a meaningful difference
     // This prevents VNC disconnect -> console switch -> remount -> VNC disconnect loops
@@ -230,23 +426,25 @@ const Machines = () => {
     if (hasVnc && hasZlogin) {
       // Both active - keep current selection or default to VNC
       if (!activeConsoleType || (activeConsoleType !== 'vnc' && activeConsoleType !== 'zlogin')) {
-        console.log('🔧 CONSOLE SWITCH: Both sessions available, defaulting to VNC');
         setActiveConsoleType('vnc');
       }
     } else if (hasZlogin && !hasVnc) {
       // Only zlogin available - ALWAYS switch to zlogin (don't check current type)
-      console.log('🔧 CONSOLE SWITCH: Only zlogin available, switching to zlogin');
       setActiveConsoleType('zlogin');
     } else if (hasVnc && !hasZlogin) {
       // Only VNC available - ALWAYS switch to VNC (don't check current type)
-      console.log('🔧 CONSOLE SWITCH: Only VNC available, switching to VNC');
       setActiveConsoleType('vnc');
     } else if (!hasVnc && !hasZlogin && activeConsoleType !== 'vnc') {
       // Nothing available - default to VNC (but don't cause unnecessary switches)
-      console.log('🔧 CONSOLE SWITCH: No sessions available, defaulting to VNC');
       setActiveConsoleType('vnc');
     }
-  }, [machineDetails.active_vnc_session, machineDetails.zlogin_session, activeConsoleType]);
+  }, [
+    machineDetails.active_vnc_session,
+    machineDetails.zlogin_session,
+    machineDetails.ssh_session,
+    machineDetails.rdp_session,
+    activeConsoleType,
+  ]);
 
   // Previous state tracking to fix infinite loop
   const prevShowZloginConsole = useRef(showZloginConsole);
@@ -261,13 +459,10 @@ const Machines = () => {
       machineDetails.zlogin_session &&
       selectedMachine
     ) {
-      console.log('🔄 MODAL CLOSE: zlogin modal just closed, reconnecting preview terminal');
-
       // Force preview terminal reconnection by incrementing the reconnect key
       // This will trigger a fresh ZoneShell component mount
       setTimeout(() => {
         setPreviewReconnectKey(prev => prev + 1);
-        console.log('🔄 MODAL CLOSE: Preview terminal reconnection triggered');
       }, 100); // Small delay to ensure modal cleanup is complete
     }
 
@@ -342,6 +537,46 @@ const Machines = () => {
     );
   }
 
+  // Hoisted so the multiline element carries its own parens — the
+  // jsx-wrap-multilines/prettier circular-fix trap (footerExtras pattern).
+  const legacyConsoleDisplay = (
+    <ConsoleDisplay
+      machineDetails={machineDetails}
+      activeConsoleType={activeConsoleType}
+      selectedMachine={selectedMachine}
+      currentServer={currentServer}
+      user={user}
+      loading={loading}
+      loadingVnc={loadingVnc}
+      previewReadOnly={previewReadOnly}
+      previewVncViewOnly={previewVncViewOnly}
+      previewReconnectKey={previewReconnectKey}
+      vncReconnectKey={vncReconnectKey}
+      vncSettings={vncSettings}
+      setActiveConsoleType={setActiveConsoleType}
+      setLoading={setLoading}
+      setLoadingVnc={setLoadingVnc}
+      setError={setError}
+      setPreviewReadOnly={setPreviewReadOnly}
+      setPreviewVncViewOnly={setPreviewVncViewOnly}
+      setMachineDetails={setMachineDetails}
+      startZloginSessionExplicitly={startZloginSessionExplicitly}
+      forceZoneSessionCleanup={forceZoneSessionCleanup}
+      handleZloginConsole={handleZloginConsole}
+      handleVncConsole={handleVncConsole}
+      handleKillVncSession={handleKillVncSession}
+      handleVncQualityChange={handleVncQualityChange}
+      handleVncCompressionChange={handleVncCompressionChange}
+      handleVncResizeChange={handleVncResizeChange}
+      handleVncShowDotChange={handleVncShowDotChange}
+      handleVncClipboardPaste={handleVncClipboardPaste}
+      startVncSession={rawStartVncSession}
+      waitForVncSessionReady={waitForVncSessionReady}
+      pasteTextToZone={pasteTextToZone}
+      setShowZloginConsole={setShowZloginConsole}
+    />
+  );
+
   return (
     <div className="hw-page-content-scrollable">
       <Helmet>
@@ -356,67 +591,44 @@ const Machines = () => {
               <strong>{singular} Management</strong>
             </div>
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
-              <div className="d-flex gap-2">
-                <span className="d-inline-flex">
-                  <span className="badge text-bg-secondary">Total</span>
-                  <span className="badge text-bg-info">{machines.length}</span>
-                </span>
-                <span className="d-inline-flex">
-                  <span className="badge text-bg-secondary">Running</span>
-                  <span className="badge text-bg-success">{runningMachines.length}</span>
-                </span>
-                <span className="d-inline-flex">
-                  <span className="badge text-bg-secondary">Stopped</span>
-                  <span className="badge text-bg-danger">
-                    {machines.length - runningMachines.length}
+              {/* Fleet counts belong to the LIST — the detail view drops them. */}
+              {!selectedMachine && (
+                <div className="d-flex gap-2">
+                  <span className="d-inline-flex">
+                    <span className="badge text-bg-secondary">Total</span>
+                    <span className="badge text-bg-info">{machines.length}</span>
                   </span>
-                </span>
-              </div>
-              {wizardAvailable && (
-                <button
-                  type="button"
-                  className="btn btn-sm btn-primary"
-                  onClick={() => {
-                    setEditTarget(null);
-                    setWizardOpen(true);
-                  }}
-                >
-                  <i className="fas fa-plus me-2" />
-                  New {singular}
-                </button>
+                  <span className="d-inline-flex">
+                    <span className="badge text-bg-secondary">Running</span>
+                    <span className="badge text-bg-success">{runningMachines.length}</span>
+                  </span>
+                  <span className="d-inline-flex">
+                    <span className="badge text-bg-secondary">Stopped</span>
+                    <span className="badge text-bg-danger">
+                      {machines.length - runningMachines.length}
+                    </span>
+                  </span>
+                </div>
               )}
+              <HeaderActions
+                selectedMachine={selectedMachine}
+                singular={singular}
+                wizardAvailable={wizardAvailable}
+                importAvailable={unattendedAvailable}
+                onNew={() => setWizardOpen(true)}
+                onImport={() => setImportOpen(true)}
+              />
             </div>
           </div>
 
           <div className="px-4">
-            {error && (
-              <div className="alert alert-danger mb-4">
-                <p>{error}</p>
-              </div>
-            )}
-            {machinesError && (
-              <div className="alert alert-danger mb-4">
-                <p>{machinesError}</p>
-              </div>
-            )}
-            {detailsError && (
-              <div className="alert alert-danger mb-4">
-                <p>{detailsError}</p>
-              </div>
-            )}
-            {provisioningNotice && (
-              <div
-                className={`alert ${provisioningNotice.warning ? 'alert-warning' : 'alert-info'} mb-4 d-flex justify-content-between align-items-center`}
-              >
-                <span>{provisioningNotice.text}</span>
-                <button
-                  type="button"
-                  className="btn-close"
-                  aria-label="Dismiss"
-                  onClick={() => setProvisioningNotice(null)}
-                />
-              </div>
-            )}
+            <PageAlerts
+              error={error}
+              machinesError={machinesError}
+              detailsError={detailsError}
+              notice={provisioningNotice}
+              onDismissNotice={() => setProvisioningNotice(null)}
+            />
 
             {/* Zone Details - Full Width */}
             <div>
@@ -425,171 +637,116 @@ const Machines = () => {
                   <div className="card-body">
                     {Object.keys(machineDetails).length > 0 ? (
                       <div>
-                        {/* Main Layout with VNC Console spanning both sections */}
-                        <div className="row g-3">
-                          {/* Left Column - Machine Information and Hardware & System */}
-                          <div className="col-12 col-lg-6">
-                            <MachineInfo
-                              machineDetails={machineDetails}
-                              monitoringHealth={monitoringHealth}
-                              getMachineStatus={getMachineStatus}
-                              selectedMachine={selectedMachine}
-                            />
+                        {activeDetailTab === 'overview' && (
+                          <div>
+                            {/* Main Layout with VNC Console spanning both sections */}
+                            <div className="row g-3">
+                              {/* Left Column - Machine Information and Hardware & System */}
+                              <div className="col-12 col-lg-6">
+                                <MachineInfo
+                                  machineDetails={machineDetails}
+                                  monitoringHealth={monitoringHealth}
+                                  getMachineStatus={getMachineStatus}
+                                  selectedMachine={selectedMachine}
+                                />
 
-                            {/* Provisioner-managed machines only (spec-carrying
-                                rows) — self-hides otherwise, either agent. */}
-                            <MachineProvisioning
-                              machineDetails={machineDetails}
+                                {/* Guest additions data (catalog §6) — self-hides
+                                    when the wire answers nothing */}
+                                <MachineGuestInfo
+                                  currentServer={currentServer}
+                                  machineName={selectedMachine}
+                                />
+
+                                <MachineGuestAgent
+                                  currentServer={currentServer}
+                                  machineName={selectedMachine}
+                                  guestInfo={machineDetails.configuration?.guest_info}
+                                />
+
+                                {/* Screenshot lives INSIDE the console section now
+                                    (its inactive default view) — no separate card. */}
+                                <MachineHardware machineDetails={machineDetails} />
+
+                                {/* Current hardware, read-only — VirtualBox
+                                    controllers/media or the zone's device
+                                    families. */}
+                                <CurrentHardwarePanel
+                                  currentHardware={parseHardware(machineDetails.configuration)}
+                                />
+                              </div>
+
+                              {/* Right column — the one console home; SSH/screenshot/
+                                  direct-VNC extend it in place. */}
+                              <div className="col-12 col-lg-6">
+                                {!consoleAvailable && (
+                                  <div className="card mb-0 pt-0">
+                                    <div className="card-body">
+                                      <h4 className="fs-6 fw-bold mb-3">
+                                        <i className="fas fa-terminal me-2" />
+                                        Console
+                                      </h4>
+                                      <div className="alert alert-info mb-0">
+                                        <p className="mb-0">
+                                          No console is available on this host yet — the agent
+                                          advertises neither a VNC console nor zlogin.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                {consoleAvailable && legacyConsoleDisplay}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Kept MOUNTED (d-none when inactive) so typed-but-
+                            unapplied edits survive tab switches; machine
+                            switches still reset the form. */}
+                        {editAvailable && (
+                          <div className={activeDetailTab === 'settings' ? '' : 'd-none'}>
+                            <MachineSettings
                               currentServer={currentServer}
-                              user={user}
-                              onModify={() => {
-                                setEditTarget(machineDetails);
-                                setWizardOpen(true);
-                              }}
-                              onCloned={cloneName => {
+                              machineName={selectedMachine}
+                              configuration={machineDetails.configuration}
+                              knobCurrent={machineDetails.knob_current}
+                              pendingChanges={machineDetails.pending_changes}
+                              rawDetails={machineDetails}
+                              isRunning={getMachineStatus(selectedMachine) === 'running'}
+                              onDone={notice => {
+                                setProvisioningNotice(notice);
+                                // The stop/apply/start path changes the running
+                                // state, and applied changes reshape the
+                                // configuration — refresh both.
                                 loadMachines();
-                                selectMachine(cloneName);
+                                reloadMachineDetails();
                               }}
                             />
-
-                            <MachineHardware machineDetails={machineDetails} />
                           </div>
+                        )}
 
-                          {/* Right Column - Console Display with Toggle (capability-gated) */}
-                          <div className="col-12 col-lg-6">
-                            {!consoleAvailable && (
-                              <div className="card mb-0 pt-0">
-                                <div className="card-body">
-                                  <h4 className="fs-6 fw-bold mb-3">
-                                    <i className="fas fa-terminal me-2" />
-                                    Console
-                                  </h4>
-                                  <div className="alert alert-info mb-0">
-                                    <p className="mb-0">
-                                      No console is available on this host yet — the agent
-                                      advertises neither a VNC console nor zlogin.
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                            {consoleAvailable && (
-                              <ConsoleDisplay
-                                machineDetails={machineDetails}
-                                activeConsoleType={activeConsoleType}
-                                selectedMachine={selectedMachine}
-                                currentServer={currentServer}
-                                user={user}
-                                loading={loading}
-                                loadingVnc={loadingVnc}
-                                previewReadOnly={previewReadOnly}
-                                previewVncViewOnly={previewVncViewOnly}
-                                previewReconnectKey={previewReconnectKey}
-                                vncReconnectKey={vncReconnectKey}
-                                vncSettings={vncSettings}
-                                setActiveConsoleType={setActiveConsoleType}
-                                setLoading={setLoading}
-                                setLoadingVnc={setLoadingVnc}
-                                setError={setError}
-                                setPreviewReadOnly={setPreviewReadOnly}
-                                setPreviewVncViewOnly={setPreviewVncViewOnly}
-                                setMachineDetails={setMachineDetails}
-                                startZloginSessionExplicitly={startZloginSessionExplicitly}
-                                forceZoneSessionCleanup={forceZoneSessionCleanup}
-                                handleZloginConsole={handleZloginConsole}
-                                handleVncConsole={handleVncConsole}
-                                handleKillVncSession={handleKillVncSession}
-                                handleVncQualityChange={handleVncQualityChange}
-                                handleVncCompressionChange={handleVncCompressionChange}
-                                handleVncResizeChange={handleVncResizeChange}
-                                handleVncShowDotChange={handleVncShowDotChange}
-                                handleVncClipboardPaste={handleVncClipboardPaste}
-                                startVncSession={rawStartVncSession}
-                                waitForVncSessionReady={waitForVncSessionReady}
-                                pasteTextToZone={pasteTextToZone}
-                                setShowZloginConsole={setShowZloginConsole}
-                              />
-                            )}
-                          </div>
-                        </div>
+                        {activeDetailTab === 'snapshots' && (
+                          <MachineSnapshots
+                            currentServer={currentServer}
+                            machineName={selectedMachine}
+                            isRunning={getMachineStatus(selectedMachine) === 'running'}
+                            user={user}
+                            snapshotPolicy={machineDetails.configuration?.snapshots}
+                            takeOpen={snapshotTakeOpen}
+                            onTakeClose={() => setSnapshotTakeOpen(false)}
+                          />
+                        )}
 
-                        {/* Configuration Display: zadm shape → structured panels;
-                            VirtualBox flat showvminfo map → generic key/value table */}
-                        {(() => {
-                          const config = machineDetails.configuration;
-                          if (isZadmConfig) {
-                            return (
-                              <div>
-                                <MachineStorage configuration={config} />
-                                <MachineNetwork configuration={config} />
-                              </div>
-                            );
-                          }
-                          if (config && Object.keys(config).length > 0) {
-                            return (
-                              <div className="card mb-4">
-                                <div className="card-body">
-                                  <h4 className="fs-6 fw-bold mb-3">
-                                    <i className="fas fa-sliders me-2" />
-                                    Configuration
-                                  </h4>
-                                  <div className="table-responsive">
-                                    <table className="table table-striped small">
-                                      <tbody>
-                                        {Object.entries(config).map(([key, value]) => (
-                                          <tr key={key}>
-                                            <td className="px-3 py-2">
-                                              <strong>{key}</strong>
-                                            </td>
-                                            <td className="px-3 py-2">
-                                              <code className="small">{String(value)}</code>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          }
-                          return (
-                            <div className="card mb-4">
-                              <div className="card-body">
-                                <h4 className="fs-6 fw-bold">Configuration</h4>
-                                <div className="alert alert-info">
-                                  <p>
-                                    <strong>No Configuration Data Available</strong>
-                                  </p>
-                                  <p>
-                                    Configuration details are not available for this{' '}
-                                    {singular.toLowerCase()}. This could be because:
-                                  </p>
-                                  <ul>
-                                    <li>The configuration hasn&apos;t been loaded yet</li>
-                                    <li>
-                                      The Agent doesn&apos;t have configuration data for this{' '}
-                                      {singular.toLowerCase()}
-                                    </li>
-                                    <li>
-                                      The {singular.toLowerCase()} might be in a transitional state
-                                    </li>
-                                  </ul>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-                        {/* Raw Data (for debugging) */}
-                        <details>
-                          <summary className="fs-6 fw-bold">Raw Data (Debug)</summary>
-                          <div className="card">
-                            <div className="card-body">
-                              <pre className="small">{JSON.stringify(machineDetails, null, 2)}</pre>
-                            </div>
-                          </div>
-                        </details>
+                        {activeDetailTab === 'provisioning' && (
+                          <MachineProvisioning
+                            machineDetails={machineDetails}
+                            currentServer={currentServer}
+                            user={user}
+                            requestedAction={provisionAction}
+                            onActionConsumed={() => setProvisionAction(null)}
+                            onDocumentStored={reloadMachineDetails}
+                          />
+                        )}
                       </div>
                     ) : (
                       <div className="alert alert-info">
@@ -602,20 +759,13 @@ const Machines = () => {
                   </div>
                 </div>
               ) : (
-                <div className="card">
-                  <div className="card-body">
-                    <div className="text-center text-muted p-5">
-                      <div className="mb-3">
-                        <i className="fas fa-server fa-3x" />
-                      </div>
-                      <h3 className="fs-4 fw-bold text-muted">Select a {singular}</h3>
-                      <p>
-                        Choose a {singular.toLowerCase()} from the list to view details and manage
-                        it.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                /* No machine selected: the list panel. Selecting a row drives
+                   the same global selection the sidebar does. */
+                <MachineListPanel
+                  currentServer={currentServer}
+                  user={user}
+                  onSelect={handleMachineSelect}
+                />
               )}
             </div>
           </div>
@@ -648,13 +798,94 @@ const Machines = () => {
       {wizardAvailable && (
         <MachineCreateModal
           isOpen={wizardOpen}
-          onClose={() => {
-            setWizardOpen(false);
-            setEditTarget(null);
-          }}
+          onClose={() => setWizardOpen(false)}
           currentServer={currentServer}
-          editMachine={editTarget}
           onCompleted={handleWizardCompleted}
+        />
+      )}
+
+      {cloneAvailable && selectedMachine && (
+        <CloneMachineModal
+          isOpen={cloneOpen}
+          onClose={() => setCloneOpen(false)}
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          isRunning={getMachineStatus(selectedMachine) === 'running'}
+          onCloned={({ taskId, message, warnings }) => {
+            const parts = [message];
+            if (taskId) {
+              parts.push(`(task ${taskId})`);
+            }
+            if (warnings.length > 0) {
+              parts.push(`— ${warnings.map(warning => warning.message).join('; ')}`);
+            }
+            setProvisioningNotice({ text: parts.join(' '), warning: warnings.length > 0 });
+            // The clone's row appears when its task completes — never select
+            // a machine that does not exist yet.
+            loadMachines();
+          }}
+        />
+      )}
+
+      {unattendedAvailable && selectedMachine && (
+        <UnattendedInstallModal
+          isOpen={installOpen}
+          onClose={() => setInstallOpen(false)}
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          isRunning={getMachineStatus(selectedMachine) === 'running'}
+          onDone={notice => {
+            setProvisioningNotice(notice);
+            loadMachines();
+          }}
+        />
+      )}
+
+      {unattendedAvailable && (
+        <ImportMachineModal
+          isOpen={importOpen}
+          onClose={() => setImportOpen(false)}
+          currentServer={currentServer}
+          onDone={notice => {
+            setProvisioningNotice(notice);
+            loadMachines();
+          }}
+        />
+      )}
+
+      {unattendedAvailable && selectedMachine && (
+        <MoveMachineModal
+          isOpen={moveOpen}
+          onClose={() => setMoveOpen(false)}
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          isRunning={getMachineStatus(selectedMachine) === 'running'}
+          onDone={notice => {
+            setProvisioningNotice(notice);
+            loadMachines();
+          }}
+        />
+      )}
+
+      {guestExecAvailable && selectedMachine && (
+        <GuestExecModal
+          isOpen={execOpen}
+          onClose={() => setExecOpen(false)}
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          isRunning={getMachineStatus(selectedMachine) === 'running'}
+          flavor={guestExecFlavor}
+        />
+      )}
+
+      {guestControlAvailable && selectedMachine && (
+        <DisplayResizeModal
+          isOpen={displayOpen}
+          onClose={() => setDisplayOpen(false)}
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          isRunning={getMachineStatus(selectedMachine) === 'running'}
+          onDone={setProvisioningNotice}
         />
       )}
 

@@ -50,6 +50,21 @@ export const hasConsole = (server, token) => {
  */
 export const hasMachines = server => hasFeature(server, 'machines');
 
+/**
+ * Whether the agent behind `server` runs a given hypervisor ('bhyve' |
+ * 'virtualbox'). ONLY for the deliberate platform-divergence gates Mark
+ * ruled 2026-07-12 — always POSITIVE checks ('virtualbox' surfaces:
+ * pause, modifyvm hardware/ports/vbox-passthrough, Secure Boot, USB,
+ * unattended install, import/move, guest exec, display resize; 'bhyve'
+ * surfaces: filesystems, bootorder/bootnext) — feature/console tokens
+ * stay the rule for everything else.
+ * @param {Object} server - Server object (registry row or Direct self-server)
+ * @param {string} name - Hypervisor name
+ * @returns {boolean} True when the capability array names it
+ */
+export const hasHypervisor = (server, name) =>
+  (server?.capabilities?.hypervisors ?? []).includes(name);
+
 // The Manage page's sub-tab tokens — keep in sync with TABS in HostManage.jsx (the
 // same parallel-list convention as Navbar's HOST_CONTROL_ROUTES ↔ ContextTabs'
 // HOST_TABS). Used to hide the Manage navbar tab when an agent offers none of them.
@@ -64,6 +79,9 @@ const MANAGE_FEATURES = [
   'fault-management',
   'file-browser',
   'system-users',
+  'provisioner-registry',
+  'templates',
+  'machines',
   'provisioning',
 ];
 

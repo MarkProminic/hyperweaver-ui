@@ -17,6 +17,27 @@ import {
 } from './utils/dataLoaders';
 import { getHistoricalTimestamp, getResolutionLimit } from './utils/hostUtils';
 
+// Session-scoped chart history, keyed per agent. Realtime agents answer one
+// live sample per fetch — the points a session accumulates exist ONLY in this
+// map, so charts survive route changes (state remounts) and start over on a
+// page reload. Entries stay capped by maxDataPoints via the chart updaters.
+const hostChartSessions = new Map();
+
+const emptyChartTimestamps = {
+  poolIO: null,
+  network: null,
+  arc: null,
+  cpu: null,
+  memory: null,
+};
+const emptyArcChartData = () => ({ sizeData: [], targetData: [], hitRateData: [] });
+const emptyCpuChartData = () => ({
+  overall: [],
+  cores: {},
+  load: { '1min': [], '5min': [], '15min': [] },
+});
+const emptyMemoryChartData = () => ({ used: [], free: [], cached: [], total: [] });
+
 export const useHostData = currentServer => {
   const [serverStats, setServerStats] = useState({});
   const [monitoringHealth, setMonitoringHealth] = useState({});
@@ -37,23 +58,10 @@ export const useHostData = currentServer => {
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   const [chartData, setChartData] = useState({});
-  const [arcChartData, setArcChartData] = useState({
-    sizeData: [],
-    targetData: [],
-    hitRateData: [],
-  });
+  const [arcChartData, setArcChartData] = useState(emptyArcChartData);
   const [networkChartData, setNetworkChartData] = useState({});
-  const [cpuChartData, setCpuChartData] = useState({
-    overall: [],
-    cores: {},
-    load: { '1min': [], '5min': [], '15min': [] },
-  });
-  const [memoryChartData, setMemoryChartData] = useState({
-    used: [],
-    free: [],
-    cached: [],
-    total: [],
-  });
+  const [cpuChartData, setCpuChartData] = useState(emptyCpuChartData);
+  const [memoryChartData, setMemoryChartData] = useState(emptyMemoryChartData);
   const [timeWindow, setTimeWindow] = useState('15min');
   const [resolution, setResolution] = useState('high');
   const [maxDataPoints, setMaxDataPoints] = useState(180);
@@ -69,13 +77,10 @@ export const useHostData = currentServer => {
   const isLoadingRef = useRef(false);
 
   // Track latest timestamps for incremental chart updates
-  const [lastChartTimestamps, setLastChartTimestamps] = useState({
-    poolIO: null,
-    network: null,
-    arc: null,
-    cpu: null,
-    memory: null,
-  });
+  const [lastChartTimestamps, setLastChartTimestamps] = useState(emptyChartTimestamps);
+
+  // Which agent the chart states currently belong to — the session cache's key.
+  const chartSessionKeyRef = useRef(null);
 
   const {
     makeAgentRequest,
@@ -220,8 +225,25 @@ export const useHostData = currentServer => {
       setLastChartTimestamps,
       getHistoricalTimestamp,
       getResolutionLimit,
+      updateNetworkChartData,
+      updatePoolIOChartData,
+      updateARCChartData,
+      updateCPUChartData,
+      updateCPUCoreChartData,
+      updateMemoryChartData,
     });
-  }, [currentServer, makeAgentRequest, timeWindow, resolution]);
+  }, [
+    currentServer,
+    makeAgentRequest,
+    timeWindow,
+    resolution,
+    updateNetworkChartData,
+    updatePoolIOChartData,
+    updateARCChartData,
+    updateCPUChartData,
+    updateCPUCoreChartData,
+    updateMemoryChartData,
+  ]);
 
   // Wrapper for loadRecentChartData
   const loadRecentChartData = useCallback(async () => {
@@ -293,6 +315,21 @@ export const useHostData = currentServer => {
     });
 
     if (currentServer && makeAgentRequest) {
+      // Re-seed chart state from the session cache when the agent changes (or
+      // the hook remounts), so realtime charts pick their history back up
+      // instead of starting over — and never mix points across agents.
+      const sessionKey = `${currentServer.hostname}:${currentServer.port}`;
+      if (chartSessionKeyRef.current !== sessionKey) {
+        chartSessionKeyRef.current = sessionKey;
+        const cached = hostChartSessions.get(sessionKey);
+        setChartData(cached ? cached.chartData : {});
+        setArcChartData(cached ? cached.arcChartData : emptyArcChartData());
+        setNetworkChartData(cached ? cached.networkChartData : {});
+        setCpuChartData(cached ? cached.cpuChartData : emptyCpuChartData());
+        setMemoryChartData(cached ? cached.memoryChartData : emptyMemoryChartData());
+        setLastChartTimestamps(cached ? cached.lastChartTimestamps : emptyChartTimestamps);
+      }
+
       // Load historical chart data first to establish chart foundation
       loadHistoricalChartData();
 
@@ -305,6 +342,28 @@ export const useHostData = currentServer => {
     }
   }, [currentServer, makeAgentRequest, loadHistoricalChartData, loadHostData]);
 
+  // Mirror chart state into the session cache on every change.
+  useEffect(() => {
+    if (!chartSessionKeyRef.current) {
+      return;
+    }
+    hostChartSessions.set(chartSessionKeyRef.current, {
+      chartData,
+      arcChartData,
+      networkChartData,
+      cpuChartData,
+      memoryChartData,
+      lastChartTimestamps,
+    });
+  }, [
+    chartData,
+    arcChartData,
+    networkChartData,
+    cpuChartData,
+    memoryChartData,
+    lastChartTimestamps,
+  ]);
+
   // Load historical chart data when time window or resolution changes
   useEffect(() => {
     if (currentServer && makeAgentRequest && initialLoadDone.current) {
@@ -312,13 +371,7 @@ export const useHostData = currentServer => {
         '📊 HISTORICAL CHARTS: Time window or resolution changed, loading historical data'
       );
       // Reset timestamps when time window or resolution changes
-      setLastChartTimestamps({
-        poolIO: null,
-        network: null,
-        arc: null,
-        cpu: null,
-        memory: null,
-      });
+      setLastChartTimestamps(emptyChartTimestamps);
       loadHistoricalChartData();
     } else if (!initialLoadDone.current) {
       console.log('📊 HISTORICAL CHARTS: Skipping settings change during initial load');

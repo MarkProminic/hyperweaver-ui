@@ -59,6 +59,21 @@
   overflow: visible !important;
 }
 
+// Flex variant: the header sizes itself and the content takes exactly the
+// rest — for consoles whose header is taller than the 60px the fixed
+// calc assumes (the SSH header's two text lines overflowed the bottom edge).
+.hw-console-container-flex {
+  display: flex !important;
+  flex-direction: column !important;
+
+  .hw-console-content {
+    height: auto !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+}
+
 .hw-inactive-console {
   background-color: var(--hw-console-surface) !important;
   display: flex !important;
@@ -288,6 +303,39 @@
   width: 100% !important;
   height: 100% !important;
   display: block !important;
+}
+
+// Browser-RDP console (iron-remote-desktop web component). The element hosts
+// its own shadow canvas; it just needs to fill the content pane. The overlay
+// carries the connect/ended/setup cards on top of it.
+// The component scales against its PARENT — this div IS the pane.
+.hw-rdp-screen {
+  width: 100% !important;
+  height: 100% !important;
+
+  iron-remote-desktop {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
+
+.hw-rdp-settings-menu {
+  min-width: 250px;
+}
+
+.hw-rdp-connection-menu {
+  min-width: 300px;
+}
+
+.hw-rdp-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: var(--hw-console-surface) !important;
+  color: var(--hw-console-surface-text) !important;
 }
 
 // ZoneShell Styling Classes

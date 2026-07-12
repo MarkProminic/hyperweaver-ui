@@ -41,14 +41,15 @@ const useExtendedHandlers = ({
       setError('');
 
       try {
-        const currentFiles = await api.loadFiles(path);
+        // loadFiles answers {items, currentPath} — the agent's RESOLVED path
+        const { items: currentFiles, currentPath: answeredPath } = await api.loadFiles(path);
 
         // Maintain root directories for navigation
         let cachedDirectories = directoryCache.get('/') || [];
 
         if (cachedDirectories.length === 0) {
           try {
-            const rootFiles = await api.loadFiles('/');
+            const { items: rootFiles } = await api.loadFiles('/');
             cachedDirectories = rootFiles.filter(file => file.isDirectory);
             setDirectoryCache(prev => new Map(prev).set('/', cachedDirectories));
           } catch {
@@ -84,7 +85,7 @@ const useExtendedHandlers = ({
           const parentResults = await Promise.all(
             uncachedPaths.map(parentPath =>
               api.loadFiles(parentPath).then(
-                parentFiles => ({
+                ({ items: parentFiles }) => ({
                   path: parentPath,
                   dirs: parentFiles.filter(f => f.isDirectory),
                 }),
@@ -120,6 +121,11 @@ const useExtendedHandlers = ({
         }
 
         setFiles(combinedFiles);
+        // Track the RESOLVED path the agent answered — '/' resolves to a
+        // drive root (C:/) on Windows agents.
+        if (answeredPath && answeredPath !== path) {
+          setCurrentPath(answeredPath);
+        }
       } catch (loadErr) {
         setError(`Failed to load files: ${loadErr.message}`);
         setFiles([]);
@@ -127,7 +133,17 @@ const useExtendedHandlers = ({
         setIsLoading(false);
       }
     },
-    [server, currentPath, api, directoryCache, setDirectoryCache, setFiles, setIsLoading, setError]
+    [
+      server,
+      currentPath,
+      api,
+      directoryCache,
+      setDirectoryCache,
+      setCurrentPath,
+      setFiles,
+      setIsLoading,
+      setError,
+    ]
   );
 
   const handleCreateFolder = useCallback(

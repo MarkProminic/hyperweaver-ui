@@ -83,7 +83,6 @@ const EtherstubManagement = ({ server, onError }) => {
         {
           temporary: false,
           force: false,
-          created_by: 'api',
         }
       );
 

@@ -107,7 +107,6 @@ const BootEnvironmentManagement = ({ server }) => {
           method = 'POST';
           requestData = {
             temporary: options.temporary || false,
-            created_by: 'api',
           };
           break;
         case 'mount':
@@ -116,7 +115,6 @@ const BootEnvironmentManagement = ({ server }) => {
           requestData = {
             mountpoint: options.mountpoint || `/mnt/${beName}`,
             shared_mode: options.sharedMode || 'ro',
-            created_by: 'api',
           };
           break;
         case 'unmount':
@@ -124,7 +122,6 @@ const BootEnvironmentManagement = ({ server }) => {
           method = 'POST';
           requestData = {
             force: options.force || false,
-            created_by: 'api',
           };
           break;
         case 'delete':

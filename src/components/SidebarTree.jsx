@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useMode } from '../contexts/ModeContext';
 import { useServers } from '../contexts/ServerContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
+import { useAgentHostname } from '../hooks/useAgentHostname';
 import { hasMachines } from '../utils/capabilities';
 
 /**
@@ -21,11 +22,20 @@ import { hasMachines } from '../utils/capabilities';
  * routes: Datacenter → Dashboard, Host → Host Overview, Machine → Zone Overview.
  */
 
+// The Dashboard route — while on it, ONLY the Datacenter node lights up
+// (host/machine selections persist in context via the navbar auto-select,
+// so selection alone can't drive the "you are here" highlight).
+const onDashboardRoute = pathname => pathname === '/ui' || pathname === '/ui/dashboard';
+
 // A running machine gets a filled green dot; a stopped one an outline dot (matches MachineManager).
 const MachineNode = ({ server, name, running }) => {
   const { currentServer, currentMachine, selectServer, selectMachine } = useServers();
   const navigate = useNavigate();
-  const active = currentServer?.id === server.id && currentMachine === name;
+  const location = useLocation();
+  const active =
+    currentServer?.id === server.id &&
+    currentMachine === name &&
+    !onDashboardRoute(location.pathname);
 
   const handleClick = () => {
     if (currentServer?.id !== server.id) {
@@ -64,38 +74,50 @@ const HostNode = ({ server, autoExpanded = false }) => {
   const { currentServer, currentMachine, selectServer, makeAgentRequest } = useServers();
   const { sidebarMinimized } = useContext(UserSettings);
   const navigate = useNavigate();
+  const location = useLocation();
+  const displayName = useAgentHostname(server);
   const [expanded, setExpanded] = useState(autoExpanded);
   const [machines, setMachines] = useState(null);
   const [loadError, setLoadError] = useState(false);
 
-  const hostActive = currentServer?.id === server.id && !currentMachine;
+  const hostActive =
+    currentServer?.id === server.id && !currentMachine && !onDashboardRoute(location.pathname);
   const machinesAvailable = hasMachines(server);
 
-  // Lazy-load this host's machines the first time it's expanded (contract C8 pattern).
+  // Lazy-load this host's machines on expand, then KEEP them fresh while
+  // expanded: machines started or stopped outside this UI (VBoxManage, another
+  // session, the agent itself) change the status dots within one poll cycle.
+  // Collapse stops the polling; re-expanding refreshes immediately.
   useEffect(() => {
     let cancelled = false;
-    if (!machinesAvailable || !expanded || machines !== null || sidebarMinimized) {
+    if (!machinesAvailable || !expanded || sidebarMinimized) {
       return undefined;
     }
-    makeAgentRequest(server.hostname, server.port, server.protocol, 'stats')
-      .then(res => {
-        if (cancelled) {
-          return;
-        }
-        if (res.success) {
-          setMachines({
-            all: res.data.allmachines || [],
-            running: res.data.runningmachines || [],
-          });
-        } else {
-          setLoadError(true);
-        }
-      })
-      .catch(() => !cancelled && setLoadError(true));
+    const load = () => {
+      makeAgentRequest(server.hostname, server.port, server.protocol, 'stats')
+        .then(res => {
+          if (cancelled) {
+            return;
+          }
+          if (res.success) {
+            setLoadError(false);
+            setMachines({
+              all: res.data.allmachines || [],
+              running: res.data.runningmachines || [],
+            });
+          } else {
+            setLoadError(true);
+          }
+        })
+        .catch(() => !cancelled && setLoadError(true));
+    };
+    load();
+    const interval = setInterval(load, 10000);
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
-  }, [machinesAvailable, expanded, machines, sidebarMinimized, makeAgentRequest, server]);
+  }, [machinesAvailable, expanded, sidebarMinimized, makeAgentRequest, server]);
 
   const handleSelectHost = () => {
     selectServer(server);
@@ -109,7 +131,7 @@ const HostNode = ({ server, autoExpanded = false }) => {
         type="button"
         onClick={handleSelectHost}
         className={`btn w-100 d-flex justify-content-center hw-tree-row ${hostActive ? 'active' : ''}`}
-        title={server.entityName || server.hostname}
+        title={displayName}
       >
         <i className="fas fa-server" />
       </button>
@@ -141,10 +163,10 @@ const HostNode = ({ server, autoExpanded = false }) => {
           type="button"
           onClick={handleSelectHost}
           className="btn flex-grow-1 d-flex align-items-center gap-2 text-start"
-          title={server.entityName || server.hostname}
+          title={displayName}
         >
           <i className="fas fa-server" />
-          <span className="text-truncate">{server.entityName || server.hostname}</span>
+          <span className="text-truncate">{displayName}</span>
         </button>
       </div>
 
@@ -156,7 +178,7 @@ const HostNode = ({ server, autoExpanded = false }) => {
               Loading…
             </div>
           )}
-          {loadError && (
+          {loadError && machines === null && (
             <div className="hw-tree-row hw-tree-machine text-danger small py-1">
               <i className="fas fa-circle-xmark fa-xs me-2" />
               Unreachable
@@ -197,18 +219,23 @@ const DatacenterNode = ({ label, canAddHost }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { sidebarMinimized } = useContext(UserSettings);
-  const { currentServer, currentMachine } = useServers();
-  // Datacenter is "focused" when nothing host/machine-specific is selected and we're on the dashboard.
-  const active =
-    !currentServer &&
-    !currentMachine &&
-    (location.pathname === '/ui' || location.pathname === '/ui/dashboard');
+  const { selectServer } = useServers();
+  // Datacenter is "focused" by ROUTE alone: the navbar auto-selects a host
+  // whenever none is picked, so a selection-based test could never be true
+  // (Mark's report: the Dashboard never highlighted). Host/machine rows
+  // stand down on this route via the same onDashboardRoute check.
+  const active = onDashboardRoute(location.pathname);
+
+  const handleSelect = () => {
+    selectServer(null); // drop the machine focus; the navbar may re-pick a host
+    navigate('/ui/dashboard');
+  };
 
   if (sidebarMinimized) {
     return (
       <button
         type="button"
-        onClick={() => navigate('/ui/dashboard')}
+        onClick={handleSelect}
         className={`btn w-100 d-flex justify-content-center hw-tree-row hw-tree-datacenter ${active ? 'active' : ''}`}
         title={label}
       >
@@ -223,7 +250,7 @@ const DatacenterNode = ({ label, canAddHost }) => {
     >
       <button
         type="button"
-        onClick={() => navigate('/ui/dashboard')}
+        onClick={handleSelect}
         className="btn flex-grow-1 d-flex align-items-center gap-2 text-start"
         title={label}
       >

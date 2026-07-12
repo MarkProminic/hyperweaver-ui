@@ -1,15 +1,18 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useSearchParams } from 'react-router-dom';
 
+import { useAuth } from '../../contexts/AuthContext';
 import { useServers } from '../../contexts/ServerContext';
 import { hasFeature, hasManageSurface } from '../../utils/capabilities';
+import { canCreateMachines } from '../../utils/permissions';
 import { resourceLabel } from '../../utils/resourceLabel';
 
 /**
  * ContextTabs — navbar row 2 (contract §2). The horizontal tab strip for the focused node,
  * chosen by the current route:
  *   - a host-context route  → the host tabs below
- *   - the machine route (/ui/machines) → machine Overview (sub-tabs deferred; Machines.jsx
- *                                        sections are already modular, so they split into tabs later)
+ *   - the machine route (/ui/machines) → {Machine} Overview | Settings | Snapshots. Selection
+ *     rides the ?tab= search param (the Machines page renders the matching pane); Settings and
+ *     Snapshots exist only with a machine selected, gated on their tokens.
  *   - anything else (dashboard/accounts/settings pages) → no context tabs
  *
  * `HOST_TABS` is the SINGLE SOURCE OF TRUTH: it both renders the tabs AND defines what counts
@@ -29,20 +32,59 @@ const HOST_TABS = [
 
 const linkClass = ({ isActive }) => (isActive ? 'nav-link active' : 'nav-link');
 
+// The machine tabs share one route and differ only by search param, so
+// NavLink's path-based isActive can't tell them apart — manual active class.
+const tabClass = active => (active ? 'nav-link active' : 'nav-link');
+
 const ContextTabs = () => {
   const { pathname } = useLocation();
-  const { currentServer } = useServers();
+  const [searchParams] = useSearchParams();
+  const { currentServer, currentMachine } = useServers();
+  const { user } = useAuth();
 
   if (pathname === '/ui/machines') {
     const machineLabel = resourceLabel(currentServer, { plural: false });
+    const activeTab = searchParams.get('tab');
+    const settingsAvailable =
+      !!currentMachine &&
+      hasFeature(currentServer, 'machine-modify') &&
+      canCreateMachines(user?.role);
+    const snapshotsAvailable = !!currentMachine && hasFeature(currentServer, 'machine-snapshots');
     return (
       <ul className="nav nav-tabs">
         <li className="nav-item">
-          <NavLink to="/ui/machines" className={linkClass} end>
+          <Link to="/ui/machines" className={tabClass(!activeTab)}>
             <i className="fas fa-circle-info me-1" />
             {machineLabel} Overview
-          </NavLink>
+          </Link>
         </li>
+        {settingsAvailable && (
+          <li className="nav-item">
+            <Link to="/ui/machines?tab=settings" className={tabClass(activeTab === 'settings')}>
+              <i className="fas fa-sliders me-1" />
+              Settings
+            </Link>
+          </li>
+        )}
+        {snapshotsAvailable && (
+          <li className="nav-item">
+            <Link to="/ui/machines?tab=snapshots" className={tabClass(activeTab === 'snapshots')}>
+              <i className="fas fa-camera me-1" />
+              Snapshots
+            </Link>
+          </li>
+        )}
+        {!!currentMachine && (
+          <li className="nav-item">
+            <Link
+              to="/ui/machines?tab=provisioning"
+              className={tabClass(activeTab === 'provisioning')}
+            >
+              <i className="fas fa-cubes me-1" />
+              Provisioning
+            </Link>
+          </li>
+        )}
       </ul>
     );
   }

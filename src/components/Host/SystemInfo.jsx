@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 
+import ProvisioningTools from './ProvisioningTools.jsx';
 import ResourceUtilization from './ResourceUtilization.jsx';
 import { formatUptime } from './utils.js';
 
@@ -11,6 +12,7 @@ const SystemInfo = ({
   taskStats,
   swapSummaryData,
   arcSizeBytes,
+  currentServer,
 }) => {
   const getHealthStatusClass = status => {
     if (status === 'healthy') {
@@ -122,6 +124,8 @@ const SystemInfo = ({
                     </td>
                   </tr>
                 )}
+                {/* SHI SystemInfoBox parity: provisioning tool availability */}
+                <ProvisioningTools currentServer={currentServer} />
               </tbody>
             </table>
           </div>
@@ -166,6 +170,7 @@ SystemInfo.propTypes = {
   }),
   swapSummaryData: PropTypes.object,
   arcSizeBytes: PropTypes.number,
+  currentServer: PropTypes.object,
 };
 
 export default SystemInfo;

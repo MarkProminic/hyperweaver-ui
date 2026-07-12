@@ -18,9 +18,13 @@ const Sidebar = () => {
 
   return (
     <aside className="flex-grow-1 w-100">
-      {/* Direct mode has no Datacenter root to fold the Dashboard into — surface it here. */}
+      {/* Direct mode has no Datacenter root to fold the Dashboard into — surface it here.
+          The .hw-tree wrapper puts the entry under the tree's highlight system (the strong
+          active selector lives on `.hw-tree .hw-tree-row.active`). */}
       {isDirect && (
-        <DashEntry title={'Dashboard'} link={'/ui/dashboard'} icon={'fas fa-solid fa-gauge'} />
+        <div className="hw-tree">
+          <DashEntry title={'Dashboard'} link={'/ui/dashboard'} icon={'fas fa-solid fa-gauge'} />
+        </div>
       )}
 
       <SidebarTree />

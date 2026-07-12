@@ -180,7 +180,7 @@ const SidebarFooter = () => {
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
         const ts = data?.ticket_system;
-        if (!mounted || !ts || !ts.enabled?.value) {
+        if (!mounted || !ts || !ts.enabled?.value || !ts.base_url?.value) {
           return;
         }
         const params = new URLSearchParams({

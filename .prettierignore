@@ -1,6 +1,9 @@
 # Build output
 dist/
 
+# Vendored IronRDP fork packages (built dist, not our code)
+vendor/
+
 # Managed by tooling — don't reformat
 package-lock.json
 CHANGELOG.md

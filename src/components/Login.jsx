@@ -120,6 +120,13 @@ DirectModeFields.propTypes = {
 // Seconds to wait after a provider is chosen before auto-handing off to the IdP.
 const OIDC_REDIRECT_DELAY = 3;
 
+// Loopback origin: the hwa:// handler reaches the agent on THIS machine.
+const IS_LOOPBACK = ['127.0.0.1', 'localhost', '[::1]'].includes(window.location.hostname);
+
+// Seconds an idle loopback login page waits before auto-firing the desktop
+// sign-in. Fires ONCE per page load (never retried — no hammering).
+const DESKTOP_HANDOFF_DELAY = 7;
+
 // OIDC redirect helper — module scope so it is NOT a hook dependency. Stashes the intended URL
 // (unless already on the login page) then hard-navigates to the Server's provider-start endpoint.
 // `register:true` adds ?register (C10) → the Server sends prompt=create → IdP registration page.
@@ -214,6 +221,88 @@ RegisterPrompt.propTypes = {
 };
 
 /**
+ * Local/LDAP credential fields. Extracted from Login (the DirectModeFields
+ * pattern) to keep its complexity down.
+ */
+const CredentialFields = ({
+  authMethod,
+  identifier,
+  setIdentifier,
+  password,
+  setPassword,
+  loading,
+  methodsLoading,
+}) => (
+  <>
+    <div className="mb-3 text-start">
+      <label className="form-label" htmlFor="identifier">
+        {authMethod === 'ldap' ? 'Username' : 'Email or Username'}
+      </label>
+      <input
+        id="identifier"
+        type="text"
+        className="form-control"
+        name="identifier"
+        autoComplete="username"
+        placeholder={authMethod === 'ldap' ? 'Username' : 'Username or Email'}
+        value={identifier}
+        onChange={e => setIdentifier(e.target.value)}
+        disabled={loading || methodsLoading}
+      />
+    </div>
+    <div className="mb-3 text-start">
+      <label className="form-label" htmlFor="password">
+        Password
+      </label>
+      <input
+        id="password"
+        type="password"
+        name="password"
+        autoComplete="current-password"
+        className="form-control"
+        placeholder="******"
+        value={password}
+        onChange={e => setPassword(e.target.value)}
+        disabled={loading}
+      />
+    </div>
+  </>
+);
+
+CredentialFields.propTypes = {
+  authMethod: PropTypes.string,
+  identifier: PropTypes.string,
+  setIdentifier: PropTypes.func,
+  password: PropTypes.string,
+  setPassword: PropTypes.func,
+  loading: PropTypes.bool,
+  methodsLoading: PropTypes.bool,
+};
+
+/**
+ * The form's submit button: spinner while a login is in flight, the provider
+ * name when an OIDC method is selected. Extracted from Login for complexity.
+ */
+const LoginSubmitButton = ({ loading, authMethod, authMethods }) => (
+  <div className="mb-3">
+    <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+      {loading && (
+        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+      )}
+      {authMethod.startsWith('oidc-')
+        ? authMethods.find(m => m.id === authMethod)?.name || 'Continue with OpenID Connect'
+        : 'Login'}
+    </button>
+  </div>
+);
+
+LoginSubmitButton.propTypes = {
+  loading: PropTypes.bool,
+  authMethod: PropTypes.string,
+  authMethods: PropTypes.array,
+};
+
+/**
  * Login component for Hyperweaver authentication
  * @returns {JSX.Element} Login component
  */
@@ -231,6 +320,9 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [methodsLoading, setMethodsLoading] = useState(true);
   const [oidcCountdown, setOidcCountdown] = useState(null);
+  const [desktopCountdown, setDesktopCountdown] = useState(null);
+  // One attempt per page load, ever — even across effect re-runs.
+  const desktopHandoffFired = useRef(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login, loginWithApiKey, bootstrapFirstKey, isAuthenticated, getAuthMethods } = useAuth();
@@ -311,6 +403,38 @@ const Login = () => {
     const timer = setTimeout(() => setOidcCountdown(count => count - 1), 1000);
     return () => clearTimeout(timer);
   }, [oidcCountdown, authMethod]);
+
+  // Idle loopback login (Direct mode): arm the one-shot desktop handoff — the
+  // user is sitting at their own machine, so after a short wait the hwa://
+  // sign-in fires itself instead of waiting for the manual click.
+  useEffect(() => {
+    if (!modeReady || !isDirect || !IS_LOOPBACK || isAuthenticated || desktopHandoffFired.current) {
+      return;
+    }
+    setDesktopCountdown(DESKTOP_HANDOFF_DELAY);
+  }, [modeReady, isDirect, isAuthenticated]);
+
+  // Tick the desktop-handoff countdown. Any user engagement (typing a key or
+  // setup token, a login in flight) cancels it; at zero it fires exactly once.
+  useEffect(() => {
+    if (desktopCountdown === null) {
+      return undefined;
+    }
+    if (apiKey || setupToken || loading) {
+      setDesktopCountdown(null);
+      return undefined;
+    }
+    if (desktopCountdown <= 0) {
+      setDesktopCountdown(null);
+      if (!desktopHandoffFired.current) {
+        desktopHandoffFired.current = true;
+        window.location.assign('hwa://open');
+      }
+      return undefined;
+    }
+    const timer = setTimeout(() => setDesktopCountdown(count => count - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [desktopCountdown, apiKey, setupToken, loading]);
 
   // Provider-via-URL: /ui/login?provider=<name> pre-selects that OIDC provider and starts the
   // auto-redirect once. Lets a link (or the Server) deep-link straight to a specific IdP.
@@ -449,11 +573,6 @@ const Login = () => {
   // where bootstrap stays open even though keys already exist).
   const directFirstBoot = isDirect && !!serverInfo?.bootstrapAvailable && !showKeyEntry;
 
-  // Desktop handoff (hwa:// protocol handler): only meaningful when the page is served
-  // from this machine — hwa://open asks the LOCAL agent to mint a tray-style single-use
-  // token and open a signed-in tab (claimed by AuthContext's claimTrayToken).
-  const isLoopback = ['127.0.0.1', 'localhost', '[::1]'].includes(window.location.hostname);
-
   // The login form depends on the serving mode (user accounts vs API key), so wait
   // for the origin probe before rendering any fields.
   if (!modeReady) {
@@ -588,12 +707,16 @@ const Login = () => {
                     reaches the agent on THIS machine). Renders in both Direct states (first-boot
                     and key entry): on a desktop install it skips the setup token entirely. If no
                     handler is installed, the browser shows its own notice — acceptable. */}
-                {isDirect && isLoopback && (
+                {isDirect && IS_LOOPBACK && (
                   <div className="mb-3">
                     <button
                       type="button"
                       className="btn btn-outline-secondary w-100"
-                      onClick={() => window.location.assign('hwa://open')}
+                      onClick={() => {
+                        desktopHandoffFired.current = true;
+                        setDesktopCountdown(null);
+                        window.location.assign('hwa://open');
+                      }}
                       disabled={loading}
                     >
                       Sign in with the desktop agent
@@ -602,45 +725,32 @@ const Login = () => {
                       Asks the Hyperweaver Agent running on this machine to open a signed-in session
                       — no key needed.
                     </div>
+                    {desktopCountdown !== null && desktopCountdown > 0 && (
+                      <div className="form-text">
+                        Signing in automatically in {desktopCountdown}s…{' '}
+                        <button
+                          type="button"
+                          className="btn btn-link btn-sm p-0 align-baseline"
+                          onClick={() => setDesktopCountdown(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Show username/password fields only for local/LDAP authentication */}
                 {!isDirect && !authMethod.startsWith('oidc-') && (
-                  <>
-                    <div className="mb-3 text-start">
-                      <label className="form-label" htmlFor="identifier">
-                        {authMethod === 'ldap' ? 'Username' : 'Email or Username'}
-                      </label>
-                      <input
-                        id="identifier"
-                        type="text"
-                        className="form-control"
-                        name="identifier"
-                        autoComplete="username"
-                        placeholder={authMethod === 'ldap' ? 'Username' : 'Username or Email'}
-                        value={identifier}
-                        onChange={e => setIdentifier(e.target.value)}
-                        disabled={loading || methodsLoading}
-                      />
-                    </div>
-                    <div className="mb-3 text-start">
-                      <label className="form-label" htmlFor="password">
-                        Password
-                      </label>
-                      <input
-                        id="password"
-                        type="password"
-                        name="password"
-                        autoComplete="current-password"
-                        className="form-control"
-                        placeholder="******"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        disabled={loading}
-                      />
-                    </div>
-                  </>
+                  <CredentialFields
+                    authMethod={authMethod}
+                    identifier={identifier}
+                    setIdentifier={setIdentifier}
+                    password={password}
+                    setPassword={setPassword}
+                    loading={loading}
+                    methodsLoading={methodsLoading}
+                  />
                 )}
 
                 {/* OIDC provider selected: the (auto-)redirect notice + controls. Once a provider
@@ -675,21 +785,11 @@ const Login = () => {
                   </div>
                 )}
                 {!directFirstBoot && (
-                  <div className="mb-3">
-                    <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-                      {loading && (
-                        <span
-                          className="spinner-border spinner-border-sm me-2"
-                          role="status"
-                          aria-hidden="true"
-                        />
-                      )}
-                      {authMethod.startsWith('oidc-')
-                        ? authMethods.find(m => m.id === authMethod)?.name ||
-                          'Continue with OpenID Connect'
-                        : 'Login'}
-                    </button>
-                  </div>
+                  <LoginSubmitButton
+                    loading={loading}
+                    authMethod={authMethod}
+                    authMethods={authMethods}
+                  />
                 )}
                 {!isDirect && (
                   <RegisterPrompt

@@ -3,10 +3,14 @@ import PropTypes from 'prop-types';
 // Interface rows are the /monitoring/network/interfaces list (same feed the
 // Networking page renders) — the /stats payload carries no interface map, so
 // this card reads the monitoring data the page already fetches.
-const NetworkStorageSummary = ({ networkInterfaces, storageSummary }) => (
+// The Storage card is ZFS-shaped (pools/datasets) and renders only where the
+// agent advertises `zfs` (Mark, 2026-07-07) — a non-ZFS host gets the network
+// card full-width; a ZFS-on-Windows host would advertise the token and get
+// the card back.
+const NetworkStorageSummary = ({ networkInterfaces, storageSummary, showZfsStorage = true }) => (
   <div className="row g-3 mb-5">
     {/* Network Summary Card */}
-    <div className="col-12 col-lg-6">
+    <div className={showZfsStorage ? 'col-12 col-lg-6' : 'col-12'}>
       <div className="card h-100">
         <div className="card-body">
           <h3 className="h5 mb-4 d-flex align-items-center gap-2">
@@ -59,39 +63,41 @@ const NetworkStorageSummary = ({ networkInterfaces, storageSummary }) => (
       </div>
     </div>
 
-    {/* Storage Summary Card */}
-    <div className="col-12 col-lg-6">
-      <div className="card h-100">
-        <div className="card-body">
-          <h3 className="h5 mb-4 d-flex align-items-center gap-2">
-            <i className="fas fa-hard-drive" />
-            <span>Storage Summary</span>
-          </h3>
-          {Object.keys(storageSummary).length > 0 ? (
-            <div className="table-responsive">
-              <table className="table">
-                <tbody>
-                  <tr>
-                    <td>
-                      <strong>ZFS Pools</strong>
-                    </td>
-                    <td>{storageSummary.pools?.length || 0}</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <strong>Datasets</strong>
-                    </td>
-                    <td>{storageSummary.datasets?.length || 0}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-muted mb-4">Storage monitoring data not available</p>
-          )}
+    {/* Storage Summary Card — ZFS-shaped, zfs-gated */}
+    {showZfsStorage && (
+      <div className="col-12 col-lg-6">
+        <div className="card h-100">
+          <div className="card-body">
+            <h3 className="h5 mb-4 d-flex align-items-center gap-2">
+              <i className="fas fa-hard-drive" />
+              <span>Storage Summary</span>
+            </h3>
+            {Object.keys(storageSummary).length > 0 ? (
+              <div className="table-responsive">
+                <table className="table">
+                  <tbody>
+                    <tr>
+                      <td>
+                        <strong>ZFS Pools</strong>
+                      </td>
+                      <td>{storageSummary.pools?.length || 0}</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <strong>Datasets</strong>
+                      </td>
+                      <td>{storageSummary.datasets?.length || 0}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-muted mb-4">Storage monitoring data not available</p>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    )}
   </div>
 );
 
@@ -107,6 +113,7 @@ NetworkStorageSummary.propTypes = {
     pools: PropTypes.arrayOf(PropTypes.any),
     datasets: PropTypes.arrayOf(PropTypes.any),
   }).isRequired,
+  showZfsStorage: PropTypes.bool,
 };
 
 export default NetworkStorageSummary;

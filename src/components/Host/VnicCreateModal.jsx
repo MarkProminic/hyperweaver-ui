@@ -291,7 +291,6 @@ const VnicCreateModal = ({ server, onClose, onSuccess, onError }) => {
         name: formData.name.trim(),
         link: formData.link.trim(),
         temporary: formData.temporary,
-        created_by: 'api',
       };
 
       // Add optional fields

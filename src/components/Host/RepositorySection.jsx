@@ -92,8 +92,7 @@ const RepositorySection = ({ server, onError }) => {
         server.port,
         server.protocol,
         `system/repositories/${encodeURIComponent(publisherName)}/${action}`,
-        'POST',
-        { created_by: 'api' }
+        'POST'
       );
 
       if (result.success) {

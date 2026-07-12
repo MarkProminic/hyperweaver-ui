@@ -1,5 +1,10 @@
 import { calculateNetworkBandwidth } from '../utils';
 
+// Series only move forward: a batch that overlaps what a series already holds
+// (realtime re-fetches, since-boundary rows) is skipped, never duplicated.
+const isNewerPoint = (series, timestamp) =>
+  series.length === 0 || timestamp > series[series.length - 1][0];
+
 /**
  * Incremental update function for Storage I/O (pure incremental only)
  * @param {Object} prevChartData - Previous chart data state
@@ -35,6 +40,9 @@ export const updatePoolIOChartData = (prevChartData, poolIOData, maxDataPoints) 
     // Pure incremental - append all new data points
     poolIOArray.forEach(poolIO => {
       const timestamp = new Date(poolIO.scan_timestamp).getTime();
+      if (!isNewerPoint(newData[poolName].readData, timestamp)) {
+        return;
+      }
       const readBandwidth = poolIO.read_bandwidth_bytes || 0;
       const writeBandwidth = poolIO.write_bandwidth_bytes || 0;
       const readMBps = readBandwidth / (1024 * 1024);
@@ -69,6 +77,9 @@ export const updateARCChartData = (prevArcChartData, arcData, maxDataPoints) => 
 
   arcData.forEach(arc => {
     const timestamp = new Date(arc.scan_timestamp).getTime();
+    if (!isNewerPoint(newData.sizeData, timestamp)) {
+      return;
+    }
 
     const arcSize = arc.arc_size ? parseFloat(arc.arc_size) / (1024 * 1024 * 1024) : 0;
     const arcTarget = arc.arc_target_size
@@ -150,15 +161,17 @@ export const updateNetworkChartData = (prevNetworkChartData, networkUsageData, m
       // Update mode - just add the latest points
       const latestUsage = usageArray[usageArray.length - 1];
       if (latestUsage) {
-        const bandwidth = calculateNetworkBandwidth(latestUsage);
         const timestamp = new Date(latestUsage.scan_timestamp).getTime();
+        if (isNewerPoint(newData[interfaceName].rxData, timestamp)) {
+          const bandwidth = calculateNetworkBandwidth(latestUsage);
 
-        newData[interfaceName].rxData.push([timestamp, parseFloat(bandwidth.rxMbps.toFixed(3))]);
-        newData[interfaceName].txData.push([timestamp, parseFloat(bandwidth.txMbps.toFixed(3))]);
-        newData[interfaceName].totalData.push([
-          timestamp,
-          parseFloat(bandwidth.totalMbps.toFixed(3)),
-        ]);
+          newData[interfaceName].rxData.push([timestamp, parseFloat(bandwidth.rxMbps.toFixed(3))]);
+          newData[interfaceName].txData.push([timestamp, parseFloat(bandwidth.txMbps.toFixed(3))]);
+          newData[interfaceName].totalData.push([
+            timestamp,
+            parseFloat(bandwidth.totalMbps.toFixed(3)),
+          ]);
+        }
       }
     }
 
@@ -191,6 +204,9 @@ export const updateCPUChartData = (prevCpuChartData, cpuData, maxDataPoints) => 
   // Process each new data point
   sortedData.forEach(d => {
     const timestamp = new Date(d.scan_timestamp).getTime();
+    if (!isNewerPoint(newData.overall, timestamp)) {
+      return;
+    }
 
     // Append to overall data
     newData.overall.push([timestamp, d.cpu_utilization_pct]);
@@ -230,6 +246,9 @@ export const updateCPUCoreChartData = (prevCpuChartData, cpuData, maxDataPoints)
         if (!newData.cores[coreData.cpu_id]) {
           newData.cores[coreData.cpu_id] = [];
         }
+        if (!isNewerPoint(newData.cores[coreData.cpu_id], timestamp)) {
+          return;
+        }
         newData.cores[coreData.cpu_id].push([timestamp, coreData.utilization_pct]);
 
         // Trim core data to max data points
@@ -261,6 +280,9 @@ export const updateMemoryChartData = (prevMemoryChartData, memoryData, maxDataPo
   // Process each new memory data point
   sortedMemoryData.forEach(d => {
     const timestamp = new Date(d.scan_timestamp).getTime();
+    if (!isNewerPoint(newData.used, timestamp)) {
+      return;
+    }
 
     newData.used.push([timestamp, parseFloat((d.used_memory_bytes / 1024 ** 3).toFixed(2))]);
     newData.free.push([timestamp, parseFloat((d.free_memory_bytes / 1024 ** 3).toFixed(2))]);

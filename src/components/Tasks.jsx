@@ -125,6 +125,7 @@ export const TASK_COLUMNS = [
 const getStatusClass = status => {
   switch (status) {
     case 'failed':
+    case 'completed_with_errors':
       return 'task-failed';
     case 'running':
       return 'task-running';

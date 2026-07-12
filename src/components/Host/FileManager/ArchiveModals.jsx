@@ -125,11 +125,11 @@ const CreateArchiveModal = ({ isOpen, onClose, selectedFiles, currentPath, api, 
           value={format}
           onChange={e => handleFormatChange(e.target.value)}
         >
-          <option value="tar.gz">tar.gz (Compressed tar archive)</option>
-          <option value="tar.bz2">tar.bz2 (BZip2 compressed tar)</option>
-          <option value="tar">tar (Uncompressed tar archive)</option>
-          <option value="zip">zip (ZIP archive)</option>
-          <option value="gz">gz (GZip compressed)</option>
+          {api.archiveFormats().map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </div>
 

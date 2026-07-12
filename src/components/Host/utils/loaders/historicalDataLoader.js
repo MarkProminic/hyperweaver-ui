@@ -5,6 +5,15 @@ import {
   processMemoryHistoricalData,
 } from '../chartProcessors';
 
+// Realtime agents (`sampling.strategy: "realtime"`) hold no history — every
+// fetch answers one live sample, so replacing chart state here would wipe the
+// session's accumulated points down to a single dot. Those responses APPEND
+// through the incremental updaters instead; stored history keeps replacing.
+const isRealtimeResult = result =>
+  result.status === 'fulfilled' &&
+  result.value?.success &&
+  result.value.data?.sampling?.strategy === 'realtime';
+
 /**
  * Helper: Group network records by interface
  */
@@ -98,7 +107,12 @@ const processNetworkUsageForState = networkData => {
 /**
  * Helper: Process network historical data
  */
-const processNetworkHistoricalData = (networkResult, setNetworkChartData, setNetworkUsage) => {
+const processNetworkHistoricalData = (
+  networkResult,
+  setNetworkChartData,
+  setNetworkUsage,
+  updateNetworkChartData
+) => {
   if (networkResult.status === 'fulfilled' && networkResult.value?.success) {
     const networkData = networkResult.value.data?.usage || [];
     console.log(
@@ -107,9 +121,15 @@ const processNetworkHistoricalData = (networkResult, setNetworkChartData, setNet
       'historical network records'
     );
 
-    const interfaceGroups = groupNetworkRecordsByInterface(networkData);
-    const newNetworkChartData = buildNetworkChartData(interfaceGroups);
-    setNetworkChartData(newNetworkChartData);
+    if (isRealtimeResult(networkResult) && updateNetworkChartData) {
+      if (networkData.length > 0) {
+        updateNetworkChartData(networkData);
+      }
+    } else {
+      const interfaceGroups = groupNetworkRecordsByInterface(networkData);
+      const newNetworkChartData = buildNetworkChartData(interfaceGroups);
+      setNetworkChartData(newNetworkChartData);
+    }
 
     const sortedNetworkUsage = processNetworkUsageForState(networkData);
     setNetworkUsage(sortedNetworkUsage);
@@ -122,7 +142,12 @@ const processNetworkHistoricalData = (networkResult, setNetworkChartData, setNet
 /**
  * Helper: Process storage pool I/O historical data
  */
-const processPoolIOHistoricalData = (poolIOResult, setChartData, setDiskIOStats) => {
+const processPoolIOHistoricalData = (
+  poolIOResult,
+  setChartData,
+  setDiskIOStats,
+  updatePoolIOChartData
+) => {
   if (poolIOResult.status === 'fulfilled' && poolIOResult.value?.success) {
     const poolIOData = poolIOResult.value.data?.poolio || [];
     console.log(
@@ -131,8 +156,14 @@ const processPoolIOHistoricalData = (poolIOResult, setChartData, setDiskIOStats)
       'historical pool I/O records'
     );
 
-    const processedStorageIOData = processStorageIOHistoricalData(poolIOData);
-    setChartData(processedStorageIOData);
+    if (isRealtimeResult(poolIOResult) && updatePoolIOChartData) {
+      if (poolIOData.length > 0) {
+        updatePoolIOChartData(poolIOData);
+      }
+    } else {
+      const processedStorageIOData = processStorageIOHistoricalData(poolIOData);
+      setChartData(processedStorageIOData);
+    }
 
     const deduplicatedPoolIO = poolIOData.reduce((acc, poolIO) => {
       const existingPoolIO = acc.find(existingItem => existingItem.pool === poolIO.pool);
@@ -155,34 +186,40 @@ const processPoolIOHistoricalData = (poolIOResult, setChartData, setDiskIOStats)
 /**
  * Helper: Process ZFS ARC historical data
  */
-const processARCHistoricalData = (arcResult, setArcChartData, setArcStats) => {
+const processARCHistoricalData = (arcResult, setArcChartData, setArcStats, updateARCChartData) => {
   if (arcResult.status === 'fulfilled' && arcResult.value?.success) {
     const arcData = arcResult.value.data?.arc || [];
     console.log('📊 HISTORICAL CHARTS: Processing', arcData.length, 'historical ARC records');
 
-    const sizeData = [];
-    const targetData = [];
-    const hitRateData = [];
-
     arcData.sort((a, b) => new Date(a.scan_timestamp) - new Date(b.scan_timestamp));
 
-    arcData.forEach(arc => {
-      const timestamp = new Date(arc.scan_timestamp).getTime();
-      const arcSize = arc.arc_size ? parseFloat(arc.arc_size) / (1024 * 1024 * 1024) : 0;
-      const arcTarget = arc.arc_target_size
-        ? parseFloat(arc.arc_target_size) / (1024 * 1024 * 1024)
-        : 0;
-      const arcHits = parseFloat(arc.hits || arc.arc_hits) || 0;
-      const arcMisses = parseFloat(arc.misses || arc.arc_misses) || 0;
-      const hitRate =
-        arc.hit_ratio || (arcHits + arcMisses > 0 ? (arcHits / (arcHits + arcMisses)) * 100 : 0);
+    if (isRealtimeResult(arcResult) && updateARCChartData) {
+      if (arcData.length > 0) {
+        updateARCChartData(arcData);
+      }
+    } else {
+      const sizeData = [];
+      const targetData = [];
+      const hitRateData = [];
 
-      sizeData.push([timestamp, parseFloat(arcSize.toFixed(2))]);
-      targetData.push([timestamp, parseFloat(arcTarget.toFixed(2))]);
-      hitRateData.push([timestamp, parseFloat(hitRate.toFixed(1))]);
-    });
+      arcData.forEach(arc => {
+        const timestamp = new Date(arc.scan_timestamp).getTime();
+        const arcSize = arc.arc_size ? parseFloat(arc.arc_size) / (1024 * 1024 * 1024) : 0;
+        const arcTarget = arc.arc_target_size
+          ? parseFloat(arc.arc_target_size) / (1024 * 1024 * 1024)
+          : 0;
+        const arcHits = parseFloat(arc.hits || arc.arc_hits) || 0;
+        const arcMisses = parseFloat(arc.misses || arc.arc_misses) || 0;
+        const hitRate =
+          arc.hit_ratio || (arcHits + arcMisses > 0 ? (arcHits / (arcHits + arcMisses)) * 100 : 0);
 
-    setArcChartData({ sizeData, targetData, hitRateData });
+        sizeData.push([timestamp, parseFloat(arcSize.toFixed(2))]);
+        targetData.push([timestamp, parseFloat(arcTarget.toFixed(2))]);
+        hitRateData.push([timestamp, parseFloat(hitRate.toFixed(1))]);
+      });
+
+      setArcChartData({ sizeData, targetData, hitRateData });
+    }
 
     const deduplicatedARC = arcData.reduce((acc, arc) => {
       const existingARC = acc.find(
@@ -204,13 +241,26 @@ const processARCHistoricalData = (arcResult, setArcChartData, setArcStats) => {
 /**
  * Helper: Process CPU historical data
  */
-const processCPUHistoricalDataHelper = (cpuResult, setCpuChartData, setCpuStats) => {
+const processCPUHistoricalDataHelper = (
+  cpuResult,
+  setCpuChartData,
+  setCpuStats,
+  updateCPUChartData,
+  updateCPUCoreChartData
+) => {
   if (cpuResult.status === 'fulfilled' && cpuResult.value?.success) {
     const cpuData = cpuResult.value.data?.cpu || [];
     console.log('📊 HISTORICAL CHARTS: Processing', cpuData.length, 'historical CPU records');
 
-    const processedCPUData = processCPUHistoricalData(cpuData);
-    setCpuChartData(processedCPUData);
+    if (isRealtimeResult(cpuResult) && updateCPUChartData && updateCPUCoreChartData) {
+      if (cpuData.length > 0) {
+        updateCPUChartData(cpuData);
+        updateCPUCoreChartData(cpuData);
+      }
+    } else {
+      const processedCPUData = processCPUHistoricalData(cpuData);
+      setCpuChartData(processedCPUData);
+    }
     setCpuStats(cpuData);
 
     return cpuData;
@@ -221,13 +271,24 @@ const processCPUHistoricalDataHelper = (cpuResult, setCpuChartData, setCpuStats)
 /**
  * Helper: Process memory historical data
  */
-const processMemoryHistoricalDataHelper = (memoryResult, setMemoryChartData, setMemoryStats) => {
+const processMemoryHistoricalDataHelper = (
+  memoryResult,
+  setMemoryChartData,
+  setMemoryStats,
+  updateMemoryChartData
+) => {
   if (memoryResult.status === 'fulfilled' && memoryResult.value?.success) {
     const memoryData = memoryResult.value.data?.memory || [];
     console.log('📊 HISTORICAL CHARTS: Processing', memoryData.length, 'historical memory records');
 
-    const processedMemoryData = processMemoryHistoricalData(memoryData);
-    setMemoryChartData(processedMemoryData);
+    if (isRealtimeResult(memoryResult) && updateMemoryChartData) {
+      if (memoryData.length > 0) {
+        updateMemoryChartData(memoryData);
+      }
+    } else {
+      const processedMemoryData = processMemoryHistoricalData(memoryData);
+      setMemoryChartData(processedMemoryData);
+    }
     setMemoryStats(memoryData);
 
     return memoryData;
@@ -315,6 +376,12 @@ export const loadHistoricalChartData = async ({
   setLastChartTimestamps,
   getHistoricalTimestamp,
   getResolutionLimit,
+  updateNetworkChartData,
+  updatePoolIOChartData,
+  updateARCChartData,
+  updateCPUChartData,
+  updateCPUCoreChartData,
+  updateMemoryChartData,
 }) => {
   // Every fetch below is /monitoring/* — a token-gated surface (sync OPEN ITEM 4b).
   if (!currentServer || !makeAgentRequest || !hasFeature(currentServer, 'monitoring')) {
@@ -362,11 +429,27 @@ export const loadHistoricalChartData = async ({
 
     const [networkResult, poolIOResult, arcResult, cpuResult, memoryResult] = results;
 
-    processNetworkHistoricalData(networkResult, setNetworkChartData, setNetworkUsage);
-    processPoolIOHistoricalData(poolIOResult, setChartData, setDiskIOStats);
-    processARCHistoricalData(arcResult, setArcChartData, setArcStats);
-    processCPUHistoricalDataHelper(cpuResult, setCpuChartData, setCpuStats);
-    processMemoryHistoricalDataHelper(memoryResult, setMemoryChartData, setMemoryStats);
+    processNetworkHistoricalData(
+      networkResult,
+      setNetworkChartData,
+      setNetworkUsage,
+      updateNetworkChartData
+    );
+    processPoolIOHistoricalData(poolIOResult, setChartData, setDiskIOStats, updatePoolIOChartData);
+    processARCHistoricalData(arcResult, setArcChartData, setArcStats, updateARCChartData);
+    processCPUHistoricalDataHelper(
+      cpuResult,
+      setCpuChartData,
+      setCpuStats,
+      updateCPUChartData,
+      updateCPUCoreChartData
+    );
+    processMemoryHistoricalDataHelper(
+      memoryResult,
+      setMemoryChartData,
+      setMemoryStats,
+      updateMemoryChartData
+    );
 
     console.log('📊 HISTORICAL CHARTS: Completed loading historical data for all chart types');
 

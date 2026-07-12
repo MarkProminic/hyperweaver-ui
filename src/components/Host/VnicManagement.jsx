@@ -144,7 +144,6 @@ const VnicManagement = ({ server, onError }) => {
         {
           // Query parameters instead
           temporary: false,
-          created_by: 'api',
         }
       );
 

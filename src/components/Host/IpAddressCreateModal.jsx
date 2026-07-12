@@ -184,7 +184,6 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
         wait: parseInt(formData.wait),
         temporary: formData.temporary,
         down: formData.down,
-        created_by: 'api',
       };
 
       if (formData.type === 'static' && formData.address) {

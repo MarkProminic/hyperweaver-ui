@@ -5,6 +5,8 @@
   "description": "Dual-mode React + Vite web UI for the Hyperweaver control plane",
   "dependencies": {
     "@cubone/react-file-manager": "^1.26.2",
+    "@devolutions/iron-remote-desktop": "file:vendor/iron-remote-desktop",
+    "@devolutions/iron-remote-desktop-rdp": "file:vendor/iron-remote-desktop-rdp",
     "@dr.pogodin/react-helmet": "^3.0.2",
     "@fortawesome/fontawesome-free": "^7.0.0",
     "@popperjs/core": "^2.11.8",

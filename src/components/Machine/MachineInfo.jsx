@@ -218,6 +218,27 @@ const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selec
                   </span>
                 </td>
               </tr>
+              {Array.isArray(configuration?.guest_info?.ips) &&
+                configuration.guest_info.ips.length > 0 && (
+                  <tr>
+                    <td className="px-3 py-2">
+                      <strong>Guest IP</strong>
+                    </td>
+                    <td className="px-3 py-2">
+                      {configuration.guest_info.ips.map(ip => (
+                        <code className="small me-2" key={ip}>
+                          {ip}
+                        </code>
+                      ))}
+                      <span className="text-muted small">
+                        via{' '}
+                        {configuration.guest_info.source === 'additions'
+                          ? 'Guest Additions'
+                          : 'guest agent'}
+                      </span>
+                    </td>
+                  </tr>
+                )}
               {(machine_info.is_orphaned || machine_info.auto_discovered) && (
                 <tr>
                   <td className="px-3 py-2">
@@ -263,6 +284,12 @@ MachineInfo.propTypes = {
       'scheduling-class': PropTypes.string,
       limitpriv: PropTypes.string,
       'fs-allowed': PropTypes.string,
+      guest_info: PropTypes.shape({
+        ips: PropTypes.arrayOf(PropTypes.string),
+        source: PropTypes.string,
+        agent_responding: PropTypes.bool,
+        checked_at: PropTypes.string,
+      }),
     }),
   }),
   monitoringHealth: PropTypes.shape({

@@ -124,7 +124,6 @@ const TimeSyncConfig = ({ server, onError }) => {
         {
           config_content: configContent,
           backup_existing: backupConfig,
-          created_by: 'api',
         }
       );
 

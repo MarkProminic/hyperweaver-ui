@@ -14,7 +14,6 @@ const CreateBEModal = ({ server, onClose, onSuccess, onError }) => {
     activate: false,
     zpool: '',
     properties: [],
-    createdBy: 'api',
   });
   const nextPropId = useRef(0);
 
@@ -80,7 +79,6 @@ const CreateBEModal = ({ server, onClose, onSuccess, onError }) => {
 
       const requestData = {
         name: formData.name.trim(),
-        created_by: formData.createdBy,
       };
 
       // Add optional fields only if they have values

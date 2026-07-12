@@ -1,130 +1,169 @@
 import PropTypes from 'prop-types';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { cloneMachine, provisionMachine, syncMachine } from '../../api/provisioningAPI';
+import {
+  provisionMachine,
+  syncMachine,
+  runProvisioners,
+  getProvisionStatus,
+} from '../../api/provisioningAPI';
 import { hasFeature } from '../../utils/capabilities';
 import { canCreateMachines, canStartStopMachines } from '../../utils/permissions';
-import { resourceLabel } from '../../utils/resourceLabel';
-import { FormModal } from '../common';
+import { DismissibleAlert } from '../common';
+
+import ProvisioningEditor from './ProvisioningEditor';
 
 /**
- * Provisioning card on the machine detail view (sync item 11) — renders only
- * for provisioner-managed machines (rows carrying a creation spec), on
- * WHICHEVER agent serves them: everything here speaks the shared v1
- * contract and gates on tokens/spec presence, never on hypervisor. Offers
- * the post-provision welcome address plus Provision / Sync / Modify / Clone.
+ * Provisioning TAB on the machine detail view — status on top, the
+ * provisioner-document editor INLINE beneath (the tab IS the editor; the
+ * navbar's Edit Provisioning item just navigates here). The pipeline actions
+ * (Provision / Sync Files / Run Provisioners) live in the navbar's {Machine}
+ * Controls menu, gated on the provision-status answer — they arrive as
+ * ?run= params and this pane executes them and reports. A machine WITHOUT a
+ * provisioner document gets the same editor: storing a first document turns
+ * the pipeline on (package-created machines carry one automatically).
  */
+
+/** Parse a possibly-JSON-string configuration document. */
+const parseConfiguration = machineDetails => {
+  const configuration = machineDetails?.configuration;
+  if (!configuration) {
+    return {};
+  }
+  if (typeof configuration === 'string') {
+    try {
+      return JSON.parse(configuration);
+    } catch {
+      return {};
+    }
+  }
+  return configuration;
+};
+
 const MachineProvisioning = ({
   machineDetails,
   currentServer,
   user,
-  onModify,
-  onCloned,
-  notice,
+  requestedAction = null,
+  onActionConsumed = null,
+  onDocumentStored = null,
 }) => {
   const [msg, setMsg] = useState('');
   const [msgVariant, setMsgVariant] = useState('info');
   const [loading, setLoading] = useState(false);
-  const [showClone, setShowClone] = useState(false);
-  const [cloneName, setCloneName] = useState('');
-  const [cloneHostname, setCloneHostname] = useState('');
-  const [cloneDomain, setCloneDomain] = useState('');
-  const [cloneMemory, setCloneMemory] = useState('');
-  const [cloneVcpus, setCloneVcpus] = useState('');
-  const [cloneStart, setCloneStart] = useState(false);
+  const [status, setStatus] = useState(null);
 
-  const spec = machineDetails?.machine_info?.spec;
   const machineName = machineDetails?.machine_info?.name;
+  const configuration = parseConfiguration(machineDetails);
+  const provisionerDoc = configuration.provisioner || null;
   const webAddress = machineDetails?.web_address || null;
-  const singular = resourceLabel(currentServer, { plural: false });
-
-  if (!spec || !machineName || Object.keys(spec).length === 0) {
-    return null;
-  }
 
   const canOperate = canStartStopMachines(user?.role);
   const canReshape = canCreateMachines(user?.role) && hasFeature(currentServer, 'machine-create');
 
-  const report = (result, queuedLabel) => {
-    if (result.success) {
-      const taskId = result.data?.task_id;
-      setMsgVariant('info');
-      setMsg(
-        result.data?.message ||
-          (taskId ? `${queuedLabel} task queued (${taskId})` : `${queuedLabel} queued`)
-      );
-    } else {
-      setMsgVariant('danger');
-      setMsg(result.message);
+  const loadStatus = useCallback(() => {
+    if (!currentServer || !machineName) {
+      return;
     }
-  };
-
-  const runOp = async op => {
-    setLoading(true);
-    setMsg('');
-    const call = op === 'provision' ? provisionMachine : syncMachine;
-    const result = await call(
+    getProvisionStatus(
       currentServer.hostname,
       currentServer.port,
       currentServer.protocol,
       machineName
-    );
-    report(result, op === 'provision' ? 'Provision' : 'Sync');
-    setLoading(false);
+    ).then(result => {
+      setStatus(result.success ? result.data : null);
+    });
+  }, [currentServer, machineName]);
+
+  useEffect(() => {
+    setStatus(null);
+    if (provisionerDoc) {
+      loadStatus();
+    }
+  }, [provisionerDoc, loadStatus]);
+
+  const report = (text, variant = 'info') => {
+    setMsg(text);
+    setMsgVariant(variant);
   };
 
-  const handleClone = async () => {
-    if (!cloneHostname.trim()) {
-      setMsgVariant('danger');
-      setMsg('Clone needs a new hostname.');
-      return;
-    }
+  const runPipeline = async kind => {
     setLoading(true);
     setMsg('');
-    const settings = { hostname: cloneHostname.trim() };
-    if (cloneDomain.trim()) {
-      settings.domain = cloneDomain.trim();
-    }
-    const overrides = {};
-    if (cloneMemory !== '') {
-      overrides.memory = Number(cloneMemory);
-    }
-    if (cloneVcpus !== '') {
-      overrides.vcpus = Number(cloneVcpus);
-    }
-    // `name` is optional (sync item 12) — blank lets the agent derive it.
-    const result = await cloneMachine(
-      currentServer.hostname,
-      currentServer.port,
-      currentServer.protocol,
-      machineName,
-      {
-        ...(cloneName.trim() && { name: cloneName.trim() }),
-        settings,
-        overrides,
-        start_after_create: cloneStart,
-      }
-    );
-    setLoading(false);
-    if (result.success) {
-      const newName = result.data?.machine_name || cloneName.trim();
-      setShowClone(false);
-      setMsgVariant('success');
-      setMsg(result.data?.message || (newName ? `Cloned to ${newName}` : 'Cloned'));
-      if (newName) {
-        onCloned(newName);
-      }
-      setCloneName('');
-      setCloneHostname('');
-      setCloneDomain('');
-      setCloneMemory('');
-      setCloneVcpus('');
-      setCloneStart(false);
+    let result;
+    if (kind === 'provision') {
+      result = await provisionMachine(
+        currentServer.hostname,
+        currentServer.port,
+        currentServer.protocol,
+        machineName
+      );
+    } else if (kind === 'sync' || kind === 'syncback') {
+      result = await syncMachine(
+        currentServer.hostname,
+        currentServer.port,
+        currentServer.protocol,
+        machineName,
+        kind === 'syncback'
+      );
     } else {
-      setMsgVariant('danger');
-      setMsg(result.message);
+      result = await runProvisioners(
+        currentServer.hostname,
+        currentServer.port,
+        currentServer.protocol,
+        machineName
+      );
     }
+    setLoading(false);
+    if (!result.success) {
+      report(result.message, 'danger');
+      return;
+    }
+    const data = result.data || {};
+    const skipped = Array.isArray(data.playbooks_skipped) ? data.playbooks_skipped : [];
+    if (!data.parent_task_id && skipped.length > 0) {
+      // Run directives skipped everything — the agent's 200 no-op answer.
+      report(`Nothing to run — skipped by run directive: ${skipped.join(', ')}`, 'warning');
+      return;
+    }
+    const parts = [data.message || 'Queued'];
+    if (data.parent_task_id) {
+      parts.push(`(task ${data.parent_task_id}${data.steps ? `, ${data.steps} steps` : ''})`);
+    }
+    if (skipped.length > 0) {
+      parts.push(`— skipped: ${skipped.join(', ')}`);
+    }
+    report(parts.join(' '), 'success');
+    setTimeout(loadStatus, 2000);
   };
+
+  // Actions handed over from the navbar Controls menu — one-shot, guarded
+  // against StrictMode double-invocation; refs keep the effect deps honest.
+  const runPipelineRef = useRef(runPipeline);
+  runPipelineRef.current = runPipeline;
+  const onActionConsumedRef = useRef(onActionConsumed);
+  onActionConsumedRef.current = onActionConsumed;
+  const firedActionRef = useRef(false);
+  useEffect(() => {
+    if (!requestedAction) {
+      firedActionRef.current = false;
+      return;
+    }
+    if (firedActionRef.current || !provisionerDoc) {
+      return;
+    }
+    firedActionRef.current = true;
+    if (onActionConsumedRef.current) {
+      onActionConsumedRef.current();
+    }
+    if (canOperate) {
+      runPipelineRef.current(requestedAction);
+    }
+  }, [requestedAction, provisionerDoc, canOperate]);
+
+  if (!machineName) {
+    return null;
+  }
 
   return (
     <div className="card mb-0 pt-0">
@@ -134,200 +173,106 @@ const MachineProvisioning = ({
           Provisioning
         </h4>
 
-        {notice && <div className="alert alert-warning py-2">{notice}</div>}
-        {msg && <div className={`alert alert-${msgVariant} py-2`}>{msg}</div>}
+        {msg && (
+          <DismissibleAlert variant={`alert-${msgVariant}`} text={msg} onHide={() => setMsg('')} />
+        )}
+        {loading && (
+          <div className="alert alert-info py-2 d-flex align-items-center gap-2">
+            <i className="fas fa-spinner fa-spin" />
+            <span>Working…</span>
+          </div>
+        )}
 
-        <div className="table-responsive">
-          <table className="table table-striped small mb-3">
-            <tbody>
-              <tr>
-                <td className="px-3 py-2">
-                  <strong>Provisioner</strong>
-                </td>
-                <td className="px-3 py-2">
-                  <code className="small">
-                    {spec.provisioner?.name}/{spec.provisioner?.version}
-                  </code>
-                </td>
-              </tr>
-              {spec.sync_method && (
-                <tr>
-                  <td className="px-3 py-2">
-                    <strong>Sync Method</strong>
-                  </td>
-                  <td className="px-3 py-2">
-                    <span className="badge text-bg-secondary">{spec.sync_method}</span>
-                  </td>
-                </tr>
-              )}
-              <tr>
-                <td className="px-3 py-2">
-                  <strong>Welcome Page</strong>
-                </td>
-                <td className="px-3 py-2">
-                  {webAddress ? (
-                    <a href={webAddress} target="_blank" rel="noopener noreferrer">
-                      {webAddress}
-                      <i className="fas fa-external-link-alt ms-2 small" />
-                    </a>
-                  ) : (
-                    <span className="text-muted">Available after the first provision</span>
+        {provisionerDoc ? (
+          <>
+            <div className="table-responsive">
+              <table className="table table-striped small mb-3">
+                <tbody>
+                  {(provisionerDoc.provisioner_name || provisionerDoc.provisioner_version) && (
+                    <tr>
+                      <td className="px-3 py-2">
+                        <strong>Provisioner</strong>
+                      </td>
+                      <td className="px-3 py-2">
+                        <code className="small">
+                          {provisionerDoc.provisioner_name || '?'}/
+                          {provisionerDoc.provisioner_version || '?'}
+                        </code>
+                      </td>
+                    </tr>
                   )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div className="d-flex flex-wrap gap-2">
-          {webAddress && (
-            <a
-              href={webAddress}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-sm btn-success"
-            >
-              <i className="fas fa-globe me-2" />
-              Open
-            </a>
-          )}
-          {canOperate && (
-            <>
-              <button
-                type="button"
-                className="btn btn-sm btn-info"
-                onClick={() => runOp('provision')}
-                disabled={loading}
-              >
-                <i className="fas fa-cogs me-2" />
-                Provision
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm btn-info"
-                onClick={() => runOp('sync')}
-                disabled={loading}
-              >
-                <i className="fas fa-rotate me-2" />
-                Sync Files
-              </button>
-            </>
-          )}
-          {canReshape && (
-            <>
-              <button
-                type="button"
-                className="btn btn-sm btn-warning"
-                onClick={onModify}
-                disabled={loading}
-              >
-                <i className="fas fa-pen-to-square me-2" />
-                Modify
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm btn-secondary"
-                onClick={() => setShowClone(true)}
-                disabled={loading}
-              >
-                <i className="fas fa-clone me-2" />
-                Clone
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      <FormModal
-        isOpen={showClone}
-        onClose={() => setShowClone(false)}
-        onSubmit={handleClone}
-        title={`Clone ${singular}: ${machineName}`}
-        icon="fas fa-clone"
-        submitText="Clone"
-        loading={loading}
-        showCancelButton
-      >
-        <div className="row g-3">
-          <div className="col-12 col-md-6">
-            <label className="form-label" htmlFor="clone-name">
-              New Name
-            </label>
-            <input
-              id="clone-name"
-              className="form-control"
-              type="text"
-              placeholder="blank = derived from hostname/domain"
-              value={cloneName}
-              onChange={e => setCloneName(e.target.value)}
-            />
-          </div>
-          <div className="col-12 col-md-6">
-            <label className="form-label" htmlFor="clone-hostname">
-              New Hostname
-            </label>
-            <input
-              id="clone-hostname"
-              className="form-control"
-              type="text"
-              value={cloneHostname}
-              onChange={e => setCloneHostname(e.target.value)}
-              required
-            />
-          </div>
-          <div className="col-12 col-md-6">
-            <label className="form-label" htmlFor="clone-domain">
-              Domain (blank = inherit)
-            </label>
-            <input
-              id="clone-domain"
-              className="form-control"
-              type="text"
-              value={cloneDomain}
-              onChange={e => setCloneDomain(e.target.value)}
-            />
-          </div>
-          <div className="col-6 col-md-3">
-            <label className="form-label" htmlFor="clone-memory">
-              Memory (MB)
-            </label>
-            <input
-              id="clone-memory"
-              className="form-control"
-              type="number"
-              value={cloneMemory}
-              onChange={e => setCloneMemory(e.target.value)}
-            />
-          </div>
-          <div className="col-6 col-md-3">
-            <label className="form-label" htmlFor="clone-vcpus">
-              vCPUs
-            </label>
-            <input
-              id="clone-vcpus"
-              className="form-control"
-              type="number"
-              value={cloneVcpus}
-              onChange={e => setCloneVcpus(e.target.value)}
-            />
-          </div>
-          <div className="col-12">
-            <div className="form-check form-switch">
-              <input
-                id="clone-start-after"
-                className="form-check-input"
-                type="checkbox"
-                role="switch"
-                checked={cloneStart}
-                onChange={e => setCloneStart(e.target.checked)}
-              />
-              <label className="form-check-label" htmlFor="clone-start-after">
-                Start (and provision) after clone
-              </label>
+                  <tr>
+                    <td className="px-3 py-2">
+                      <strong>Status</strong>
+                    </td>
+                    <td className="px-3 py-2">
+                      {status ? (
+                        <>
+                          <span
+                            className={`badge ${status.provisioning_status === 'provisioned' ? 'text-bg-success' : 'text-bg-warning'}`}
+                          >
+                            {status.provisioning_status || 'unknown'}
+                          </span>
+                          {status.last_provisioned_at && (
+                            <span className="small text-muted ms-2">
+                              last: {new Date(status.last_provisioned_at).toLocaleString()}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-muted">-</span>
+                      )}
+                    </td>
+                  </tr>
+                  {webAddress && (
+                    <tr>
+                      <td className="px-3 py-2">
+                        <strong>Welcome Page</strong>
+                      </td>
+                      <td className="px-3 py-2">
+                        <a href={webAddress} target="_blank" rel="noopener noreferrer">
+                          {webAddress}
+                          <i className="fas fa-external-link-alt ms-2 small" />
+                        </a>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </div>
-      </FormModal>
+            <p className="form-text text-muted mb-0">
+              Provision (the full pipeline), Sync Files, and Run Provisioners (playbooks only) live
+              in the Controls menu in the navbar. The document is edited below.
+            </p>
+          </>
+        ) : (
+          <p className="text-muted mb-0">
+            No provisioner document yet — provisioning is not configured for this machine. Machines
+            created from a provisioner package carry one automatically
+            {canReshape
+              ? '; storing a document below enables the pipeline (its actions then appear under Controls in the navbar)'
+              : ''}
+            .
+          </p>
+        )}
+
+        {canReshape && (
+          <ProvisioningEditor
+            currentServer={currentServer}
+            machineName={machineName}
+            document={provisionerDoc}
+            onSaved={text => {
+              report(text, 'success');
+              // The stored document reshapes configuration.provisioner —
+              // refresh so a first document flips the status (and the
+              // Controls menu) on, and the editor reseeds from what stuck.
+              if (onDocumentStored) {
+                onDocumentStored();
+              }
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 };
@@ -336,9 +281,9 @@ MachineProvisioning.propTypes = {
   machineDetails: PropTypes.object,
   currentServer: PropTypes.object,
   user: PropTypes.object,
-  onModify: PropTypes.func.isRequired,
-  onCloned: PropTypes.func.isRequired,
-  notice: PropTypes.string,
+  requestedAction: PropTypes.string,
+  onActionConsumed: PropTypes.func,
+  onDocumentStored: PropTypes.func,
 };
 
 export default MachineProvisioning;

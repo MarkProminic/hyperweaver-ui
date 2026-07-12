@@ -5,8 +5,10 @@ import { useServers } from '../../contexts/ServerContext';
 
 import AggregateManagement from './AggregateManagement';
 import BridgeManagement from './BridgeManagement';
+import DnsSettings from './DnsSettings';
 import EtherstubManagement from './EtherstubManagement';
 import HostnameSettings from './HostnameSettings';
+import HostsFileEditor from './HostsFileEditor';
 import IpAddressManagement from './IpAddressManagement';
 import VlanManagement from './VlanManagement';
 import VnicManagement from './VnicManagement';
@@ -27,6 +29,8 @@ const NetworkHostnameManagement = ({ server }) => {
 
   const sections = [
     { key: 'hostname', label: 'Hostname', icon: 'fa-server' },
+    { key: 'hosts', label: 'Hosts File', icon: 'fa-address-book' },
+    { key: 'dns', label: 'DNS', icon: 'fa-route' },
     { key: 'vnics', label: 'VNICs', icon: 'fa-network-wired' },
     { key: 'vlans', label: 'VLANs', icon: 'fa-tags' },
     { key: 'addresses', label: 'IP Addresses', icon: 'fa-globe' },
@@ -64,6 +68,10 @@ const NetworkHostnameManagement = ({ server }) => {
       {/* Section Content */}
       <div className="section-content">
         {activeSection === 'hostname' && <HostnameSettings server={server} onError={setError} />}
+
+        {activeSection === 'hosts' && <HostsFileEditor server={server} onError={setError} />}
+
+        {activeSection === 'dns' && <DnsSettings server={server} onError={setError} />}
 
         {activeSection === 'vnics' && <VnicManagement server={server} onError={setError} />}
 

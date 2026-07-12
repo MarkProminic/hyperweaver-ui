@@ -21,6 +21,9 @@ export const useNavbarActions = () => {
     message: '',
     bootEnvironment: '',
   });
+  // Destroy dialog options (catalog §2/§13): cleanup_disks rides the wire
+  // explicitly on every delete — the two agents' defaults disagree.
+  const [destroyOptions, setDestroyOptions] = useState({ cleanupDisks: true });
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,6 +40,10 @@ export const useNavbarActions = () => {
     stopMachine,
     restartMachine,
     suspendMachine,
+    resetMachine,
+    injectNmi,
+    pauseMachine,
+    resumeMachine,
     deleteMachine,
     restartHost,
     shutdownHost,
@@ -92,6 +99,41 @@ export const useNavbarActions = () => {
             currentMachine
           );
           break;
+        case 'reset':
+          // Hard reboot — the agent answers 400 unless the machine is running.
+          result = await resetMachine(
+            currentServer.hostname,
+            currentServer.port,
+            currentServer.protocol,
+            currentMachine
+          );
+          break;
+        case 'nmi':
+          // Diagnostic NMI (crash dump / kernel debugger) — the agent answers
+          // 400 unless the machine is running.
+          result = await injectNmi(
+            currentServer.hostname,
+            currentServer.port,
+            currentServer.protocol,
+            currentMachine
+          );
+          break;
+        case 'pause':
+          result = await pauseMachine(
+            currentServer.hostname,
+            currentServer.port,
+            currentServer.protocol,
+            currentMachine
+          );
+          break;
+        case 'resume':
+          result = await resumeMachine(
+            currentServer.hostname,
+            currentServer.port,
+            currentServer.protocol,
+            currentMachine
+          );
+          break;
         case 'kill':
           result = await stopMachine(
             currentServer.hostname,
@@ -109,7 +151,8 @@ export const useNavbarActions = () => {
             currentServer.port,
             currentServer.protocol,
             currentMachine,
-            true
+            true,
+            destroyOptions.cleanupDisks
           );
           break;
         default:
@@ -298,6 +341,8 @@ export const useNavbarActions = () => {
     loading,
     hostActionOptions,
     setHostActionOptions,
+    destroyOptions,
+    setDestroyOptions,
     recoveryFailed,
     setRecoveryFailed,
     handleModalClick,

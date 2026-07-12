@@ -2,7 +2,9 @@ import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 
 import { useServers } from '../contexts/ServerContext';
+import { hasConsole } from '../utils/capabilities';
 
+import { startRdpPreview } from './consoleActions';
 import VncActionsDropdown from './VncActionsDropdown';
 import VncViewerReact from './VncViewerReact';
 
@@ -18,6 +20,7 @@ const VncConsoleDisplay = ({
   vncSettings,
   vncRef,
   hasZlogin,
+  hasRdp,
   setLoading,
   setError,
   setPreviewVncViewOnly,
@@ -34,6 +37,8 @@ const VncConsoleDisplay = ({
 }) => {
   const { makeAgentRequest } = useServers();
   const [screenshotUrl, setScreenshotUrl] = useState(null);
+  const rdpAvailable = hasConsole(currentServer, 'rdp');
+  const zloginAvailable = hasConsole(currentServer, 'zlogin');
 
   // With no live console session, fetch a server-side framebuffer screenshot
   // for this zone and show it as the placeholder preview. The API captures it
@@ -102,12 +107,7 @@ const VncConsoleDisplay = ({
           <VncActionsDropdown
             vncRef={vncRef}
             variant="button"
-            onToggleReadOnly={() => {
-              console.log(
-                `🔧 VNC READ-ONLY: Toggling from ${previewVncViewOnly} to ${!previewVncViewOnly}`
-              );
-              setPreviewVncViewOnly(!previewVncViewOnly);
-            }}
+            onToggleReadOnly={() => setPreviewVncViewOnly(!previewVncViewOnly)}
             onScreenshot={() => {
               const vncContainer = document.querySelector('.vnc-viewer-react canvas');
               if (vncContainer) {
@@ -150,7 +150,6 @@ const VncConsoleDisplay = ({
                   if (navigator.clipboard && navigator.clipboard.readText) {
                     const text = await navigator.clipboard.readText();
                     if (text && vncRef.current?.clipboardPaste) {
-                      console.log(`📋 VNC PREVIEW PASTE: Pasting ${text.length} characters`);
                       vncRef.current.clipboardPaste(text);
                     }
                   }
@@ -172,48 +171,78 @@ const VncConsoleDisplay = ({
           >
             <i className="fas fa-expand" />
           </button>
-          {hasZlogin ? (
-            <button
-              type="button"
-              className="btn btn-sm btn-warning"
-              onClick={() => {
-                console.log(`🔄 PREVIEW SWITCH: Switching to zlogin preview from VNC`);
-                setActiveConsoleType('zlogin');
-              }}
-              title="Switch to zlogin Console"
-            >
-              <i className="fas fa-terminal" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-sm btn-warning"
-              onClick={async () => {
-                console.log(`🚀 START ZLOGIN: Starting zlogin for preview from VNC`);
-                try {
-                  setLoading(true);
-                  const result = await startZloginSessionExplicitly(currentServer, selectedMachine);
-                  if (result) {
-                    setMachineDetails(prev => ({
-                      ...prev,
-                      zlogin_session: result,
-                      active_zlogin_session: true,
-                    }));
-                    setActiveConsoleType('zlogin');
+          {zloginAvailable &&
+            (hasZlogin ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-warning"
+                onClick={() => setActiveConsoleType('zlogin')}
+                title="Switch to zlogin Console"
+              >
+                <i className="fas fa-terminal" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm btn-warning"
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    const result = await startZloginSessionExplicitly(
+                      currentServer,
+                      selectedMachine
+                    );
+                    if (result) {
+                      setMachineDetails(prev => ({
+                        ...prev,
+                        zlogin_session: result,
+                        active_zlogin_session: true,
+                      }));
+                      setActiveConsoleType('zlogin');
+                    }
+                  } catch (error) {
+                    console.error('Error starting zlogin:', error);
+                    setError('Error starting zlogin console');
+                  } finally {
+                    setLoading(false);
                   }
-                } catch (error) {
-                  console.error('Error starting zlogin:', error);
-                  setError('Error starting zlogin console');
-                } finally {
-                  setLoading(false);
+                }}
+                disabled={loading}
+                title="Start zlogin Console"
+              >
+                <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'}`} />
+              </button>
+            ))}
+          {rdpAvailable &&
+            (hasRdp ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-info"
+                onClick={() => setActiveConsoleType('rdp')}
+                title="Switch to RDP Console"
+              >
+                <i className="fab fa-windows" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm btn-info"
+                onClick={() =>
+                  startRdpPreview({
+                    currentServer,
+                    selectedMachine,
+                    setLoading,
+                    setError,
+                    setMachineDetails,
+                    setActiveConsoleType,
+                  })
                 }
-              }}
-              disabled={loading}
-              title="Start zlogin Console"
-            >
-              <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'}`} />
-            </button>
-          )}
+                disabled={loading}
+                title="Start the browser VRDP console (VRDE over the agent)"
+              >
+                <i className={loading ? 'fas fa-spinner fa-pulse' : 'fab fa-windows'} />
+              </button>
+            ))}
         </div>
       </div>
 
@@ -235,9 +264,6 @@ const VncConsoleDisplay = ({
                 resize={vncSettings.resize}
                 showDot={vncSettings.showDot}
                 resizeSession={vncSettings.resize === 'remote'}
-                onClipboard={event => {
-                  console.log('📋 VNC PREVIEW: Clipboard received from server:', event);
-                }}
                 className="hw-vnc-container"
               />
             );
@@ -300,6 +326,7 @@ VncConsoleDisplay.propTypes = {
   vncSettings: PropTypes.object,
   vncRef: PropTypes.object,
   hasZlogin: PropTypes.bool,
+  hasRdp: PropTypes.bool,
   setLoading: PropTypes.func,
   setError: PropTypes.func,
   setPreviewVncViewOnly: PropTypes.func,

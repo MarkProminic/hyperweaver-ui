@@ -6,6 +6,7 @@ import { hasFeature, hasMachines } from '../utils/capabilities';
 
 import HostHeader from './Host/HostHeader.jsx';
 import MachineManager from './Host/MachineManager.jsx';
+import MonitoringDatabase from './Host/MonitoringDatabase.jsx';
 import NetworkStorageSummary from './Host/NetworkStorageSummary.jsx';
 import ZfsArcChart from './Host/PerformanceCharts/Arc.jsx';
 import CpuChart from './Host/PerformanceCharts/Cpu.jsx';
@@ -267,6 +268,7 @@ const Hosts = () => {
               taskStats={taskStats}
               swapSummaryData={swapSummaryData}
               arcSizeBytes={arcSizeBytes}
+              currentServer={currentServer}
               loading={loading}
             />
 
@@ -289,6 +291,7 @@ const Hosts = () => {
                 <NetworkStorageSummary
                   networkInterfaces={networkInterfaces}
                   storageSummary={storageSummary}
+                  showZfsStorage={hasFeature(currentServer, 'zfs')}
                   loading={loading}
                 />
 
@@ -301,19 +304,27 @@ const Hosts = () => {
                     </h5>
 
                     <div className="row g-3">
-                      <StorageIOChart
-                        chartData={chartData}
-                        storageSeriesVisibility={storageSeriesVisibility}
-                        setStorageSeriesVisibility={setStorageSeriesVisibility}
-                        expandChart={expandChart}
-                        loading={loading}
-                      />
+                      {/* Pool I/O and ARC are ZFS-shaped data — hidden where the
+                          agent doesn't advertise `zfs` (Mark, 2026-07-07). When an
+                          agent ships generic disk-I/O monitoring, that gets its own
+                          chart against that wire, not this pool one. */}
+                      {hasFeature(currentServer, 'zfs') && (
+                        <StorageIOChart
+                          chartData={chartData}
+                          storageSeriesVisibility={storageSeriesVisibility}
+                          setStorageSeriesVisibility={setStorageSeriesVisibility}
+                          expandChart={expandChart}
+                          loading={loading}
+                        />
+                      )}
 
-                      <ZfsArcChart
-                        arcChartData={arcChartData}
-                        expandChart={expandChart}
-                        loading={loading}
-                      />
+                      {hasFeature(currentServer, 'zfs') && (
+                        <ZfsArcChart
+                          arcChartData={arcChartData}
+                          expandChart={expandChart}
+                          loading={loading}
+                        />
+                      )}
 
                       <NetworkChart
                         networkChartData={networkChartData}
@@ -340,6 +351,9 @@ const Hosts = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Self-hides on realtime-only agents (empty store = no database). */}
+                <MonitoringDatabase currentServer={currentServer} />
               </>
             )}
 

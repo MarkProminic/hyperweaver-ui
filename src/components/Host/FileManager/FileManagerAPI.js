@@ -42,9 +42,8 @@ class AgentFileManagerAPI extends FileManagerAPIBase {
         path: getPathFromFile(file),
         content,
         backup: false,
-        uid: 1000,
-        gid: 1000,
         mode: '644',
+        ...this.ownershipFields(),
       };
 
       return await this.makeRequest('filesystem/content', 'PUT', data);
@@ -171,6 +170,11 @@ class AgentFileManagerAPI extends FileManagerAPIBase {
         ...permissionChanges,
         recursive: permissionChanges.recursive || false,
       };
+      // uid/gid 400 on a Windows agent — mode there is the read-only attribute.
+      if (this.isWindowsAgent()) {
+        delete data.uid;
+        delete data.gid;
+      }
 
       const result = await this.makeRequest('filesystem/permissions', 'PATCH', data);
 

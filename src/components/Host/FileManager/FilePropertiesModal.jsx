@@ -193,6 +193,7 @@ const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
   const currentOctal = useCustomMode ? customMode : calculateOctalFromCheckboxes();
   const selectedUserObj = systemUsers.find(u => u.uid.toString() === selectedUser);
   const selectedGroupObj = systemGroups.find(g => g.gid.toString() === selectedGroup);
+  const isWindows = api.isWindowsAgent();
 
   return (
     <FormModal
@@ -239,62 +240,64 @@ const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
       )}
 
       <div className="row">
-        {/* Ownership */}
-        <div className="col">
-          <h5 className="h6">Ownership</h5>
+        {/* Ownership — POSIX only; a Windows agent rejects uid/gid. */}
+        {!isWindows && (
+          <div className="col">
+            <h5 className="h6">Ownership</h5>
 
-          {/* User selection */}
-          <div className="mb-3">
-            <label htmlFor="file-props-user" className="form-label">
-              User
-            </label>
-            <div>
-              <select
-                id="file-props-user"
-                className="form-select"
-                value={selectedUser}
-                onChange={e => setSelectedUser(e.target.value)}
-              >
-                <option value="">Keep current</option>
-                {systemUsers.map(user => (
-                  <option key={user.uid} value={user.uid.toString()}>
-                    {user.username} ({user.uid})
-                  </option>
-                ))}
-              </select>
+            {/* User selection */}
+            <div className="mb-3">
+              <label htmlFor="file-props-user" className="form-label">
+                User
+              </label>
+              <div>
+                <select
+                  id="file-props-user"
+                  className="form-select"
+                  value={selectedUser}
+                  onChange={e => setSelectedUser(e.target.value)}
+                >
+                  <option value="">Keep current</option>
+                  {systemUsers.map(user => (
+                    <option key={user.uid} value={user.uid.toString()}>
+                      {user.username} ({user.uid})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="form-text text-muted">
+                Current: {selectedUserObj?.username || 'Unknown'} (
+                {selectedUser || file._hwMetadata?.uid || 'Unknown'})
+              </p>
             </div>
-            <p className="form-text text-muted">
-              Current: {selectedUserObj?.username || 'Unknown'} (
-              {selectedUser || file._hwMetadata?.uid || 'Unknown'})
-            </p>
-          </div>
 
-          {/* Group selection */}
-          <div className="mb-3">
-            <label htmlFor="file-props-group" className="form-label">
-              Group
-            </label>
-            <div>
-              <select
-                id="file-props-group"
-                className="form-select"
-                value={selectedGroup}
-                onChange={e => setSelectedGroup(e.target.value)}
-              >
-                <option value="">Keep current</option>
-                {systemGroups.map(group => (
-                  <option key={group.gid} value={group.gid.toString()}>
-                    {group.groupname} ({group.gid})
-                  </option>
-                ))}
-              </select>
+            {/* Group selection */}
+            <div className="mb-3">
+              <label htmlFor="file-props-group" className="form-label">
+                Group
+              </label>
+              <div>
+                <select
+                  id="file-props-group"
+                  className="form-select"
+                  value={selectedGroup}
+                  onChange={e => setSelectedGroup(e.target.value)}
+                >
+                  <option value="">Keep current</option>
+                  {systemGroups.map(group => (
+                    <option key={group.gid} value={group.gid.toString()}>
+                      {group.groupname} ({group.gid})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="form-text text-muted">
+                Current: {selectedGroupObj?.groupname || 'Unknown'} (
+                {selectedGroup || file._hwMetadata?.gid || 'Unknown'})
+              </p>
             </div>
-            <p className="form-text text-muted">
-              Current: {selectedGroupObj?.groupname || 'Unknown'} (
-              {selectedGroup || file._hwMetadata?.gid || 'Unknown'})
-            </p>
           </div>
-        </div>
+        )}
 
         {/* Permissions - extracted component */}
         <PermissionEditor

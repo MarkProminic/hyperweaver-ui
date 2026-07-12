@@ -54,12 +54,14 @@ const KillProcessModal = ({ process, onClose, onConfirm }) => {
                   </td>
                   <td>{process.username}</td>
                 </tr>
-                <tr>
-                  <td>
-                    <strong>Zone</strong>
-                  </td>
-                  <td>{process.zone}</td>
-                </tr>
+                {process.zone && (
+                  <tr>
+                    <td>
+                      <strong>Zone</strong>
+                    </td>
+                    <td>{process.zone}</td>
+                  </tr>
+                )}
                 <tr>
                   <td>
                     <strong>Command</strong>
@@ -123,11 +125,11 @@ KillProcessModal.propTypes = {
 };
 
 // Send Signal Modal
-const SendSignalModal = ({ process, onClose, onConfirm }) => {
+const SendSignalModal = ({ process, onClose, onConfirm, limitedSignals }) => {
   const [loading, setLoading] = useState(false);
   const [signal, setSignal] = useState('TERM');
 
-  const signals = [
+  const allSignals = [
     { value: 'TERM', label: 'SIGTERM - Graceful termination' },
     { value: 'KILL', label: 'SIGKILL - Force kill (cannot be ignored)' },
     { value: 'HUP', label: 'SIGHUP - Hangup (reload configuration)' },
@@ -138,6 +140,10 @@ const SendSignalModal = ({ process, onClose, onConfirm }) => {
     { value: 'STOP', label: 'SIGSTOP - Stop process (cannot be ignored)' },
     { value: 'CONT', label: 'SIGCONT - Continue stopped process' },
   ];
+  // A Windows-host agent delivers only TERM/KILL — anything else 400s.
+  const signals = limitedSignals
+    ? allSignals.filter(sig => sig.value === 'TERM' || sig.value === 'KILL')
+    : allSignals;
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -185,12 +191,14 @@ const SendSignalModal = ({ process, onClose, onConfirm }) => {
                   </td>
                   <td>{process.username}</td>
                 </tr>
-                <tr>
-                  <td>
-                    <strong>Zone</strong>
-                  </td>
-                  <td>{process.zone}</td>
-                </tr>
+                {process.zone && (
+                  <tr>
+                    <td>
+                      <strong>Zone</strong>
+                    </td>
+                    <td>{process.zone}</td>
+                  </tr>
+                )}
                 <tr>
                   <td>
                     <strong>Command</strong>
@@ -264,16 +272,17 @@ SendSignalModal.propTypes = {
   }).isRequired,
   onClose: PropTypes.func.isRequired,
   onConfirm: PropTypes.func.isRequired,
+  limitedSignals: PropTypes.bool,
 };
 
 // Batch Kill Modal
-const BatchKillModal = ({ onClose, onConfirm, availableZones }) => {
+const BatchKillModal = ({ onClose, onConfirm, availableZones, limitedSignals }) => {
   const [loading, setLoading] = useState(false);
   const [pattern, setPattern] = useState('');
   const [zone, setZone] = useState('');
   const [signal, setSignal] = useState('TERM');
 
-  const signals = ['TERM', 'KILL', 'HUP', 'INT', 'QUIT'];
+  const signals = limitedSignals ? ['TERM', 'KILL'] : ['TERM', 'KILL', 'HUP', 'INT', 'QUIT'];
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -339,27 +348,29 @@ const BatchKillModal = ({ onClose, onConfirm, availableZones }) => {
             </p>
           </div>
 
-          <div className="mb-3">
-            <label className="form-label" htmlFor="batch-kill-zone-filter">
-              Zone Filter (Optional)
-            </label>
-            <select
-              id="batch-kill-zone-filter"
-              className="form-select"
-              value={zone}
-              onChange={e => setZone(e.target.value)}
-            >
-              <option value="">All Zones</option>
-              {availableZones.map(zoneName => (
-                <option key={zoneName} value={zoneName}>
-                  {zoneName}
-                </option>
-              ))}
-            </select>
-            <p className="form-text text-muted">
-              Optionally limit the operation to processes in a specific zone.
-            </p>
-          </div>
+          {availableZones.length > 0 && (
+            <div className="mb-3">
+              <label className="form-label" htmlFor="batch-kill-zone-filter">
+                Zone Filter (Optional)
+              </label>
+              <select
+                id="batch-kill-zone-filter"
+                className="form-select"
+                value={zone}
+                onChange={e => setZone(e.target.value)}
+              >
+                <option value="">All Zones</option>
+                {availableZones.map(zoneName => (
+                  <option key={zoneName} value={zoneName}>
+                    {zoneName}
+                  </option>
+                ))}
+              </select>
+              <p className="form-text text-muted">
+                Optionally limit the operation to processes in a specific zone.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -420,6 +431,7 @@ BatchKillModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   onConfirm: PropTypes.func.isRequired,
   availableZones: PropTypes.array.isRequired,
+  limitedSignals: PropTypes.bool,
 };
 
 // Main component that renders the appropriate modal
@@ -429,6 +441,7 @@ const ProcessActionModals = ({
   showSignalModal,
   showBatchKillModal,
   availableZones,
+  limitedSignals,
   onCloseKillModal,
   onCloseSignalModal,
   onCloseBatchKillModal,
@@ -449,6 +462,7 @@ const ProcessActionModals = ({
         process={selectedProcess}
         onClose={onCloseSignalModal}
         onConfirm={onProcessAction}
+        limitedSignals={limitedSignals}
       />
     )}
 
@@ -457,6 +471,7 @@ const ProcessActionModals = ({
         onClose={onCloseBatchKillModal}
         onConfirm={onBatchKill}
         availableZones={availableZones}
+        limitedSignals={limitedSignals}
       />
     )}
   </>
@@ -468,6 +483,7 @@ ProcessActionModals.propTypes = {
   showSignalModal: PropTypes.bool.isRequired,
   showBatchKillModal: PropTypes.bool.isRequired,
   availableZones: PropTypes.array.isRequired,
+  limitedSignals: PropTypes.bool,
   onCloseKillModal: PropTypes.func.isRequired,
   onCloseSignalModal: PropTypes.func.isRequired,
   onCloseBatchKillModal: PropTypes.func.isRequired,

@@ -113,7 +113,6 @@ const IpAddressManagement = ({ server, onError }) => {
         {
           // Query parameters instead
           release: false,
-          created_by: 'api',
         }
       );
 

@@ -54,6 +54,7 @@ export const getActionVariant = action => {
       return 'is-success';
     case 'restart':
     case 'suspend':
+    case 'nmi':
       return 'is-warning';
     case 'shutdown':
     case 'kill':
@@ -72,6 +73,8 @@ export const getActionIcon = action => {
       return 'fas fa-redo';
     case 'suspend':
       return 'fas fa-pause';
+    case 'nmi':
+      return 'fas fa-bug';
     case 'shutdown':
       return 'fas fa-stop';
     case 'kill':
