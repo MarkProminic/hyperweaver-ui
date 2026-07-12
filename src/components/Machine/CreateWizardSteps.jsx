@@ -1661,7 +1661,13 @@ export const SystemStep = ({
         {bhyve && (
           <>
             <div className="col-12">
-              <span className="form-label d-block">Boot Order (blank = agent default)</span>
+              <span className="form-label d-block">
+                Boot Order (blank ={' '}
+                {agentDefaults?.zones?.bootorder
+                  ? `default ${agentDefaults.zones.bootorder}`
+                  : 'agent default'}
+                )
+              </span>
               <BootOrderEditor
                 bootOrder={splitBhyveBootOrder(zones.bootorder)}
                 setBootOrder={list => setZone('bootorder', list.join(','))}

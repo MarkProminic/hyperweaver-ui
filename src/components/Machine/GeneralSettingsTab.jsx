@@ -25,6 +25,18 @@ const unchangedLabelFor = (defaultsDoc, key) => {
     : '(unchanged)';
 };
 
+/** " — default disk,dvd" suffix for the boot-order labels; '' when the
+ *  defaults doc reports nothing. */
+const bootOrderDefaultSuffix = value => {
+  if (value === undefined || value === null || value === '') {
+    return '';
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0 ? ` — default ${value.join(',')}` : '';
+  }
+  return ` — default ${value}`;
+};
+
 const FieldControl = ({
   field,
   vocabulary,
@@ -384,7 +396,11 @@ const GeneralSettingsTab = ({
       {isVbox && (
         <div className="col-12">
           <span className="form-label d-block">
-            Boot Order (blank = unchanged; requires restart)
+            Boot Order (blank = unchanged
+            {bootOrderDefaultSuffix(
+              defaultsDoc?.settings?.boot_order ?? defaultsDoc?.zones?.boot_order
+            )}
+            ; requires restart)
           </span>
           <BootOrderEditor
             bootOrder={bootOrder}
@@ -397,7 +413,8 @@ const GeneralSettingsTab = ({
       {bootorderField && (
         <div className="col-12">
           <span className="form-label d-block">
-            Boot Order (blank = unchanged; requires restart)
+            Boot Order (blank = unchanged
+            {bootOrderDefaultSuffix(defaultsDoc?.zones?.bootorder)}; requires restart)
           </span>
           <BootOrderEditor
             bootOrder={splitBhyveBootOrder(values.bootorder)}

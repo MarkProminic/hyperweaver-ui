@@ -557,30 +557,36 @@ const StorageDevicesEditor = ({
                 <span className="hw-device-path" title={disk.value}>
                   {disk.value}
                 </span>
-                {disk.boot ? (
+                {disk.boot && (
                   <span
-                    className="badge text-bg-light ms-auto"
-                    title="The zone's boot medium — removing it would kill boot, so it is blocked here"
+                    className="badge text-bg-light"
+                    title="The zone's boot medium — detaching it leaves the zone unbootable until a new boot medium is configured"
                   >
                     boot
                   </span>
-                ) : (
-                  <div className="hw-device-actions">
-                    <button
-                      type="button"
-                      className={`btn btn-sm py-0 ${markButtonClass(isMarked)}`}
-                      title={
-                        isMarked
-                          ? 'Unmark'
-                          : 'Detach this disk from the zone — the zvol and its data survive'
-                      }
-                      onClick={() => onToggleZoneDisk(disk.name)}
-                      disabled={formDisabled}
-                    >
-                      <i className={`fas ${markIconClass(isMarked)}`} />
-                    </button>
-                  </div>
                 )}
+                {disk.boot && isMarked && (
+                  <span className="badge text-bg-danger">unbootable after Apply</span>
+                )}
+                <div className="hw-device-actions">
+                  <button
+                    type="button"
+                    className={`btn btn-sm py-0 ${markButtonClass(isMarked)}`}
+                    title={
+                      isMarked
+                        ? 'Unmark'
+                        : `Detach this disk from the zone — the zvol and its data survive${
+                            disk.boot
+                              ? '. THIS IS THE BOOT MEDIUM: the zone cannot boot without a replacement'
+                              : ''
+                          }`
+                    }
+                    onClick={() => onToggleZoneDisk(disk.name)}
+                    disabled={formDisabled}
+                  >
+                    <i className={`fas ${markIconClass(isMarked)}`} />
+                  </button>
+                </div>
               </div>
             );
           })}

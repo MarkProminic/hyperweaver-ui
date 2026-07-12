@@ -20,6 +20,21 @@ import { FormModal } from '../common';
 import ZfsPropertiesEditor, { propertyEdits } from './ZfsPropertiesEditor';
 import { parsePropertyLines, queuedMessage } from './zfsUtils';
 
+const DATASET_TYPE_CARDS = [
+  {
+    value: 'filesystem',
+    label: 'Filesystem',
+    icon: 'fa-folder',
+    note: 'a mountable dataset — files, quotas, compression',
+  },
+  {
+    value: 'volume',
+    label: 'Volume (zvol)',
+    icon: 'fa-hard-drive',
+    note: 'a fixed-size block device — VM disks, iSCSI',
+  },
+];
+
 export const CreateDatasetModal = ({
   isOpen,
   onClose,
@@ -28,7 +43,10 @@ export const CreateDatasetModal = ({
   initialName = '',
   onQueued,
 }) => {
-  const [name, setName] = useState('');
+  // "Create child…" hands a `parent/` prefix — it locks, only the leaf types.
+  const parentPrefix = initialName.endsWith('/') ? initialName : '';
+  const [leaf, setLeaf] = useState('');
+  const [pool, setPool] = useState('');
   const [type, setType] = useState('filesystem');
   const [volsize, setVolsize] = useState('');
   const [propLines, setPropLines] = useState('');
@@ -37,21 +55,26 @@ export const CreateDatasetModal = ({
 
   useEffect(() => {
     if (isOpen) {
-      setName(initialName);
+      setLeaf(parentPrefix ? '' : initialName);
+      setPool('');
       setType('filesystem');
       setVolsize('');
       setPropLines('');
       setError('');
     }
-  }, [isOpen, initialName]);
+  }, [isOpen, initialName, parentPrefix]);
+
+  // Full dataset name: locked parent prefix, or pool picker + typed path.
+  const prefix = parentPrefix || (pool ? `${pool}/` : '');
+  const fullName = `${prefix}${leaf.trim()}`;
 
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      setError('A dataset name (pool/path) is required.');
+    if (!leaf.trim() || (!parentPrefix && pools.length > 0 && !pool)) {
+      setError(parentPrefix ? 'Name the new dataset.' : 'Pick the pool and name the new dataset.');
       return;
     }
     if (type === 'volume' && !volsize.trim()) {
-      setError('A volume needs a size (volsize).');
+      setError('A volume needs a size.');
       return;
     }
     const properties = {
@@ -61,7 +84,7 @@ export const CreateDatasetModal = ({
     setLoading(true);
     setError('');
     const result = await createZfsDataset(server.hostname, server.port, server.protocol, {
-      name: name.trim(),
+      name: fullName,
       type,
       ...(Object.keys(properties).length > 0 && { properties }),
     });
@@ -70,7 +93,7 @@ export const CreateDatasetModal = ({
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Creation queued for ${name.trim()}.`));
+    onQueued(queuedMessage(result, `Creation queued for ${fullName}.`));
     onClose();
   };
 
@@ -79,7 +102,7 @@ export const CreateDatasetModal = ({
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create dataset"
+      title={parentPrefix ? `Create under ${parentPrefix}` : 'Create dataset'}
       icon="fas fa-folder-tree"
       submitText="Create"
       submitIcon="fas fa-plus"
@@ -87,38 +110,71 @@ export const CreateDatasetModal = ({
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
+
+      <span className="form-label d-block">Type</span>
+      <div className="row g-2 mb-3">
+        {DATASET_TYPE_CARDS.map(card => (
+          <div className="col-6" key={card.value}>
+            <button
+              type="button"
+              className={`border rounded p-2 w-100 text-start bg-transparent ${
+                type === card.value ? 'border-primary border-2' : ''
+              }`}
+              onClick={() => setType(card.value)}
+              disabled={loading}
+            >
+              <div className="d-flex align-items-center gap-2">
+                <i className={`fas ${card.icon} text-muted`} />
+                <strong className="small">{card.label}</strong>
+                {type === card.value && <i className="fas fa-circle-check text-primary ms-auto" />}
+              </div>
+              <span className="form-text d-block">{card.note}</span>
+            </button>
+          </div>
+        ))}
+      </div>
+
       <div className="row g-3">
-        <div className="col-12 col-md-6">
+        {!parentPrefix && pools.length > 0 && (
+          <div className="col-12 col-md-4">
+            <label className="form-label" htmlFor="zfs-create-pool">
+              Pool <span className="text-danger">*</span>
+            </label>
+            <select
+              id="zfs-create-pool"
+              className="form-select"
+              value={pool}
+              onChange={e => setPool(e.target.value)}
+              disabled={loading}
+            >
+              <option value="">Select a pool…</option>
+              {pools.map(entry => (
+                <option key={entry} value={entry}>
+                  {entry}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div className="col-12 col-md-8">
           <label className="form-label" htmlFor="zfs-create-name">
             Name <span className="text-danger">*</span>
           </label>
-          <input
-            id="zfs-create-name"
-            className="form-control font-monospace"
-            type="text"
-            placeholder={pools.length > 0 ? `e.g. ${pools[0]}/data` : 'pool/path'}
-            value={name}
-            onChange={e => setName(e.target.value)}
-            disabled={loading}
-          />
-        </div>
-        <div className="col-6 col-md-3">
-          <label className="form-label" htmlFor="zfs-create-type">
-            Type
-          </label>
-          <select
-            id="zfs-create-type"
-            className="form-select"
-            value={type}
-            onChange={e => setType(e.target.value)}
-            disabled={loading}
-          >
-            <option value="filesystem">filesystem</option>
-            <option value="volume">volume (zvol)</option>
-          </select>
+          <div className="input-group">
+            {prefix && <span className="input-group-text font-monospace">{prefix}</span>}
+            <input
+              id="zfs-create-name"
+              className="form-control font-monospace"
+              type="text"
+              placeholder={type === 'volume' ? 'e.g. vm-disk1' : 'e.g. data or data/projects'}
+              value={leaf}
+              onChange={e => setLeaf(e.target.value)}
+              disabled={loading}
+            />
+          </div>
         </div>
         {type === 'volume' && (
-          <div className="col-6 col-md-3">
+          <div className="col-6 col-md-4">
             <label className="form-label" htmlFor="zfs-create-volsize">
               Size <span className="text-danger">*</span>
             </label>
@@ -133,21 +189,30 @@ export const CreateDatasetModal = ({
             />
           </div>
         )}
-        <div className="col-12">
-          <label className="form-label" htmlFor="zfs-create-props">
-            Properties (key=value, one per line)
-          </label>
-          <textarea
-            id="zfs-create-props"
-            className="form-control font-monospace"
-            rows={2}
-            placeholder={'e.g.\ncompression=lz4\nquota=50G'}
-            value={propLines}
-            onChange={e => setPropLines(e.target.value)}
-            disabled={loading}
-          />
-        </div>
       </div>
+
+      {leaf.trim() && (prefix || parentPrefix) && (
+        <p className="form-text mt-2 mb-0">
+          Creates {type} <code>{fullName}</code>
+          {type === 'volume' && volsize.trim() ? ` — ${volsize.trim()}` : ''}
+        </p>
+      )}
+
+      <details className="mt-3">
+        <summary className="small text-muted">Advanced properties</summary>
+        <label className="form-label small mt-2" htmlFor="zfs-create-props">
+          Properties (key=value, one per line)
+        </label>
+        <textarea
+          id="zfs-create-props"
+          className="form-control font-monospace"
+          rows={2}
+          placeholder={'e.g.\ncompression=lz4\nquota=50G'}
+          value={propLines}
+          onChange={e => setPropLines(e.target.value)}
+          disabled={loading}
+        />
+      </details>
     </FormModal>
   );
 };
@@ -692,7 +757,9 @@ export const DatasetPropertiesModal = ({ isOpen, onClose, server, dataset, onQue
       if (result.success) {
         setProperties(result.data?.properties || {});
       } else {
-        setError(result.message);
+        setError(
+          `GET storage/datasets/${dataset} failed (${result.status ?? '?'}): ${result.message}`
+        );
       }
     });
   }, [isOpen, server, dataset]);
@@ -738,7 +805,7 @@ export const DatasetPropertiesModal = ({ isOpen, onClose, server, dataset, onQue
         Edit a value and Apply — only changed properties ride the update. Read-only properties
         (source <code>-</code>) display as-is.
       </p>
-      {properties === null && (
+      {properties === null && !error && (
         <p className="text-muted mb-0">
           <i className="fas fa-spinner fa-pulse me-2" />
           Loading…

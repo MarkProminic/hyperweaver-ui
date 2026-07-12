@@ -1,7 +1,44 @@
 import PropTypes from 'prop-types';
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 
-import { markButtonClass, markIconClass, nicSummary, zoneNicSummary } from './CurrentHardware';
+import { markButtonClass, markIconClass, nicSummary } from './CurrentHardware';
+
+/** A locally-administered unicast MAC (02:xx:…) — the random-MAC dice. */
+const randomMac = () => {
+  const octet = () =>
+    Math.floor(Math.random() * 256)
+      .toString(16)
+      .padStart(2, '0');
+  return ['02', octet(), octet(), octet(), octet(), octet()].join(':');
+};
+
+/** One-click copy for the live values (MACs, vnic names). */
+const CopyButton = ({ value, label }) => {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className="btn btn-link p-0"
+      title={copied ? 'Copied' : `Copy ${label}`}
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(value);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          setCopied(false);
+        }
+      }}
+    >
+      <i className={`fas small ${copied ? 'fa-check text-success' : 'fa-copy text-muted'}`} />
+    </button>
+  );
+};
+
+CopyButton.propTypes = {
+  value: PropTypes.string.isRequired,
+  label: PropTypes.string.isRequired,
+};
 
 /**
  * The Settings → NICs editor: ONE device tree. Every EXISTING adapter is a
@@ -35,13 +72,98 @@ const FALLBACK_ENUMS = {
 };
 
 // In-place zone NIC keys (the agent's update_nics vocabulary) — blank =
-// keep the current value; the placeholder shows what that is.
+// keep the current value. Placeholders speak BOTH layers: the zonecfg
+// value where set, else the live dladm value the VNIC actually runs with.
 const ZONE_NIC_EDIT_FIELDS = [
-  { key: 'global_nic', label: 'Bridge (global-nic)', currentOf: nic => nic.globalNic },
-  { key: 'vlan_id', label: 'VLAN id', type: 'number', currentOf: nic => nic.vlanId },
-  { key: 'mac_addr', label: 'MAC', currentOf: nic => nic.mac },
-  { key: 'allowed_address', label: 'Allowed address', currentOf: nic => nic.allowedAddress },
+  {
+    key: 'global_nic',
+    label: 'Bridge (global-nic)',
+    currentOf: nic => nic.globalNic,
+    liveOf: live => live?.over || '',
+  },
+  {
+    key: 'vlan_id',
+    label: 'VLAN id',
+    type: 'number',
+    currentOf: nic => nic.vlanId,
+    liveOf: live => (live?.vid === undefined || live?.vid === null ? '' : String(live.vid)),
+  },
+  {
+    key: 'mac_addr',
+    label: 'MAC',
+    currentOf: nic => nic.mac,
+    liveOf: live => live?.macaddress || '',
+  },
+  {
+    key: 'allowed_address',
+    label: 'Allowed address',
+    currentOf: nic => nic.allowedAddress,
+    liveOf: () => '',
+  },
 ];
+
+const zoneNicPlaceholder = (field, nic, live) => {
+  const current = field.currentOf(nic);
+  if (current) {
+    return current;
+  }
+  const liveValue = field.liveOf(live);
+  return liveValue ? `unset — live: ${liveValue}` : '(unset)';
+};
+
+const liveSpeed = speed => {
+  if (!speed) {
+    return null;
+  }
+  return speed >= 1000 ? `${speed / 1000}G` : `${speed}M`;
+};
+
+/** The dladm layer's truth for one zone NIC — over-link, live MAC, VID,
+ *  state — shown beside the zonecfg fields it backs. */
+const LiveVnicLine = ({ live }) => {
+  if (!live) {
+    return (
+      <span className="text-muted small">no live VNIC record — the vnic may not exist yet</span>
+    );
+  }
+  return (
+    <span className="d-inline-flex flex-wrap gap-1 align-items-center small">
+      <span
+        className={`badge ${live.state === 'up' ? 'text-bg-success' : 'text-bg-secondary'}`}
+        title="Link state"
+      >
+        {live.state || 'unknown'}
+      </span>
+      {live.over && (
+        <span className="badge text-bg-secondary" title="Physical link the VNIC rides">
+          over {live.over}
+        </span>
+      )}
+      {liveSpeed(live.speed) && (
+        <span className="badge text-bg-info" title="Link speed">
+          {liveSpeed(live.speed)}
+        </span>
+      )}
+      <code className="small" title={`Live MAC (${live.macaddrtype || 'unknown type'})`}>
+        {live.macaddress}
+      </code>
+      {live.macaddress && <CopyButton value={live.macaddress} label="live MAC" />}
+      {live.macaddrtype && <span className="text-muted">({live.macaddrtype})</span>}
+      <span className="badge text-bg-light border" title="VLAN id">
+        VID {live.vid ?? 0}
+      </span>
+      {live.mtu && (
+        <span className="badge text-bg-light border" title="MTU">
+          MTU {live.mtu}
+        </span>
+      )}
+    </span>
+  );
+};
+
+LiveVnicLine.propTypes = {
+  live: PropTypes.object,
+};
 
 /** A tuning row for an adapter that knob_current did not seed. */
 export const blankNicRow = adapter => ({
@@ -116,6 +238,8 @@ const NetworkAdaptersEditor = ({
   onToggleNic,
   nicEnums = null,
   zoneNics = null,
+  hostVnics = [],
+  bridgeOptions = [],
   zoneNicRemovals = [],
   onToggleZoneNic = () => {},
   zoneNicEdits = {},
@@ -149,6 +273,7 @@ const NetworkAdaptersEditor = ({
         zoneNics.map(nic => {
           const isMarked = zoneNicRemovals.includes(nic.physical);
           const edits = zoneNicEdits[nic.physical] || {};
+          const live = hostVnics.find(vnic => vnic.link === nic.physical) || null;
           return (
             <Fragment key={nic.name}>
               <div
@@ -156,7 +281,17 @@ const NetworkAdaptersEditor = ({
               >
                 <i className="fas fa-ethernet text-muted" />
                 <span>{nic.name}</span>
-                <span className="hw-device-meta">{zoneNicSummary(nic)}</span>
+                {nic.physical && (
+                  <>
+                    <code className="small">{nic.physical}</code>
+                    <CopyButton value={nic.physical} label="VNIC name" />
+                  </>
+                )}
+                {nic.allowedAddress && (
+                  <span className="badge text-bg-light border" title="zonecfg allowed-address">
+                    {nic.allowedAddress}
+                  </span>
+                )}
                 {nic.physical && (
                   <div className="hw-device-actions">
                     <button
@@ -175,27 +310,60 @@ const NetworkAdaptersEditor = ({
                   </div>
                 )}
               </div>
+              <div className="hw-device-row hw-device-child">
+                <i className="fas fa-wave-square text-muted" title="Live dladm state" />
+                <LiveVnicLine live={live} />
+              </div>
               {!isMarked && nic.physical && (
                 <div className="hw-device-row hw-device-child hw-device-child-form">
                   <div className="row g-2 align-items-end">
                     {ZONE_NIC_EDIT_FIELDS.map(field => {
                       const inputId = `zone-nic-${nic.physical}-${field.key}`;
-                      const current = field.currentOf(nic);
+                      const isBridge = field.key === 'global_nic';
+                      const isMac = field.key === 'mac_addr';
+                      const control = (
+                        <input
+                          id={inputId}
+                          className="form-control form-control-sm"
+                          type={field.type || 'text'}
+                          list={
+                            isBridge && bridgeOptions.length > 0 ? `${inputId}-options` : undefined
+                          }
+                          placeholder={zoneNicPlaceholder(field, nic, live)}
+                          title="Blank = keep the current value; clearing a property needs detach + re-add"
+                          value={edits[field.key] ?? ''}
+                          onChange={e => onZoneNicEdit(nic.physical, field.key, e.target.value)}
+                          disabled={formDisabled}
+                        />
+                      );
                       return (
                         <div className="col-6 col-md-3" key={field.key}>
                           <label className="form-label small mb-1" htmlFor={inputId}>
                             {field.label}
                           </label>
-                          <input
-                            id={inputId}
-                            className="form-control form-control-sm"
-                            type={field.type || 'text'}
-                            placeholder={current || '(unset)'}
-                            title="Blank = keep the current value; clearing a property needs detach + re-add"
-                            value={edits[field.key] ?? ''}
-                            onChange={e => onZoneNicEdit(nic.physical, field.key, e.target.value)}
-                            disabled={formDisabled}
-                          />
+                          {isMac ? (
+                            <div className="input-group input-group-sm">
+                              {control}
+                              <button
+                                type="button"
+                                className="btn btn-outline-secondary"
+                                title="Generate a random locally-administered MAC"
+                                onClick={() => onZoneNicEdit(nic.physical, field.key, randomMac())}
+                                disabled={formDisabled}
+                              >
+                                <i className="fas fa-dice" />
+                              </button>
+                            </div>
+                          ) : (
+                            control
+                          )}
+                          {isBridge && bridgeOptions.length > 0 && (
+                            <datalist id={`${inputId}-options`}>
+                              {bridgeOptions.map(option => (
+                                <option key={option} value={option} />
+                              ))}
+                            </datalist>
+                          )}
                         </div>
                       );
                     })}
@@ -301,22 +469,41 @@ const NetworkAdaptersEditor = ({
                 <input
                   id={`add-nic-bridge-${row.key}`}
                   className="form-control form-control-sm"
+                  list={bridgeOptions.length > 0 ? `add-nic-bridge-${row.key}-options` : undefined}
                   value={row.bridge}
                   onChange={e => patchAddNic(row.key, { bridge: e.target.value })}
                   disabled={formDisabled}
                 />
+                {bridgeOptions.length > 0 && (
+                  <datalist id={`add-nic-bridge-${row.key}-options`}>
+                    {bridgeOptions.map(option => (
+                      <option key={option} value={option} />
+                    ))}
+                  </datalist>
+                )}
               </div>
               <div className="col-6 col-md-3">
                 <label className="form-label small mb-1" htmlFor={`add-nic-mac-${row.key}`}>
                   MAC (blank = auto)
                 </label>
-                <input
-                  id={`add-nic-mac-${row.key}`}
-                  className="form-control form-control-sm"
-                  value={row.mac}
-                  onChange={e => patchAddNic(row.key, { mac: e.target.value })}
-                  disabled={formDisabled}
-                />
+                <div className="input-group input-group-sm">
+                  <input
+                    id={`add-nic-mac-${row.key}`}
+                    className="form-control"
+                    value={row.mac}
+                    onChange={e => patchAddNic(row.key, { mac: e.target.value })}
+                    disabled={formDisabled}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    title="Generate a random locally-administered MAC"
+                    onClick={() => patchAddNic(row.key, { mac: randomMac() })}
+                    disabled={formDisabled}
+                  >
+                    <i className="fas fa-dice" />
+                  </button>
+                </div>
               </div>
               {isZone && (
                 <>
@@ -420,6 +607,8 @@ NetworkAdaptersEditor.propTypes = {
   onToggleNic: PropTypes.func.isRequired,
   nicEnums: PropTypes.object,
   zoneNics: PropTypes.array,
+  hostVnics: PropTypes.array,
+  bridgeOptions: PropTypes.arrayOf(PropTypes.string),
   zoneNicRemovals: PropTypes.arrayOf(PropTypes.string),
   onToggleZoneNic: PropTypes.func,
   zoneNicEdits: PropTypes.object,

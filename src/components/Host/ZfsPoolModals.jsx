@@ -1,24 +1,22 @@
 import PropTypes from 'prop-types';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import {
   addZfsPoolVdevs,
   createZfsPool,
   destroyZfsPool,
+  forceMonitoringCollect,
   getHostDisks,
   getImportableZfsPools,
   getZfsPool,
   getZfsPoolStatus,
   importZfsPool,
-  offlineZfsPoolDevice,
-  onlineZfsPoolDevice,
-  removeZfsPoolVdev,
-  replaceZfsPoolDevice,
   setZfsPoolProperties,
 } from '../../api/zfsAPI';
 import { hasFeature } from '../../utils/capabilities';
 import { ContentModal, FormModal } from '../common';
 
+import { shortDevice } from './ZfsDiskActionModal';
 import ZfsPropertiesEditor, { propertyEdits } from './ZfsPropertiesEditor';
 import { healthBadgeClass, parsePropertyLines, parseZpoolStatus, queuedMessage } from './zfsUtils';
 
@@ -46,9 +44,19 @@ const buildVdevs = rows =>
  * Visual vdev builder — a shelf of the host's FREE disks (monitoring
  * inventory: name/model/serial/capacity) sits above vdev buckets; drag
  * disks from the shelf into buckets, between buckets, or back. Typing
- * stays for hosts without the monitoring feature.
+ * exists ONLY when the inventory answers empty (last resort, with the
+ * rescan right there).
  */
-const VdevBuilder = ({ rows, onChange, shelf = [], disabled, idPrefix }) => {
+const VdevBuilder = ({
+  rows,
+  onChange,
+  shelf = [],
+  shelfError = '',
+  rescanning = false,
+  onRescan,
+  disabled,
+  idPrefix,
+}) => {
   const [dragChip, setDragChip] = useState(null); // {device, fromKey}
   const [pending, setPending] = useState({}); // per-bucket typed text
 
@@ -104,6 +112,27 @@ const VdevBuilder = ({ rows, onChange, shelf = [], disabled, idPrefix }) => {
 
   return (
     <div className="d-flex flex-column gap-2">
+      {shelf.length === 0 && (
+        <div className="alert alert-warning py-2 d-flex align-items-center gap-2 flex-wrap mb-0">
+          <span>
+            {shelfError
+              ? 'The disk inventory calls are FAILING — this is an agent problem, not missing disks:'
+              : 'The disk inventory reports no free disks — rescan it (required once after an agent deploy). Typed device names below are the last resort.'}
+          </span>
+          {shelfError && <code className="small d-block w-100">{shelfError}</code>}
+          {onRescan && (
+            <button
+              type="button"
+              className="btn btn-sm btn-warning"
+              onClick={onRescan}
+              disabled={rescanning || disabled}
+            >
+              <i className={`fas fa-radar me-2 ${rescanning ? 'fa-spin' : ''}`} />
+              Rescan
+            </button>
+          )}
+        </div>
+      )}
       {shelf.length > 0 && (
         <div
           className="border rounded p-2"
@@ -119,33 +148,52 @@ const VdevBuilder = ({ rows, onChange, shelf = [], disabled, idPrefix }) => {
             <i className="fas fa-server me-2 text-muted" />
             Available disks — drag into a vdev
           </div>
-          <div className="d-flex flex-wrap gap-1" role="list">
-            {shelfDisks.length === 0 && (
-              <span className="text-muted small">Every free disk is placed.</span>
-            )}
-            {shelfDisks.map(disk => (
-              <span
-                className={`badge text-bg-light border d-inline-flex align-items-center gap-1 ${
-                  dragChip?.device === disk.device_name && dragChip?.fromKey === '__shelf__'
-                    ? 'opacity-50'
-                    : ''
-                }`}
-                style={{ cursor: 'grab' }}
-                key={disk.device_name}
-                role="listitem"
-                draggable={!disabled}
-                title={`${disk.manufacturer || ''} ${disk.model || ''} · ${disk.serial_number || ''} · ${disk.disk_type || ''}`.trim()}
-                onDragStart={() => setDragChip({ device: disk.device_name, fromKey: '__shelf__' })}
-                onDragEnd={() => setDragChip(null)}
-              >
-                <i
-                  className={`fas ${disk.disk_type === 'SSD' ? 'fa-microchip' : 'fa-hard-drive'}`}
-                />
-                <code className="small">{disk.device_name}</code>
-                <span className="text-muted small">{disk.capacity}</span>
-              </span>
-            ))}
-          </div>
+          {shelfDisks.length === 0 && (
+            <span className="text-muted small">Every free disk is placed.</span>
+          )}
+          {['HDD', 'SSD', 'NVMe', 'Other'].map(groupType => {
+            const groupDisks = shelfDisks.filter(disk => {
+              const type = disk.disk_type || 'HDD';
+              if (groupType === 'Other') {
+                return !['HDD', 'SSD', 'NVMe'].includes(type);
+              }
+              return type === groupType;
+            });
+            if (groupDisks.length === 0) {
+              return null;
+            }
+            return (
+              <div key={groupType} className="mb-1">
+                <div className="small text-muted">{groupType}</div>
+                <div className="d-flex flex-wrap gap-1" role="list">
+                  {groupDisks.map(disk => (
+                    <span
+                      className={`badge text-bg-light border d-inline-flex align-items-center gap-1 ${
+                        dragChip?.device === disk.device_name && dragChip?.fromKey === '__shelf__'
+                          ? 'opacity-50'
+                          : ''
+                      }`}
+                      style={{ cursor: 'grab' }}
+                      key={disk.device_name}
+                      role="listitem"
+                      draggable={!disabled}
+                      title={`${disk.device_name} · ${disk.manufacturer || ''} ${disk.model || ''} · ${disk.serial_number || ''}`.trim()}
+                      onDragStart={() =>
+                        setDragChip({ device: disk.device_name, fromKey: '__shelf__' })
+                      }
+                      onDragEnd={() => setDragChip(null)}
+                    >
+                      <i
+                        className={`fas ${disk.disk_type === 'SSD' || disk.disk_type === 'NVMe' ? 'fa-microchip' : 'fa-hard-drive'}`}
+                      />
+                      <code className="small">{shortDevice(disk.device_name)}</code>
+                      <span className="text-muted small">{disk.capacity}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
       <div className="row g-2">
@@ -193,7 +241,11 @@ const VdevBuilder = ({ rows, onChange, shelf = [], disabled, idPrefix }) => {
                 <p className="form-text text-muted mt-0 mb-2 small">{meta.note}</p>
                 <div className="d-flex flex-wrap gap-1 mb-2" role="list">
                   {row.devices.length === 0 && (
-                    <span className="text-muted small">Drag disks here or type below.</span>
+                    <span className="text-muted small">
+                      {shelf.length > 0
+                        ? 'Drag disks here from the shelf.'
+                        : 'Type a device below (last resort).'}
+                    </span>
                   )}
                   {row.devices.map(device => (
                     <span
@@ -227,31 +279,33 @@ const VdevBuilder = ({ rows, onChange, shelf = [], disabled, idPrefix }) => {
                     </span>
                   ))}
                 </div>
-                <div className="input-group input-group-sm">
-                  <input
-                    className="form-control font-monospace"
-                    type="text"
-                    placeholder="device — e.g. c1t0d0"
-                    aria-label="Add device to this vdev"
-                    value={pending[row.key] || ''}
-                    onChange={e => setPending(prev => ({ ...prev, [row.key]: e.target.value }))}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addTyped(row.key);
-                      }
-                    }}
-                    disabled={disabled}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => addTyped(row.key)}
-                    disabled={disabled || !(pending[row.key] || '').trim()}
-                  >
-                    <i className="fas fa-plus" />
-                  </button>
-                </div>
+                {shelf.length === 0 && (
+                  <div className="input-group input-group-sm">
+                    <input
+                      className="form-control font-monospace"
+                      type="text"
+                      placeholder="device — e.g. c1t0d0"
+                      aria-label="Add device to this vdev"
+                      value={pending[row.key] || ''}
+                      onChange={e => setPending(prev => ({ ...prev, [row.key]: e.target.value }))}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addTyped(row.key);
+                        }
+                      }}
+                      disabled={disabled}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => addTyped(row.key)}
+                      disabled={disabled || !(pending[row.key] || '').trim()}
+                    >
+                      <i className="fas fa-plus" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -279,31 +333,61 @@ VdevBuilder.propTypes = {
   rows: PropTypes.array.isRequired,
   onChange: PropTypes.func.isRequired,
   shelf: PropTypes.array,
+  shelfError: PropTypes.string,
+  rescanning: PropTypes.bool,
+  onRescan: PropTypes.func,
   disabled: PropTypes.bool,
   idPrefix: PropTypes.string.isRequired,
 };
 
-/** The monitoring inventory's FREE disks — the builder's shelf feed. */
+/** The monitoring inventory's FREE disks — the builder's shelf feed, with
+ *  the forced rescan an empty first answer needs. Failures surface as
+ *  `error` — a silent empty shelf hides agent bugs. */
 const useFreeDiskShelf = (isOpen, server) => {
   const [shelf, setShelf] = useState([]);
-  useEffect(() => {
-    if (!isOpen || !server || !hasFeature(server, 'monitoring')) {
+  const [rescanning, setRescanning] = useState(false);
+  const [error, setError] = useState('');
+  const enabled = !!(isOpen && server && hasFeature(server, 'monitoring'));
+
+  const load = useCallback(async () => {
+    if (!enabled) {
       return;
     }
+    const result = await getHostDisks(server.hostname, server.port, server.protocol, {
+      available: true,
+    });
+    if (result.success) {
+      setShelf(Array.isArray(result.data?.disks) ? result.data.disks : []);
+      setError('');
+    } else {
+      setShelf([]);
+      setError(`GET monitoring/storage/disks failed (${result.status ?? '?'}): ${result.message}`);
+    }
+  }, [enabled, server]);
+
+  useEffect(() => {
     setShelf([]);
-    getHostDisks(server.hostname, server.port, server.protocol, { available: true }).then(
-      result => {
-        setShelf(result.success && Array.isArray(result.data?.disks) ? result.data.disks : []);
-      }
-    );
-  }, [isOpen, server]);
-  return shelf;
+    setError('');
+    load();
+  }, [load]);
+
+  const rescan = async () => {
+    setRescanning(true);
+    const collect = await forceMonitoringCollect(server.hostname, server.port, server.protocol);
+    if (!collect.success) {
+      setError(`POST monitoring/collect failed (${collect.status ?? '?'}): ${collect.message}`);
+    }
+    await load();
+    setRescanning(false);
+  };
+
+  return { shelf, rescanning, rescan, error };
 };
 
 export const CreatePoolModal = ({ isOpen, onClose, server, onQueued }) => {
   const [name, setName] = useState('');
   const [vdevRows, setVdevRows] = useState([]);
-  const shelf = useFreeDiskShelf(isOpen, server);
+  const { shelf, rescanning, rescan, error: shelfError } = useFreeDiskShelf(isOpen, server);
   const [propLines, setPropLines] = useState('');
   const [mountPoint, setMountPoint] = useState('');
   const [force, setForce] = useState(false);
@@ -395,6 +479,9 @@ export const CreatePoolModal = ({ isOpen, onClose, server, onQueued }) => {
             rows={vdevRows}
             onChange={setVdevRows}
             shelf={shelf}
+            shelfError={shelfError}
+            rescanning={rescanning}
+            onRescan={rescan}
             disabled={loading}
             idPrefix="create"
           />
@@ -729,7 +816,7 @@ export const PoolPropertiesModal = ({ isOpen, onClose, server, pool, onQueued })
       if (result.success) {
         setProperties(result.data?.properties || {});
       } else {
-        setError(result.message);
+        setError(`GET storage/pools/${pool} failed (${result.status ?? '?'}): ${result.message}`);
       }
     });
   }, [isOpen, server, pool]);
@@ -775,7 +862,7 @@ export const PoolPropertiesModal = ({ isOpen, onClose, server, pool, onQueued })
         Edit a value and Apply — only changed properties ride the update. Read-only properties
         (source <code>-</code>) display as-is.
       </p>
-      {properties === null && (
+      {properties === null && !error && (
         <p className="text-muted mb-0">
           <i className="fas fa-spinner fa-pulse me-2" />
           Loading…
@@ -801,234 +888,90 @@ PoolPropertiesModal.propTypes = {
   onQueued: PropTypes.func.isRequired,
 };
 
-const DEVICE_MODES = {
-  'add-vdev': { title: 'Add vdevs', icon: 'fas fa-plus', submit: 'Add vdevs' },
-  remove: { title: 'Remove device', icon: 'fas fa-minus', submit: 'Remove' },
-  replace: { title: 'Replace device', icon: 'fas fa-right-left', submit: 'Replace' },
-  online: { title: 'Online device', icon: 'fas fa-circle-check', submit: 'Online' },
-  offline: { title: 'Offline device', icon: 'fas fa-circle-minus', submit: 'Offline' },
-};
-
-export const PoolDeviceModal = ({ isOpen, onClose, server, pool, mode, onQueued }) => {
+/** Extend a pool with new vdevs — the same drag-a-disk builder create uses.
+ *  Per-device operations (remove/replace/online/offline) live on the
+ *  topology's disk chips, not here. */
+export const AddVdevsModal = ({ isOpen, onClose, server, pool, onQueued }) => {
   const [vdevRows, setVdevRows] = useState([]);
-  const shelf = useFreeDiskShelf(isOpen && (mode === 'add-vdev' || mode === 'replace'), server);
-  const [device, setDevice] = useState('');
-  const [newDevice, setNewDevice] = useState('');
-  const [flag, setFlag] = useState(false); // force | expand | temporary, by mode
-  // The pool's real devices (parsed from zpool status) — the chooser feed.
-  const [poolDevices, setPoolDevices] = useState([]);
+  const { shelf, rescanning, rescan, error: shelfError } = useFreeDiskShelf(isOpen, server);
+  const [force, setForce] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setVdevRows([{ key: 'vdev-0-device', type: '', devices: [] }]);
-      setDevice('');
-      setNewDevice('');
-      setFlag(false);
+      setForce(false);
       setError('');
     }
-  }, [isOpen, mode]);
-
-  useEffect(() => {
-    if (!isOpen || !pool || mode === 'add-vdev') {
-      return;
-    }
-    setPoolDevices([]);
-    getZfsPoolStatus(server.hostname, server.port, server.protocol, pool).then(result => {
-      if (result.success) {
-        setPoolDevices(parseZpoolStatus(result.data?.status).devices);
-      }
-    });
-  }, [isOpen, server, pool, mode]);
-
-  const meta = DEVICE_MODES[mode] || DEVICE_MODES.remove;
-
-  const runByMode = () => {
-    const base = [server.hostname, server.port, server.protocol, pool];
-    switch (mode) {
-      case 'add-vdev': {
-        const vdevs = buildVdevs(vdevRows);
-        if (vdevs.length === 0) {
-          return null;
-        }
-        return addZfsPoolVdevs(...base, { vdevs, ...(flag && { force: true }) });
-      }
-      case 'replace':
-        if (!device.trim() || !newDevice.trim()) {
-          return null;
-        }
-        return replaceZfsPoolDevice(...base, {
-          old_device: device.trim(),
-          new_device: newDevice.trim(),
-          ...(flag && { force: true }),
-        });
-      case 'online':
-        if (!device.trim()) {
-          return null;
-        }
-        return onlineZfsPoolDevice(...base, {
-          device: device.trim(),
-          ...(flag && { expand: true }),
-        });
-      case 'offline':
-        if (!device.trim()) {
-          return null;
-        }
-        return offlineZfsPoolDevice(...base, {
-          device: device.trim(),
-          ...(flag && { temporary: true }),
-        });
-      default:
-        if (!device.trim()) {
-          return null;
-        }
-        return removeZfsPoolVdev(...base, device.trim());
-    }
-  };
+  }, [isOpen]);
 
   const handleSubmit = async () => {
-    const request = runByMode();
-    if (!request) {
-      setError('Fill in the required device fields.');
+    const vdevs = buildVdevs(vdevRows);
+    if (vdevs.length === 0) {
+      setError('Put at least one disk into a vdev.');
       return;
     }
     setLoading(true);
     setError('');
-    const result = await request;
+    const result = await addZfsPoolVdevs(server.hostname, server.port, server.protocol, pool, {
+      vdevs,
+      ...(force && { force: true }),
+    });
     setLoading(false);
     if (!result.success) {
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `${meta.title} queued on ${pool}.`));
+    onQueued(queuedMessage(result, `Add vdevs queued on ${pool}.`));
     onClose();
   };
-
-  const flagLabel = {
-    'add-vdev': 'Force (override device refusals)',
-    replace: 'Force (override device refusals)',
-    online: 'Expand the device to use all available space',
-    offline: 'Temporary (comes back online on reboot)',
-  }[mode];
 
   return (
     <FormModal
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`${meta.title} — ${pool || ''}`}
-      icon={meta.icon}
-      submitText={meta.submit}
-      submitIcon={meta.icon}
+      title={`Add vdevs — ${pool || ''}`}
+      icon="fas fa-plus"
+      submitText="Add vdevs"
+      submitIcon="fas fa-plus"
       loading={loading}
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
-      {mode === 'add-vdev' ? (
-        <VdevBuilder
-          rows={vdevRows}
-          onChange={setVdevRows}
-          shelf={shelf}
+      <VdevBuilder
+        rows={vdevRows}
+        onChange={setVdevRows}
+        shelf={shelf}
+        shelfError={shelfError}
+        rescanning={rescanning}
+        onRescan={rescan}
+        disabled={loading}
+        idPrefix="device"
+      />
+      <div className="form-check mt-3">
+        <input
+          id="zpool-addvdev-force"
+          className="form-check-input"
+          type="checkbox"
+          checked={force}
+          onChange={e => setForce(e.target.checked)}
           disabled={loading}
-          idPrefix="device"
         />
-      ) : (
-        <div className="row g-3">
-          <div className="col-12 col-md-6">
-            <label className="form-label" htmlFor="zpool-device">
-              {mode === 'replace' ? 'Old device' : 'Device'} <span className="text-danger">*</span>
-            </label>
-            {poolDevices.length > 0 ? (
-              <select
-                id="zpool-device"
-                className="form-select font-monospace"
-                value={device}
-                onChange={e => setDevice(e.target.value)}
-                disabled={loading}
-              >
-                <option value="">Select a device in this pool…</option>
-                {poolDevices.map(name => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                id="zpool-device"
-                className="form-control font-monospace"
-                type="text"
-                placeholder="e.g. c1t2d0"
-                value={device}
-                onChange={e => setDevice(e.target.value)}
-                disabled={loading}
-              />
-            )}
-            <span className="form-text">
-              Targets this ONE device only — the rest of the pool keeps running.
-            </span>
-          </div>
-          {mode === 'replace' && (
-            <div className="col-12 col-md-6">
-              <label className="form-label" htmlFor="zpool-new-device">
-                New device <span className="text-danger">*</span>
-              </label>
-              {shelf.length > 0 ? (
-                <select
-                  id="zpool-new-device"
-                  className="form-select font-monospace"
-                  value={newDevice}
-                  onChange={e => setNewDevice(e.target.value)}
-                  disabled={loading}
-                >
-                  <option value="">Select a free disk…</option>
-                  {shelf.map(disk => (
-                    <option key={disk.device_name} value={disk.device_name}>
-                      {disk.device_name} — {disk.capacity} {disk.model || ''}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  id="zpool-new-device"
-                  className="form-control font-monospace"
-                  type="text"
-                  placeholder="the replacement device path"
-                  value={newDevice}
-                  onChange={e => setNewDevice(e.target.value)}
-                  disabled={loading}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      )}
-      {flagLabel && (
-        <div className="form-check mt-3">
-          <input
-            id="zpool-device-flag"
-            className="form-check-input"
-            type="checkbox"
-            checked={flag}
-            onChange={e => setFlag(e.target.checked)}
-            disabled={loading}
-          />
-          <label className="form-check-label" htmlFor="zpool-device-flag">
-            {flagLabel}
-          </label>
-        </div>
-      )}
+        <label className="form-check-label" htmlFor="zpool-addvdev-force">
+          Force (override device refusals)
+        </label>
+      </div>
     </FormModal>
   );
 };
 
-PoolDeviceModal.propTypes = {
+AddVdevsModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   server: PropTypes.object,
   pool: PropTypes.string,
-  mode: PropTypes.oneOf(['add-vdev', 'remove', 'replace', 'online', 'offline']),
   onQueued: PropTypes.func.isRequired,
 };
 

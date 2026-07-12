@@ -14,11 +14,12 @@ import {
 } from '../../api/zfsAPI';
 import { hasFeature } from '../../utils/capabilities';
 
+import DiskActionModal, { shortDevice } from './ZfsDiskActionModal';
 import {
+  AddVdevsModal,
   CreatePoolModal,
   DestroyPoolModal,
   ImportPoolModal,
-  PoolDeviceModal,
   PoolPropertiesModal,
   PoolStatusModal,
 } from './ZfsPoolModals';
@@ -58,8 +59,45 @@ const healthIcon = health => {
 // Per-pool tint palette for the chassis view — green is reserved for free.
 const POOL_COLORS = ['primary', 'info', 'warning', 'danger', 'dark', 'secondary'];
 
-/** The host's physical disks as chassis bays, tinted by pool membership. */
-const DiskChassis = ({ disks, poolColorOf, rescanning, onRescan }) => (
+/** Capacity as an SVG donut — r=15.9155 makes the circumference ≈ 100, so the
+ *  dash array reads straight as a percentage. Percent stacks in the middle. */
+const CapacityRing = ({ percent, variant }) => (
+  <div
+    className="hw-cap-ring"
+    role="progressbar"
+    aria-label="Pool capacity used"
+    aria-valuenow={percent}
+    aria-valuemin={0}
+    aria-valuemax={100}
+    title={`${percent}% used`}
+  >
+    <svg viewBox="0 0 42 42" aria-hidden="true">
+      <circle className="hw-cap-ring-track" cx="21" cy="21" r="15.9155" />
+      <circle
+        className="hw-cap-ring-fill"
+        cx="21"
+        cy="21"
+        r="15.9155"
+        style={{ stroke: `var(--bs-${variant})`, strokeDasharray: `${percent} ${100 - percent}` }}
+      />
+    </svg>
+    <div className="hw-cap-ring-center">
+      <span className="hw-cap-ring-pct" style={{ color: `var(--bs-${variant})` }}>
+        {percent}%
+      </span>
+      <span className="hw-cap-ring-sub">used</span>
+    </div>
+  </div>
+);
+
+CapacityRing.propTypes = {
+  percent: PropTypes.number.isRequired,
+  variant: PropTypes.string.isRequired,
+};
+
+/** The host's physical disks as chassis bays, tinted by pool membership;
+ *  pool-member bays click through to that disk's detail + operations. */
+const DiskChassis = ({ disks, poolColorOf, rescanning, onRescan, onDiskClick }) => (
   <div className="mt-4">
     <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
       <h3 className="fs-6 fw-bold mb-0">
@@ -77,48 +115,100 @@ const DiskChassis = ({ disks, poolColorOf, rescanning, onRescan }) => (
         Rescan
       </button>
     </div>
+    {disks.length === 0 && (
+      <div className="alert alert-warning py-2">
+        The monitoring inventory reports no disks — after an agent deploy the first scan must be
+        forced: hit Rescan. Until it answers, disk pickers fall back to typed device names.
+      </div>
+    )}
     <div className="row g-2">
       {disks.map(disk => {
         const color = disk.pool_assignment ? poolColorOf(disk.pool_assignment) : null;
+        const clickable = !!disk.pool_assignment;
+        const hasLocation =
+          disk.chassis !== null &&
+          disk.chassis !== undefined &&
+          disk.bay !== null &&
+          disk.bay !== undefined;
+        const solidState = disk.disk_type === 'SSD' || disk.disk_type === 'NVMe';
+        let ledClass = 'text-success';
+        if (disk.faulty) {
+          ledClass = 'text-danger';
+        } else if (color) {
+          ledClass = `text-${color}`;
+        }
+        let bayClass = 'hw-bay';
+        if (disk.faulty) {
+          bayClass += ' hw-bay-faulty';
+        } else if (!clickable) {
+          bayClass += ' hw-bay-free';
+        }
+        const accentStyle = color ? { '--hw-bay-accent': `var(--bs-${color})` } : undefined;
+        const bay = (
+          <>
+            <div className="d-flex align-items-center gap-2">
+              <i className={`fas fa-circle hw-drive-led ${ledClass}`} />
+              <i className={`fas ${solidState ? 'fa-microchip' : 'fa-hard-drive'} text-muted`} />
+              <strong className="small text-truncate" title={disk.device_name}>
+                {shortDevice(disk.device_name)}
+              </strong>
+              {disk.faulty && (
+                <span className="badge text-bg-danger" title="fmd reports this disk faulty">
+                  FAULTY
+                </span>
+              )}
+              <span className={`badge ms-auto ${color ? `text-bg-${color}` : 'text-bg-success'}`}>
+                {disk.pool_assignment || 'free'}
+              </span>
+            </div>
+            <div
+              className="small text-muted text-truncate"
+              title={`${disk.manufacturer || ''} ${disk.model || ''}`.trim()}
+            >
+              {disk.model || '—'}
+            </div>
+            {hasLocation && (
+              <div className="small text-muted" title="Physical location">
+                <i className="fas fa-location-dot me-1" />
+                chassis {disk.chassis} · bay {disk.bay}
+              </div>
+            )}
+            <div className="d-flex justify-content-between align-items-center gap-2 small">
+              <span className="hw-bay-serial" title="Serial number">
+                {disk.serial_number || '—'}
+              </span>
+              <span className="fw-semibold text-nowrap">
+                {disk.capacity || humanSize(disk.capacity_bytes)}
+              </span>
+            </div>
+            <div className="d-flex gap-1 mt-auto pt-1">
+              {disk.disk_type && <span className="badge text-bg-secondary">{disk.disk_type}</span>}
+              {disk.interface_type && (
+                <span className="badge text-bg-light border">{disk.interface_type}</span>
+              )}
+            </div>
+          </>
+        );
         return (
           <div
             className="col-6 col-md-4 col-lg-3 col-xxl-2"
             key={disk.device_name || disk.disk_index}
           >
-            <div
-              className={`border rounded p-2 h-100 ${color ? `border-${color}` : 'border-success'}`}
-              style={color ? undefined : { borderStyle: 'dashed' }}
-            >
-              <div className="d-flex align-items-center gap-2">
-                <i
-                  className={`fas ${disk.disk_type === 'SSD' ? 'fa-microchip' : 'fa-hard-drive'} text-muted`}
-                />
-                <strong className="small">{disk.device_name}</strong>
-                <span className={`badge ms-auto ${color ? `text-bg-${color}` : 'text-bg-success'}`}>
-                  {disk.pool_assignment || 'free'}
-                </span>
-              </div>
-              <div
-                className="small text-muted text-truncate"
-                title={`${disk.manufacturer || ''} ${disk.model || ''}`.trim()}
+            {clickable ? (
+              <button
+                type="button"
+                className={bayClass}
+                style={accentStyle}
+                title="Click for details and disk operations"
+                onClick={() => onDiskClick(disk)}
               >
-                {disk.model || '—'}
+                {bay}
+              </button>
+            ) : (
+              <div className={bayClass} style={accentStyle}>
+                {bay}
               </div>
-              <div className="d-flex justify-content-between align-items-center small">
-                <code className="small" title="Serial number">
-                  {disk.serial_number || '—'}
-                </code>
-                <span>{disk.capacity || humanSize(disk.capacity_bytes)}</span>
-              </div>
-              <div className="d-flex gap-1 mt-1">
-                {disk.disk_type && (
-                  <span className="badge text-bg-secondary">{disk.disk_type}</span>
-                )}
-                {disk.interface_type && (
-                  <span className="badge text-bg-light border">{disk.interface_type}</span>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         );
       })}
@@ -131,12 +221,14 @@ DiskChassis.propTypes = {
   poolColorOf: PropTypes.func.isRequired,
   rescanning: PropTypes.bool,
   onRescan: PropTypes.func.isRequired,
+  onDiskClick: PropTypes.func.isRequired,
 };
 
 /** The pool's vdev layout drawn as boxes of drive chips — a mirror IS two
  *  drives in one box; state dots color each disk; an active scrub/resilver
- *  sweeps a striped progress bar across the top. */
-const PoolTopology = ({ parsed }) => {
+ *  sweeps a striped progress bar across the top. Chips truncate the long
+ *  ctd names and CLICK OPEN the disk's full identity + its operations. */
+const PoolTopology = ({ parsed, onDiskClick }) => {
   if (!parsed) {
     return (
       <p className="text-muted small mb-2">
@@ -154,8 +246,7 @@ const PoolTopology = ({ parsed }) => {
     <div className="mb-2">
       {scanPct !== null && (
         <div
-          className="progress mb-2"
-          style={{ height: '0.4rem' }}
+          className="progress hw-scan-bar mb-2"
           title={parsed.fields.scan}
           role="progressbar"
           aria-label="Scrub/resilver progress"
@@ -164,40 +255,42 @@ const PoolTopology = ({ parsed }) => {
           aria-valuemax={100}
         >
           <div
-            className="progress-bar progress-bar-striped progress-bar-animated bg-info"
-            style={{ width: `${scanPct}%` }}
-          />
+            className="progress-bar progress-bar-striped progress-bar-animated bg-info fw-semibold"
+            style={{ width: `${Math.max(scanPct, 8)}%` }}
+          >
+            {scanPct}%
+          </div>
         </div>
       )}
-      {/* One full-width row per vdev — a mirror's disks always sit together
-          in ONE segment, and multiple vdevs stack as the pool's real layers. */}
-      <div className="d-flex flex-column gap-1">
+      {/* One module per vdev, disks NEVER wrap — a mirror's members sit on the
+          same line always; an over-wide row scrolls inside itself. Multiple
+          vdevs stack as the pool's real layers. */}
+      <div className="d-flex flex-column gap-2">
         {groups.map(group => (
-          <div
-            className="border rounded px-2 py-1 d-flex align-items-center gap-2 flex-wrap"
-            key={group.name}
-          >
-            <span
-              className="d-inline-flex align-items-center gap-2 flex-shrink-0"
-              style={{ minWidth: '8rem' }}
-            >
+          <div className="hw-vdev" key={group.name}>
+            <div className="hw-vdev-head">
               <i className={`fas ${group.bare ? 'fa-hard-drive' : 'fa-layer-group'} text-muted`} />
-              <span className="fw-semibold small">{group.bare ? 'stripe' : group.name}</span>
-              <span className={`badge ${healthBadgeClass(group.state)}`}>{group.state}</span>
-            </span>
-            <span className="d-inline-flex align-items-center flex-wrap gap-1">
+              <span>{group.bare ? 'stripe' : group.name}</span>
+              <span className={`badge ${healthBadgeClass(group.state)} ms-auto`}>
+                {group.state}
+              </span>
+            </div>
+            <div className="hw-vdev-drives">
               {group.devices.map(device => (
-                <span
-                  className="badge text-bg-light border d-inline-flex align-items-center gap-1"
+                <button
+                  type="button"
+                  className="hw-drive"
                   key={device.name}
-                  title={`${device.state} · read ${device.read} · write ${device.write} · cksum ${device.cksum}${device.note ? ` · ${device.note}` : ''}`}
+                  title={`${device.name} — ${device.state} · read ${device.read} · write ${device.write} · cksum ${device.cksum}${device.note ? ` · ${device.note}` : ''} — click for details and actions`}
+                  onClick={() => onDiskClick(device)}
                 >
-                  <i className={`fas fa-circle small ${healthTextClass(device.state)}`} />
-                  <i className="fas fa-hard-drive" />
-                  <code className="small">{device.name}</code>
-                </span>
+                  <i className={`fas fa-circle hw-drive-led ${healthTextClass(device.state)}`} />
+                  <i className="fas fa-hard-drive hw-drive-glyph" />
+                  <span className="hw-drive-name">{shortDevice(device.name)}</span>
+                  {device.note && <i className="fas fa-triangle-exclamation text-warning" />}
+                </button>
               ))}
-            </span>
+            </div>
           </div>
         ))}
       </div>
@@ -216,12 +309,16 @@ const PoolTopology = ({ parsed }) => {
 
 PoolTopology.propTypes = {
   parsed: PropTypes.object,
+  onDiskClick: PropTypes.func.isRequired,
 };
 
-const PoolCard = ({ pool, topology, busy, onAction, onModal }) => {
+const PoolCard = ({ pool, topology, accent, busy, onAction, onModal, onDiskClick }) => {
   const percent = percentOf(pool);
   return (
-    <div className="card h-100">
+    <div
+      className="card h-100 hw-zpool-card"
+      style={{ '--hw-zpool-accent': `var(--bs-${accent})` }}
+    >
       <div className="card-body d-flex flex-column">
         <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
           <div>
@@ -242,42 +339,36 @@ const PoolCard = ({ pool, topology, busy, onAction, onModal }) => {
         </div>
 
         {percent !== null && (
-          <>
-            <div
-              className="progress mb-1"
-              style={{ height: '1.25rem' }}
-              role="progressbar"
-              aria-label={`${pool.name} capacity`}
-              aria-valuenow={percent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <div
-                className={`progress-bar bg-${capacityVariant(percent)}`}
-                style={{ width: `${Math.max(percent, 4)}%` }}
-              >
-                {percent}%
+          <div className="d-flex align-items-center gap-3 mb-3">
+            <CapacityRing percent={percent} variant={capacityVariant(percent)} />
+            <div className="hw-zpool-stats flex-grow-1">
+              <div className="hw-zpool-stat">
+                <span className="hw-zpool-stat-k">Used</span>
+                <span className="hw-zpool-stat-v">{humanSize(pool.alloc)}</span>
+              </div>
+              <div className="hw-zpool-stat">
+                <span className="hw-zpool-stat-k">Free</span>
+                <span className="hw-zpool-stat-v">{humanSize(pool.free)}</span>
+              </div>
+              <div className="hw-zpool-stat">
+                <span className="hw-zpool-stat-k">Total</span>
+                <span className="hw-zpool-stat-v">{humanSize(pool.size)}</span>
+              </div>
+              <div className="hw-zpool-stat">
+                <span className="hw-zpool-stat-k">Dedup</span>
+                <span className="hw-zpool-stat-v">{pool.dedup_ratio || '—'}</span>
               </div>
             </div>
-            <div className="d-flex justify-content-between small text-muted mb-2">
-              <span>
-                <strong>{humanSize(pool.alloc)}</strong> used
-              </span>
-              <span>
-                <strong>{humanSize(pool.free)}</strong> free
-              </span>
-              <span>
-                <strong>{humanSize(pool.size)}</strong> total
-              </span>
-            </div>
-          </>
+          </div>
         )}
 
-        <PoolTopology parsed={topology} />
+        <PoolTopology parsed={topology} onDiskClick={device => onDiskClick(pool.name, device)} />
 
-        <div className="small text-muted mb-3">
-          Dedup ratio <strong>{pool.dedup_ratio || '—'}</strong>
-        </div>
+        {percent === null && (
+          <div className="small text-muted mb-3">
+            Dedup ratio <strong>{pool.dedup_ratio || '—'}</strong>
+          </div>
+        )}
 
         <div className="d-flex flex-wrap gap-1 mt-auto">
           <button
@@ -327,46 +418,14 @@ const PoolCard = ({ pool, topology, busy, onAction, onModal }) => {
                 Stop scrub
               </Dropdown.Item>
               <Dropdown.Divider />
-              <Dropdown.Header>Devices</Dropdown.Header>
               <Dropdown.Item
                 as="button"
                 type="button"
-                onClick={() => onModal({ kind: 'device', pool: pool.name, mode: 'add-vdev' })}
+                title="Extend the pool with new vdevs — per-disk operations live on the disks in the diagram"
+                onClick={() => onModal({ kind: 'device', pool: pool.name })}
               >
                 <i className="fas fa-plus me-2" />
                 Add vdevs…
-              </Dropdown.Item>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                onClick={() => onModal({ kind: 'device', pool: pool.name, mode: 'remove' })}
-              >
-                <i className="fas fa-minus me-2" />
-                Remove device…
-              </Dropdown.Item>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                onClick={() => onModal({ kind: 'device', pool: pool.name, mode: 'replace' })}
-              >
-                <i className="fas fa-right-left me-2" />
-                Replace device…
-              </Dropdown.Item>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                onClick={() => onModal({ kind: 'device', pool: pool.name, mode: 'online' })}
-              >
-                <i className="fas fa-circle-check text-success me-2" />
-                Online device…
-              </Dropdown.Item>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                onClick={() => onModal({ kind: 'device', pool: pool.name, mode: 'offline' })}
-              >
-                <i className="fas fa-circle-minus text-warning me-2" />
-                Offline device…
               </Dropdown.Item>
               <Dropdown.Divider />
               <Dropdown.Item
@@ -407,9 +466,11 @@ const PoolCard = ({ pool, topology, busy, onAction, onModal }) => {
 PoolCard.propTypes = {
   pool: PropTypes.object.isRequired,
   topology: PropTypes.object,
+  accent: PropTypes.string.isRequired,
   busy: PropTypes.bool,
   onAction: PropTypes.func.isRequired,
   onModal: PropTypes.func.isRequired,
+  onDiskClick: PropTypes.func.isRequired,
 };
 
 const ZfsPoolsPanel = ({ server }) => {
@@ -469,7 +530,15 @@ const ZfsPoolsPanel = ({ server }) => {
       return;
     }
     const result = await getHostDisks(server.hostname, server.port, server.protocol);
-    setHostDisks(result.success && Array.isArray(result.data?.disks) ? result.data.disks : []);
+    if (result.success) {
+      setHostDisks(Array.isArray(result.data?.disks) ? result.data.disks : []);
+    } else {
+      setHostDisks([]);
+      report(
+        `Disk inventory failed (GET monitoring/storage/disks, ${result.status ?? '?'}): ${result.message}`,
+        'danger'
+      );
+    }
   }, [server]);
 
   useEffect(() => {
@@ -560,24 +629,44 @@ const ZfsPoolsPanel = ({ server }) => {
 
       <div className="row g-3">
         {pools.map(pool => (
-          <div className="col-12 col-md-6 col-xxl-4" key={pool.name}>
+          <div className="col-12 col-xl-6" key={pool.name}>
             <PoolCard
               pool={pool}
               topology={statuses[pool.name] || null}
+              accent={poolColorOf(pool.name)}
               busy={busy}
               onAction={runSimple}
               onModal={setModal}
+              onDiskClick={(poolName, device) => setModal({ kind: 'disk', pool: poolName, device })}
             />
           </div>
         ))}
       </div>
 
-      {hostDisks.length > 0 && (
+      {hasFeature(server, 'monitoring') && (
         <DiskChassis
           disks={hostDisks}
           poolColorOf={poolColorOf}
           rescanning={rescanning}
           onRescan={rescanDisks}
+          onDiskClick={disk => {
+            const parsed = statuses[disk.pool_assignment];
+            const row = parsed?.rows.find(
+              entry => entry.name === disk.device_name || entry.name.startsWith(disk.device_name)
+            );
+            setModal({
+              kind: 'disk',
+              pool: disk.pool_assignment,
+              device: row || {
+                name: disk.device_name,
+                state: '',
+                read: '—',
+                write: '—',
+                cksum: '—',
+                note: '',
+              },
+            });
+          }}
         />
       )}
 
@@ -606,12 +695,11 @@ const ZfsPoolsPanel = ({ server }) => {
         pool={modal?.pool}
         onQueued={onQueued}
       />
-      <PoolDeviceModal
+      <AddVdevsModal
         isOpen={modal?.kind === 'device'}
         onClose={() => setModal(null)}
         server={server}
         pool={modal?.pool}
-        mode={modal?.mode}
         onQueued={onQueued}
       />
       <DestroyPoolModal
@@ -619,6 +707,26 @@ const ZfsPoolsPanel = ({ server }) => {
         onClose={() => setModal(null)}
         server={server}
         pool={modal?.pool}
+        onQueued={onQueued}
+      />
+      <DiskActionModal
+        isOpen={modal?.kind === 'disk'}
+        onClose={() => setModal(null)}
+        server={server}
+        pool={modal?.pool}
+        device={modal?.device || null}
+        inventoryDisk={
+          modal?.device
+            ? hostDisks.find(
+                disk =>
+                  disk.device_name === modal.device.name ||
+                  modal.device.name.startsWith(disk.device_name)
+              ) || null
+            : null
+        }
+        freeDisks={hostDisks.filter(disk => disk.is_available)}
+        rescanning={rescanning}
+        onRescan={rescanDisks}
         onQueued={onQueued}
       />
     </div>

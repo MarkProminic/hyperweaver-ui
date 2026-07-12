@@ -1,0 +1,224 @@
+// ZFS pools + datasets visuals — the pool card, its capacity ring, the vdev
+// topology drawn as hardware "modules" of drive chips, and the physical
+// drive-bay chassis. Every color rides a --bs-* / --hw-* custom property so
+// both themes and any re-brand follow for free. Pool tints are passed in as an
+// inline --hw-zpool-accent (a Bootstrap text-bg-* variant), never hard-coded.
+
+// --- Pool card: a tint accent down the leading edge lifts it off the grid ---
+.hw-zpool-card {
+  position: relative;
+  overflow: hidden;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--hw-zpool-accent, var(--bs-primary));
+  }
+
+  &:hover {
+    box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
+}
+
+// --- Capacity ring: an SVG donut with the percent stacked in its center ---
+.hw-cap-ring {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  flex-shrink: 0;
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.hw-cap-ring-track {
+  fill: none;
+  stroke: var(--bs-tertiary-bg);
+  stroke-width: 3.2;
+}
+
+.hw-cap-ring-fill {
+  fill: none;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dasharray 0.6s ease;
+}
+
+.hw-cap-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.hw-cap-ring-pct {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.hw-cap-ring-sub {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bs-secondary-color);
+}
+
+// --- Stat column beside the ring ---
+.hw-zpool-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.hw-zpool-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.85rem;
+
+  .hw-zpool-stat-k {
+    color: var(--bs-secondary-color);
+  }
+  .hw-zpool-stat-v {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// --- vdev module: a labeled box whose members sit on ONE row (a mirror IS two
+//     drives in one box). Never wraps; an over-wide row scrolls inside itself. ---
+.hw-vdev {
+  border: 1px solid var(--hw-border-light);
+  border-radius: var(--bs-border-radius);
+  background: var(--bs-tertiary-bg);
+  overflow: hidden;
+}
+
+.hw-vdev-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.55rem;
+  background: var(--hw-editor-head-bg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.hw-vdev-drives {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  overflow-x: auto;
+}
+
+// --- drive chip: a status LED, a drive glyph, its (truncated) name + size.
+//     Clickable everywhere it represents a real, addressable disk. ---
+.hw-drive {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--hw-border-light);
+  border-radius: var(--bs-border-radius);
+  background: var(--bs-body-bg);
+  flex: 0 0 auto;
+  color: inherit;
+  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+button.hw-drive:hover {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 1px var(--bs-primary);
+  transform: translateY(-1px);
+}
+
+// The LED glows in its own state color (currentColor from a text-* class).
+.hw-drive-led {
+  font-size: 0.55rem;
+  filter: drop-shadow(0 0 3px currentColor);
+}
+
+.hw-drive-glyph {
+  color: var(--bs-secondary-color);
+}
+
+.hw-drive-name {
+  font-family: var(--bs-font-monospace);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.hw-drive-cap {
+  font-size: 0.72rem;
+  color: var(--bs-secondary-color);
+  font-variant-numeric: tabular-nums;
+}
+
+// --- scrub / resilver sweep ---
+.hw-scan-bar {
+  height: 1.15rem;
+  background: rgba(128, 128, 128, 0.3);
+}
+
+// --- physical drive bay in the chassis: a slot tinted by its pool, an empty
+//     bay dashed-green, a faulted bay red. Pool tint via inline --hw-bay-accent. ---
+.hw-bay {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  height: 100%;
+  width: 100%;
+  padding: 0.55rem;
+  border: 1px solid var(--hw-border-light);
+  border-left: 4px solid var(--hw-bay-accent, var(--bs-border-color));
+  border-radius: var(--bs-border-radius);
+  background: var(--bs-body-bg);
+  color: inherit;
+  text-align: left;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+button.hw-bay:hover {
+  box-shadow: 0 0.35rem 0.9rem rgba(0, 0, 0, 0.16);
+  transform: translateY(-2px);
+}
+
+.hw-bay-free {
+  border-style: dashed;
+  border-left-color: var(--bs-success);
+  background: transparent;
+}
+
+.hw-bay-faulty {
+  border-color: var(--bs-danger);
+  border-left-color: var(--bs-danger);
+}
+
+.hw-bay-serial {
+  font-family: var(--bs-font-monospace);
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

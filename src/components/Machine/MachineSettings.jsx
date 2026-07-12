@@ -2,7 +2,11 @@ import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
 
 import { getMachineDefaults, getMachineOsTypes } from '../../api/machineAPI';
-import { getIsoArtifacts, modifyInfrastructure } from '../../api/provisioningAPI';
+import {
+  getBridgedInterfaces,
+  getIsoArtifacts,
+  modifyInfrastructure,
+} from '../../api/provisioningAPI';
 import { getZfsPools } from '../../api/zfsAPI';
 import { useServers } from '../../contexts/ServerContext';
 import { hasHypervisor } from '../../utils/capabilities';
@@ -582,6 +586,12 @@ const MachineSettings = ({
   const [osTypes, setOsTypes] = useState(null); // null = keep the text input
   const [isoOptions, setIsoOptions] = useState([]); // cached-ISO filenames
   const [poolOptions, setPoolOptions] = useState([]); // zone zvol-add pool picker
+  // The host's live VNIC records (dladm layer) — zone NIC rows merge them
+  // with the zonecfg net resource so "unset in zonecfg" still shows the
+  // real MAC/link/VLAN the VNIC runs with.
+  const [hostVnics, setHostVnics] = useState([]);
+  // Bridge/uplink suggestions for NIC fields (the create wizard's feed).
+  const [bridgeOptions, setBridgeOptions] = useState([]);
 
   const formDisabled = loading || phase !== 'form';
 
@@ -657,7 +667,22 @@ const MachineSettings = ({
         setAgentDefaults(result.success ? result.data : null);
       }
     );
-    // The zone zvol-add pool picker.
+    // Bridge/uplink suggestions — the same feed the create wizard uses.
+    getBridgedInterfaces(currentServer.hostname, currentServer.port, currentServer.protocol).then(
+      result => {
+        const list = result.success
+          ? result.data?.interfaces || result.data?.bridged_interfaces || result.data || []
+          : [];
+        setBridgeOptions(
+          (Array.isArray(list) ? list : [])
+            .map(entry => (typeof entry === 'string' ? { name: entry } : entry || {}))
+            .filter(entry => !entry.class || entry.class === 'phys' || entry.class === 'aggr')
+            .map(entry => entry.name || entry.device || '')
+            .filter(Boolean)
+        );
+      }
+    );
+    // The zone zvol-add pool picker + the live VNIC layer for NIC rows.
     if (hasHypervisor(currentServer, 'bhyve')) {
       getZfsPools(currentServer.hostname, currentServer.port, currentServer.protocol).then(
         result => {
@@ -668,10 +693,19 @@ const MachineSettings = ({
           );
         }
       );
+      makeAgentRequest(
+        currentServer.hostname,
+        currentServer.port,
+        currentServer.protocol,
+        'network/vnics'
+      ).then(result => {
+        setHostVnics(result.success && Array.isArray(result.data?.vnics) ? result.data.vnics : []);
+      });
     } else {
       setPoolOptions([]);
+      setHostVnics([]);
     }
-  }, [currentServer]);
+  }, [currentServer, makeAgentRequest]);
 
   const waitForStopped = async () => {
     const outcome = await poll(
@@ -1293,6 +1327,8 @@ const MachineSettings = ({
           onToggleNic={toggleNicRemoval}
           nicEnums={knobValues}
           zoneNics={currentHardware.zone?.nics || null}
+          hostVnics={hostVnics}
+          bridgeOptions={bridgeOptions}
           zoneNicRemovals={removeZoneNics}
           onToggleZoneNic={toggleName(setRemoveZoneNics)}
           zoneNicEdits={zoneNicEdits}

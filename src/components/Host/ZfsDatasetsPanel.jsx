@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Dropdown from 'react-bootstrap/Dropdown';
 
 import { getZfsDatasets, getZfsPools, promoteZfsDataset } from '../../api/zfsAPI';
+import { ConfirmModal } from '../common';
 
 import {
   CloneSnapshotModal,
@@ -59,15 +60,21 @@ const buildTree = rows => {
   return roots;
 };
 
-const nodeMatches = (node, needle) => {
-  if (!needle) {
+/** A node shows when its own type is toggled on AND it matches the search —
+ *  or when any descendant does (ancestors stay as structure). */
+const nodeMatches = (node, needle, show) => {
+  const typeOn = show[node.row.type] ?? true;
+  const nameOk = !needle || node.name.toLowerCase().includes(needle);
+  if (typeOn && nameOk) {
     return true;
   }
-  return (
-    node.name.toLowerCase().includes(needle) ||
-    node.snapshots.some(snap => snap.name.toLowerCase().includes(needle)) ||
-    node.children.some(child => nodeMatches(child, needle))
-  );
+  if (
+    show.snapshot &&
+    node.snapshots.some(snap => !needle || snap.name.toLowerCase().includes(needle))
+  ) {
+    return true;
+  }
+  return node.children.some(child => nodeMatches(child, needle, show));
 };
 
 const typeIcon = (row, depth) => {
@@ -304,8 +311,8 @@ SnapshotRow.propTypes = {
   onModal: PropTypes.func.isRequired,
 };
 
-const TreeNode = ({ node, depth, needle, collapsed, snapsOpen, busy, handlers }) => {
-  if (!nodeMatches(node, needle)) {
+const TreeNode = ({ node, depth, needle, show, collapsed, snapsOpen, busy, handlers }) => {
+  if (!nodeMatches(node, needle, show)) {
     return null;
   }
   // A live search expands everything it matched through.
@@ -314,7 +321,7 @@ const TreeNode = ({ node, depth, needle, collapsed, snapsOpen, busy, handlers })
     ? node.snapshots.some(snap => snap.name.toLowerCase().includes(needle)) ||
       snapsOpen.has(node.name)
     : snapsOpen.has(node.name);
-  const hasContent = node.children.length > 0 || node.snapshots.length > 0;
+  const hasContent = node.children.length > 0 || (show.snapshot && node.snapshots.length > 0);
   return (
     <>
       <DatasetRow
@@ -327,7 +334,7 @@ const TreeNode = ({ node, depth, needle, collapsed, snapsOpen, busy, handlers })
         onModal={handlers.onModal}
         onPromote={handlers.onPromote}
       />
-      {!isCollapsed && node.snapshots.length > 0 && (
+      {!isCollapsed && show.snapshot && node.snapshots.length > 0 && (
         <div
           className="d-flex align-items-center gap-2 border-bottom py-1"
           style={{ paddingLeft: `${(depth + 1) * 1.5}rem` }}
@@ -348,6 +355,7 @@ const TreeNode = ({ node, depth, needle, collapsed, snapsOpen, busy, handlers })
         </div>
       )}
       {!isCollapsed &&
+        show.snapshot &&
         snapsVisible &&
         node.snapshots.map(snap => (
           <SnapshotRow
@@ -364,6 +372,7 @@ const TreeNode = ({ node, depth, needle, collapsed, snapsOpen, busy, handlers })
             node={child}
             depth={depth + 1}
             needle={needle}
+            show={show}
             collapsed={collapsed}
             snapsOpen={snapsOpen}
             busy={busy}
@@ -379,11 +388,18 @@ TreeNode.propTypes = {
   node: PropTypes.object.isRequired,
   depth: PropTypes.number.isRequired,
   needle: PropTypes.string.isRequired,
+  show: PropTypes.object.isRequired,
   collapsed: PropTypes.instanceOf(Set).isRequired,
   snapsOpen: PropTypes.instanceOf(Set).isRequired,
   busy: PropTypes.bool,
   handlers: PropTypes.object.isRequired,
 };
+
+const TYPE_TOGGLES = [
+  { key: 'filesystem', label: 'Filesystems', icon: 'fa-folder' },
+  { key: 'volume', label: 'Volumes', icon: 'fa-hard-drive' },
+  { key: 'snapshot', label: 'Snapshots', icon: 'fa-camera' },
+];
 
 const toggleIn = (set, name) => {
   const next = new Set(set);
@@ -404,6 +420,9 @@ const ZfsDatasetsPanel = ({ server }) => {
   const [nameFilter, setNameFilter] = useState('');
   const [collapsed, setCollapsed] = useState(new Set());
   const [snapsOpen, setSnapsOpen] = useState(new Set());
+  // Type visibility toggles — hiding filesystems keeps ancestors whose
+  // descendants are still visible (structure survives).
+  const [show, setShow] = useState({ filesystem: true, volume: true, snapshot: true });
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -472,7 +491,7 @@ const ZfsDatasetsPanel = ({ server }) => {
     setTimeout(load, 2000);
   };
 
-  const onPromote = async name => {
+  const runPromote = async name => {
     setBusy(true);
     setMsg('');
     const result = await promoteZfsDataset(server.hostname, server.port, server.protocol, name);
@@ -486,13 +505,14 @@ const ZfsDatasetsPanel = ({ server }) => {
 
   const handlers = {
     onModal: setModal,
-    onPromote,
+    // Promote confirms first — it silently rewires clone/origin dependency.
+    onPromote: name => setModal({ kind: 'promote', name }),
     onToggle: name => setCollapsed(prev => toggleIn(prev, name)),
     onToggleSnaps: name => setSnapsOpen(prev => toggleIn(prev, name)),
   };
 
   const needle = nameFilter.trim().toLowerCase();
-  const visibleRoots = tree.filter(node => nodeMatches(node, needle));
+  const visibleRoots = tree.filter(node => nodeMatches(node, needle, show));
 
   return (
     <div>
@@ -543,7 +563,7 @@ const ZfsDatasetsPanel = ({ server }) => {
       </div>
 
       <div className="row g-2 mb-3">
-        <div className="col-12 col-md-8">
+        <div className="col-12 col-md-5">
           <input
             className="form-control form-control-sm"
             type="search"
@@ -553,7 +573,7 @@ const ZfsDatasetsPanel = ({ server }) => {
             onChange={e => setNameFilter(e.target.value)}
           />
         </div>
-        <div className="col-12 col-md-4">
+        <div className="col-12 col-md-3">
           <select
             className="form-select form-select-sm"
             aria-label="Filter by pool"
@@ -567,6 +587,23 @@ const ZfsDatasetsPanel = ({ server }) => {
               </option>
             ))}
           </select>
+        </div>
+        <div className="col-12 col-md-4">
+          <div className="btn-group btn-group-sm w-100" role="group" aria-label="Show types">
+            {TYPE_TOGGLES.map(toggle => (
+              <button
+                type="button"
+                key={toggle.key}
+                className={`btn ${show[toggle.key] ? 'btn-primary' : 'btn-outline-secondary'}`}
+                aria-pressed={show[toggle.key]}
+                title={`${show[toggle.key] ? 'Hide' : 'Show'} ${toggle.label.toLowerCase()}`}
+                onClick={() => setShow(prev => ({ ...prev, [toggle.key]: !prev[toggle.key] }))}
+              >
+                <i className={`fas ${toggle.icon} me-1`} />
+                {toggle.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -652,6 +689,22 @@ const ZfsDatasetsPanel = ({ server }) => {
         isSnapshot={modal?.isSnapshot}
         onQueued={onQueued}
       />
+      {modal?.kind === 'promote' && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setModal(null)}
+          onConfirm={() => {
+            const { name } = modal;
+            setModal(null);
+            runPromote(name);
+          }}
+          title="Promote clone"
+          message={`Promote ${modal.name} to an independent dataset? It stops depending on its origin snapshot and takes over that snapshot's space accounting — the origin becomes deletable. Only valid on a CLONE; the agent refuses anything else.`}
+          confirmText="Promote"
+          confirmVariant="is-primary"
+          loading={busy}
+        />
+      )}
     </div>
   );
 };
