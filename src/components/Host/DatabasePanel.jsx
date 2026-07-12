@@ -85,12 +85,7 @@ const TableBrowserModal = ({ server, database, table, onClose }) => {
   const to = Math.min(offset + PAGE_SIZE, total);
 
   return (
-    <ContentModal
-      isOpen
-      onClose={onClose}
-      title={`${database} · ${table}`}
-      icon="fas fa-table"
-    >
+    <ContentModal isOpen onClose={onClose} title={`${database} · ${table}`} icon="fas fa-table">
       <div className="d-flex align-items-center flex-wrap gap-2 mb-2">
         <label className="small text-muted" htmlFor="db-browse-orderby">
           Order by
@@ -232,7 +227,9 @@ const DatabaseRow = ({ database, expanded, tables, onToggle, onBrowse }) => {
         </button>
         <strong>{database.name}</strong>
         {totalSize !== null && <span className="badge text-bg-info">{formatBytes(totalSize)}</span>}
-        {tableCount !== null && <span className="badge text-bg-secondary">{tableCount} tables</span>}
+        {tableCount !== null && (
+          <span className="badge text-bg-secondary">{tableCount} tables</span>
+        )}
         {indexCount !== null && (
           <span className="badge text-bg-secondary">{indexCount} indexes</span>
         )}
