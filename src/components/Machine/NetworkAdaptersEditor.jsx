@@ -100,7 +100,85 @@ const ZONE_NIC_EDIT_FIELDS = [
     currentOf: nic => nic.allowedAddress,
     liveOf: () => '',
   },
+  {
+    key: 'address',
+    label: 'IP address (shared-IP)',
+    currentOf: nic => nic.address,
+    liveOf: () => '',
+  },
+  {
+    key: 'defrouter',
+    label: 'Default router',
+    currentOf: nic => nic.defrouter,
+    liveOf: () => '',
+  },
 ];
+
+// bhyve net-resource PROPERTIES (agent's `props` wire) — the promisc set is
+// brand-supported (zadm#116); the rest tune the viona/dlpi backend. Blank =
+// not sent; update_nics REPLACES a prop pair when a new value rides.
+const NIC_PROP_FIELDS = [
+  { key: 'promiscphys', label: 'Promisc (phys)', kind: 'onoff' },
+  { key: 'promiscrxonly', label: 'Promisc (rx-only)', kind: 'onoff' },
+  { key: 'promiscsap', label: 'Promisc (SAP)', kind: 'onoff' },
+  { key: 'promiscmulti', label: 'Promisc (multicast)', kind: 'onoff' },
+  { key: 'mtu', label: 'MTU', kind: 'text', hint: 'e.g. 9000' },
+  { key: 'vqsize', label: 'VQ size', kind: 'text' },
+  { key: 'feature_mask', label: 'Feature mask', kind: 'text' },
+  { key: 'backend', label: 'Backend', kind: 'text' },
+  { key: 'netif', label: 'netif override', kind: 'text' },
+];
+
+/** The net-resource property grid — folded by default so the common fields
+ *  stay clean. `props` is the flat name→value object the wire carries. */
+const NicPropsEditor = ({ idPrefix, props, onChange, disabled }) => (
+  <div className="hw-device-row hw-device-child hw-device-child-form">
+    <details className="w-100">
+      <summary className="small fw-semibold">Link properties (promisc, MTU, backend…)</summary>
+      <div className="row g-2 align-items-end mt-0">
+        {NIC_PROP_FIELDS.map(field => {
+          const inputId = `${idPrefix}-prop-${field.key}`;
+          return (
+            <div className="col-6 col-md-3" key={field.key}>
+              <label className="form-label small mb-1" htmlFor={inputId}>
+                {field.label}
+              </label>
+              {field.kind === 'onoff' ? (
+                <select
+                  id={inputId}
+                  className="form-select form-select-sm"
+                  value={props[field.key] ?? ''}
+                  onChange={e => onChange(field.key, e.target.value)}
+                  disabled={disabled}
+                >
+                  <option value="">(default)</option>
+                  <option value="on">on</option>
+                  <option value="off">off</option>
+                </select>
+              ) : (
+                <input
+                  id={inputId}
+                  className="form-control form-control-sm"
+                  placeholder={field.hint || '(default)'}
+                  value={props[field.key] ?? ''}
+                  onChange={e => onChange(field.key, e.target.value)}
+                  disabled={disabled}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  </div>
+);
+
+NicPropsEditor.propTypes = {
+  idPrefix: PropTypes.string.isRequired,
+  props: PropTypes.object.isRequired,
+  onChange: PropTypes.func.isRequired,
+  disabled: PropTypes.bool,
+};
 
 const zoneNicPlaceholder = (field, nic, live) => {
   const current = field.currentOf(nic);
@@ -244,6 +322,7 @@ const NetworkAdaptersEditor = ({
   onToggleZoneNic = () => {},
   zoneNicEdits = {},
   onZoneNicEdit = () => {},
+  onZoneNicPropEdit = () => {},
   formDisabled = false,
 }) => {
   // Zone NICs remove by their PHYSICAL vnic name (agent-confirmed wire) —
@@ -369,6 +448,14 @@ const NetworkAdaptersEditor = ({
                     })}
                   </div>
                 </div>
+              )}
+              {!isMarked && nic.physical && (
+                <NicPropsEditor
+                  idPrefix={`zone-nic-${nic.physical}`}
+                  props={edits.props || {}}
+                  onChange={(propKey, value) => onZoneNicPropEdit(nic.physical, propKey, value)}
+                  disabled={formDisabled}
+                />
               )}
             </Fragment>
           );
@@ -540,19 +627,59 @@ const NetworkAdaptersEditor = ({
                       className="form-label small mb-1"
                       htmlFor={`add-nic-physical-${row.key}`}
                     >
-                      VNIC name (blank = auto)
+                      VNIC name / HW nic (blank = auto)
                     </label>
                     <input
                       id={`add-nic-physical-${row.key}`}
                       className="form-control form-control-sm font-monospace"
+                      placeholder="blank, or a physical link e.g. igb2"
                       value={row.physical ?? ''}
                       onChange={e => patchAddNic(row.key, { physical: e.target.value })}
+                      disabled={formDisabled}
+                    />
+                  </div>
+                  <div className="col-6 col-md-3">
+                    <label className="form-label small mb-1" htmlFor={`add-nic-address-${row.key}`}>
+                      IP address (shared-IP)
+                    </label>
+                    <input
+                      id={`add-nic-address-${row.key}`}
+                      className="form-control form-control-sm font-monospace"
+                      placeholder="(none)"
+                      value={row.address ?? ''}
+                      onChange={e => patchAddNic(row.key, { address: e.target.value })}
+                      disabled={formDisabled}
+                    />
+                  </div>
+                  <div className="col-6 col-md-3">
+                    <label
+                      className="form-label small mb-1"
+                      htmlFor={`add-nic-defrouter-${row.key}`}
+                    >
+                      Default router
+                    </label>
+                    <input
+                      id={`add-nic-defrouter-${row.key}`}
+                      className="form-control form-control-sm font-monospace"
+                      placeholder="(none)"
+                      value={row.defrouter ?? ''}
+                      onChange={e => patchAddNic(row.key, { defrouter: e.target.value })}
                       disabled={formDisabled}
                     />
                   </div>
                 </>
               )}
             </div>
+            {isZone && (
+              <NicPropsEditor
+                idPrefix={`add-nic-${row.key}`}
+                props={row.props || {}}
+                onChange={(propKey, value) =>
+                  patchAddNic(row.key, { props: { ...(row.props || {}), [propKey]: value } })
+                }
+                disabled={formDisabled}
+              />
+            )}
             {/* Tuning rides INLINE on the add_nics entry — the agent applies
                 it on whichever free slot it assigns. VirtualBox vocabulary,
                 hidden on zones. */}
@@ -613,6 +740,7 @@ NetworkAdaptersEditor.propTypes = {
   onToggleZoneNic: PropTypes.func,
   zoneNicEdits: PropTypes.object,
   onZoneNicEdit: PropTypes.func,
+  onZoneNicPropEdit: PropTypes.func,
   formDisabled: PropTypes.bool,
 };
 

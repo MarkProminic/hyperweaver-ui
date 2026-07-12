@@ -117,6 +117,7 @@ const DatasetRow = ({
   depth,
   isCollapsed,
   hasContent,
+  showSnapshots,
   busy,
   onToggle,
   onModal,
@@ -144,7 +145,7 @@ const DatasetRow = ({
       {node.label}
     </span>
     {node.row.type === 'volume' && <span className="badge text-bg-info">volume</span>}
-    {node.snapshots.length > 0 && (
+    {showSnapshots && node.snapshots.length > 0 && (
       <span className="badge text-bg-secondary" title={`${node.snapshots.length} snapshots`}>
         <i className="fas fa-camera me-1" />
         {node.snapshots.length}
@@ -233,6 +234,7 @@ DatasetRow.propTypes = {
   depth: PropTypes.number.isRequired,
   isCollapsed: PropTypes.bool,
   hasContent: PropTypes.bool,
+  showSnapshots: PropTypes.bool,
   busy: PropTypes.bool,
   onToggle: PropTypes.func.isRequired,
   onModal: PropTypes.func.isRequired,
@@ -329,6 +331,7 @@ const TreeNode = ({ node, depth, needle, show, collapsed, snapsOpen, busy, handl
         depth={depth}
         isCollapsed={isCollapsed}
         hasContent={hasContent}
+        showSnapshots={show.snapshot}
         busy={busy}
         onToggle={handlers.onToggle}
         onModal={handlers.onModal}
@@ -412,6 +415,93 @@ const toggleIn = (set, name) => {
 };
 
 const allNodeNames = nodes => nodes.flatMap(node => [node.name, ...allNodeNames(node.children)]);
+
+/** The whole modal stack — one open at a time, keyed on modal.kind. Split out
+ *  of the panel purely for the complexity budget; behavior is identical. */
+const DatasetModals = ({ modal, onClose, server, pools, busy, onQueued, onPromote }) => (
+  <>
+    <CreateDatasetModal
+      isOpen={modal?.kind === 'create'}
+      onClose={onClose}
+      server={server}
+      pools={pools}
+      initialName={modal?.kind === 'create' ? modal?.name || '' : ''}
+      onQueued={onQueued}
+    />
+    <SnapshotCreateModal
+      isOpen={modal?.kind === 'snapshot'}
+      onClose={onClose}
+      server={server}
+      dataset={modal?.name}
+      onQueued={onQueued}
+    />
+    <RenameDatasetModal
+      isOpen={modal?.kind === 'rename'}
+      onClose={onClose}
+      server={server}
+      dataset={modal?.name}
+      onQueued={onQueued}
+    />
+    <CloneSnapshotModal
+      isOpen={modal?.kind === 'clone'}
+      onClose={onClose}
+      server={server}
+      snapshot={modal?.name}
+      onQueued={onQueued}
+    />
+    <RollbackSnapshotModal
+      isOpen={modal?.kind === 'rollback'}
+      onClose={onClose}
+      server={server}
+      snapshot={modal?.name}
+      onQueued={onQueued}
+    />
+    <SnapshotHoldsModal
+      isOpen={modal?.kind === 'holds'}
+      onClose={onClose}
+      server={server}
+      snapshot={modal?.name}
+      onQueued={onQueued}
+    />
+    <DatasetPropertiesModal
+      isOpen={modal?.kind === 'properties'}
+      onClose={onClose}
+      server={server}
+      dataset={modal?.name}
+      onQueued={onQueued}
+    />
+    <DestroyDatasetModal
+      isOpen={modal?.kind === 'destroy'}
+      onClose={onClose}
+      server={server}
+      name={modal?.name}
+      isSnapshot={modal?.isSnapshot}
+      onQueued={onQueued}
+    />
+    {modal?.kind === 'promote' && (
+      <ConfirmModal
+        isOpen
+        onClose={onClose}
+        onConfirm={() => onPromote(modal.name)}
+        title="Promote clone"
+        message={`Promote ${modal.name} to an independent dataset? It stops depending on its origin snapshot and takes over that snapshot's space accounting — the origin becomes deletable. Only valid on a CLONE; the agent refuses anything else.`}
+        confirmText="Promote"
+        confirmVariant="is-primary"
+        loading={busy}
+      />
+    )}
+  </>
+);
+
+DatasetModals.propTypes = {
+  modal: PropTypes.object,
+  onClose: PropTypes.func.isRequired,
+  server: PropTypes.object,
+  pools: PropTypes.array.isRequired,
+  busy: PropTypes.bool,
+  onQueued: PropTypes.func.isRequired,
+  onPromote: PropTypes.func.isRequired,
+};
 
 const ZfsDatasetsPanel = ({ server }) => {
   const [tree, setTree] = useState([]);
@@ -621,6 +711,7 @@ const ZfsDatasetsPanel = ({ server }) => {
               node={node}
               depth={0}
               needle={needle}
+              show={show}
               collapsed={collapsed}
               snapsOpen={snapsOpen}
               busy={busy}
@@ -631,80 +722,18 @@ const ZfsDatasetsPanel = ({ server }) => {
         </div>
       )}
 
-      <CreateDatasetModal
-        isOpen={modal?.kind === 'create'}
+      <DatasetModals
+        modal={modal}
         onClose={() => setModal(null)}
         server={server}
         pools={pools}
-        initialName={modal?.kind === 'create' ? modal?.name || '' : ''}
+        busy={busy}
         onQueued={onQueued}
+        onPromote={name => {
+          setModal(null);
+          runPromote(name);
+        }}
       />
-      <SnapshotCreateModal
-        isOpen={modal?.kind === 'snapshot'}
-        onClose={() => setModal(null)}
-        server={server}
-        dataset={modal?.name}
-        onQueued={onQueued}
-      />
-      <RenameDatasetModal
-        isOpen={modal?.kind === 'rename'}
-        onClose={() => setModal(null)}
-        server={server}
-        dataset={modal?.name}
-        onQueued={onQueued}
-      />
-      <CloneSnapshotModal
-        isOpen={modal?.kind === 'clone'}
-        onClose={() => setModal(null)}
-        server={server}
-        snapshot={modal?.name}
-        onQueued={onQueued}
-      />
-      <RollbackSnapshotModal
-        isOpen={modal?.kind === 'rollback'}
-        onClose={() => setModal(null)}
-        server={server}
-        snapshot={modal?.name}
-        onQueued={onQueued}
-      />
-      <SnapshotHoldsModal
-        isOpen={modal?.kind === 'holds'}
-        onClose={() => setModal(null)}
-        server={server}
-        snapshot={modal?.name}
-        onQueued={onQueued}
-      />
-      <DatasetPropertiesModal
-        isOpen={modal?.kind === 'properties'}
-        onClose={() => setModal(null)}
-        server={server}
-        dataset={modal?.name}
-        onQueued={onQueued}
-      />
-      <DestroyDatasetModal
-        isOpen={modal?.kind === 'destroy'}
-        onClose={() => setModal(null)}
-        server={server}
-        name={modal?.name}
-        isSnapshot={modal?.isSnapshot}
-        onQueued={onQueued}
-      />
-      {modal?.kind === 'promote' && (
-        <ConfirmModal
-          isOpen
-          onClose={() => setModal(null)}
-          onConfirm={() => {
-            const { name } = modal;
-            setModal(null);
-            runPromote(name);
-          }}
-          title="Promote clone"
-          message={`Promote ${modal.name} to an independent dataset? It stops depending on its origin snapshot and takes over that snapshot's space accounting — the origin becomes deletable. Only valid on a CLONE; the agent refuses anything else.`}
-          confirmText="Promote"
-          confirmVariant="is-primary"
-          loading={busy}
-        />
-      )}
     </div>
   );
 };

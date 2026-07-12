@@ -130,6 +130,8 @@ const ConsoleDisplay = ({
         previewReadOnly={previewReadOnly}
         setPreviewReadOnly={setPreviewReadOnly}
         hasVnc={false}
+        hasSsh={!!hasSsh}
+        hasRdp={!!hasRdp}
       />
     );
   } else if (hasVnc && !hasZlogin) {
@@ -141,6 +143,7 @@ const ConsoleDisplay = ({
         setPreviewVncViewOnly={setPreviewVncViewOnly}
         vncRef={previewVncRef}
         hasZlogin={false}
+        hasSsh={!!hasSsh}
         hasRdp={!!hasRdp}
       />
     );
@@ -154,6 +157,8 @@ const ConsoleDisplay = ({
           previewReadOnly={previewReadOnly}
           setPreviewReadOnly={setPreviewReadOnly}
           hasVnc
+          hasSsh={!!hasSsh}
+          hasRdp={!!hasRdp}
         />
       );
     }
@@ -165,6 +170,7 @@ const ConsoleDisplay = ({
         setPreviewVncViewOnly={setPreviewVncViewOnly}
         vncRef={previewVncRef}
         hasZlogin
+        hasSsh={!!hasSsh}
         hasRdp={!!hasRdp}
       />
     );

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import Dropdown from 'react-bootstrap/Dropdown';
 
-import { getApplications, launchMachineApplication } from '../api/machineAPI';
+import { getApplications, launchMachineApplication, shutdownGuest } from '../api/machineAPI';
 import { getProvisionStatus } from '../api/provisioningAPI';
-import { hasFeature, hasHypervisor } from '../utils/capabilities';
+import { hasFeature, hasFeatureStrict, hasHypervisor } from '../utils/capabilities';
 import {
   canStartStopMachines,
   canRestartMachines,
@@ -14,7 +14,7 @@ import {
 } from '../utils/permissions';
 import { resourceLabel } from '../utils/resourceLabel';
 
-import { FormModal } from './common';
+import { ConfirmModal, FormModal } from './common';
 import Breadcrumb from './Navbar/Breadcrumb';
 import BulkActionsModal from './Navbar/BulkActionsModal';
 import ContextTabs from './Navbar/ContextTabs';
@@ -74,6 +74,29 @@ const Navbar = () => {
   // (host scope) or all registered hosts (Datacenter scope).
   const [bulk, setBulk] = useState(null);
 
+  // Clean in-guest power via the guest agent — 'powerdown' | 'reboot' | null.
+  const [guestPower, setGuestPower] = useState(null);
+  const [guestPowerBusy, setGuestPowerBusy] = useState(false);
+  const [guestPowerError, setGuestPowerError] = useState('');
+
+  const runGuestPower = async () => {
+    setGuestPowerBusy(true);
+    setGuestPowerError('');
+    const result = await shutdownGuest(
+      currentServer.hostname,
+      currentServer.port,
+      currentServer.protocol,
+      currentMachine,
+      guestPower
+    );
+    setGuestPowerBusy(false);
+    if (!result.success) {
+      setGuestPowerError(result.message);
+      return;
+    }
+    setGuestPower(null);
+  };
+
   // Capability-driven noun (contract C7): "Zone" on all-bhyve scopes, "Machine" otherwise.
   const machineNoun = resourceLabel(currentServer, { plural: false });
 
@@ -97,7 +120,9 @@ const Navbar = () => {
   // exists-flagged; the machine Controls menu launches them. Launches spawn on
   // the AGENT host, so this rides the token, not the UI mode (a headless host
   // no-ops harmlessly; a desktop host — bhyve or Direct — runs them).
-  const launchersAvailable = hasFeature(currentServer, 'host-launchers');
+  // STRICT gate: render-all fired GET /applications against agents that never
+  // serve the route (zoneweaver 404s) — the token must be present.
+  const launchersAvailable = hasFeatureStrict(currentServer, 'host-launchers');
   const [applications, setApplications] = useState([]);
   useEffect(() => {
     setApplications([]);
@@ -291,6 +316,29 @@ const Navbar = () => {
             </>
           )}
 
+          {guestExecAvailable && canStartStopMachines(userRole) && (
+            <>
+              <Dropdown.Item
+                as="button"
+                type="button"
+                title="Clean in-guest shutdown via the guest agent"
+                onClick={() => setGuestPower('powerdown')}
+              >
+                <i className="fas fa-power-off text-danger me-2" />
+                Guest Shutdown
+              </Dropdown.Item>
+              <Dropdown.Item
+                as="button"
+                type="button"
+                title="Clean in-guest reboot via the guest agent"
+                onClick={() => setGuestPower('reboot')}
+              >
+                <i className="fas fa-rotate text-warning me-2" />
+                Guest Reboot
+              </Dropdown.Item>
+            </>
+          )}
+
           {applications.length > 0 && (
             <>
               <Dropdown.Divider />
@@ -331,6 +379,17 @@ const Navbar = () => {
             >
               <i className="fas fa-clone me-2" />
               Clone
+            </Dropdown.Item>
+          )}
+          {hasFeature(currentServer, 'templates') && canCreateMachines(userRole) && (
+            <Dropdown.Item
+              as="button"
+              type="button"
+              title="Export this machine into a local .box template — publish it from the host's Templates page"
+              onClick={() => navigate('/ui/machines?totemplate=1')}
+            >
+              <i className="fas fa-box-archive me-2" />
+              Convert to Template…
             </Dropdown.Item>
           )}
           {hasHypervisor(currentServer, 'virtualbox') && canCreateMachines(userRole) && (
@@ -746,6 +805,27 @@ const Navbar = () => {
 
       {/* Row 2: context tabs for the focused node */}
       <ContextTabs />
+
+      {guestPower && (
+        <ConfirmModal
+          isOpen
+          onClose={() => {
+            setGuestPower(null);
+            setGuestPowerError('');
+          }}
+          onConfirm={runGuestPower}
+          title={`Guest ${guestPower === 'reboot' ? 'Reboot' : 'Shutdown'} — ${currentMachine}`}
+          message={
+            guestPowerError
+              ? `Failed: ${guestPowerError}`
+              : `Send a clean in-guest ${
+                  guestPower === 'reboot' ? 'reboot' : 'shutdown'
+                } to ${currentMachine} via the guest agent? Silence after delivery is the normal success.`
+          }
+          confirmText={guestPowerError ? 'Retry' : 'Send'}
+          loading={guestPowerBusy}
+        />
+      )}
 
       {/* Bulk Actions modal (phase B) — scope-aware, launched from the Controls dropdowns */}
       {bulk && (

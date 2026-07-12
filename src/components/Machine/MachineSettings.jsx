@@ -52,9 +52,29 @@ const FIELDS = [
   { key: 'diskif', label: 'Disk Interface', hint: 'VirtualBox refuses this after create' },
   { key: 'netif', label: 'Network Interface' },
   { key: 'os_type', label: 'Guest OS Type' },
-  { key: 'vnc', label: 'VNC Console', freeText: true },
+  {
+    key: 'vnc',
+    label: 'VNC Console',
+    freeText: true,
+    hint: 'on / off / wait, or an option string via Custom value… (e.g. on,w=1920,h=1080)',
+  },
   { key: 'acpi', label: 'ACPI' },
   { key: 'xhci', label: 'xHCI USB' },
+  {
+    key: 'uefivars',
+    label: 'UEFI Vars',
+    // Agent-stated value set (zadm bool strings) — a select, not a text box.
+    options: ['on', 'off'],
+    hint: 'Persistent UEFI variable store (boot entries survive restarts)',
+    bhyveOnly: true,
+  },
+  {
+    key: 'rng',
+    label: 'RNG (virtio-rnd)',
+    options: ['on', 'off'],
+    hint: 'Feeds the guest entropy from the host',
+    bhyveOnly: true,
+  },
   {
     key: 'bootorder',
     label: 'Boot Order (bhyve attr)',
@@ -77,6 +97,11 @@ const asFormString = value => {
   if (value === undefined || value === null) {
     return '';
   }
+  // knob_current.bootorder arrives as a parsed token LIST — the PUT wire
+  // stays the comma-joined string, so the form value is the join.
+  if (Array.isArray(value)) {
+    return value.join(',');
+  }
   // zadm renders some knobs as objects (vnc {enabled, ...}) — the knob's
   // on/off lives in `enabled`; other objects have no form rendering.
   if (typeof value === 'object') {
@@ -85,12 +110,19 @@ const asFormString = value => {
   return String(value);
 };
 
+// Where a knob's config-document key differs from its PUT key, the seed
+// needs the alias (zadm stores os_type as the `type` attr).
+const CONFIG_KEY_ALIASES = { os_type: 'type' };
+
 // knob_current beats the raw configuration document (zadm configs carry the
 // zone keys directly; VirtualBox current values only exist in knob_current).
 const prefillFrom = (configuration, knobCurrent) =>
   Object.fromEntries(
     FIELDS.map(field => {
-      const value = knobCurrent?.[field.key] ?? configuration?.[field.key];
+      const value =
+        knobCurrent?.[field.key] ??
+        configuration?.[field.key] ??
+        configuration?.[CONFIG_KEY_ALIASES[field.key]];
       return [field.key, asFormString(value)];
     })
   );
@@ -158,33 +190,40 @@ const seedNicRows = entries =>
     nic_type: asFormString(entry.nic_type),
   }));
 
+// Credentials live in configuration.settings (the PUT family's documented
+// storage) — the fallback covers agents whose knob_current predates the
+// password countermand.
+const seedCreds = (configuration, knobCurrent) => ({
+  vagrant_user: asFormString(
+    knobCurrent?.credentials?.vagrant_user ?? configuration?.settings?.vagrant_user
+  ),
+  vagrant_user_pass: asFormString(
+    knobCurrent?.credentials?.vagrant_user_pass ?? configuration?.settings?.vagrant_user_pass
+  ),
+  vagrant_user_private_key_path: asFormString(
+    knobCurrent?.credentials?.vagrant_user_private_key_path ??
+      configuration?.settings?.vagrant_user_private_key_path
+  ),
+});
+
 /** Everything the form seeds from — kept verbatim as the diff base. */
 const buildSeed = (configuration, knobCurrent) => ({
   values: prefillFrom(configuration, knobCurrent),
-  autoboot: knobCurrent?.autoboot === undefined ? '' : String(knobCurrent.autoboot),
+  // zadm configs carry autoboot directly; knob_current wins where served.
+  autoboot: asFormString(knobCurrent?.autoboot ?? configuration?.autoboot),
   // null = the agent doesn't report the knob; the checkbox never renders.
   guestAgent: typeof knobCurrent?.guest_agent === 'boolean' ? knobCurrent.guest_agent : null,
   bootPriority: asFormString(knobCurrent?.boot_priority),
+  // The noVNC web-port pin + bind address — custom zonecfg attrs, applied
+  // synchronously (no task, no restart); absent key = unset (dynamic pool).
+  consolePort: asFormString(knobCurrent?.consoleport),
+  consoleHost: asFormString(knobCurrent?.consolehost),
   bootOrder: Array.isArray(knobCurrent?.boot_order) ? knobCurrent.boot_order : [],
   hardware: seedHardwareValues(knobCurrent),
   serialRows: seedSerialRows(knobCurrent?.hardware?.serial),
   parallelRows: seedParallelRows(knobCurrent?.hardware?.parallel),
   nicRows: seedNicRows(knobCurrent?.nics),
-  // Credentials live in configuration.settings (the PUT family's documented
-  // storage) — the fallback covers agents whose knob_current predates the
-  // password countermand.
-  creds: {
-    vagrant_user: asFormString(
-      knobCurrent?.credentials?.vagrant_user ?? configuration?.settings?.vagrant_user
-    ),
-    vagrant_user_pass: asFormString(
-      knobCurrent?.credentials?.vagrant_user_pass ?? configuration?.settings?.vagrant_user_pass
-    ),
-    vagrant_user_private_key_path: asFormString(
-      knobCurrent?.credentials?.vagrant_user_private_key_path ??
-        configuration?.settings?.vagrant_user_private_key_path
-    ),
-  },
+  creds: seedCreds(configuration, knobCurrent),
 });
 
 const rowsChanged = (rows, seededRows) => JSON.stringify(rows) !== JSON.stringify(seededRows);
@@ -229,6 +268,17 @@ const NIC_TUNING_KEYS = [
   'nic_type',
 ];
 
+/** A NIC's net-resource props → the wire's flat {name: value} object; blank
+ *  values drop. null when nothing set (so the key never rides empty). */
+const cleanNicProps = props => {
+  const cleaned = Object.fromEntries(
+    Object.entries(props || {})
+      .map(([key, value]) => [key, String(value).trim()])
+      .filter(([, value]) => value !== '')
+  );
+  return Object.keys(cleaned).length > 0 ? cleaned : null;
+};
+
 /** One tuning key's form value on the wire — on/off → boolean, numbers numeric. */
 const nicTuningValue = (key, value) => {
   if (key === 'cable_connected') {
@@ -253,7 +303,8 @@ const buildDeviceChanges = state => {
         // The wire key is mac_addr (the base's add_nics vocabulary).
         entry.mac_addr = row.mac.trim();
       }
-      // Zone NIC keys (agent-confirmed) — physical auto-names when omitted.
+      // Zone NIC keys (agent-confirmed) — physical auto-names when omitted;
+      // a bare physical link name attaches a dedicated HW nic.
       if (row.physical?.trim()) {
         entry.physical = row.physical.trim();
       }
@@ -262,6 +313,16 @@ const buildDeviceChanges = state => {
       }
       if (row.allowed_address?.trim()) {
         entry.allowed_address = row.allowed_address.trim();
+      }
+      if (row.address?.trim()) {
+        entry.address = row.address.trim();
+      }
+      if (row.defrouter?.trim()) {
+        entry.defrouter = row.defrouter.trim();
+      }
+      const addProps = cleanNicProps(row.props);
+      if (addProps) {
+        entry.props = addProps;
       }
       // Tuning keys ride INLINE on add_nics — the agent applies them on the
       // free slot it assigns.
@@ -439,6 +500,8 @@ const CRED_FIELDS = [
 // restart, and are valid while running.
 const IMMEDIATE_KEYS = [
   'boot_priority',
+  'consoleport',
+  'consolehost',
   'vagrant_user',
   'vagrant_user_pass',
   'vagrant_user_private_key_path',
@@ -541,6 +604,8 @@ const MachineSettings = ({
   const [guestAgent, setGuestAgent] = useState(null); // null = knob absent
   const [bootOrder, setBootOrder] = useState([]); // [] = unchanged
   const [bootPriority, setBootPriority] = useState(''); // '' = unchanged (DB-immediate)
+  const [consolePort, setConsolePort] = useState(''); // '' = unchanged; 'dynamic' clears the pin
+  const [consoleHost, setConsoleHost] = useState(''); // '' = unchanged
   const [vboxJson, setVboxJson] = useState(''); // raw passthrough, '' = unchanged
   const [addNics, setAddNics] = useState([]);
   const [addDisks, setAddDisks] = useState([]);
@@ -566,11 +631,17 @@ const MachineSettings = ({
   // are the zvol shape (create_new… | existing_dataset).
   const [addZoneDisks, setAddZoneDisks] = useState([]);
   const [removeZoneDisks, setRemoveZoneDisks] = useState([]);
+  // Grow-only zvol resizes: {attr name: new size}. Never live — a running
+  // zone accrues them for the next power cycle.
+  const [zoneDiskResizes, setZoneDiskResizes] = useState({});
   const [removeZoneCdroms, setRemoveZoneCdroms] = useState([]);
   const [removeZoneNics, setRemoveZoneNics] = useState([]);
   // In-place zone NIC edits (agent's update_nics): {physical: {key: value}}
   // — only non-empty keys ride; clearing a property is detach + re-add.
   const [zoneNicEdits, setZoneNicEdits] = useState({});
+  // Cloud-init rides the `cloud_init` OBJECT wire {enabled, dns_domain,
+  // password, resolvers, sshkey} — only touched keys ride; '' = unchanged.
+  const [cloudInit, setCloudInit] = useState({});
   // The seeded current values — the diff base every submit compares against.
   const [seed, setSeed] = useState(() => buildSeed(undefined, undefined));
   const [revealPass, setRevealPass] = useState(false);
@@ -606,6 +677,8 @@ const MachineSettings = ({
     setGuestAgent(seeded.guestAgent);
     setBootOrder([...seeded.bootOrder]);
     setBootPriority(seeded.bootPriority);
+    setConsolePort(seeded.consolePort);
+    setConsoleHost(seeded.consoleHost);
     setVboxJson('');
     setAddNics([]);
     setAddDisks([]);
@@ -624,9 +697,11 @@ const MachineSettings = ({
     setRemoveFilesystems([]);
     setAddZoneDisks([]);
     setRemoveZoneDisks([]);
+    setZoneDiskResizes({});
     setRemoveZoneCdroms([]);
     setRemoveZoneNics([]);
     setZoneNicEdits({});
+    setCloudInit({});
     setRevealPass(false);
     setPhase('form');
     setStagedChanges(null);
@@ -888,6 +963,15 @@ const MachineSettings = ({
     if (bootPriority !== '' && bootPriority !== seed.bootPriority) {
       changes.boot_priority = Number(bootPriority);
     }
+    // consoleport pins the noVNC web port (typing "dynamic" clears the pin
+    // back to the agent's pool); consolehost sets the bind address.
+    if (consolePort !== '' && consolePort !== seed.consolePort) {
+      changes.consoleport =
+        consolePort.trim().toLowerCase() === 'dynamic' ? null : Number(consolePort);
+    }
+    if (consoleHost !== '' && consoleHost !== seed.consoleHost) {
+      changes.consolehost = consoleHost.trim();
+    }
     // Touched credentials ride verbatim — '' deletes the key on the wire.
     credsTouched.forEach(key => {
       changes[key] = creds[key] ?? '';
@@ -923,6 +1007,13 @@ const MachineSettings = ({
     if (removeZoneDisks.length > 0) {
       changes.remove_disks = removeZoneDisks;
     }
+    // Grow-only resizes — detached disks never resize.
+    const diskResizes = Object.entries(zoneDiskResizes)
+      .filter(([name, size]) => size.trim() !== '' && !removeZoneDisks.includes(name))
+      .map(([name, size]) => ({ name, size: size.trim() }));
+    if (diskResizes.length > 0) {
+      changes.resize_disks = diskResizes;
+    }
     if (removeZoneCdroms.length > 0) {
       changes.remove_cdroms = removeZoneCdroms;
     }
@@ -947,11 +1038,30 @@ const MachineSettings = ({
         if (patch.allowed_address?.trim()) {
           entry.allowed_address = patch.allowed_address.trim();
         }
+        if (patch.address?.trim()) {
+          entry.address = patch.address.trim();
+        }
+        if (patch.defrouter?.trim()) {
+          entry.defrouter = patch.defrouter.trim();
+        }
+        const updateProps = cleanNicProps(patch.props);
+        if (updateProps) {
+          entry.props = updateProps;
+        }
         return entry;
       })
       .filter(entry => Object.keys(entry).length > 1);
     if (nicUpdates.length > 0) {
       changes.update_nics = nicUpdates;
+    }
+    // cloud_init object — only touched (non-empty) keys ride.
+    const cloudInitEntry = Object.fromEntries(
+      Object.entries(cloudInit)
+        .map(([key, value]) => [key, String(value).trim()])
+        .filter(([, value]) => value !== '')
+    );
+    if (Object.keys(cloudInitEntry).length > 0) {
+      changes.cloud_init = cloudInitEntry;
     }
     Object.assign(
       changes,
@@ -1047,6 +1157,16 @@ const MachineSettings = ({
   const activeSection = sectionForTab(tab);
   const autostartSection = HARDWARE_SECTIONS.find(section => section.id === 'autostart');
   const currentHardware = parseHardware(configuration);
+  // The zone's REAL devices as bhyve boot tokens (short names: bootdisk,
+  // disk0, cdrom0, net0) — feeds the boot-order editor's slots/picker so
+  // it behaves like the VirtualBox one instead of a bare typed input.
+  const zoneBootDevices = currentHardware.zone
+    ? [
+        ...currentHardware.zone.disks.map(disk => disk.name),
+        ...currentHardware.zone.cdroms.map(cdrom => cdrom.name),
+        ...currentHardware.zone.nics.map(nic => nic.name),
+      ]
+    : [];
 
   const marked = entry =>
     removeAttachments.some(
@@ -1139,7 +1259,8 @@ const MachineSettings = ({
 
       <p className="form-text text-muted">
         Fields show the {`machine's`} current values where the agent reports them; edits are cached
-        across all tabs until you Apply, and only values you CHANGED are sent. Blank = unchanged.
+        across all tabs until you Apply, and only values you CHANGED are sent. Blank = the shown
+        default stays in effect.
       </p>
 
       {tab === 'general' && (
@@ -1157,8 +1278,16 @@ const MachineSettings = ({
           setGuestAgent={setGuestAgent}
           bootPriority={bootPriority}
           setBootPriority={setBootPriority}
+          consolePort={consolePort}
+          setConsolePort={setConsolePort}
+          consoleHost={consoleHost}
+          setConsoleHost={setConsoleHost}
           bootOrder={bootOrder}
           setBootOrder={setBootOrder}
+          cloudInit={cloudInit}
+          setCloudInit={setCloudInit}
+          cloudInitCurrent={configuration?.['cloud-init']}
+          bhyveBootDevices={zoneBootDevices}
           currentServer={currentServer}
           machineName={machineName}
           isRunning={isRunning}
@@ -1266,6 +1395,10 @@ const MachineSettings = ({
           zoneName={machineName}
           zoneDiskRemovals={removeZoneDisks}
           onToggleZoneDisk={toggleName(setRemoveZoneDisks)}
+          zoneDiskResizes={zoneDiskResizes}
+          onZoneDiskResize={(name, size) =>
+            setZoneDiskResizes(prev => ({ ...prev, [name]: size }))
+          }
           zoneCdromRemovals={removeZoneCdroms}
           onToggleZoneCdrom={toggleName(setRemoveZoneCdroms)}
           isoOptions={isoOptions}
@@ -1336,6 +1469,15 @@ const MachineSettings = ({
             setZoneNicEdits(prev => ({
               ...prev,
               [physical]: { ...(prev[physical] || {}), [key]: value },
+            }))
+          }
+          onZoneNicPropEdit={(physical, propKey, value) =>
+            setZoneNicEdits(prev => ({
+              ...prev,
+              [physical]: {
+                ...(prev[physical] || {}),
+                props: { ...((prev[physical] || {}).props || {}), [propKey]: value },
+              },
             }))
           }
           formDisabled={formDisabled}

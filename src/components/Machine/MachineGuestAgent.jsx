@@ -1,12 +1,7 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
 
-import {
-  getGuestAgentNetwork,
-  getGuestAgentOsInfo,
-  setupGuestAgent,
-  shutdownGuest,
-} from '../../api/machineAPI';
+import { getGuestAgentNetwork, getGuestAgentOsInfo, setupGuestAgent } from '../../api/machineAPI';
 import { ContentModal } from '../common';
 
 /**
@@ -61,25 +56,9 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo }) => {
   const [netError, setNetError] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionMsg, setActionMsg] = useState('');
-  const [confirmMode, setConfirmMode] = useState(null);
 
   const ready = !!guestInfo?.agent_responding;
   const ips = Array.isArray(guestInfo?.ips) ? guestInfo.ips : [];
-
-  const runShutdown = async mode => {
-    setBusy(true);
-    setActionMsg('');
-    const result = await shutdownGuest(
-      currentServer.hostname,
-      currentServer.port,
-      currentServer.protocol,
-      machineName,
-      mode
-    );
-    setBusy(false);
-    setConfirmMode(null);
-    setActionMsg(result.success ? result.data?.message || `Guest ${mode} sent.` : result.message);
-  };
 
   const runSetup = async () => {
     setBusy(true);
@@ -215,52 +194,6 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo }) => {
                 >
                   More
                 </button>
-              )}
-              {confirmMode ? (
-                <>
-                  <span className="small align-self-center">
-                    Send in-guest {confirmMode === 'reboot' ? 'reboot' : 'shutdown'}?
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-danger"
-                    onClick={() => runShutdown(confirmMode)}
-                    disabled={busy}
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-secondary"
-                    onClick={() => setConfirmMode(null)}
-                    disabled={busy}
-                  >
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => setConfirmMode('powerdown')}
-                    disabled={busy}
-                    title="Clean in-guest shutdown via the guest agent"
-                  >
-                    <i className="fas fa-power-off me-2" />
-                    Shut down guest
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-warning"
-                    onClick={() => setConfirmMode('reboot')}
-                    disabled={busy}
-                    title="Clean in-guest reboot via the guest agent"
-                  >
-                    <i className="fas fa-rotate me-2" />
-                    Reboot guest
-                  </button>
-                </>
               )}
             </div>
             {actionMsg && (

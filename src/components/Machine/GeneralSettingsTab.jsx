@@ -18,11 +18,17 @@ import SecureBootPanel from './SecureBootPanel';
  *  with a "Custom value…" escape. Blank labels show the agent's REAL
  *  default from GET /machines/defaults where it reports one. */
 
-const unchangedLabelFor = (defaultsDoc, key) => {
-  const value = defaultsDoc?.zones?.[key] ?? defaultsDoc?.settings?.[key];
+const defaultLabelFor = (defaultsDoc, key) => {
+  // knob_defaults = the value an UNSET attr effectively RUNS with (zadm
+  // brand schema, flat dotted) — Mark's ruling: blank always shows what
+  // the machine actually operates under. Never the word "unchanged".
+  const value =
+    defaultsDoc?.knob_defaults?.[`zones.${key}`] ??
+    defaultsDoc?.zones?.[key] ??
+    defaultsDoc?.settings?.[key];
   return value !== undefined && value !== null && value !== ''
-    ? `(unchanged — default ${value})`
-    : '(unchanged)';
+    ? `(default: ${value})`
+    : '(agent default)';
 };
 
 /** " — default disk,dvd" suffix for the boot-order labels; '' when the
@@ -255,8 +261,16 @@ const GeneralSettingsTab = ({
   setGuestAgent,
   bootPriority,
   setBootPriority,
+  consolePort = '',
+  setConsolePort,
+  consoleHost = '',
+  setConsoleHost,
   bootOrder,
   setBootOrder,
+  cloudInit = {},
+  setCloudInit,
+  cloudInitCurrent,
+  bhyveBootDevices = [],
   currentServer,
   machineName,
   isRunning,
@@ -265,6 +279,8 @@ const GeneralSettingsTab = ({
   const isVbox = hasHypervisor(currentServer, 'virtualbox');
   // Which freeText fields are in Custom-value input mode.
   const [customFields, setCustomFields] = useState({});
+  // Cloud-init "Enabled" in config-URL input mode (vs the on/off select).
+  const [ciCustomUrl, setCiCustomUrl] = useState(false);
   // The bhyve bootorder attr gets the SAME draggable editor as the
   // VirtualBox boot order (parity ruling) — it renders below, not as a
   // plain field in the loop.
@@ -277,9 +293,11 @@ const GeneralSettingsTab = ({
       {fields
         .filter(field => field.key !== 'bootorder')
         .map(field => {
-          const vocabulary = knobValues?.[`zones.${field.key}`] || null;
+          // Served vocabulary wins; a field's own agent-stated option set
+          // (uefivars/rng on|off) keeps the control a select either way.
+          const vocabulary = knobValues?.[`zones.${field.key}`] || field.options || null;
           const value = values[field.key] ?? '';
-          const blankLabel = unchangedLabelFor(defaultsDoc, field.key);
+          const blankLabel = defaultLabelFor(defaultsDoc, field.key);
           const onChange = e => setValues(prev => ({ ...prev, [field.key]: e.target.value }));
           let control;
           if (field.key === 'ram') {
@@ -348,7 +366,7 @@ const GeneralSettingsTab = ({
           onChange={e => setAutoboot(e.target.value)}
           disabled={formDisabled}
         >
-          <option value="">{unchangedLabelFor(defaultsDoc, 'autoboot')}</option>
+          <option value="">{defaultLabelFor(defaultsDoc, 'autoboot')}</option>
           <option value="true">on</option>
           <option value="false">off</option>
         </select>
@@ -384,7 +402,7 @@ const GeneralSettingsTab = ({
           type="number"
           min="1"
           max="100"
-          placeholder="(unchanged — default 95)"
+          placeholder="(default: 95)"
           value={bootPriority}
           onChange={e => setBootPriority(e.target.value)}
           disabled={formDisabled}
@@ -393,10 +411,50 @@ const GeneralSettingsTab = ({
           Applies immediately, even while running — no restart involved.
         </span>
       </div>
+      {!isVbox && (
+        <>
+          <div className="col-12 col-md-4">
+            <label className="form-label" htmlFor="machine-edit-consoleport">
+              VNC Web Port (noVNC)
+            </label>
+            <input
+              id="machine-edit-consoleport"
+              className="form-control"
+              type="text"
+              placeholder="(dynamic — agent pool)"
+              title="Pin the noVNC web port (1025-65535); type dynamic to clear the pin back to the pool"
+              value={consolePort}
+              onChange={e => setConsolePort(e.target.value)}
+              disabled={formDisabled}
+            />
+            <span className="form-text text-muted small">
+              Applies immediately; takes effect on the next VNC session. Type <code>dynamic</code>{' '}
+              to clear a pin.
+            </span>
+          </div>
+          <div className="col-12 col-md-4">
+            <label className="form-label" htmlFor="machine-edit-consolehost">
+              VNC Bind Address
+            </label>
+            <input
+              id="machine-edit-consolehost"
+              className="form-control"
+              type="text"
+              placeholder="(default: 0.0.0.0)"
+              value={consoleHost}
+              onChange={e => setConsoleHost(e.target.value)}
+              disabled={formDisabled}
+            />
+            <span className="form-text text-muted small">
+              Applies immediately; takes effect on the next VNC session.
+            </span>
+          </div>
+        </>
+      )}
       {isVbox && (
         <div className="col-12">
           <span className="form-label d-block">
-            Boot Order (blank = unchanged
+            Boot Order (blank = default
             {bootOrderDefaultSuffix(
               defaultsDoc?.settings?.boot_order ?? defaultsDoc?.zones?.boot_order
             )}
@@ -410,21 +468,150 @@ const GeneralSettingsTab = ({
           />
         </div>
       )}
-      {bootorderField && (
+      {bootorderField &&
+        (() => {
+          // Explicit attr tokens win; with the attr unset the slots show the
+          // zone's REAL devices (bootdisk → disks → cdroms → nets — the
+          // firmware's disk-then-cdrom default order) exactly like the
+          // VirtualBox slot list. Touching the list writes the attr.
+          const explicit = splitBhyveBootOrder(values.bootorder);
+          const showingDevices = explicit.length === 0 && bhyveBootDevices.length > 0;
+          return (
+            <div className="col-12">
+              <span className="form-label d-block">Boot Order (requires restart)</span>
+              <BootOrderEditor
+                bootOrder={showingDevices ? bhyveBootDevices : explicit}
+                setBootOrder={list => setValues(prev => ({ ...prev, bootorder: list.join(',') }))}
+                deviceOptions={bhyveBootDevices}
+                maxSlots={Infinity}
+                allowCustom
+                loading={formDisabled}
+              />
+              <span className="form-text text-muted small">
+                {showingDevices
+                  ? "Showing the zone's devices in the firmware's default order — drag, remove, or add to set an explicit order."
+                  : bootorderField.hint}
+              </span>
+            </div>
+          );
+        })()}
+      {!isVbox && (
         <div className="col-12">
           <span className="form-label d-block">
-            Boot Order (blank = unchanged
-            {bootOrderDefaultSuffix(defaultsDoc?.zones?.bootorder)}; requires restart)
+            Cloud Init{' '}
+            <span className="text-muted small fw-normal">
+              (current: {cloudInitCurrent || 'off'} — blank fields keep their current value;
+              requires restart)
+            </span>
           </span>
-          <BootOrderEditor
-            bootOrder={splitBhyveBootOrder(values.bootorder)}
-            setBootOrder={list => setValues(prev => ({ ...prev, bootorder: list.join(',') }))}
-            deviceOptions={[]}
-            maxSlots={Infinity}
-            allowCustom
-            loading={formDisabled}
-          />
-          <span className="form-text text-muted small">{bootorderField.hint}</span>
+          <div className="row g-2">
+            <div className="col-12 col-md-4">
+              <label className="form-label small mb-1" htmlFor="machine-edit-ci-enabled">
+                Enabled
+              </label>
+              {ciCustomUrl ? (
+                <>
+                  <input
+                    id="machine-edit-ci-enabled"
+                    className="form-control"
+                    type="text"
+                    placeholder="https://… (cloud-init config URL)"
+                    title="A URL serves that cloud-init config to the guest"
+                    value={cloudInit.enabled ?? ''}
+                    onChange={e => setCloudInit(prev => ({ ...prev, enabled: e.target.value }))}
+                    disabled={formDisabled}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-link btn-sm p-0"
+                    onClick={() => {
+                      setCiCustomUrl(false);
+                      setCloudInit(prev => ({ ...prev, enabled: '' }));
+                    }}
+                  >
+                    back to on/off
+                  </button>
+                </>
+              ) : (
+                <select
+                  id="machine-edit-ci-enabled"
+                  className="form-select"
+                  value={cloudInit.enabled ?? ''}
+                  onChange={e => {
+                    if (e.target.value === '__url__') {
+                      setCiCustomUrl(true);
+                      setCloudInit(prev => ({ ...prev, enabled: '' }));
+                      return;
+                    }
+                    setCloudInit(prev => ({ ...prev, enabled: e.target.value }));
+                  }}
+                  disabled={formDisabled}
+                >
+                  <option value="">{defaultLabelFor(defaultsDoc, 'cloud_init')}</option>
+                  <option value="on">on</option>
+                  <option value="off">off</option>
+                  <option value="__url__">Config URL…</option>
+                </select>
+              )}
+            </div>
+            <div className="col-12 col-md-4">
+              <label className="form-label small mb-1" htmlFor="machine-edit-ci-domain">
+                DNS domain
+              </label>
+              <input
+                id="machine-edit-ci-domain"
+                className="form-control"
+                type="text"
+                placeholder="(keep current)"
+                value={cloudInit.dns_domain ?? ''}
+                onChange={e => setCloudInit(prev => ({ ...prev, dns_domain: e.target.value }))}
+                disabled={formDisabled}
+              />
+            </div>
+            <div className="col-12 col-md-4">
+              <label className="form-label small mb-1" htmlFor="machine-edit-ci-resolvers">
+                Resolvers
+              </label>
+              <input
+                id="machine-edit-ci-resolvers"
+                className="form-control"
+                type="text"
+                placeholder="e.g. 1.1.1.1,8.8.8.8"
+                value={cloudInit.resolvers ?? ''}
+                onChange={e => setCloudInit(prev => ({ ...prev, resolvers: e.target.value }))}
+                disabled={formDisabled}
+              />
+            </div>
+            <div className="col-12 col-md-4">
+              <label className="form-label small mb-1" htmlFor="machine-edit-ci-password">
+                Root password (hash or plain)
+              </label>
+              <input
+                id="machine-edit-ci-password"
+                className="form-control"
+                type="password"
+                autoComplete="new-password"
+                placeholder="(keep current)"
+                value={cloudInit.password ?? ''}
+                onChange={e => setCloudInit(prev => ({ ...prev, password: e.target.value }))}
+                disabled={formDisabled}
+              />
+            </div>
+            <div className="col-12 col-md-8">
+              <label className="form-label small mb-1" htmlFor="machine-edit-ci-sshkey">
+                SSH public key
+              </label>
+              <input
+                id="machine-edit-ci-sshkey"
+                className="form-control font-monospace"
+                type="text"
+                placeholder="ssh-ed25519 AAAA… user@host"
+                value={cloudInit.sshkey ?? ''}
+                onChange={e => setCloudInit(prev => ({ ...prev, sshkey: e.target.value }))}
+                disabled={formDisabled}
+              />
+            </div>
+          </div>
         </div>
       )}
       {isVbox && (
@@ -456,8 +643,16 @@ GeneralSettingsTab.propTypes = {
   setGuestAgent: PropTypes.func.isRequired,
   bootPriority: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   setBootPriority: PropTypes.func.isRequired,
+  consolePort: PropTypes.string,
+  setConsolePort: PropTypes.func,
+  consoleHost: PropTypes.string,
+  setConsoleHost: PropTypes.func,
   bootOrder: PropTypes.array.isRequired,
   setBootOrder: PropTypes.func.isRequired,
+  cloudInit: PropTypes.object,
+  setCloudInit: PropTypes.func,
+  cloudInitCurrent: PropTypes.string,
+  bhyveBootDevices: PropTypes.arrayOf(PropTypes.string),
   currentServer: PropTypes.object,
   machineName: PropTypes.string,
   isRunning: PropTypes.bool,

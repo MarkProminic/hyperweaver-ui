@@ -1,8 +1,9 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 
-import { hasConsole } from '../utils/capabilities';
+import { hasConsole, hasFeature } from '../utils/capabilities';
 
+import { startRdpPreview, startSshPreview } from './consoleActions';
 import ZloginActionsDropdown from './ZloginActionsDropdown';
 import ZoneShell from './ZoneShell';
 
@@ -16,6 +17,8 @@ const ZloginConsoleDisplay = ({
   previewReadOnly,
   previewReconnectKey,
   hasVnc,
+  hasSsh,
+  hasRdp,
   setLoading,
   setLoadingVnc,
   setError,
@@ -176,6 +179,66 @@ const ZloginConsoleDisplay = ({
               <i className={`fas ${loadingVnc ? 'fa-spinner fa-pulse' : 'fa-desktop'}`} />
             </button>
           ))}
+        {hasFeature(currentServer, 'ssh') &&
+          (hasSsh ? (
+            <button
+              type="button"
+              className="btn btn-sm btn-success"
+              onClick={() => setActiveConsoleType('ssh')}
+              title="Switch to SSH Console"
+            >
+              <i className="fas fa-terminal" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-sm btn-success"
+              onClick={() =>
+                startSshPreview({
+                  currentServer,
+                  selectedMachine,
+                  setLoading,
+                  setError,
+                  setMachineDetails,
+                  setActiveConsoleType,
+                })
+              }
+              disabled={loading}
+              title="Start an SSH shell inside the guest"
+            >
+              <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'}`} />
+            </button>
+          ))}
+        {hasConsole(currentServer, 'rdp') &&
+          (hasRdp ? (
+            <button
+              type="button"
+              className="btn btn-sm btn-info"
+              onClick={() => setActiveConsoleType('rdp')}
+              title="Switch to RDP Console"
+            >
+              <i className="fab fa-windows" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-sm btn-info"
+              onClick={() =>
+                startRdpPreview({
+                  currentServer,
+                  selectedMachine,
+                  setLoading,
+                  setError,
+                  setMachineDetails,
+                  setActiveConsoleType,
+                })
+              }
+              disabled={loading}
+              title="Start the browser VRDP console (VRDE over the agent)"
+            >
+              <i className={loading ? 'fas fa-spinner fa-pulse' : 'fab fa-windows'} />
+            </button>
+          ))}
       </div>
     </div>
 
@@ -222,6 +285,8 @@ ZloginConsoleDisplay.propTypes = {
   previewReadOnly: PropTypes.bool,
   previewReconnectKey: PropTypes.number,
   hasVnc: PropTypes.bool,
+  hasSsh: PropTypes.bool,
+  hasRdp: PropTypes.bool,
   setLoading: PropTypes.func,
   setLoadingVnc: PropTypes.func,
   setError: PropTypes.func,

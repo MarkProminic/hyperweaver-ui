@@ -17,6 +17,7 @@ import { resourceLabel } from '../utils/resourceLabel';
 import { DismissibleAlert } from './common';
 import ConsoleDisplay from './ConsoleDisplay';
 import CloneMachineModal from './Machine/CloneMachineModal';
+import ConvertToTemplateModal from './Machine/ConvertToTemplateModal';
 import { CurrentHardwarePanel, parseHardware } from './Machine/CurrentHardware';
 import DisplayResizeModal from './Machine/DisplayResizeModal';
 import GuestExecModal from './Machine/GuestExecModal';
@@ -27,6 +28,7 @@ import MachineGuestInfo from './Machine/MachineGuestInfo';
 import MachineHardware from './Machine/MachineHardware';
 import MachineInfo from './Machine/MachineInfo';
 import MachineListPanel from './Machine/MachineListPanel';
+import MachineNetworkCharts from './Machine/MachineNetworkCharts';
 import MachineProvisioning from './Machine/MachineProvisioning';
 import MachineSettings from './Machine/MachineSettings';
 import MachineSnapshots from './Machine/MachineSnapshots';
@@ -147,6 +149,139 @@ const machinePageGates = (currentServer, role) => ({
     hasConsole(currentServer, 'zlogin'),
 });
 
+/** The page's conditional dialog stack — split out of Machines purely for
+ *  the complexity budget (the DatasetModals pattern); behavior identical. */
+const MachinePageModals = ({
+  gates,
+  currentServer,
+  selectedMachine,
+  isRunning,
+  open,
+  closeModal,
+  onWizardCompleted,
+  onNotice,
+  loadMachines,
+}) => (
+  <>
+    {gates.wizardAvailable && (
+      <MachineCreateModal
+        isOpen={open.wizard}
+        onClose={closeModal('wizard')}
+        currentServer={currentServer}
+        onCompleted={onWizardCompleted}
+      />
+    )}
+
+    {gates.cloneAvailable && selectedMachine && (
+      <CloneMachineModal
+        isOpen={open.clone}
+        onClose={closeModal('clone')}
+        currentServer={currentServer}
+        machineName={selectedMachine}
+        isRunning={isRunning}
+        onCloned={({ taskId, message, warnings }) => {
+          const parts = [message];
+          if (taskId) {
+            parts.push(`(task ${taskId})`);
+          }
+          if (warnings.length > 0) {
+            parts.push(`— ${warnings.map(warning => warning.message).join('; ')}`);
+          }
+          onNotice({ text: parts.join(' '), warning: warnings.length > 0 });
+          // The clone's row appears when its task completes — never select
+          // a machine that does not exist yet.
+          loadMachines();
+        }}
+      />
+    )}
+
+    {gates.unattendedAvailable && selectedMachine && (
+      <UnattendedInstallModal
+        isOpen={open.install}
+        onClose={closeModal('install')}
+        currentServer={currentServer}
+        machineName={selectedMachine}
+        isRunning={isRunning}
+        onDone={notice => {
+          onNotice(notice);
+          loadMachines();
+        }}
+      />
+    )}
+
+    {gates.unattendedAvailable && (
+      <ImportMachineModal
+        isOpen={open.imp}
+        onClose={closeModal('imp')}
+        currentServer={currentServer}
+        onDone={notice => {
+          onNotice(notice);
+          loadMachines();
+        }}
+      />
+    )}
+
+    {gates.unattendedAvailable && selectedMachine && (
+      <MoveMachineModal
+        isOpen={open.move}
+        onClose={closeModal('move')}
+        currentServer={currentServer}
+        machineName={selectedMachine}
+        isRunning={isRunning}
+        onDone={notice => {
+          onNotice(notice);
+          loadMachines();
+        }}
+      />
+    )}
+
+    {gates.templatesAvailable && selectedMachine && (
+      <ConvertToTemplateModal
+        isOpen={open.toTemplate}
+        onClose={closeModal('toTemplate')}
+        currentServer={currentServer}
+        machineName={selectedMachine}
+        isRunning={isRunning}
+        onDone={onNotice}
+      />
+    )}
+
+    {gates.guestExecAvailable && selectedMachine && (
+      <GuestExecModal
+        isOpen={open.exec}
+        onClose={closeModal('exec')}
+        currentServer={currentServer}
+        machineName={selectedMachine}
+        isRunning={isRunning}
+        flavor={gates.guestExecFlavor}
+      />
+    )}
+
+    {gates.guestControlAvailable && selectedMachine && (
+      <DisplayResizeModal
+        isOpen={open.display}
+        onClose={closeModal('display')}
+        currentServer={currentServer}
+        machineName={selectedMachine}
+        isRunning={isRunning}
+        onDone={onNotice}
+      />
+    )}
+  </>
+);
+
+MachinePageModals.propTypes = {
+  gates: PropTypes.object.isRequired,
+  currentServer: PropTypes.object,
+  selectedMachine: PropTypes.string,
+  isRunning: PropTypes.bool,
+  open: PropTypes.object.isRequired,
+  closeModal: PropTypes.func.isRequired,
+  onWizardCompleted: PropTypes.func.isRequired,
+  onNotice: PropTypes.func.isRequired,
+  loadMachines: PropTypes.func.isRequired,
+};
+
 const Machines = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -201,6 +336,7 @@ const Machines = () => {
   const [moveOpen, setMoveOpen] = useState(false);
   const [execOpen, setExecOpen] = useState(false);
   const [displayOpen, setDisplayOpen] = useState(false);
+  const [toTemplateOpen, setToTemplateOpen] = useState(false);
   const {
     wizardAvailable,
     editAvailable,
@@ -215,6 +351,20 @@ const Machines = () => {
 
   // Provisioning pipeline intents handed over by the navbar Controls menu (?run=).
   const [provisionAction, setProvisionAction] = useState(null);
+
+  // One closer per dialog for MachinePageModals — keyed, so the stack
+  // component stays a dumb renderer.
+  const closeModal = key => () =>
+    ({
+      wizard: setWizardOpen,
+      clone: setCloneOpen,
+      install: setInstallOpen,
+      imp: setImportOpen,
+      move: setMoveOpen,
+      exec: setExecOpen,
+      display: setDisplayOpen,
+      toTemplate: setToTemplateOpen,
+    })[key](false);
 
   const detailTabs = availableDetailTabs(
     editAvailable,
@@ -311,59 +461,46 @@ const Machines = () => {
       setSearchParams({});
     }
 
-    // Entry points elsewhere (Host page, Dashboard) open the wizard here via
-    // ?create=1 — the gate is the same wizardAvailable the header button uses.
-    if (searchParams.get('create')) {
-      if (wizardAvailable) {
-        setWizardOpen(true);
+    // Navbar Controls / cross-page intents (the ?create=1 pattern): each
+    // param opens its dialog when the gate allows and is CONSUMED either
+    // way; `next` computes the params that replace the URL afterwards.
+    // create is the one intent that needs no selected machine.
+    const intents = [
+      { param: 'create', gate: wizardAvailable, open: setWizardOpen, needsMachine: false },
+      {
+        param: 'take',
+        gate: snapshotsAvailable,
+        open: setSnapshotTakeOpen,
+        next: () => ({ tab: 'snapshots' }),
+      },
+      {
+        param: 'clone',
+        gate: cloneAvailable,
+        open: setCloneOpen,
+        next: params => {
+          const tab = params.get('tab');
+          return tab ? { tab } : {};
+        },
+      },
+      { param: 'install', gate: unattendedAvailable, open: setInstallOpen },
+      { param: 'move', gate: unattendedAvailable, open: setMoveOpen },
+      { param: 'exec', gate: guestExecAvailable, open: setExecOpen },
+      {
+        param: 'totemplate',
+        gate: hasFeature(currentServer, 'templates'),
+        open: setToTemplateOpen,
+      },
+      { param: 'display', gate: guestControlAvailable, open: setDisplayOpen },
+    ];
+    intents.forEach(intent => {
+      if (!searchParams.get(intent.param)) {
+        return;
       }
-      setSearchParams({});
-    }
-
-    // Navbar Machine Controls: ?take=1 opens the take-snapshot dialog on the
-    // Snapshots tab; ?clone=1 opens the clone modal (the ?create=1 pattern).
-    if (searchParams.get('take')) {
-      if (currentMachine && snapshotsAvailable) {
-        setSnapshotTakeOpen(true);
+      if (intent.gate && (intent.needsMachine === false || currentMachine)) {
+        intent.open(true);
       }
-      setSearchParams({ tab: 'snapshots' });
-    }
-
-    if (searchParams.get('clone')) {
-      if (currentMachine && cloneAvailable) {
-        setCloneOpen(true);
-      }
-      const tabParam = searchParams.get('tab');
-      setSearchParams(tabParam ? { tab: tabParam } : {});
-    }
-
-    if (searchParams.get('install')) {
-      if (currentMachine && unattendedAvailable) {
-        setInstallOpen(true);
-      }
-      setSearchParams({});
-    }
-
-    if (searchParams.get('move')) {
-      if (currentMachine && unattendedAvailable) {
-        setMoveOpen(true);
-      }
-      setSearchParams({});
-    }
-
-    if (searchParams.get('exec')) {
-      if (currentMachine && guestExecAvailable) {
-        setExecOpen(true);
-      }
-      setSearchParams({});
-    }
-
-    if (searchParams.get('display')) {
-      if (currentMachine && guestControlAvailable) {
-        setDisplayOpen(true);
-      }
-      setSearchParams({});
-    }
+      setSearchParams(intent.next ? intent.next(searchParams) : {});
+    });
 
     // Provisioning actions from the Controls menu — the pane executes them.
     const runParam = searchParams.get('run');
@@ -394,6 +531,7 @@ const Machines = () => {
     handleVncConsole,
     wizardAvailable,
     currentMachine,
+    currentServer,
     snapshotsAvailable,
     cloneAvailable,
     unattendedAvailable,
@@ -673,6 +811,22 @@ const Machines = () => {
                                 <CurrentHardwarePanel
                                   currentHardware={parseHardware(machineDetails.configuration)}
                                 />
+
+                                {/* Per-zone network graphs — the machine's own
+                                    vnics from the per-link monitoring series;
+                                    cpu/mem/disk stay host-level (no per-zone
+                                    collection on the agent yet). */}
+                                {hasFeature(currentServer, 'monitoring') && (
+                                  <MachineNetworkCharts
+                                    currentServer={currentServer}
+                                    machineName={selectedMachine}
+                                    links={(
+                                      parseHardware(machineDetails.configuration).zone?.nics || []
+                                    )
+                                      .map(nic => nic.physical)
+                                      .filter(Boolean)}
+                                  />
+                                )}
                               </div>
 
                               {/* Right column — the one console home; SSH/screenshot/
@@ -795,99 +949,34 @@ const Machines = () => {
         setModalReadOnly={setModalReadOnly}
       />
 
-      {wizardAvailable && (
-        <MachineCreateModal
-          isOpen={wizardOpen}
-          onClose={() => setWizardOpen(false)}
-          currentServer={currentServer}
-          onCompleted={handleWizardCompleted}
-        />
-      )}
-
-      {cloneAvailable && selectedMachine && (
-        <CloneMachineModal
-          isOpen={cloneOpen}
-          onClose={() => setCloneOpen(false)}
-          currentServer={currentServer}
-          machineName={selectedMachine}
-          isRunning={getMachineStatus(selectedMachine) === 'running'}
-          onCloned={({ taskId, message, warnings }) => {
-            const parts = [message];
-            if (taskId) {
-              parts.push(`(task ${taskId})`);
-            }
-            if (warnings.length > 0) {
-              parts.push(`— ${warnings.map(warning => warning.message).join('; ')}`);
-            }
-            setProvisioningNotice({ text: parts.join(' '), warning: warnings.length > 0 });
-            // The clone's row appears when its task completes — never select
-            // a machine that does not exist yet.
-            loadMachines();
-          }}
-        />
-      )}
-
-      {unattendedAvailable && selectedMachine && (
-        <UnattendedInstallModal
-          isOpen={installOpen}
-          onClose={() => setInstallOpen(false)}
-          currentServer={currentServer}
-          machineName={selectedMachine}
-          isRunning={getMachineStatus(selectedMachine) === 'running'}
-          onDone={notice => {
-            setProvisioningNotice(notice);
-            loadMachines();
-          }}
-        />
-      )}
-
-      {unattendedAvailable && (
-        <ImportMachineModal
-          isOpen={importOpen}
-          onClose={() => setImportOpen(false)}
-          currentServer={currentServer}
-          onDone={notice => {
-            setProvisioningNotice(notice);
-            loadMachines();
-          }}
-        />
-      )}
-
-      {unattendedAvailable && selectedMachine && (
-        <MoveMachineModal
-          isOpen={moveOpen}
-          onClose={() => setMoveOpen(false)}
-          currentServer={currentServer}
-          machineName={selectedMachine}
-          isRunning={getMachineStatus(selectedMachine) === 'running'}
-          onDone={notice => {
-            setProvisioningNotice(notice);
-            loadMachines();
-          }}
-        />
-      )}
-
-      {guestExecAvailable && selectedMachine && (
-        <GuestExecModal
-          isOpen={execOpen}
-          onClose={() => setExecOpen(false)}
-          currentServer={currentServer}
-          machineName={selectedMachine}
-          isRunning={getMachineStatus(selectedMachine) === 'running'}
-          flavor={guestExecFlavor}
-        />
-      )}
-
-      {guestControlAvailable && selectedMachine && (
-        <DisplayResizeModal
-          isOpen={displayOpen}
-          onClose={() => setDisplayOpen(false)}
-          currentServer={currentServer}
-          machineName={selectedMachine}
-          isRunning={getMachineStatus(selectedMachine) === 'running'}
-          onDone={setProvisioningNotice}
-        />
-      )}
+      <MachinePageModals
+        gates={{
+          wizardAvailable,
+          cloneAvailable,
+          unattendedAvailable,
+          guestExecAvailable,
+          guestControlAvailable,
+          guestExecFlavor,
+          templatesAvailable: hasFeature(currentServer, 'templates'),
+        }}
+        currentServer={currentServer}
+        selectedMachine={selectedMachine}
+        isRunning={getMachineStatus(selectedMachine) === 'running'}
+        open={{
+          wizard: wizardOpen,
+          clone: cloneOpen,
+          install: installOpen,
+          imp: importOpen,
+          move: moveOpen,
+          exec: execOpen,
+          display: displayOpen,
+          toTemplate: toTemplateOpen,
+        }}
+        closeModal={closeModal}
+        onWizardCompleted={handleWizardCompleted}
+        onNotice={setProvisioningNotice}
+        loadMachines={loadMachines}
+      />
 
       <VncModal
         showVncConsole={showVncConsole}

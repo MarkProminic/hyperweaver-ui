@@ -28,6 +28,17 @@ export const hasFeature = (server, token) => {
 };
 
 /**
+ * STRICT feature check — the token must be PRESENT; no render-all fallback.
+ * For surfaces that fire agent requests which 404/noise on agents that never
+ * serve them (e.g. host-launchers → GET /applications on zoneweaver).
+ * @param {Object} server - Server object (registry row or Direct self-server)
+ * @param {string} token - Feature token
+ * @returns {boolean} True only when the harvested capabilities name the token
+ */
+export const hasFeatureStrict = (server, token) =>
+  Array.isArray(server?.capabilities?.features) && server.capabilities.features.includes(token);
+
+/**
  * Whether the agent behind `server` supports a console protocol.
  * @param {Object} server - Server object
  * @param {string} token - Console token, e.g. 'vnc'

@@ -2,9 +2,9 @@ import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 
 import { useServers } from '../contexts/ServerContext';
-import { hasConsole } from '../utils/capabilities';
+import { hasConsole, hasFeature } from '../utils/capabilities';
 
-import { startRdpPreview } from './consoleActions';
+import { startRdpPreview, startSshPreview } from './consoleActions';
 import VncActionsDropdown from './VncActionsDropdown';
 import VncViewerReact from './VncViewerReact';
 
@@ -21,6 +21,7 @@ const VncConsoleDisplay = ({
   vncRef,
   hasZlogin,
   hasRdp,
+  hasSsh,
   setLoading,
   setError,
   setPreviewVncViewOnly,
@@ -39,6 +40,7 @@ const VncConsoleDisplay = ({
   const [screenshotUrl, setScreenshotUrl] = useState(null);
   const rdpAvailable = hasConsole(currentServer, 'rdp');
   const zloginAvailable = hasConsole(currentServer, 'zlogin');
+  const sshAvailable = hasFeature(currentServer, 'ssh');
 
   // With no live console session, fetch a server-side framebuffer screenshot
   // for this zone and show it as the placeholder preview. The API captures it
@@ -213,6 +215,36 @@ const VncConsoleDisplay = ({
                 <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'}`} />
               </button>
             ))}
+          {sshAvailable &&
+            (hasSsh ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-success"
+                onClick={() => setActiveConsoleType('ssh')}
+                title="Switch to SSH Console"
+              >
+                <i className="fas fa-terminal" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm btn-success"
+                onClick={() =>
+                  startSshPreview({
+                    currentServer,
+                    selectedMachine,
+                    setLoading,
+                    setError,
+                    setMachineDetails,
+                    setActiveConsoleType,
+                  })
+                }
+                disabled={loading}
+                title="Start an SSH shell inside the guest"
+              >
+                <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'}`} />
+              </button>
+            ))}
           {rdpAvailable &&
             (hasRdp ? (
               <button
@@ -327,6 +359,7 @@ VncConsoleDisplay.propTypes = {
   vncRef: PropTypes.object,
   hasZlogin: PropTypes.bool,
   hasRdp: PropTypes.bool,
+  hasSsh: PropTypes.bool,
   setLoading: PropTypes.func,
   setError: PropTypes.func,
   setPreviewVncViewOnly: PropTypes.func,

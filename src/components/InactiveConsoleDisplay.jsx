@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import React, { useState } from 'react';
 
 import { useMode } from '../contexts/ModeContext';
-import { hasConsole, hasFeature } from '../utils/capabilities';
+import { hasConsole, hasFeature, hasFeatureStrict } from '../utils/capabilities';
 
 import {
   startVncPreview,
@@ -115,10 +115,15 @@ const InactiveConsoleDisplay = ({
   const zloginAvailable = hasConsole(currentServer, 'zlogin');
   const sshAvailable = hasFeature(currentServer, 'ssh');
   const rdpAvailable = hasConsole(currentServer, 'rdp');
-  const launchersAvailable = hasFeature(currentServer, 'host-launchers');
+  // Strict: agents without the token 404 the launcher endpoints.
+  const launchersAvailable = hasFeatureStrict(currentServer, 'host-launchers');
 
   const guestIps = machineDetails?.configuration?.guest_info?.ips;
   const guestRdpIp = Array.isArray(guestIps) && guestIps.length > 0 ? guestIps[0] : null;
+  // SSH needs a reachable guest — the discovered networking data (QGA on
+  // bhyve, Guest Additions on VirtualBox) is the gate, per the agent's
+  // fresh-per-request guarantee.
+  const sshReady = machineRunning && !!guestRdpIp;
 
   const handleStartVnc = () =>
     startVncPreview({
@@ -218,12 +223,16 @@ const InactiveConsoleDisplay = ({
               type="button"
               className="btn btn-sm btn-success"
               onClick={handleStartSsh}
-              disabled={loading || !machineRunning}
-              title={
-                machineRunning
-                  ? 'Start an SSH shell inside the guest'
-                  : 'The machine must be running'
-              }
+              disabled={loading || !sshReady}
+              title={(() => {
+                if (!machineRunning) {
+                  return 'The machine must be running';
+                }
+                if (!sshReady) {
+                  return 'No guest networking data yet — SSH needs a discovered IP (guest agent / Guest Additions)';
+                }
+                return `Start an SSH shell inside the guest (${guestRdpIp})`;
+              })()}
             >
               <i className="fas fa-terminal me-2" />
               <span>{loading ? 'Starting...' : 'SSH'}</span>

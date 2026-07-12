@@ -32,11 +32,19 @@ export const parseZoneHardware = configuration => {
   }
   const disks = [
     ...(configuration.bootdisk
-      ? [{ name: 'bootdisk', value: zoneDeviceValue(configuration.bootdisk), boot: true }]
+      ? [
+          {
+            name: 'bootdisk',
+            value: zoneDeviceValue(configuration.bootdisk),
+            size: configuration.bootdisk?.size || '',
+            boot: true,
+          },
+        ]
       : []),
     ...listOf(configuration.disk).map((entry, index) => ({
       name: `disk${index}`,
       value: zoneDeviceValue(entry),
+      size: entry?.size || '',
       boot: false,
     })),
   ];
@@ -51,6 +59,8 @@ export const parseZoneHardware = configuration => {
     mac: entry?.['mac-addr'] || entry?.mac || '',
     globalNic: entry?.['global-nic'] || '',
     vlanId: entry?.['vlan-id'] !== undefined ? String(entry['vlan-id']) : '',
+    address: entry?.address || '',
+    defrouter: entry?.defrouter || '',
   }));
   if (disks.length === 0 && cdroms.length === 0 && nics.length === 0) {
     return null;

@@ -140,6 +140,17 @@ export const getNetworkRoutes = async (hostname, port, protocol, filters = {}) =
     filters
   );
 
+/**
+ * Get per-zone resource usage time series (cpu/memory/fs-io)
+ * @param {string} hostname - Server hostname
+ * @param {number} port - Server port
+ * @param {string} protocol - Server protocol
+ * @param {Object} filters - Filter options (zone, since, limit)
+ * @returns {Promise<Object>} {usage: [ZoneMetrics], totalCount, returnedCount} — newest first
+ */
+export const getZoneUsage = async (hostname, port, protocol, filters = {}) =>
+  await makeAgentRequest(hostname, port, protocol, 'monitoring/zones/usage', 'GET', null, filters);
+
 // ========================================
 // STORAGE MONITORING FUNCTIONS
 // ========================================

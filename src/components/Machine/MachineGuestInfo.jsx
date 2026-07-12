@@ -2,15 +2,16 @@ import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
 
 import { getGuestProperties } from '../../api/machineAPI';
+import { hasHypervisor } from '../../utils/capabilities';
 
 /**
  * Guest-properties card (catalog §6): what the guest additions report about
  * a RUNNING machine. The gold: live guest IPs (/VirtualBox/GuestInfo/Net/N/
  * V4/IP) lead the card; /Hyperweaver/CloudInit/* shows what the agent
  * seeded; everything else sits behind a collapsed details block. Self-hides
- * when the endpoint answers nothing (stopped machine, no guest additions,
- * or an agent without the surface) — no token exists for it, so absence of
- * data IS the gate (D14: gate on the wire).
+ * when the endpoint answers nothing — and never even CALLS it on bhyve
+ * (zoneweaver has no guest-properties route, it 404s; the Guest Agent card
+ * carries the QGA equivalent there).
  */
 
 const IP_PATTERN = /^\/VirtualBox\/GuestInfo\/Net\/(?<nic>\d+)\/V4\/IP$/u;
@@ -20,8 +21,10 @@ const MachineGuestInfo = ({ currentServer, machineName }) => {
   const [properties, setProperties] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
+  const isBhyve = hasHypervisor(currentServer, 'bhyve');
+
   const load = useCallback(async () => {
-    if (!currentServer || !machineName) {
+    if (!currentServer || !machineName || isBhyve) {
       return;
     }
     const result = await getGuestProperties(
@@ -34,7 +37,7 @@ const MachineGuestInfo = ({ currentServer, machineName }) => {
       result.success && Array.isArray(result.data?.properties) ? result.data.properties : []
     );
     setLoaded(true);
-  }, [currentServer, machineName]);
+  }, [currentServer, machineName, isBhyve]);
 
   useEffect(() => {
     load();
