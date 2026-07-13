@@ -84,9 +84,16 @@ const MachineNetworkCharts = ({ currentServer, machineName, links }) => {
     return '';
   }, [currentServer, machineName]);
 
+  // `links` is a fresh array each parent render — a joined key drives the
+  // effect, a ref feeds the callback, so the poll only resets when the
+  // machine or its link set actually changes (never every render).
+  const linksKey = links.join(',');
+  const linksRef = useRef(links);
+  linksRef.current = links;
+
   const loadNetwork = useCallback(async () => {
     const results = await Promise.all(
-      links.map(link =>
+      linksRef.current.map(link =>
         getNetworkUsage(currentServer.hostname, currentServer.port, currentServer.protocol, {
           link,
           since: lastSeen.current[link] || sinceIso(),
@@ -124,7 +131,7 @@ const MachineNetworkCharts = ({ currentServer, machineName, links }) => {
     return failed
       ? `Network usage failed (GET monitoring/network/usage): ${failed.result.message}`
       : '';
-  }, [currentServer, links]);
+  }, [currentServer]);
 
   const load = useCallback(async () => {
     const [zoneError, netError] = await Promise.all([loadZoneUsage(), loadNetwork()]);
@@ -142,8 +149,8 @@ const MachineNetworkCharts = ({ currentServer, machineName, links }) => {
     load();
     const interval = setInterval(load, POLL_SECONDS * 1000);
     return () => clearInterval(interval);
-    // Machine switch resets the window (links identity changes with it).
-  }, [currentServer, machineName, links.length, load]);
+    // Machine switch or a changed link set resets the window.
+  }, [currentServer, machineName, linksKey, load]);
 
   const hasZoneSamples = zoneData && zoneData.cpu.length > 0;
 

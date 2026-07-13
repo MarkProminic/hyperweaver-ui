@@ -48,7 +48,7 @@ GuestNetworkTable.propTypes = {
   interfaces: PropTypes.array.isRequired,
 };
 
-const MachineGuestAgent = ({ currentServer, machineName, guestInfo }) => {
+const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = 'col-12' }) => {
   const [osinfo, setOsinfo] = useState(null);
   const [showNetwork, setShowNetwork] = useState(false);
   const [interfaces, setInterfaces] = useState([]);
@@ -122,100 +122,102 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo }) => {
   }
 
   return (
-    <div className="card mb-3">
-      <div className="card-body">
-        <div className="d-flex justify-content-between align-items-center mb-2">
-          <h4 className="fs-6 fw-bold mb-0">
-            <i className="fas fa-satellite-dish me-2" />
-            Guest Agent
-          </h4>
-          {guestInfo.checked_at && (
-            <span className="text-muted small">
-              checked {new Date(guestInfo.checked_at).toLocaleTimeString()}
-            </span>
-          )}
-        </div>
-
-        {!ready && (
-          <>
-            <p className="text-muted small mb-2">
-              The guest-agent channel is not responding — either the guest is not running qemu-ga,
-              or the channel device is not wired yet.
-            </p>
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-primary"
-              onClick={runSetup}
-              disabled={busy}
-              title="Wire the guest-agent channel device onto this machine — takes effect on the next boot"
-            >
-              <i className={`fas ${busy ? 'fa-spinner fa-pulse' : 'fa-plug'} me-2`} />
-              Set up channel
-            </button>
-            {actionMsg && (
-              <div className="alert alert-info py-1 px-2 small mt-2 mb-0">{actionMsg}</div>
+    <div className={colClass}>
+      <div className="card h-100">
+        <div className="card-body">
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <h4 className="fs-6 fw-bold mb-0">
+              <i className="fas fa-satellite-dish me-2" />
+              Guest Agent
+            </h4>
+            {guestInfo.checked_at && (
+              <span className="text-muted small">
+                checked {new Date(guestInfo.checked_at).toLocaleTimeString()}
+              </span>
             )}
-          </>
-        )}
+          </div>
 
-        {ready && (
-          <>
-            {osinfo && (
-              <div className="mb-2">
-                <span className="text-muted small me-2">OS</span>
-                <span className="small">{osinfo['pretty-name'] || osinfo.name || 'Unknown'}</span>
-                {osinfo['kernel-release'] && (
-                  <span className="text-muted small ms-2">({osinfo['kernel-release']})</span>
+          {!ready && (
+            <>
+              <p className="text-muted small mb-2">
+                The guest-agent channel is not responding — either the guest is not running qemu-ga,
+                or the channel device is not wired yet.
+              </p>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary"
+                onClick={runSetup}
+                disabled={busy}
+                title="Wire the guest-agent channel device onto this machine — takes effect on the next boot"
+              >
+                <i className={`fas ${busy ? 'fa-spinner fa-pulse' : 'fa-plug'} me-2`} />
+                Set up channel
+              </button>
+              {actionMsg && (
+                <div className="alert alert-info py-1 px-2 small mt-2 mb-0">{actionMsg}</div>
+              )}
+            </>
+          )}
+
+          {ready && (
+            <>
+              {osinfo && (
+                <div className="mb-2">
+                  <span className="text-muted small me-2">OS</span>
+                  <span className="small">{osinfo['pretty-name'] || osinfo.name || 'Unknown'}</span>
+                  {osinfo['kernel-release'] && (
+                    <span className="text-muted small ms-2">({osinfo['kernel-release']})</span>
+                  )}
+                </div>
+              )}
+
+              {ips.length > 0 ? (
+                <div className="mb-2">
+                  {ips.map(ip => (
+                    <div key={ip}>
+                      <code>{ip}</code>
+                    </div>
+                  ))}
+                  <span className="text-muted small">
+                    via {guestInfo.source === 'additions' ? 'Guest Additions' : 'guest agent'}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-muted small mb-2">No addresses observed.</p>
+              )}
+
+              <div className="d-flex flex-wrap gap-1">
+                {ips.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={handleShowNetwork}
+                  >
+                    More
+                  </button>
                 )}
               </div>
-            )}
-
-            {ips.length > 0 ? (
-              <div className="mb-2">
-                {ips.map(ip => (
-                  <div key={ip}>
-                    <code>{ip}</code>
-                  </div>
-                ))}
-                <span className="text-muted small">
-                  via {guestInfo.source === 'additions' ? 'Guest Additions' : 'guest agent'}
-                </span>
-              </div>
-            ) : (
-              <p className="text-muted small mb-2">No addresses observed.</p>
-            )}
-
-            <div className="d-flex flex-wrap gap-1">
-              {ips.length > 0 && (
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-secondary"
-                  onClick={handleShowNetwork}
-                >
-                  More
-                </button>
+              {actionMsg && (
+                <div className="alert alert-info py-1 px-2 small mt-2 mb-0">{actionMsg}</div>
               )}
-            </div>
-            {actionMsg && (
-              <div className="alert alert-info py-1 px-2 small mt-2 mb-0">{actionMsg}</div>
-            )}
-          </>
-        )}
-
-        <ContentModal
-          isOpen={showNetwork}
-          onClose={() => setShowNetwork(false)}
-          title="Guest Agent Network Information"
-          icon="fas fa-network-wired"
-        >
-          {netLoading && (
-            <div className="text-center py-3">
-              <i className="fas fa-spinner fa-pulse fa-2x" />
-            </div>
+            </>
           )}
-          {!netLoading && netError && <div className="alert alert-warning mb-0">{netError}</div>}
-          {!netLoading && !netError && <GuestNetworkTable interfaces={interfaces} />}
-        </ContentModal>
+
+          <ContentModal
+            isOpen={showNetwork}
+            onClose={() => setShowNetwork(false)}
+            title="Guest Agent Network Information"
+            icon="fas fa-network-wired"
+          >
+            {netLoading && (
+              <div className="text-center py-3">
+                <i className="fas fa-spinner fa-pulse fa-2x" />
+              </div>
+            )}
+            {!netLoading && netError && <div className="alert alert-warning mb-0">{netError}</div>}
+            {!netLoading && !netError && <GuestNetworkTable interfaces={interfaces} />}
+          </ContentModal>
+        </div>
       </div>
     </div>
   );
@@ -230,6 +232,7 @@ MachineGuestAgent.propTypes = {
     agent_responding: PropTypes.bool,
     checked_at: PropTypes.string,
   }),
+  colClass: PropTypes.string,
 };
 
 export default MachineGuestAgent;

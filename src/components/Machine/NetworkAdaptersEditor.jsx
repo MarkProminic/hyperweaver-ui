@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { Fragment, useState } from 'react';
 
 import { markButtonClass, markIconClass, nicSummary } from './CurrentHardware';
+import VnicLinkPropsEditor from './VnicLinkPropsEditor';
 
 /** A locally-administered unicast MAC (02:xx:…) — the random-MAC dice. */
 const randomMac = () => {
@@ -114,68 +115,110 @@ const ZONE_NIC_EDIT_FIELDS = [
   },
 ];
 
-// bhyve net-resource PROPERTIES (agent's `props` wire) — the promisc set is
-// brand-supported (zadm#116); the rest tune the viona/dlpi backend. Blank =
-// not sent; update_nics REPLACES a prop pair when a new value rides.
-const NIC_PROP_FIELDS = [
-  { key: 'promiscphys', label: 'Promisc (phys)', kind: 'onoff' },
-  { key: 'promiscrxonly', label: 'Promisc (rx-only)', kind: 'onoff' },
-  { key: 'promiscsap', label: 'Promisc (SAP)', kind: 'onoff' },
-  { key: 'promiscmulti', label: 'Promisc (multicast)', kind: 'onoff' },
-  { key: 'mtu', label: 'MTU', kind: 'text', hint: 'e.g. 9000' },
-  { key: 'vqsize', label: 'VQ size', kind: 'text' },
-  { key: 'feature_mask', label: 'Feature mask', kind: 'text' },
-  { key: 'backend', label: 'Backend', kind: 'text' },
-  { key: 'netif', label: 'netif override', kind: 'text' },
-];
+// Enabling promiscphys is known to break host→VM traffic on this platform
+// (illumos-omnios#1039, still open) — never let anyone flip it blind.
+const PROP_WARNINGS = {
+  promiscphys: 'Known to BREAK host→VM traffic on this platform (illumos-omnios#1039, still open).',
+};
 
-/** The net-resource property grid — folded by default so the common fields
- *  stay clean. `props` is the flat name→value object the wire carries. */
-const NicPropsEditor = ({ idPrefix, props, onChange, disabled }) => (
-  <div className="hw-device-row hw-device-child hw-device-child-form">
-    <details className="w-100">
-      <summary className="small fw-semibold">Link properties (promisc, MTU, backend…)</summary>
-      <div className="row g-2 align-items-end mt-0">
-        {NIC_PROP_FIELDS.map(field => {
-          const inputId = `${idPrefix}-prop-${field.key}`;
-          return (
-            <div className="col-6 col-md-3" key={field.key}>
-              <label className="form-label small mb-1" htmlFor={inputId}>
-                {field.label}
-              </label>
-              {field.kind === 'onoff' ? (
-                <select
-                  id={inputId}
-                  className="form-select form-select-sm"
-                  value={props[field.key] ?? ''}
-                  onChange={e => onChange(field.key, e.target.value)}
-                  disabled={disabled}
-                >
-                  <option value="">(default)</option>
-                  <option value="on">on</option>
-                  <option value="off">off</option>
-                </select>
-              ) : (
-                <input
-                  id={inputId}
-                  className="form-control form-control-sm"
-                  placeholder={field.hint || '(default)'}
-                  value={props[field.key] ?? ''}
-                  onChange={e => onChange(field.key, e.target.value)}
-                  disabled={disabled}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </details>
-  </div>
-);
+const propLabel = key => key.replace(/_/gu, ' ');
+
+/**
+ * The zonecfg NET-RESOURCE properties the bhyve brand consumes. Which ones
+ * apply depends on the NIC's BACKEND (viona takes the ring/queue knobs;
+ * virtio/e1000 take the promiscuous-mode knobs) — the agent says which via
+ * `nic_props_by_netif`, so the UI never offers a knob bhyve would ignore.
+ * Current values, defaults and vocabularies all come from the agent; a blank
+ * field shows the default it actually runs with.
+ */
+const NicPropsEditor = ({
+  idPrefix,
+  netif,
+  props,
+  currentProps = {},
+  propsByNetif = null,
+  propDefaults = {},
+  propValues = {},
+  onChange,
+  disabled,
+}) => {
+  const applicable = propsByNetif?.[netif] || null;
+  if (!applicable || applicable.length === 0) {
+    return null;
+  }
+  return (
+    <div className="hw-device-row hw-device-child hw-device-child-form">
+      <details className="w-100">
+        <summary className="small fw-semibold">
+          Brand net properties{netif ? ` — ${netif}` : ''}
+        </summary>
+        <div className="row g-2 align-items-end mt-0">
+          {applicable.map(key => {
+            const inputId = `${idPrefix}-prop-${key}`;
+            const vocabulary = propValues[`nics.props.${key}`] || null;
+            const fallback = propDefaults[`nics.props.${key}`];
+            const current = currentProps[key];
+            // Set → show it; unset → show the default it actually runs with.
+            const blankLabel =
+              current !== undefined && current !== ''
+                ? `(current: ${current})`
+                : `(default: ${fallback ?? 'agent default'})`;
+            const warning = PROP_WARNINGS[key];
+            return (
+              <div className="col-6 col-md-3" key={key}>
+                <label className="form-label small mb-1 text-capitalize" htmlFor={inputId}>
+                  {propLabel(key)}
+                  {warning && (
+                    <i
+                      className="fas fa-triangle-exclamation text-warning ms-1"
+                      title={warning}
+                      aria-label={warning}
+                    />
+                  )}
+                </label>
+                {vocabulary ? (
+                  <select
+                    id={inputId}
+                    className="form-select form-select-sm"
+                    value={props[key] ?? ''}
+                    onChange={e => onChange(key, e.target.value)}
+                    disabled={disabled}
+                  >
+                    <option value="">{blankLabel}</option>
+                    {vocabulary.map(option => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    id={inputId}
+                    className="form-control form-control-sm"
+                    placeholder={blankLabel}
+                    value={props[key] ?? ''}
+                    onChange={e => onChange(key, e.target.value)}
+                    disabled={disabled}
+                  />
+                )}
+                {warning && <span className="form-text text-warning small">{warning}</span>}
+              </div>
+            );
+          })}
+        </div>
+      </details>
+    </div>
+  );
+};
 
 NicPropsEditor.propTypes = {
   idPrefix: PropTypes.string.isRequired,
+  netif: PropTypes.string,
   props: PropTypes.object.isRequired,
+  currentProps: PropTypes.object,
+  propsByNetif: PropTypes.object,
+  propDefaults: PropTypes.object,
+  propValues: PropTypes.object,
   onChange: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
 };
@@ -323,6 +366,10 @@ const NetworkAdaptersEditor = ({
   zoneNicEdits = {},
   onZoneNicEdit = () => {},
   onZoneNicPropEdit = () => {},
+  zoneNicCurrent = [],
+  nicPropsByNetif = null,
+  knobDefaults = {},
+  currentServer = null,
   formDisabled = false,
 }) => {
   // Zone NICs remove by their PHYSICAL vnic name (agent-confirmed wire) —
@@ -353,6 +400,9 @@ const NetworkAdaptersEditor = ({
           const isMarked = zoneNicRemovals.includes(nic.physical);
           const edits = zoneNicEdits[nic.physical] || {};
           const live = hostVnics.find(vnic => vnic.link === nic.physical) || null;
+          // knob_current.nics[] — the NIC's effective backend and the props
+          // that are EXPLICITLY set on it.
+          const current = zoneNicCurrent.find(entry => entry.physical === nic.physical) || null;
           return (
             <Fragment key={nic.name}>
               <div
@@ -452,8 +502,20 @@ const NetworkAdaptersEditor = ({
               {!isMarked && nic.physical && (
                 <NicPropsEditor
                   idPrefix={`zone-nic-${nic.physical}`}
+                  netif={current?.netif || ''}
                   props={edits.props || {}}
+                  currentProps={current?.props || {}}
+                  propsByNetif={nicPropsByNetif}
+                  propDefaults={knobDefaults}
+                  propValues={nicEnums || {}}
                   onChange={(propKey, value) => onZoneNicPropEdit(nic.physical, propKey, value)}
+                  disabled={formDisabled}
+                />
+              )}
+              {!isMarked && nic.physical && currentServer && (
+                <VnicLinkPropsEditor
+                  currentServer={currentServer}
+                  vnic={nic.physical}
                   disabled={formDisabled}
                 />
               )}
@@ -741,6 +803,10 @@ NetworkAdaptersEditor.propTypes = {
   zoneNicEdits: PropTypes.object,
   onZoneNicEdit: PropTypes.func,
   onZoneNicPropEdit: PropTypes.func,
+  zoneNicCurrent: PropTypes.array,
+  nicPropsByNetif: PropTypes.object,
+  knobDefaults: PropTypes.object,
+  currentServer: PropTypes.object,
   formDisabled: PropTypes.bool,
 };
 

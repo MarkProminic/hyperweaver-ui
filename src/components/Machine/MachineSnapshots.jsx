@@ -6,12 +6,16 @@ import {
   takeMachineSnapshot,
   restoreMachineSnapshot,
   deleteMachineSnapshot,
+  startMachine,
   getTask,
 } from '../../api/machineAPI';
 import { modifyInfrastructure } from '../../api/provisioningAPI';
+import { hasFeature } from '../../utils/capabilities';
 import { canCreateMachines } from '../../utils/permissions';
 import { ConfirmModal, FormModal } from '../common';
 import TaskDetailModal from '../TaskDetailModal';
+
+import SnapshotTemplateModal from './SnapshotTemplateModal';
 
 /**
  * Snapshots card (catalog §4, `machine-snapshots` token — the PARENT gates;
@@ -27,6 +31,26 @@ import TaskDetailModal from '../TaskDetailModal';
 
 const depthOf = node => (String(node || '').match(/-/gu) || []).length;
 
+const TERMINAL_STATUSES = ['completed', 'completed_with_errors', 'failed', 'cancelled'];
+
+const wait = ms =>
+  new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+
+/** Recursive poll — answers the terminal task row, or null when it runs out. */
+const pollTask = async (fetchRow, attempts) => {
+  const row = await fetchRow();
+  if (row && TERMINAL_STATUSES.includes(row.status)) {
+    return row;
+  }
+  if (attempts <= 1) {
+    return null;
+  }
+  await wait(2000);
+  return pollTask(fetchRow, attempts - 1);
+};
+
 const formatBytes = bytes => {
   if (bytes >= 1024 ** 3) {
     return `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
@@ -38,6 +62,28 @@ const formatBytes = bytes => {
     return `${(bytes / 1024).toFixed(0)} KiB`;
   }
   return `${bytes} B`;
+};
+
+const CONFIRM_TITLES = {
+  restore: 'Restore Snapshot',
+  'restore-start': 'Restore Snapshot and Start',
+  delete: 'Delete Snapshot',
+};
+
+const CONFIRM_ACTIONS = {
+  restore: 'Restore',
+  'restore-start': 'Restore and start',
+  delete: 'Delete',
+};
+
+const confirmMessage = ({ kind, snapshot }, machineName) => {
+  if (kind === 'delete') {
+    return `Delete snapshot "${snapshot.name}"? The machine itself is unaffected.`;
+  }
+  const base = `Restore ${machineName} to snapshot "${snapshot.name}"? The machine's current disk state is replaced by the snapshot's.`;
+  return kind === 'restore-start'
+    ? `${base} The machine powers back on once the restore completes.`
+    : base;
 };
 
 const POLICY_TYPES = [
@@ -274,11 +320,15 @@ const MachineSnapshots = ({
     quiesce: false,
     live: false,
   });
-  const [confirm, setConfirm] = useState(null); // {kind: 'restore'|'delete', snapshot}
+  // {kind: 'restore'|'restore-start'|'delete', snapshot}
+  const [confirm, setConfirm] = useState(null);
+  // {mode: 'export'|'publish', snapshot} — build a template FROM a snapshot.
+  const [templateFrom, setTemplateFrom] = useState(null);
   const [busy, setBusy] = useState(false);
   const [followTask, setFollowTask] = useState(null);
 
   const canMutate = canCreateMachines(user?.role);
+  const templatesAvailable = hasFeature(currentServer, 'templates');
   const resetTakeForm = () =>
     setTakeForm({
       mode: 'name',
@@ -379,27 +429,63 @@ const MachineSnapshots = ({
     }
   };
 
+  // Restore, wait for the task to land, then power the machine back on — the
+  // restore itself requires a stopped machine, so starting is a second step.
+  const restoreThenStart = async taskId => {
+    if (!taskId) {
+      setMsg('Restore queued, but no task id came back — start the machine yourself.');
+      return;
+    }
+    const task = await pollTask(
+      () =>
+        getTask(currentServer.hostname, currentServer.port, currentServer.protocol, taskId).then(
+          result => (result.success ? result.data?.task || result.data : null)
+        ),
+      60
+    );
+    if (!task) {
+      setMsg('Restore is still running — start the machine once it completes.');
+      return;
+    }
+    if (task.status === 'failed') {
+      setMsg(`Restore failed — not starting. ${task.error_message || ''}`.trim());
+      return;
+    }
+    const start = await startMachine(
+      currentServer.hostname,
+      currentServer.port,
+      currentServer.protocol,
+      machineName
+    );
+    setMsg(start.success ? '' : `Restored, but the start failed: ${start.message}`);
+  };
+
   const handleConfirm = async () => {
     if (!confirm) {
       return;
     }
+    const { kind, snapshot } = confirm;
     setBusy(true);
-    const call = confirm.kind === 'restore' ? restoreMachineSnapshot : deleteMachineSnapshot;
+    const call = kind === 'delete' ? deleteMachineSnapshot : restoreMachineSnapshot;
     const result = await call(
       currentServer.hostname,
       currentServer.port,
       currentServer.protocol,
       machineName,
-      confirm.snapshot.name
+      snapshot.name
     );
-    setBusy(false);
     setConfirm(null);
-    if (result.success) {
-      setMsg('');
-      await followQueuedTask(result.data?.task_id);
-    } else {
-      setMsg(`Snapshot ${confirm.kind} failed: ${result.message}`);
+    if (!result.success) {
+      setBusy(false);
+      setMsg(`Snapshot ${kind === 'delete' ? 'delete' : 'restore'} failed: ${result.message}`);
+      return;
     }
+    setMsg('');
+    await followQueuedTask(result.data?.task_id);
+    if (kind === 'restore-start') {
+      await restoreThenStart(result.data?.task_id);
+    }
+    setBusy(false);
   };
 
   return (
@@ -486,6 +572,41 @@ const MachineSnapshots = ({
                     >
                       <i className="fas fa-history" />
                     </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-warning"
+                      title={
+                        isRunning
+                          ? 'Restore needs the machine stopped — stop it first'
+                          : 'Restore to this snapshot, then power the machine back on'
+                      }
+                      disabled={isRunning || busy}
+                      onClick={() => setConfirm({ kind: 'restore-start', snapshot })}
+                    >
+                      <i className="fas fa-play" />
+                    </button>
+                    {templatesAvailable && (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-secondary"
+                          title="Build a local .box template from this snapshot"
+                          disabled={busy}
+                          onClick={() => setTemplateFrom({ mode: 'export', snapshot })}
+                        >
+                          <i className="fas fa-box-archive" />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-info"
+                          title="Publish this snapshot to a registry"
+                          disabled={busy}
+                          onClick={() => setTemplateFrom({ mode: 'publish', snapshot })}
+                        >
+                          <i className="fas fa-cloud-arrow-up" />
+                        </button>
+                      </>
+                    )}
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-danger"
@@ -620,14 +741,25 @@ const MachineSnapshots = ({
           isOpen
           onClose={() => setConfirm(null)}
           onConfirm={handleConfirm}
-          title={confirm.kind === 'restore' ? 'Restore Snapshot' : 'Delete Snapshot'}
-          message={
-            confirm.kind === 'restore'
-              ? `Restore ${machineName} to snapshot "${confirm.snapshot.name}"? The machine's current disk state is replaced by the snapshot's.`
-              : `Delete snapshot "${confirm.snapshot.name}"? The machine itself is unaffected.`
-          }
-          confirmText={confirm.kind === 'restore' ? 'Restore' : 'Delete'}
+          title={CONFIRM_TITLES[confirm.kind]}
+          message={confirmMessage(confirm, machineName)}
+          confirmText={CONFIRM_ACTIONS[confirm.kind]}
           loading={busy}
+        />
+      )}
+
+      {templateFrom && (
+        <SnapshotTemplateModal
+          isOpen
+          mode={templateFrom.mode}
+          onClose={() => setTemplateFrom(null)}
+          currentServer={currentServer}
+          machineName={machineName}
+          snapshotName={templateFrom.snapshot.name}
+          onQueued={(data, fallback) => {
+            setMsg(data?.message || fallback);
+            followQueuedTask(data?.task_id);
+          }}
         />
       )}
 

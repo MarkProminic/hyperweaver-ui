@@ -141,15 +141,31 @@ export const getNetworkRoutes = async (hostname, port, protocol, filters = {}) =
   );
 
 /**
- * Get per-zone resource usage time series (cpu/memory/fs-io)
+ * Get per-machine CPU/memory time series (ZoneMetrics: cpu_used, cpu_pct,
+ * rss_bytes, swap_bytes — one row per machine per tick, newest first).
  * @param {string} hostname - Server hostname
  * @param {number} port - Server port
  * @param {string} protocol - Server protocol
  * @param {Object} filters - Filter options (zone, since, limit)
- * @returns {Promise<Object>} {usage: [ZoneMetrics], totalCount, returnedCount} — newest first
+ * @returns {Promise<Object>} {usage: [ZoneMetrics], totalCount, returnedCount}
  */
 export const getZoneUsage = async (hostname, port, protocol, filters = {}) =>
   await makeAgentRequest(hostname, port, protocol, 'monitoring/zones/usage', 'GET', null, filters);
+
+/**
+ * Get per-machine, PER-ZVOL disk I/O (ZvolIoStats — the DEVICE is the unit:
+ * a machine's volumes can live on different arrays). Rows carry dataset,
+ * pool, device, read/write ops+bytes and derived read_bps/write_bps/
+ * read_iops/write_iops. Sourced from a DTrace consumer on the guests'
+ * pread/pwrite — what the machine ASKED for, not post-ARC pool traffic.
+ * @param {string} hostname - Server hostname
+ * @param {number} port - Server port
+ * @param {string} protocol - Server protocol
+ * @param {Object} filters - Filter options (zone, dataset, pool, since, limit)
+ * @returns {Promise<Object>} {diskio: [ZvolIoStats], totalCount, returnedCount}
+ */
+export const getZoneDiskIo = async (hostname, port, protocol, filters = {}) =>
+  await makeAgentRequest(hostname, port, protocol, 'monitoring/zones/diskio', 'GET', null, filters);
 
 // ========================================
 // STORAGE MONITORING FUNCTIONS

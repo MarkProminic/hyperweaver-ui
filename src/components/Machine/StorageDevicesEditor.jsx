@@ -462,8 +462,7 @@ const StorageDevicesEditor = ({
   zoneName = '',
   zoneDiskRemovals = [],
   onToggleZoneDisk = () => {},
-  zoneDiskResizes = {},
-  onZoneDiskResize = () => {},
+  onManageZoneDisk = () => {},
   zoneCdromRemovals = [],
   onToggleZoneCdrom = () => {},
   isoOptions,
@@ -549,7 +548,6 @@ const StorageDevicesEditor = ({
           )}
           {zone.disks.map(disk => {
             const isMarked = zoneDiskRemovals.includes(disk.name);
-            const resizeValue = zoneDiskResizes[disk.name] ?? '';
             return (
               <div
                 className={`hw-device-row hw-device-child ${isMarked ? 'hw-device-removed' : ''}`}
@@ -574,16 +572,15 @@ const StorageDevicesEditor = ({
                 )}
                 <div className="hw-device-actions">
                   {!isMarked && (
-                    <input
-                      className="form-control form-control-sm w-auto"
-                      style={{ maxWidth: '8rem' }}
-                      aria-label={`Grow ${disk.name} to`}
-                      placeholder={`grow${disk.size ? ` ${disk.size} ` : ' '}→ e.g. 100G`}
-                      title="Grow this zvol (shrinking is refused — it destroys data). Accrues while the zone runs; applies at the next power cycle."
-                      value={resizeValue}
-                      onChange={e => onZoneDiskResize(disk.name, e.target.value)}
+                    <button
+                      type="button"
+                      className="btn btn-sm py-0 btn-outline-secondary"
+                      title="Manage this zvol — resize, snapshot, ZFS properties"
+                      onClick={() => onManageZoneDisk(disk)}
                       disabled={formDisabled}
-                    />
+                    >
+                      <i className="fas fa-gear" />
+                    </button>
                   )}
                   <button
                     type="button"
@@ -866,8 +863,7 @@ StorageDevicesEditor.propTypes = {
   zoneName: PropTypes.string,
   zoneDiskRemovals: PropTypes.arrayOf(PropTypes.string),
   onToggleZoneDisk: PropTypes.func,
-  zoneDiskResizes: PropTypes.object,
-  onZoneDiskResize: PropTypes.func,
+  onManageZoneDisk: PropTypes.func,
   zoneCdromRemovals: PropTypes.arrayOf(PropTypes.string),
   onToggleZoneCdrom: PropTypes.func,
   isoOptions: PropTypes.array.isRequired,

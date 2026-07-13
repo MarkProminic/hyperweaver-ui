@@ -232,14 +232,14 @@ ZoneDeviceRows.propTypes = {
  * bootdisk/disks/cdroms/net families. The editable versions live in
  * StorageDevicesEditor / NetworkAdaptersEditor.
  */
-export const CurrentHardwarePanel = ({ currentHardware }) => {
+export const HardwareDeviceTree = ({ currentHardware }) => {
   const { controllers, attachments, nics, zone } = currentHardware;
   if (zone) {
     return (
-      <div className="hw-device-tree">
+      <div className="hw-device-tree mb-0">
         <div className="hw-device-tree-head">
-          <i className="fas fa-microchip" />
-          <span>Hardware</span>
+          <i className="fas fa-plug" />
+          <span>Devices</span>
         </div>
         <ZoneDeviceRows zone={zone} />
       </div>
@@ -249,10 +249,10 @@ export const CurrentHardwarePanel = ({ currentHardware }) => {
     return null;
   }
   return (
-    <div className="hw-device-tree">
+    <div className="hw-device-tree mb-0">
       <div className="hw-device-tree-head">
-        <i className="fas fa-microchip" />
-        <span>Hardware</span>
+        <i className="fas fa-plug" />
+        <span>Devices</span>
       </div>
       {controllers.map(controller => (
         <Fragment key={controller.name}>
@@ -296,6 +296,6 @@ export const CurrentHardwarePanel = ({ currentHardware }) => {
   );
 };
 
-CurrentHardwarePanel.propTypes = {
+HardwareDeviceTree.propTypes = {
   currentHardware: PropTypes.object.isRequired,
 };

@@ -18,7 +18,7 @@ import { DismissibleAlert } from './common';
 import ConsoleDisplay from './ConsoleDisplay';
 import CloneMachineModal from './Machine/CloneMachineModal';
 import ConvertToTemplateModal from './Machine/ConvertToTemplateModal';
-import { CurrentHardwarePanel, parseHardware } from './Machine/CurrentHardware';
+import { parseHardware } from './Machine/CurrentHardware';
 import DisplayResizeModal from './Machine/DisplayResizeModal';
 import GuestExecModal from './Machine/GuestExecModal';
 import ImportMachineModal from './Machine/ImportMachineModal';
@@ -28,11 +28,12 @@ import MachineGuestInfo from './Machine/MachineGuestInfo';
 import MachineHardware from './Machine/MachineHardware';
 import MachineInfo from './Machine/MachineInfo';
 import MachineListPanel from './Machine/MachineListPanel';
-import MachineNetworkCharts from './Machine/MachineNetworkCharts';
 import MachineProvisioning from './Machine/MachineProvisioning';
+import MachineResourceCharts from './Machine/MachineResourceCharts';
 import MachineSettings from './Machine/MachineSettings';
 import MachineSnapshots from './Machine/MachineSnapshots';
 import MoveMachineModal from './Machine/MoveMachineModal';
+import TagsNotesPanel from './Machine/TagsNotesPanel';
 import UnattendedInstallModal from './Machine/UnattendedInstallModal';
 import VncModal from './Machine/VncModal';
 import ZloginModal from './Machine/ZloginModal';
@@ -776,81 +777,78 @@ const Machines = () => {
                     {Object.keys(machineDetails).length > 0 ? (
                       <div>
                         {activeDetailTab === 'overview' && (
-                          <div>
-                            {/* Main Layout with VNC Console spanning both sections */}
-                            <div className="row g-3">
-                              {/* Left Column - Machine Information and Hardware & System */}
-                              <div className="col-12 col-lg-6">
-                                <MachineInfo
-                                  machineDetails={machineDetails}
-                                  monitoringHealth={monitoringHealth}
-                                  getMachineStatus={getMachineStatus}
-                                  selectedMachine={selectedMachine}
-                                />
+                          <div className="row g-3">
+                            <div className="col-12 col-lg-6">
+                              <MachineInfo
+                                machineDetails={machineDetails}
+                                monitoringHealth={monitoringHealth}
+                                getMachineStatus={getMachineStatus}
+                                selectedMachine={selectedMachine}
+                              />
+                            </div>
 
-                                {/* Guest additions data (catalog §6) — self-hides
-                                    when the wire answers nothing */}
-                                <MachineGuestInfo
-                                  currentServer={currentServer}
-                                  machineName={selectedMachine}
-                                />
-
-                                <MachineGuestAgent
-                                  currentServer={currentServer}
-                                  machineName={selectedMachine}
-                                  guestInfo={machineDetails.configuration?.guest_info}
-                                />
-
-                                {/* Screenshot lives INSIDE the console section now
-                                    (its inactive default view) — no separate card. */}
-                                <MachineHardware machineDetails={machineDetails} />
-
-                                {/* Current hardware, read-only — VirtualBox
-                                    controllers/media or the zone's device
-                                    families. */}
-                                <CurrentHardwarePanel
-                                  currentHardware={parseHardware(machineDetails.configuration)}
-                                />
-
-                                {/* Per-zone network graphs — the machine's own
-                                    vnics from the per-link monitoring series;
-                                    cpu/mem/disk stay host-level (no per-zone
-                                    collection on the agent yet). */}
-                                {hasFeature(currentServer, 'monitoring') && (
-                                  <MachineNetworkCharts
-                                    currentServer={currentServer}
-                                    machineName={selectedMachine}
-                                    links={(
-                                      parseHardware(machineDetails.configuration).zone?.nics || []
-                                    )
-                                      .map(nic => nic.physical)
-                                      .filter(Boolean)}
-                                  />
-                                )}
-                              </div>
-
-                              {/* Right column — the one console home; SSH/screenshot/
-                                  direct-VNC extend it in place. */}
-                              <div className="col-12 col-lg-6">
-                                {!consoleAvailable && (
-                                  <div className="card mb-0 pt-0">
-                                    <div className="card-body">
-                                      <h4 className="fs-6 fw-bold mb-3">
-                                        <i className="fas fa-terminal me-2" />
-                                        Console
-                                      </h4>
-                                      <div className="alert alert-info mb-0">
-                                        <p className="mb-0">
-                                          No console is available on this host yet — the agent
-                                          advertises neither a VNC console nor zlogin.
-                                        </p>
-                                      </div>
+                            {/* The console keeps its half — everything else flows
+                                around it as cards in the same grid. */}
+                            <div className="col-12 col-lg-6">
+                              {!consoleAvailable && (
+                                <div className="card h-100">
+                                  <div className="card-body">
+                                    <h4 className="fs-6 fw-bold mb-3">
+                                      <i className="fas fa-terminal me-2" />
+                                      Console
+                                    </h4>
+                                    <div className="alert alert-info mb-0">
+                                      <p className="mb-0">
+                                        No console is available on this host yet — the agent
+                                        advertises neither a VNC console nor zlogin.
+                                      </p>
                                     </div>
                                   </div>
-                                )}
-                                {consoleAvailable && legacyConsoleDisplay}
-                              </div>
+                                </div>
+                              )}
+                              {consoleAvailable && legacyConsoleDisplay}
                             </div>
+
+                            <div className="col-12 col-lg-6 col-xxl-4">
+                              <TagsNotesPanel
+                                currentServer={currentServer}
+                                machineName={selectedMachine}
+                                currentTags={machineDetails.machine_info?.tags}
+                                currentNotes={machineDetails.machine_info?.notes}
+                              />
+                            </div>
+
+                            <MachineHardware
+                              machineDetails={machineDetails}
+                              currentHardware={parseHardware(machineDetails.configuration)}
+                              colClass="col-12 col-lg-6 col-xxl-4"
+                            />
+
+                            <MachineGuestAgent
+                              currentServer={currentServer}
+                              machineName={selectedMachine}
+                              guestInfo={machineDetails.configuration?.guest_info}
+                              colClass="col-12 col-lg-6 col-xxl-4"
+                            />
+
+                            <MachineGuestInfo
+                              currentServer={currentServer}
+                              machineName={selectedMachine}
+                              colClass="col-12 col-lg-6 col-xxl-4"
+                            />
+
+                            {hasFeature(currentServer, 'monitoring') &&
+                              hasHypervisor(currentServer, 'bhyve') && (
+                                <MachineResourceCharts
+                                  currentServer={currentServer}
+                                  machineName={selectedMachine}
+                                  links={(
+                                    parseHardware(machineDetails.configuration).zone?.nics || []
+                                  )
+                                    .map(nic => nic.physical)
+                                    .filter(Boolean)}
+                                />
+                              )}
                           </div>
                         )}
 

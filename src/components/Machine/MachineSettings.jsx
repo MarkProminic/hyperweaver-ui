@@ -26,8 +26,8 @@ import {
 import MachineSettingsStatus from './MachineSettingsStatus';
 import NetworkAdaptersEditor from './NetworkAdaptersEditor';
 import StorageDevicesEditor from './StorageDevicesEditor';
-import TagsNotesPanel from './TagsNotesPanel';
 import UsbPanel from './UsbPanel';
+import ZvolManageModal from './ZvolManageModal';
 
 /**
  * Machine Settings tab — the PUT modify contract, changed fields only.
@@ -453,6 +453,88 @@ const buildHardwareChanges = state => {
   return changes;
 };
 
+/** One in-place zone NIC update entry — physical selects, provided keys set,
+ *  omitted keys keep their value. null when nothing but the selector rides. */
+const zoneNicUpdateEntry = (physical, patch) => {
+  const entry = { physical };
+  if (patch.global_nic?.trim()) {
+    entry.global_nic = patch.global_nic.trim();
+  }
+  if (patch.vlan_id !== undefined && patch.vlan_id !== '') {
+    entry.vlan_id = Number(patch.vlan_id);
+  }
+  if (patch.mac_addr?.trim()) {
+    entry.mac_addr = patch.mac_addr.trim();
+  }
+  if (patch.allowed_address?.trim()) {
+    entry.allowed_address = patch.allowed_address.trim();
+  }
+  if (patch.address?.trim()) {
+    entry.address = patch.address.trim();
+  }
+  if (patch.defrouter?.trim()) {
+    entry.defrouter = patch.defrouter.trim();
+  }
+  const props = cleanNicProps(patch.props);
+  if (props) {
+    entry.props = props;
+  }
+  return Object.keys(entry).length > 1 ? entry : null;
+};
+
+/** One zone disk-add entry — the agent's zvol shape (mint new | attach existing). */
+const zoneDiskAddEntry = row => {
+  if (row.mode === 'existing') {
+    return row.existing_dataset.trim() && { existing_dataset: row.existing_dataset.trim() };
+  }
+  return {
+    create_new: true,
+    ...(row.pool.trim() && { pool: row.pool.trim() }),
+    ...(row.dataset.trim() && { dataset: row.dataset.trim() }),
+    ...(row.volume_name.trim() && { volume_name: row.volume_name.trim() }),
+    ...(row.size.trim() && { size: row.size.trim() }),
+    ...(row.sparse && { sparse: true }),
+  };
+};
+
+/**
+ * The zone device/config families of the PUT body — zvol-shaped disk adds,
+ * grow-only resizes, attr-name/vnic removals, in-place NIC updates (incl.
+ * net props), and the cloud_init object. All accrue on a running zone.
+ */
+const buildZoneChanges = state => {
+  const changes = {};
+  const diskAdds = state.addZoneDisks.map(zoneDiskAddEntry).filter(Boolean);
+  if (diskAdds.length > 0) {
+    changes.add_disks = diskAdds;
+  }
+  if (state.removeZoneDisks.length > 0) {
+    changes.remove_disks = state.removeZoneDisks;
+  }
+  if (state.removeZoneCdroms.length > 0) {
+    changes.remove_cdroms = state.removeZoneCdroms;
+  }
+  if (state.removeZoneNics.length > 0) {
+    changes.remove_nics = state.removeZoneNics;
+  }
+  const nicUpdates = Object.entries(state.zoneNicEdits)
+    .filter(([physical]) => !state.removeZoneNics.includes(physical))
+    .map(([physical, patch]) => zoneNicUpdateEntry(physical, patch))
+    .filter(Boolean);
+  if (nicUpdates.length > 0) {
+    changes.update_nics = nicUpdates;
+  }
+  const cloudInitEntry = Object.fromEntries(
+    Object.entries(state.cloudInit)
+      .map(([key, value]) => [key, String(value).trim()])
+      .filter(([, value]) => value !== '')
+  );
+  if (Object.keys(cloudInitEntry).length > 0) {
+    changes.cloud_init = cloudInitEntry;
+  }
+  return changes;
+};
+
 const SECTION_TABS = HARDWARE_SECTIONS.filter(section => section.id !== 'autostart');
 
 // The hardware.<section>.<key> knob surface, serial/parallel ports, and the
@@ -631,9 +713,10 @@ const MachineSettings = ({
   // are the zvol shape (create_new… | existing_dataset).
   const [addZoneDisks, setAddZoneDisks] = useState([]);
   const [removeZoneDisks, setRemoveZoneDisks] = useState([]);
-  // Grow-only zvol resizes: {attr name: new size}. Never live — a running
-  // zone accrues them for the next power cycle.
-  const [zoneDiskResizes, setZoneDiskResizes] = useState({});
+  // The zone disk whose management modal is open (null = closed). Resizes
+  // apply immediately from that modal (the agent's resize_disks no longer
+  // accrues) — nothing about them rides the Apply pipeline.
+  const [manageDisk, setManageDisk] = useState(null);
   const [removeZoneCdroms, setRemoveZoneCdroms] = useState([]);
   const [removeZoneNics, setRemoveZoneNics] = useState([]);
   // In-place zone NIC edits (agent's update_nics): {physical: {key: value}}
@@ -697,7 +780,6 @@ const MachineSettings = ({
     setRemoveFilesystems([]);
     setAddZoneDisks([]);
     setRemoveZoneDisks([]);
-    setZoneDiskResizes({});
     setRemoveZoneCdroms([]);
     setRemoveZoneNics([]);
     setZoneNicEdits({});
@@ -985,86 +1067,16 @@ const MachineSettings = ({
     if (removeFilesystems.length > 0) {
       changes.remove_filesystems = removeFilesystems;
     }
-    // Zone device families — attr-name/vnic removals, zvol-shaped adds.
-    const zoneDiskAdds = addZoneDisks
-      .map(row => {
-        if (row.mode === 'existing') {
-          return row.existing_dataset.trim() && { existing_dataset: row.existing_dataset.trim() };
-        }
-        return {
-          create_new: true,
-          ...(row.pool.trim() && { pool: row.pool.trim() }),
-          ...(row.dataset.trim() && { dataset: row.dataset.trim() }),
-          ...(row.volume_name.trim() && { volume_name: row.volume_name.trim() }),
-          ...(row.size.trim() && { size: row.size.trim() }),
-          ...(row.sparse && { sparse: true }),
-        };
-      })
-      .filter(Boolean);
-    if (zoneDiskAdds.length > 0) {
-      changes.add_disks = zoneDiskAdds;
-    }
-    if (removeZoneDisks.length > 0) {
-      changes.remove_disks = removeZoneDisks;
-    }
-    // Grow-only resizes — detached disks never resize.
-    const diskResizes = Object.entries(zoneDiskResizes)
-      .filter(([name, size]) => size.trim() !== '' && !removeZoneDisks.includes(name))
-      .map(([name, size]) => ({ name, size: size.trim() }));
-    if (diskResizes.length > 0) {
-      changes.resize_disks = diskResizes;
-    }
-    if (removeZoneCdroms.length > 0) {
-      changes.remove_cdroms = removeZoneCdroms;
-    }
-    if (removeZoneNics.length > 0) {
-      changes.remove_nics = removeZoneNics;
-    }
-    // In-place zone NIC updates — physical selects, provided keys SET,
-    // omitted keys keep their value; ≥1 set key required per entry.
-    const nicUpdates = Object.entries(zoneNicEdits)
-      .filter(([physical]) => !removeZoneNics.includes(physical))
-      .map(([physical, patch]) => {
-        const entry = { physical };
-        if (patch.global_nic?.trim()) {
-          entry.global_nic = patch.global_nic.trim();
-        }
-        if (patch.vlan_id !== undefined && patch.vlan_id !== '') {
-          entry.vlan_id = Number(patch.vlan_id);
-        }
-        if (patch.mac_addr?.trim()) {
-          entry.mac_addr = patch.mac_addr.trim();
-        }
-        if (patch.allowed_address?.trim()) {
-          entry.allowed_address = patch.allowed_address.trim();
-        }
-        if (patch.address?.trim()) {
-          entry.address = patch.address.trim();
-        }
-        if (patch.defrouter?.trim()) {
-          entry.defrouter = patch.defrouter.trim();
-        }
-        const updateProps = cleanNicProps(patch.props);
-        if (updateProps) {
-          entry.props = updateProps;
-        }
-        return entry;
-      })
-      .filter(entry => Object.keys(entry).length > 1);
-    if (nicUpdates.length > 0) {
-      changes.update_nics = nicUpdates;
-    }
-    // cloud_init object — only touched (non-empty) keys ride.
-    const cloudInitEntry = Object.fromEntries(
-      Object.entries(cloudInit)
-        .map(([key, value]) => [key, String(value).trim()])
-        .filter(([, value]) => value !== '')
-    );
-    if (Object.keys(cloudInitEntry).length > 0) {
-      changes.cloud_init = cloudInitEntry;
-    }
     Object.assign(
       changes,
+      buildZoneChanges({
+        addZoneDisks,
+        removeZoneDisks,
+        removeZoneCdroms,
+        removeZoneNics,
+        zoneNicEdits,
+        cloudInit,
+      }),
       buildDeviceChanges({
         addNics,
         addDisks,
@@ -1295,16 +1307,6 @@ const MachineSettings = ({
         />
       )}
 
-      {tab === 'general' && (
-        <TagsNotesPanel
-          currentServer={currentServer}
-          machineName={machineName}
-          currentTags={rawDetails?.machine_info?.tags}
-          currentNotes={rawDetails?.machine_info?.notes}
-          disabled={formDisabled}
-        />
-      )}
-
       {tab === 'credentials' && (
         <div className="row g-3">
           <p className="form-text text-muted mt-0 mb-0">
@@ -1395,10 +1397,7 @@ const MachineSettings = ({
           zoneName={machineName}
           zoneDiskRemovals={removeZoneDisks}
           onToggleZoneDisk={toggleName(setRemoveZoneDisks)}
-          zoneDiskResizes={zoneDiskResizes}
-          onZoneDiskResize={(name, size) =>
-            setZoneDiskResizes(prev => ({ ...prev, [name]: size }))
-          }
+          onManageZoneDisk={setManageDisk}
           zoneCdromRemovals={removeZoneCdroms}
           onToggleZoneCdrom={toggleName(setRemoveZoneCdroms)}
           isoOptions={isoOptions}
@@ -1460,6 +1459,10 @@ const MachineSettings = ({
           onToggleNic={toggleNicRemoval}
           nicEnums={knobValues}
           zoneNics={currentHardware.zone?.nics || null}
+          zoneNicCurrent={Array.isArray(knobCurrent?.nics) ? knobCurrent.nics : []}
+          nicPropsByNetif={agentDefaults?.nic_props_by_netif || null}
+          knobDefaults={agentDefaults?.knob_defaults || {}}
+          currentServer={currentServer}
           hostVnics={hostVnics}
           bridgeOptions={bridgeOptions}
           zoneNicRemovals={removeZoneNics}
@@ -1522,6 +1525,16 @@ const MachineSettings = ({
           />
         </>
       )}
+
+      <ZvolManageModal
+        isOpen={manageDisk !== null}
+        onClose={() => setManageDisk(null)}
+        currentServer={currentServer}
+        machineName={machineName}
+        disk={manageDisk}
+        isRunning={isRunning}
+        onResized={() => onDone({ text: `Disk resized on ${machineName}.`, warning: false })}
+      />
 
       <div className="d-flex gap-2 mt-3 border-top pt-3">
         <button
