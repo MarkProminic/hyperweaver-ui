@@ -11,7 +11,37 @@ import {
   installFromCatalog,
   getSecrets,
 } from '../../api/provisioningAPI';
+import { makeAgentRequest } from '../../api/serverUtils';
 import { ConfirmModal, ContentModal, FormModal } from '../common';
+
+const TERMINAL_STATUSES = ['completed', 'completed_with_errors', 'failed', 'cancelled'];
+
+const wait = ms =>
+  new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+
+/** Recursive task poller (2s ticks): the task row once terminal, null on timeout. */
+const pollTask = async (server, taskId, attempts) => {
+  const result = await makeAgentRequest(
+    server.hostname,
+    server.port,
+    server.protocol,
+    'tasks',
+    'GET',
+    null,
+    { limit: 50 }
+  );
+  const task = result.success ? (result.data?.tasks || []).find(row => row.id === taskId) : null;
+  if (task && TERMINAL_STATUSES.includes(task.status)) {
+    return task;
+  }
+  if (attempts <= 1) {
+    return null;
+  }
+  await wait(2000);
+  return pollTask(server, taskId, attempts - 1);
+};
 
 /**
  * Provisioner management (sync item 11) — the registry surface of the
@@ -46,6 +76,8 @@ const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }
         sourceName || null
       );
       if (result.success) {
+        // The response IS the catalog document (bare parsed relay, both
+        // agents): {name, format_version, updated, provisioners[]}.
         setCatalog(result.data || {});
       } else {
         setCatalog({});
@@ -77,11 +109,7 @@ const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }
     });
     setInstalling(null);
     if (result.success) {
-      onQueued(
-        `${result.data?.message || `Install of ${key} queued`}${
-          result.data?.task_id ? ` (task ${result.data.task_id})` : ''
-        } — refresh once it completes`
-      );
+      onQueued(key, result.data?.task_id || null);
       onClose();
     } else {
       setError(`Install failed: ${result.message}`);
@@ -296,6 +324,35 @@ const ProvisionerManagement = ({ server }) => {
       setTokenName('');
     } else {
       report(`Import failed: ${result.message}`, 'danger');
+    }
+  };
+
+  // A queued catalog install tracks its own task to completion, then the
+  // registry list refreshes itself — no manual refresh.
+  const trackInstall = async (label, taskId) => {
+    if (!taskId) {
+      report(`Install of ${label} queued — refresh once it completes.`, 'success');
+      return;
+    }
+    report(`Installing ${label}… (task ${taskId})`, 'info');
+    const task = await pollTask(server, taskId, 90);
+    if (!task) {
+      report(
+        `Install of ${label} is still running (task ${taskId}) — refresh once it completes.`,
+        'warning'
+      );
+      return;
+    }
+    if (task.status === 'completed') {
+      report(`${label} installed.`, 'success');
+      loadProvisioners();
+    } else {
+      report(
+        `Install of ${label} ${task.status.replace(/_/gu, ' ')}: ${
+          task.error_message || 'see the task log'
+        }`,
+        'danger'
+      );
     }
   };
 
@@ -549,7 +606,7 @@ const ProvisionerManagement = ({ server }) => {
             )
           )
         }
-        onQueued={message => report(message, 'success')}
+        onQueued={(label, taskId) => trackInstall(label, taskId)}
       />
 
       {deleteTarget && (

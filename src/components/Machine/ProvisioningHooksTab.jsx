@@ -1,20 +1,17 @@
 import PropTypes from 'prop-types';
-import { useState } from 'react';
-import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 import StepCardList from './ProvisioningStepList';
 
 /**
- * The Hooks tab — two different things that both wrap the run:
- *
- * 1. SEQUENCE HOOKS (design B10, ruled 2026-07-16): provisioning.pre[] /
- *    provisioning.post[] — steps around the WHOLE provisioning run, each
- *    {script, target: host|guest, on_failure: abort|continue, run:
- *    always|once}, executed in list order. Host-target hooks ride the
- *    agent's host_hooks gate (hyperweaver ON / zoneweaver OFF defaults).
- * 2. pre_tasks / post_tasks — ansible TASK blocks inside the generated
- *    playbook (the old Hosts.rb contract), document-level keys, edited as
- *    YAML lists.
+ * The Hooks tab — SEQUENCE HOOKS only (design B10, ruled 2026-07-16):
+ * provisioning.pre[] / provisioning.post[] — steps around the WHOLE
+ * provisioning run, each {script, target: host|guest, on_failure:
+ * abort|continue, run: always|once}, executed in list order. Host-target
+ * hooks ride the agent's host_hooks gate (hyperweaver ON / zoneweaver OFF
+ * defaults). pre_tasks/post_tasks are PLAYBOOK-layer keys (the generated-
+ * playbook convention) — no dedicated UI surface (Mark's ruling 2026-07-17);
+ * the Raw JSON tab is the only place they edit, and documents carrying them
+ * ride verbatim.
  */
 
 const HOOK_TARGETS = ['guest', 'host'];
@@ -110,76 +107,11 @@ HookBody.propTypes = {
   disabled: PropTypes.bool,
 };
 
-/**
- * A YAML editor over an ansible TASK LIST (pre_tasks/post_tasks) — edits
- * locally, commits on blur ONLY when the text parses to a list (empty
- * unsets the key). The same refuse-to-save-garbage rule as the vars editor.
- */
-const TaskListYaml = ({ id, label, tasks, onCommit, disabled }) => {
-  const [draft, setDraft] = useState(() =>
-    Array.isArray(tasks) && tasks.length > 0 ? stringifyYaml(tasks) : ''
-  );
-  const [invalid, setInvalid] = useState(false);
-  const parses = value => {
-    if (value.trim() === '') {
-      return true;
-    }
-    try {
-      return Array.isArray(parseYaml(value));
-    } catch {
-      return false;
-    }
-  };
-  return (
-    <div className="mb-3">
-      <label className="form-label small mb-1" htmlFor={id}>
-        {label}
-      </label>
-      <textarea
-        id={id}
-        className={`form-control form-control-sm font-monospace hw-yaml-edit ${invalid ? 'is-invalid' : ''}`}
-        rows={5}
-        value={draft}
-        spellCheck={false}
-        disabled={disabled}
-        placeholder={'- name: Wait for something\n  ansible.builtin.wait_for:\n    port: 22'}
-        onChange={e => {
-          setDraft(e.target.value);
-          setInvalid(!parses(e.target.value));
-        }}
-        onBlur={() => {
-          if (!parses(draft)) {
-            return;
-          }
-          onCommit(draft.trim() === '' ? undefined : parseYaml(draft));
-        }}
-      />
-      {invalid && (
-        <div className="hw-invalid-msg">
-          Not a valid YAML LIST of tasks — the value is not saved until it parses.
-        </div>
-      )}
-    </div>
-  );
-};
-
-TaskListYaml.propTypes = {
-  id: PropTypes.string.isRequired,
-  label: PropTypes.string.isRequired,
-  tasks: PropTypes.array,
-  onCommit: PropTypes.func.isRequired,
-  disabled: PropTypes.bool,
-};
-
 const ProvisioningHooksTab = ({
   preHooks,
   postHooks,
   onPreChange,
   onPostChange,
-  preTasks,
-  postTasks,
-  onPreTasksChange,
-  onPostTasksChange,
   makeRow,
   disabled,
 }) => (
@@ -211,31 +143,6 @@ const ProvisioningHooksTab = ({
       renderTitle={hook => <HookTitle hook={hook} />}
       renderBody={(hook, patch) => <HookBody hook={hook} patch={patch} disabled={disabled} />}
     />
-
-    <h6 className="fw-bold mt-4">Ansible pre/post tasks</h6>
-    <p className="form-text text-muted mt-0 mb-2">
-      Task blocks inside the generated playbook (the old <code>pre_tasks</code>/
-      <code>post_tasks</code> contract) — YAML lists, run by ansible itself, not by the hooks
-      machinery above.
-    </p>
-    {/* Keyed off the stored lists so Discard Edits remounts the drafts —
-        blur-commit editors must never re-commit discarded YAML. */}
-    <TaskListYaml
-      key={`pre:${JSON.stringify(preTasks ?? null)}`}
-      id="prov-pre-tasks"
-      label="pre_tasks (YAML list)"
-      tasks={preTasks}
-      onCommit={onPreTasksChange}
-      disabled={disabled}
-    />
-    <TaskListYaml
-      key={`post:${JSON.stringify(postTasks ?? null)}`}
-      id="prov-post-tasks"
-      label="post_tasks (YAML list)"
-      tasks={postTasks}
-      onCommit={onPostTasksChange}
-      disabled={disabled}
-    />
   </div>
 );
 
@@ -244,10 +151,6 @@ ProvisioningHooksTab.propTypes = {
   postHooks: PropTypes.array.isRequired,
   onPreChange: PropTypes.func.isRequired,
   onPostChange: PropTypes.func.isRequired,
-  preTasks: PropTypes.array,
-  postTasks: PropTypes.array,
-  onPreTasksChange: PropTypes.func.isRequired,
-  onPostTasksChange: PropTypes.func.isRequired,
   makeRow: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
 };

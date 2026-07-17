@@ -26,8 +26,8 @@ import { VarRowList, VAR_NAME_PATTERN, ROLE_NAME_PATTERN } from './ProvisioningV
  */
 
 // Variables sits before Playbooks (Mark's tab-order ruling, 2026-07-13).
-// Scripts sits between them — its run slot (after sync, before ansible).
-// Hooks wrap the whole run, so they sit past Roles.
+// Scripts sits between them. Hooks wrap the whole run, so they sit past
+// Roles. WHEN anything runs is the document's own order — no slots.
 const TABS = [
   { id: 'folders', label: 'Folders' },
   { id: 'vars', label: 'Variables' },
@@ -87,6 +87,24 @@ const mapHooks = (doc, transform) => {
     },
   };
 };
+/**
+ * Shell scripts are bare STRINGS on the wire; the card list needs row
+ * identity — wrap into {script, _ui_id} objects in editor state, unwrap
+ * back to the original values on clean.
+ */
+const mapShellScripts = (doc, transform) => {
+  const scripts = doc.provisioning?.shell?.scripts;
+  if (!Array.isArray(scripts)) {
+    return doc;
+  }
+  return {
+    ...doc,
+    provisioning: {
+      ...doc.provisioning,
+      shell: { ...doc.provisioning.shell, scripts: transform(scripts) },
+    },
+  };
+};
 const tagRows = doc => {
   let next = { ...doc };
   if (Array.isArray(next.folders)) {
@@ -99,6 +117,7 @@ const tagRows = doc => {
   if (local.length > 0) {
     next = withLocalPlaybooks(next, local.map(tagRow));
   }
+  next = mapShellScripts(next, list => list.map(entry => tagRow({ script: entry })));
   return mapHooks(next, tagRow);
 };
 const clean = doc => {
@@ -113,6 +132,7 @@ const clean = doc => {
   if (local.length > 0) {
     next = withLocalPlaybooks(next, local.map(stripTag));
   }
+  next = mapShellScripts(next, list => list.map(row => row.script));
   return mapHooks(next, stripTag);
 };
 
@@ -242,17 +262,6 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
     updateDoc({ ...doc, provisioning });
   };
 
-  /** Patch a document-level key; undefined deletes it (unset). */
-  const patchDocKey = (key, value) => {
-    const next = { ...doc };
-    if (value === undefined) {
-      delete next[key];
-    } else {
-      next[key] = value;
-    }
-    updateDoc(next);
-  };
-
   // The attach: stamp (or clear) the document's package reference — the
   // catalog reloads via the effect above; the keys ride the next Store.
   const handlePackagePicked = (name, version) => {
@@ -353,6 +362,7 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
           shell={doc.provisioning?.shell}
           disabled={loading}
           onChange={next => patchProvisioning('shell', next)}
+          makeRow={() => tagRow({ script: '' })}
         />
       )}
 
@@ -372,10 +382,6 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
           postHooks={postHooks}
           onPreChange={next => patchProvisioning('pre', next.length > 0 ? next : undefined)}
           onPostChange={next => patchProvisioning('post', next.length > 0 ? next : undefined)}
-          preTasks={Array.isArray(doc.pre_tasks) ? doc.pre_tasks : undefined}
-          postTasks={Array.isArray(doc.post_tasks) ? doc.post_tasks : undefined}
-          onPreTasksChange={next => patchDocKey('pre_tasks', next)}
-          onPostTasksChange={next => patchDocKey('post_tasks', next)}
           makeRow={() =>
             tagRow({ script: '', target: 'guest', on_failure: 'abort', run: 'always' })
           }

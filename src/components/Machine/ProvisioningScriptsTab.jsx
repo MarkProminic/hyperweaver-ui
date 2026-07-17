@@ -1,25 +1,62 @@
 import PropTypes from 'prop-types';
 
-import { LinesField } from './ProvisioningVarRows';
+import StepCardList from './ProvisioningStepList';
 
 /**
  * The Scripts tab — provisioning.shell verbatim: {enabled, scripts[]}.
- * Scripts are ARBITRARY package-relative paths (any script type,
- * interpreter by extension/shebang), one task child per script in LIST
- * ORDER. WHEN they run = where the `shell:` key sits among the
- * document's provisioning methods — the document prescribes the whole
- * run, there are no phases (Mark's ruling 2026-07-17). Agents gate on
- * enabled AND a non-empty list.
+ * One card per script entry, same drag-to-reorder treatment as Playbooks —
+ * array order IS run order. On the WIRE each entry is a bare
+ * package-relative path string (any script type, interpreter by shebang);
+ * the row objects exist only in editor state (the editor unwraps them back
+ * to strings). A bare string entry runs on EVERY walk (Q3 ruling); WHEN the
+ * method runs = where the `shell:` key sits among the document's
+ * provisioning methods.
  */
-const ProvisioningScriptsTab = ({ shell, onChange, disabled }) => {
+
+const ScriptTitle = ({ row }) => (
+  <>
+    <span className="hw-rc-role font-monospace">{row.script || '—'}</span>
+    <span className="hw-chip hw-chip-tag">runs every walk</span>
+  </>
+);
+
+ScriptTitle.propTypes = {
+  row: PropTypes.object.isRequired,
+};
+
+const ScriptBody = ({ row, patch, disabled }) => (
+  <div className="hw-rc-fields">
+    <span className="hw-field">
+      <label htmlFor={`script-path-${row._ui_id}`}>script</label>
+      <input
+        id={`script-path-${row._ui_id}`}
+        className="form-control form-control-sm font-monospace hw-field-wide"
+        type="text"
+        placeholder="./scripts/aliases.sh"
+        value={row.script ?? ''}
+        disabled={disabled}
+        onChange={e => patch({ script: e.target.value })}
+      />
+    </span>
+  </div>
+);
+
+ScriptBody.propTypes = {
+  row: PropTypes.object.isRequired,
+  patch: PropTypes.func.isRequired,
+  disabled: PropTypes.bool,
+};
+
+const ProvisioningScriptsTab = ({ shell, onChange, makeRow, disabled }) => {
   const scripts = Array.isArray(shell?.scripts) ? shell.scripts : [];
   return (
     <div>
       <p className="form-text text-muted mt-0 mb-2">
-        Shell scripts run top to bottom (one line per script, package-relative paths like{' '}
-        <code>./scripts/aliases.sh</code>), in the position <code>shell</code> holds among this
-        document&apos;s provisioning methods. Any script type; the shebang decides the interpreter.
-        Document <code>vars</code> reach scripts as environment variables under their exact names.
+        Shell scripts run top to bottom — drag to reorder. Paths are package-relative (like{' '}
+        <code>./scripts/aliases.sh</code>); any script type, the shebang decides the interpreter;
+        each entry runs on every walk. WHEN they run is where <code>shell</code> sits among this
+        document&apos;s provisioning methods. Document <code>vars</code> reach scripts as
+        environment variables under their exact names.
       </p>
       <div className="form-check form-switch mb-2">
         <input
@@ -35,16 +72,14 @@ const ProvisioningScriptsTab = ({ shell, onChange, disabled }) => {
           Enabled
         </label>
       </div>
-      {/* Keyed off the stored list so Discard Edits remounts the draft —
-          the blur-commit editor must never re-commit discarded text. */}
-      <LinesField
-        key={`scripts:${scripts.join('\n')}`}
-        id="prov-shell-scripts"
-        label="Scripts (one per line, run order)"
-        lines={scripts}
+      <StepCardList
+        rows={scripts}
+        onChange={next => onChange({ ...(shell || {}), scripts: next })}
         disabled={disabled}
-        placeholder={'./scripts/aliases.sh\n./scripts/motd.sh'}
-        onCommit={list => onChange({ ...(shell || {}), scripts: list || [] })}
+        addLabel="Add Script"
+        makeRow={makeRow}
+        renderTitle={row => <ScriptTitle row={row} />}
+        renderBody={(row, patch) => <ScriptBody row={row} patch={patch} disabled={disabled} />}
       />
     </div>
   );
@@ -53,6 +88,7 @@ const ProvisioningScriptsTab = ({ shell, onChange, disabled }) => {
 ProvisioningScriptsTab.propTypes = {
   shell: PropTypes.object,
   onChange: PropTypes.func.isRequired,
+  makeRow: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
 };
 
