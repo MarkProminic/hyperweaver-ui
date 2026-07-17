@@ -29,7 +29,8 @@ import {
   ConfirmStep,
 } from './CreateWizardSteps';
 import { buildHardwarePayload, buildPortsPayload } from './HardwareEditor';
-import { configurationFields, seedRoles } from './ProvisionerFormFields';
+import { dslConfiguration, seedAnswers, pruneHidden, validateAnswers } from './ProvisionerFieldDsl';
+import { seedRoles } from './ProvisionerFormFields';
 
 // Machine-create wizard — stepped tabs with Back/Next and a footer Advanced
 // toggle. POST /machines answers the create-orchestration shape
@@ -138,8 +139,10 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   const [notes, setNotes] = useState('');
   const [networks, setNetworks] = useState([]);
   const [roles, setRoles] = useState([]);
+  // The DSL answers — ONE flat map keyed by exact field name; hidden fields
+  // never ride the wire (pruned at buildSpec). advanced_properties is gone.
   const [properties, setProperties] = useState({});
-  const [advancedProperties, setAdvancedProperties] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
   const [syncMethod, setSyncMethod] = useState('rsync');
   const [safeIdPath, setSafeIdPath] = useState('');
   const [startAfterCreate, setStartAfterCreate] = useState(false);
@@ -171,8 +174,16 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     [family, versionKey]
   );
 
-  const basicFields = useMemo(() => configurationFields(version, 'basicFields'), [version]);
-  const advancedFields = useMemo(() => configurationFields(version, 'advancedFields'), [version]);
+  const fieldConfig = useMemo(() => dslConfiguration(version), [version]);
+  // options_source pickers draw on what the wizard already fetched: host
+  // NICs as `networks`, the local template registry as `images`.
+  const fieldInventory = useMemo(
+    () => ({
+      networks: bridgeOptions,
+      images: [...new Set(templates.map(t => `${t.organization}/${t.box_name}`))],
+    }),
+    [bridgeOptions, templates]
+  );
 
   const resetForm = useCallback(() => {
     setError('');
@@ -198,7 +209,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     setNetworks([defaultExternalNetwork()]);
     setRoles([]);
     setProperties({});
-    setAdvancedProperties({});
+    setFieldErrors({});
     setSyncMethod('rsync');
     setSafeIdPath('');
     setStartAfterCreate(false);
@@ -391,12 +402,18 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     setVersionKey(value);
     const nextVersion = family?.versions?.find(v => v.version === value || v.dir === value) || null;
     setRoles(seedRoles(nextVersion));
+    // Defaults merge into the answers BEFORE conditionals evaluate — a
+    // default-driven show_if is correct before the user touches anything.
+    setProperties(seedAnswers(dslConfiguration(nextVersion)));
+    setFieldErrors({});
   };
 
   const handleFamilyChange = value => {
     setFamilyName(value);
     setVersionKey('');
     setRoles([]);
+    setProperties({});
+    setFieldErrors({});
   };
 
   /** Optional controller/port addressing on a media row (device model). */
@@ -592,8 +609,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       ...(notes.trim() && { notes: notes.trim() }),
       networks: cleanedNetworks,
       roles,
-      properties,
-      advanced_properties: advancedProperties,
+      // Hidden fields' answers are NOT collected — their names are ABSENT
+      // (Jinja undefined-renders-empty, the DSL contract).
+      properties: pruneHidden(fieldConfig, properties, roles),
       sync_method: syncMethod,
       safe_id_path: safeIdPath,
       start_after_create: startAfterCreate,
@@ -625,6 +643,16 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     if (stepId === 'provisioning' && familyName && !versionKey) {
       return 'Select a version for the chosen provisioner — or set it back to None.';
     }
+    // The DSL's live validation pass — the agent re-runs it authoritatively
+    // pre-render; visible fields only, required-only-while-visible.
+    if (stepId === 'provisioning' && fieldConfig) {
+      const errors = validateAnswers(fieldConfig, properties, roles);
+      setFieldErrors(errors);
+      const names = Object.keys(errors);
+      if (names.length > 0) {
+        return `Fix the highlighted configuration field${names.length > 1 ? 's' : ''}: ${names.join(', ')}.`;
+      }
+    }
     return '';
   };
 
@@ -641,6 +669,16 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   };
 
   const handleCreate = async () => {
+    // Re-validate EVERY step — pill navigation can reach Confirm with edits
+    // Next never checked; the first failing step gets focus + its error.
+    for (const step of STEPS) {
+      const failure = validateStep(step.id);
+      if (failure) {
+        setError(failure);
+        setStepIndex(STEPS.findIndex(entry => entry.id === step.id));
+        return;
+      }
+    }
     setLoading(true);
     setError('');
     setErrorDetails([]);
@@ -840,14 +878,11 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           versionKey={versionKey}
           onVersionChange={handleVersionChange}
           version={version}
-          basicFields={basicFields}
-          advancedFields={advancedFields}
-          properties={properties}
-          onPropertyChange={(key, value) => setProperties(prev => ({ ...prev, [key]: value }))}
-          advancedProperties={advancedProperties}
-          onAdvancedPropertyChange={(key, value) =>
-            setAdvancedProperties(prev => ({ ...prev, [key]: value }))
-          }
+          fieldConfig={fieldConfig}
+          answers={properties}
+          fieldErrors={fieldErrors}
+          onAnswerChange={(key, value) => setProperties(prev => ({ ...prev, [key]: value }))}
+          inventory={fieldInventory}
           roles={roles}
           onRolesChange={setRoles}
           artifacts={artifacts}

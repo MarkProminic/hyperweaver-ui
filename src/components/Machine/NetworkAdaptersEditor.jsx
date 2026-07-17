@@ -121,6 +121,11 @@ const PROP_WARNINGS = {
   promiscphys: 'Known to BREAK host→VM traffic on this platform (illumos-omnios#1039, still open).',
 };
 
+// Legal zonecfg net props bhyve does not document consuming — the agent
+// deliberately serves no default for them (may be no-ops), so the blank
+// label says so instead of inventing one.
+const UNDOCUMENTED_PROPS = new Set(['mtu', 'backend']);
+
 const propLabel = key => key.replace(/_/gu, ' ');
 
 /**
@@ -158,11 +163,14 @@ const NicPropsEditor = ({
             const vocabulary = propValues[`nics.props.${key}`] || null;
             const fallback = propDefaults[`nics.props.${key}`];
             const current = currentProps[key];
-            // Set → show it; unset → show the default it actually runs with.
-            const blankLabel =
-              current !== undefined && current !== ''
-                ? `(current: ${current})`
-                : `(default: ${fallback ?? 'agent default'})`;
+            // Set → show it; unset → the default it actually runs with —
+            // except the props bhyve doesn't document, which say so honestly.
+            let blankLabel = `(default: ${fallback ?? 'agent default'})`;
+            if (current !== undefined && current !== '') {
+              blankLabel = `(current: ${current})`;
+            } else if (fallback === undefined && UNDOCUMENTED_PROPS.has(key)) {
+              blankLabel = '(undocumented — may be a bhyve no-op)';
+            }
             const warning = PROP_WARNINGS[key];
             return (
               <div className="col-6 col-md-3" key={key}>
@@ -369,6 +377,7 @@ const NetworkAdaptersEditor = ({
   zoneNicCurrent = [],
   nicPropsByNetif = null,
   knobDefaults = {},
+  machineNetif = '',
   currentServer = null,
   formDisabled = false,
 }) => {
@@ -732,10 +741,16 @@ const NetworkAdaptersEditor = ({
                 </>
               )}
             </div>
+            {/* New NICs take the MACHINE's netif (per-NIC overrides don't
+                exist at add time) — the applicability map keys off it. */}
             {isZone && (
               <NicPropsEditor
                 idPrefix={`add-nic-${row.key}`}
+                netif={machineNetif}
                 props={row.props || {}}
+                propsByNetif={nicPropsByNetif}
+                propDefaults={knobDefaults}
+                propValues={nicEnums || {}}
                 onChange={(propKey, value) =>
                   patchAddNic(row.key, { props: { ...(row.props || {}), [propKey]: value } })
                 }
@@ -806,6 +821,7 @@ NetworkAdaptersEditor.propTypes = {
   zoneNicCurrent: PropTypes.array,
   nicPropsByNetif: PropTypes.object,
   knobDefaults: PropTypes.object,
+  machineNetif: PropTypes.string,
   currentServer: PropTypes.object,
   formDisabled: PropTypes.bool,
 };

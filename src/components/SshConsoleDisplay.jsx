@@ -13,6 +13,7 @@ import {
   startVncPreview,
   startZloginPreview,
   startRdpPreview,
+  startSshPreview,
   launchRdp,
   launchDirectoryOrFtp,
 } from './consoleActions';
@@ -144,6 +145,35 @@ const SshConsoleDisplay = ({
     setActiveConsoleType(hasVnc ? 'vnc' : 'zlogin');
   };
 
+  // Multi-homed guests: the session row carries every candidate address
+  // (guest-agent live IPs first, then the document control IP) plus the one
+  // this session targeted. A dead shell = wrong pick — cycle to the next.
+  const ipCandidates = Array.isArray(session?.ip_candidates) ? session.ip_candidates : [];
+  const ipIndex = Number.isInteger(session?.ip_index) ? session.ip_index : 0;
+  const nextIndex = ipCandidates.length > 1 ? (ipIndex + 1) % ipCandidates.length : null;
+
+  const handleNextAddress = async () => {
+    if (session?.id) {
+      await makeAgentRequest(
+        currentServer.hostname,
+        currentServer.port,
+        currentServer.protocol,
+        `ssh/sessions/${session.id}/stop`,
+        'DELETE'
+      );
+    }
+    setMachineDetails(prev => ({ ...prev, ssh_session: null }));
+    await startSshPreview({
+      currentServer,
+      selectedMachine,
+      setLoading,
+      setError,
+      setMachineDetails,
+      setActiveConsoleType,
+      ipIndex: nextIndex,
+    });
+  };
+
   return (
     <div className="hw-console-container hw-console-container-flex">
       <div className="bg-dark text-white p-3 d-flex justify-content-between align-items-center flex-shrink-0">
@@ -152,7 +182,16 @@ const SshConsoleDisplay = ({
             SSH — {session?.ssh_username ? `${session.ssh_username}@` : ''}
             {selectedMachine}
           </h6>
-          <p className="small text-white-50 mb-0">Interactive shell inside the guest</p>
+          <p className="small text-white-50 mb-0">
+            Interactive shell inside the guest
+            {session?.ssh_host && (
+              <>
+                {' — '}
+                <code className="text-white-50">{session.ssh_host}</code>
+                {ipCandidates.length > 1 && ` (address ${ipIndex + 1}/${ipCandidates.length})`}
+              </>
+            )}
+          </p>
         </div>
         <div className="d-flex gap-1 m-0 flex-wrap">
           <button
@@ -163,6 +202,17 @@ const SshConsoleDisplay = ({
           >
             <i className="fas fa-paste" />
           </button>
+          {nextIndex !== null && (
+            <button
+              type="button"
+              className="btn btn-sm btn-warning"
+              onClick={handleNextAddress}
+              disabled={loading}
+              title={`Dead shell? Reconnect to the guest's next address: ${ipCandidates[nextIndex]}`}
+            >
+              <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-shuffle'}`} />
+            </button>
+          )}
           {vncAvailable &&
             (hasVnc ? (
               <button

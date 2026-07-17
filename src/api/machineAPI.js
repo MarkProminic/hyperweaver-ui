@@ -294,14 +294,25 @@ export const getMachineFtpInfo = async (hostname, port, protocol, machineName) =
  * Start an SSH terminal session against a running machine (`ssh` console
  * token). Answers the session row; the shell itself rides the WebSocket
  * /ssh/{sessionId}?ticket=… (raw text + {type:"resize"} frames).
+ * Multi-homed guests: `ipIndex` picks among the answer's `ip_candidates[]`
+ * (0-based, default 0 — guest-agent live addresses first, then the document
+ * control IP); an out-of-range index answers 400 with the candidate list.
  * @param {string} hostname - Server hostname
  * @param {number} port - Server port
  * @param {string} protocol - Server protocol
  * @param {string} machineName - Machine name
- * @returns {Promise<Object>} Session {id, machine_name, ssh_host, ssh_port, ssh_username, …}
+ * @param {number} [ipIndex] - Candidate address to target (0-based)
+ * @returns {Promise<Object>} Session {id, machine_name, ssh_host, ssh_port, ssh_username, ip_candidates, ip_index, …}
  */
-export const startMachineSshSession = async (hostname, port, protocol, machineName) =>
-  await makeAgentRequest(hostname, port, protocol, `machines/${machineName}/ssh/start`, 'POST');
+export const startMachineSshSession = async (hostname, port, protocol, machineName, ipIndex) =>
+  await makeAgentRequest(
+    hostname,
+    port,
+    protocol,
+    `machines/${machineName}/ssh/start`,
+    'POST',
+    Number.isInteger(ipIndex) && ipIndex > 0 ? { ip_index: ipIndex } : null
+  );
 
 /**
  * Start a HOST terminal session (`host-terminal` token, ADMIN only). Same

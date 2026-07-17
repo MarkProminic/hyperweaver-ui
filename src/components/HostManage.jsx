@@ -18,7 +18,6 @@ import PackageManagement from './Host/Package/Management';
 import ProcessManagement from './Host/ProcessManagement';
 import ProvisionerManagement from './Host/ProvisionerManagement';
 import ProvisioningNetworkPanel from './Host/ProvisioningNetworkPanel';
-import ProvisioningProfiles from './Host/ProvisioningProfiles';
 import ServiceManagement from './Host/ServiceManagement';
 import StorageManagement from './Host/StorageManagement';
 import TemplatesManagement from './Host/TemplatesManagement';
@@ -74,13 +73,6 @@ const TABS = [
     label: 'Orchestration',
     icon: 'fas fa-arrow-down-1-9',
     feature: 'machines',
-  },
-  // Reusable provisioning bundles (catalog §9) — rides `provisioning`.
-  {
-    id: 'provisioning-profiles',
-    label: 'Provisioning Profiles',
-    icon: 'fas fa-layer-group',
-    feature: 'provisioning',
   },
   // `artifacts` alone also names the zoneweaver ISO/storage-location surface
   // (its own sub-tab under Storage); the file cache lights up only where the
@@ -376,21 +368,6 @@ const HostManage = () => {
                 </div>
 
                 <OrchestrationPanel server={currentServer} />
-              </div>
-            )}
-
-            {/* Provisioning Profiles Tab */}
-            {effectiveTab === 'provisioning-profiles' && (
-              <div>
-                <div className="mb-4">
-                  <p>
-                    Reusable provisioning bundles on <strong>{currentServer.hostname}</strong> —
-                    credentials, sync folders, provisioners, and variables you can apply to any
-                    machine without a provisioner package.
-                  </p>
-                </div>
-
-                <ProvisioningProfiles server={currentServer} />
               </div>
             )}
 

@@ -130,7 +130,10 @@ export const startZloginPreview = async ({
 
 /**
  * Start the SSH console (`ssh` console token): POST /machines/{name}/ssh/start
- * answers the session row; the shell rides /ssh/{id}?ticket=.
+ * answers the session row; the shell rides /ssh/{id}?ticket=. Multi-homed
+ * guests carry several candidate addresses — `ipIndex` targets one; the
+ * session row's ip_candidates/ip_index drive the console's try-the-next-
+ * address control on a dead connect.
  */
 export const startSshPreview = async ({
   currentServer,
@@ -139,6 +142,7 @@ export const startSshPreview = async ({
   setError,
   setMachineDetails,
   setActiveConsoleType,
+  ipIndex = 0,
 }) => {
   try {
     setLoading(true);
@@ -146,15 +150,20 @@ export const startSshPreview = async ({
       currentServer.hostname,
       currentServer.port,
       currentServer.protocol,
-      selectedMachine
+      selectedMachine,
+      ipIndex
     );
     if (result.success && result.data?.id) {
       setMachineDetails(prev => ({ ...prev, ssh_session: result.data }));
       setActiveConsoleType('ssh');
     } else {
-      const hint = /vagrant_user/iu.test(result.message || '')
-        ? ' — set the SSH user under Edit Machine → Credentials.'
-        : '';
+      let hint = '';
+      if (/vagrant_user/iu.test(result.message || '')) {
+        hint = ' — set the SSH user under Edit Machine → Credentials.';
+      } else if (Array.isArray(result.data?.ip_candidates)) {
+        // A 400 out-of-range answer names the legal candidates.
+        hint = ` — candidate addresses: ${result.data.ip_candidates.join(', ')}.`;
+      }
       setError(`SSH session failed: ${result.message}${hint}`);
     }
   } catch (error) {

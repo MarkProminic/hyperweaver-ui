@@ -18,7 +18,8 @@ export const getProvisioners = async (hostname, port, protocol) =>
 
 /**
  * One provisioner version's full manifest — metadata.roles +
- * metadata.configuration.basicFields/advancedFields drive the create forms.
+ * metadata.configuration {groups, fields} (the field DSL) drive the
+ * create forms.
  */
 export const getProvisionerVersion = async (hostname, port, protocol, name, version) =>
   await makeAgentRequest(
@@ -69,6 +70,38 @@ export const deleteProvisionerVersion = async (hostname, port, protocol, name, v
   );
 
 /**
+ * The public provisioner catalog, relayed live by the agent (format_version 1
+ * gate agent-side): {name, format_version, updated, provisioners: [{name,
+ * repo, description, versions: [{version, artifacts[]}]}]}. Omit sourceName
+ * for the agent's default catalog source.
+ */
+export const getCatalog = async (hostname, port, protocol, sourceName = null) =>
+  await makeAgentRequest(
+    hostname,
+    port,
+    protocol,
+    'provisioning/catalog',
+    'GET',
+    null,
+    sourceName ? { source: sourceName } : null
+  );
+
+/**
+ * The agent's configured catalog sources (mirrors the template-sources
+ * pattern) — {sources: [{name, url, …}]}.
+ */
+export const getCatalogSources = async (hostname, port, protocol) =>
+  await makeAgentRequest(hostname, port, protocol, 'provisioning/catalog/sources');
+
+/**
+ * Install a catalog version into the local registry (op
+ * provisioner_catalog_install: fresh catalog fetch, sha256-verified download,
+ * then the ordinary import path). body = {source_name?, name, version}.
+ */
+export const installFromCatalog = async (hostname, port, protocol, body) =>
+  await makeAgentRequest(hostname, port, protocol, 'provisioning/catalog/install', 'POST', body);
+
+/**
  * The global secrets document (admin-only; six SHI categories, plain values
  * by design — Mark's ruling).
  */
@@ -84,8 +117,9 @@ export const updateSecrets = async (hostname, port, protocol, categories) =>
 
 /**
  * Create a machine from a provisioner spec. body = {name} + the spec
- * (provisioner {name, version}, settings, networks, roles, properties,
- * advanced_properties, sync_method?, safe_id_path?, start_after_create?).
+ * (provisioner {name, version}, settings, networks, roles, properties —
+ * ONE flat DSL-answers map — sync_method?, safe_id_path?,
+ * start_after_create?).
  */
 export const createMachine = async (hostname, port, protocol, body) =>
   await makeAgentRequest(hostname, port, protocol, 'machines', 'POST', body);
@@ -365,26 +399,6 @@ export const registerArtifact = async (hostname, port, protocol, body) =>
  */
 export const deleteArtifacts = async (hostname, port, protocol, body) =>
   await makeAgentRequest(hostname, port, protocol, 'artifacts/files', 'DELETE', body);
-
-/**
- * Provisioning profiles CRUD (catalog §9) — reusable credentials/folders/
- * provisioners/variables bundles. Apply is UI-side: merge the profile's
- * pieces into the machine's provisioner document (PUT), then /provision.
- */
-export const getProvisioningProfiles = async (hostname, port, protocol) =>
-  await makeAgentRequest(hostname, port, protocol, 'provisioning/profiles');
-
-/** Create a profile (201; 409 on a name conflict). */
-export const createProvisioningProfile = async (hostname, port, protocol, body) =>
-  await makeAgentRequest(hostname, port, protocol, 'provisioning/profiles', 'POST', body);
-
-/** Replace a profile. */
-export const updateProvisioningProfile = async (hostname, port, protocol, id, body) =>
-  await makeAgentRequest(hostname, port, protocol, `provisioning/profiles/${id}`, 'PUT', body);
-
-/** Delete a profile. */
-export const deleteProvisioningProfile = async (hostname, port, protocol, id) =>
-  await makeAgentRequest(hostname, port, protocol, `provisioning/profiles/${id}`, 'DELETE');
 
 /**
  * Host NICs usable as VirtualBox bridges — feeds the wizard's bridge picker.

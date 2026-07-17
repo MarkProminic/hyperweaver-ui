@@ -713,9 +713,9 @@ const MachineSettings = ({
   // are the zvol shape (create_new… | existing_dataset).
   const [addZoneDisks, setAddZoneDisks] = useState([]);
   const [removeZoneDisks, setRemoveZoneDisks] = useState([]);
-  // The zone disk whose management modal is open (null = closed). Resizes
-  // apply immediately from that modal (the agent's resize_disks no longer
-  // accrues) — nothing about them rides the Apply pipeline.
+  // The zone disk whose management modal is open (null = closed). The modal
+  // sends its own resize_disks PUT; the agent applies a grow live where it can
+  // and ACCRUES the rest into pending_changes, which the panel above surfaces.
   const [manageDisk, setManageDisk] = useState(null);
   const [removeZoneCdroms, setRemoveZoneCdroms] = useState([]);
   const [removeZoneNics, setRemoveZoneNics] = useState([]);
@@ -740,6 +740,7 @@ const MachineSettings = ({
   const [osTypes, setOsTypes] = useState(null); // null = keep the text input
   const [isoOptions, setIsoOptions] = useState([]); // cached-ISO filenames
   const [poolOptions, setPoolOptions] = useState([]); // zone zvol-add pool picker
+  const [pools, setPools] = useState([]); // full pool rows (carry .free for the resize bar)
   // The host's live VNIC records (dladm layer) — zone NIC rows merge them
   // with the zonecfg net resource so "unset in zonecfg" still shows the
   // real MAC/link/VLAN the VNIC runs with.
@@ -843,11 +844,9 @@ const MachineSettings = ({
     if (hasHypervisor(currentServer, 'bhyve')) {
       getZfsPools(currentServer.hostname, currentServer.port, currentServer.protocol).then(
         result => {
-          setPoolOptions(
-            result.success && Array.isArray(result.data?.pools)
-              ? result.data.pools.map(pool => pool.name)
-              : []
-          );
+          const rows = result.success && Array.isArray(result.data?.pools) ? result.data.pools : [];
+          setPools(rows);
+          setPoolOptions(rows.map(pool => pool.name));
         }
       );
       makeAgentRequest(
@@ -859,6 +858,7 @@ const MachineSettings = ({
         setHostVnics(result.success && Array.isArray(result.data?.vnics) ? result.data.vnics : []);
       });
     } else {
+      setPools([]);
       setPoolOptions([]);
       setHostVnics([]);
     }
@@ -1462,6 +1462,7 @@ const MachineSettings = ({
           zoneNicCurrent={Array.isArray(knobCurrent?.nics) ? knobCurrent.nics : []}
           nicPropsByNetif={agentDefaults?.nic_props_by_netif || null}
           knobDefaults={agentDefaults?.knob_defaults || {}}
+          machineNetif={values.netif || ''}
           currentServer={currentServer}
           hostVnics={hostVnics}
           bridgeOptions={bridgeOptions}
@@ -1533,6 +1534,7 @@ const MachineSettings = ({
         machineName={machineName}
         disk={manageDisk}
         isRunning={isRunning}
+        pools={pools}
         onResized={() => onDone({ text: `Disk resized on ${machineName}.`, warning: false })}
       />
 

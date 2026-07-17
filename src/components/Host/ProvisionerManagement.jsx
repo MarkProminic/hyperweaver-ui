@@ -6,9 +6,12 @@ import {
   importProvisioner,
   deleteProvisioner,
   deleteProvisionerVersion,
+  getCatalog,
+  getCatalogSources,
+  installFromCatalog,
   getSecrets,
 } from '../../api/provisioningAPI';
-import { ConfirmModal, FormModal } from '../common';
+import { ConfirmModal, ContentModal, FormModal } from '../common';
 
 /**
  * Provisioner management (sync item 11) — the registry surface of the
@@ -17,12 +20,200 @@ import { ConfirmModal, FormModal } from '../common';
  * locations), delete family or version with the 409-in-use answer surfaced
  * (the agent lists the machines whose specs still reference it).
  */
+
+/**
+ * The public-catalog browser: the agent relays catalog.json live (families +
+ * versions + checksummed artifacts) and installs run agent-side (op
+ * provisioner_catalog_install — sha256 verified before anything lands, then
+ * the ordinary import). Source dropdown appears only when the agent carries
+ * more than one catalog source; blank = the agent's default.
+ */
+const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }) => {
+  const [sources, setSources] = useState([]);
+  const [source, setSource] = useState(''); // '' = the agent's default source
+  const [catalog, setCatalog] = useState(null); // null = loading
+  const [error, setError] = useState('');
+  const [installing, setInstalling] = useState(null); // "name/version" mid-POST
+
+  const loadCatalog = useCallback(
+    async sourceName => {
+      setCatalog(null);
+      setError('');
+      const result = await getCatalog(
+        server.hostname,
+        server.port,
+        server.protocol,
+        sourceName || null
+      );
+      if (result.success) {
+        setCatalog(result.data || {});
+      } else {
+        setCatalog({});
+        setError(`Catalog fetch failed: ${result.message}`);
+      }
+    },
+    [server]
+  );
+
+  useEffect(() => {
+    if (!isOpen || !server) {
+      return;
+    }
+    setSource('');
+    getCatalogSources(server.hostname, server.port, server.protocol).then(result => {
+      setSources(result.success && Array.isArray(result.data?.sources) ? result.data.sources : []);
+    });
+    loadCatalog('');
+  }, [isOpen, server, loadCatalog]);
+
+  const install = async (name, version) => {
+    const key = `${name}/${version}`;
+    setInstalling(key);
+    setError('');
+    const result = await installFromCatalog(server.hostname, server.port, server.protocol, {
+      ...(source && { source_name: source }),
+      name,
+      version,
+    });
+    setInstalling(null);
+    if (result.success) {
+      onQueued(
+        `${result.data?.message || `Install of ${key} queued`}${
+          result.data?.task_id ? ` (task ${result.data.task_id})` : ''
+        } — refresh once it completes`
+      );
+      onClose();
+    } else {
+      setError(`Install failed: ${result.message}`);
+    }
+  };
+
+  const families = Array.isArray(catalog?.provisioners) ? catalog.provisioners : [];
+
+  return (
+    <ContentModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Provisioner Catalog"
+      icon="fas fa-cloud-arrow-down"
+    >
+      {sources.length > 1 && (
+        <div className="mb-3">
+          <label className="form-label" htmlFor="catalog-source">
+            Catalog source
+          </label>
+          <select
+            id="catalog-source"
+            className="form-select"
+            value={source}
+            onChange={e => {
+              setSource(e.target.value);
+              loadCatalog(e.target.value);
+            }}
+          >
+            <option value="">Default</option>
+            {sources.map(entry => (
+              <option key={entry.name} value={entry.name}>
+                {entry.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {error && <div className="alert alert-danger py-2">{error}</div>}
+      {catalog === null && (
+        <p className="text-muted mb-0">
+          <i className="fas fa-spinner fa-spin me-2" />
+          Fetching the catalog…
+        </p>
+      )}
+      {catalog !== null && families.length === 0 && !error && (
+        <p className="text-muted mb-0">The catalog lists no provisioners.</p>
+      )}
+
+      {families.map(family => (
+        <div className="card mb-3" key={family.name}>
+          <div className="card-body">
+            <h5 className="fs-6 fw-bold mb-1">
+              <i className="fas fa-cubes me-2" />
+              {family.name}
+            </h5>
+            {family.repo && <code className="small text-muted d-block mb-1">{family.repo}</code>}
+            {family.description && <p className="text-muted small mb-2">{family.description}</p>}
+            {Array.isArray(family.versions) && family.versions.length > 0 ? (
+              <div className="table-responsive">
+                <table className="table table-striped table-sm mb-0">
+                  <thead>
+                    <tr>
+                      <th>Version</th>
+                      <th aria-label="Actions" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {family.versions.map(version => {
+                      const key = `${family.name}/${version.version}`;
+                      const installed = installedKeys.has(key);
+                      return (
+                        <tr key={version.version}>
+                          <td>
+                            <code className="small">{version.version}</code>
+                            {installed && (
+                              <span className="badge text-bg-success ms-2">installed</span>
+                            )}
+                          </td>
+                          <td className="text-end">
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => install(family.name, version.version)}
+                              disabled={installed || installing !== null}
+                              title={
+                                installed
+                                  ? 'Already in the registry — versions are immutable'
+                                  : 'Download, verify, and import this version'
+                              }
+                            >
+                              {installing === key ? (
+                                <i className="fas fa-spinner fa-spin" />
+                              ) : (
+                                <>
+                                  <i className="fas fa-download me-2" />
+                                  Install
+                                </>
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-muted small mb-0">No versions published.</p>
+            )}
+          </div>
+        </div>
+      ))}
+    </ContentModal>
+  );
+};
+
+CatalogBrowseModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  server: PropTypes.object,
+  installedKeys: PropTypes.instanceOf(Set).isRequired,
+  onQueued: PropTypes.func.isRequired,
+};
 const ProvisionerManagement = ({ server }) => {
   const [provisioners, setProvisioners] = useState([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [msgVariant, setMsgVariant] = useState('info');
   const [showImport, setShowImport] = useState(false);
+  const [showCatalog, setShowCatalog] = useState(false);
   const [sourceType, setSourceType] = useState('folder');
   const [importPath, setImportPath] = useState('');
   const [importUrl, setImportUrl] = useState('');
@@ -139,6 +330,15 @@ const ProvisionerManagement = ({ server }) => {
           >
             <i className="fas fa-file-import me-2" />
             Import Provisioner
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-primary"
+            onClick={() => setShowCatalog(true)}
+            disabled={loading}
+          >
+            <i className="fas fa-cloud-arrow-down me-2" />
+            Browse Catalog
           </button>
           <button
             type="button"
@@ -337,6 +537,20 @@ const ProvisionerManagement = ({ server }) => {
           </>
         )}
       </FormModal>
+
+      <CatalogBrowseModal
+        isOpen={showCatalog}
+        onClose={() => setShowCatalog(false)}
+        server={server}
+        installedKeys={
+          new Set(
+            provisioners.flatMap(collection =>
+              (collection.versions || []).map(version => `${collection.name}/${version.version}`)
+            )
+          )
+        }
+        onQueued={message => report(message, 'success')}
+      />
 
       {deleteTarget && (
         <ConfirmModal

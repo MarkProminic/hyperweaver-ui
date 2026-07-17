@@ -562,8 +562,13 @@ const ZfsPoolsPanel = ({ server }) => {
 
   const onQueued = text => {
     report(text, 'success');
-    // The task reshapes the list when it lands — refresh shortly after.
-    setTimeout(load, 2000);
+    // The task reshapes the list when it lands — refresh shortly after. Pool
+    // mutations also kick an immediate storage collection agent-side, so the
+    // disk inventory (pool_assignment / is_available) is re-read too.
+    setTimeout(() => {
+      load();
+      loadDisks();
+    }, 2000);
   };
 
   const runSimple = async (pool, action) => {

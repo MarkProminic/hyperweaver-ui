@@ -10,9 +10,10 @@ import {
   getTask,
 } from '../../api/machineAPI';
 import { modifyInfrastructure } from '../../api/provisioningAPI';
+import { getZfsSnapshotHolds, holdZfsSnapshot, releaseZfsSnapshotHold } from '../../api/zfsAPI';
 import { hasFeature } from '../../utils/capabilities';
 import { canCreateMachines } from '../../utils/permissions';
-import { ConfirmModal, FormModal } from '../common';
+import { ConfirmModal, ContentModal, FormModal } from '../common';
 import TaskDetailModal from '../TaskDetailModal';
 
 import SnapshotTemplateModal from './SnapshotTemplateModal';
@@ -84,6 +85,185 @@ const confirmMessage = ({ kind, snapshot }, machineName) => {
   return kind === 'restore-start'
     ? `${base} The machine powers back on once the restore completes.`
     : base;
+};
+
+/**
+ * Holds on a MACHINE snapshot — there is no machine-level hold: the snapshot's
+ * `dataset_names[]` are the handles, and every hold/release addresses one
+ * `dataset@snapshot` through the dataset-level API. Hold fans the tag out
+ * across all datasets (a machine snapshot is one point in time — pinning half
+ * of it pins nothing).
+ */
+const SnapshotHoldsModal = ({ isOpen, onClose, currentServer, snapshot }) => {
+  const [holdsByDataset, setHoldsByDataset] = useState(null);
+  const [tag, setTag] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const datasets = Array.isArray(snapshot?.dataset_names) ? snapshot.dataset_names : [];
+  const handleOf = dataset => `${dataset}@${snapshot.name}`;
+
+  const load = useCallback(async () => {
+    const list = Array.isArray(snapshot?.dataset_names) ? snapshot.dataset_names : [];
+    if (!isOpen || !snapshot || list.length === 0) {
+      return;
+    }
+    setHoldsByDataset(null);
+    setError('');
+    const results = await Promise.all(
+      list.map(dataset =>
+        getZfsSnapshotHolds(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          `${dataset}@${snapshot.name}`
+        ).then(result => ({ dataset, result }))
+      )
+    );
+    const failed = results.find(({ result }) => !result.success);
+    if (failed) {
+      setError(`Holds query failed on ${failed.dataset}: ${failed.result.message}`);
+    }
+    setHoldsByDataset(
+      Object.fromEntries(
+        results.map(({ dataset, result }) => [
+          dataset,
+          result.success && Array.isArray(result.data?.holds) ? result.data.holds : [],
+        ])
+      )
+    );
+  }, [isOpen, snapshot, currentServer]);
+
+  useEffect(() => {
+    setTag('');
+    load();
+  }, [load]);
+
+  if (!snapshot) {
+    return null;
+  }
+
+  const holdAll = async () => {
+    setBusy(true);
+    setError('');
+    const results = await Promise.all(
+      datasets.map(dataset =>
+        holdZfsSnapshot(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          handleOf(dataset),
+          {
+            tag: tag.trim(),
+          }
+        ).then(result => ({ dataset, result }))
+      )
+    );
+    setBusy(false);
+    const failures = results
+      .filter(({ result }) => !result.success)
+      .map(({ dataset, result }) => `${dataset}: ${result.message}`);
+    if (failures.length > 0) {
+      setError(failures.join('; '));
+      return;
+    }
+    setTag('');
+    // Holds land via tasks — re-list shortly after.
+    setTimeout(load, 2000);
+  };
+
+  const release = async (dataset, holdTag) => {
+    setBusy(true);
+    setError('');
+    const result = await releaseZfsSnapshotHold(
+      currentServer.hostname,
+      currentServer.port,
+      currentServer.protocol,
+      handleOf(dataset),
+      holdTag
+    );
+    setBusy(false);
+    if (!result.success) {
+      setError(`Release failed on ${dataset}: ${result.message}`);
+      return;
+    }
+    setTimeout(load, 2000);
+  };
+
+  return (
+    <ContentModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Holds — ${snapshot.name}`}
+      icon="fas fa-lock"
+    >
+      <p className="form-text mt-0">
+        A held snapshot cannot be destroyed until every hold releases. A machine snapshot spans{' '}
+        {datasets.length} dataset{datasets.length === 1 ? '' : 's'} — holding pins the tag on ALL of
+        them.
+      </p>
+      {error && <div className="alert alert-danger py-2">{error}</div>}
+      {holdsByDataset === null && !error && (
+        <p className="text-muted mb-2">
+          <i className="fas fa-spinner fa-pulse me-2" />
+          Loading…
+        </p>
+      )}
+      {holdsByDataset !== null &&
+        datasets.map(dataset => (
+          <div className="mb-2" key={dataset}>
+            <code className="small">{handleOf(dataset)}</code>
+            {(holdsByDataset[dataset] || []).length === 0 ? (
+              <span className="text-muted small ms-2">no holds</span>
+            ) : (
+              <div className="d-flex flex-wrap gap-1 mt-1">
+                {holdsByDataset[dataset].map(hold => (
+                  <span className="badge text-bg-secondary d-inline-flex gap-1" key={hold.tag}>
+                    {hold.tag}
+                    <button
+                      type="button"
+                      className="btn btn-link p-0 text-white"
+                      title={`Release '${hold.tag}' on ${dataset}`}
+                      onClick={() => release(dataset, hold.tag)}
+                      disabled={busy}
+                    >
+                      <i className="fas fa-lock-open small" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      <div className="input-group input-group-sm mt-3">
+        <input
+          className="form-control"
+          type="text"
+          placeholder="e.g. keep-for-audit"
+          aria-label="New hold tag"
+          value={tag}
+          onChange={e => setTag(e.target.value)}
+          disabled={busy}
+        />
+        <button
+          type="button"
+          className="btn btn-outline-primary"
+          onClick={holdAll}
+          disabled={busy || !tag.trim()}
+        >
+          <i className="fas fa-lock me-1" />
+          Hold all datasets
+        </button>
+      </div>
+    </ContentModal>
+  );
+};
+
+SnapshotHoldsModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  currentServer: PropTypes.object,
+  snapshot: PropTypes.object,
 };
 
 const POLICY_TYPES = [
@@ -324,6 +504,8 @@ const MachineSnapshots = ({
   const [confirm, setConfirm] = useState(null);
   // {mode: 'export'|'publish', snapshot} — build a template FROM a snapshot.
   const [templateFrom, setTemplateFrom] = useState(null);
+  // The snapshot whose ZFS holds are being managed (needs dataset_names[]).
+  const [holdsFor, setHoldsFor] = useState(null);
   const [busy, setBusy] = useState(false);
   const [followTask, setFollowTask] = useState(null);
 
@@ -535,13 +717,28 @@ const MachineSnapshots = ({
                       Current
                     </span>
                   )}
-                  {snapshot.holds > 0 && (
-                    <span
-                      className="badge text-bg-secondary ms-2"
-                      title="ZFS holds pin this snapshot against deletion"
+                  {Array.isArray(snapshot.dataset_names) && snapshot.dataset_names.length > 0 ? (
+                    <button
+                      type="button"
+                      className={`badge border-0 ms-2 ${snapshot.holds > 0 ? 'text-bg-secondary' : 'text-bg-light border'}`}
+                      title="ZFS holds pin this snapshot against deletion — click to manage"
+                      onClick={() => setHoldsFor(snapshot)}
+                      disabled={busy}
                     >
-                      {snapshot.holds} hold{snapshot.holds === 1 ? '' : 's'}
-                    </span>
+                      <i
+                        className={`fas ${snapshot.holds > 0 ? 'fa-lock' : 'fa-lock-open'} me-1`}
+                      />
+                      {snapshot.holds || 0} hold{snapshot.holds === 1 ? '' : 's'}
+                    </button>
+                  ) : (
+                    snapshot.holds > 0 && (
+                      <span
+                        className="badge text-bg-secondary ms-2"
+                        title="ZFS holds pin this snapshot against deletion"
+                      >
+                        {snapshot.holds} hold{snapshot.holds === 1 ? '' : 's'}
+                      </span>
+                    )
                   )}
                   {snapshot.created && (
                     <span className="text-muted small ms-2">
@@ -760,6 +957,18 @@ const MachineSnapshots = ({
             setMsg(data?.message || fallback);
             followQueuedTask(data?.task_id);
           }}
+        />
+      )}
+
+      {holdsFor && (
+        <SnapshotHoldsModal
+          isOpen
+          onClose={() => {
+            setHoldsFor(null);
+            load();
+          }}
+          currentServer={currentServer}
+          snapshot={holdsFor}
         />
       )}
 

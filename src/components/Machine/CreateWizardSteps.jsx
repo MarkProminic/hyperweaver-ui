@@ -10,7 +10,8 @@ import {
   ParallelPortsEditor,
 } from './HardwareEditor';
 import NetworksEditor from './NetworksEditor';
-import { MetadataFieldGroup, RolesEditor } from './ProvisionerFormFields';
+import DslConfigForm from './ProvisionerFieldDsl';
+import { RolesEditor } from './ProvisionerFormFields';
 
 // Machine-create wizard steps. State lives in the wizard — steps are pure
 // render + callbacks. Every field maps to a key the create wire carries.
@@ -1887,12 +1888,11 @@ export const ProvisioningStep = ({
   versionKey,
   onVersionChange,
   version,
-  basicFields,
-  advancedFields,
-  properties,
-  onPropertyChange,
-  advancedProperties,
-  onAdvancedPropertyChange,
+  fieldConfig,
+  answers,
+  fieldErrors,
+  onAnswerChange,
+  inventory,
   roles,
   onRolesChange,
   artifacts,
@@ -1966,32 +1966,28 @@ export const ProvisioningStep = ({
     </div>
     {version?.description && <p className="form-text text-muted">{version.description}</p>}
 
-    {version && basicFields.length > 0 && (
-      <>
-        <h6 className="fw-bold">Configuration</h6>
-        <div className="mb-3">
-          <MetadataFieldGroup
-            fields={basicFields}
-            values={properties}
-            onChange={onPropertyChange}
-            loading={loading}
-          />
-        </div>
-      </>
+    {version && fieldConfig && (
+      <div className="mb-3">
+        <DslConfigForm
+          config={fieldConfig}
+          answers={answers}
+          errors={fieldErrors}
+          onChange={onAnswerChange}
+          roles={roles}
+          inventory={inventory}
+          showAdvanced={advanced}
+          idPrefix="prov-field"
+          disabled={loading}
+        />
+      </div>
     )}
 
-    {advanced && version && advancedFields.length > 0 && (
-      <>
-        <h6 className="fw-bold">Advanced Configuration</h6>
-        <div className="mb-3">
-          <MetadataFieldGroup
-            fields={advancedFields}
-            values={advancedProperties}
-            onChange={onAdvancedPropertyChange}
-            loading={loading}
-          />
-        </div>
-      </>
+    {version && !fieldConfig && (
+      <p className="form-text text-muted">
+        This package&apos;s manifest predates the field DSL (no{' '}
+        <code>metadata.configuration.groups/fields</code>) — it renders no configuration form.
+        Values still ride the document&apos;s <code>vars</code>.
+      </p>
     )}
 
     {(version || roles.length > 0) && (
@@ -2036,12 +2032,11 @@ ProvisioningStep.propTypes = {
   versionKey: PropTypes.string.isRequired,
   onVersionChange: PropTypes.func.isRequired,
   version: PropTypes.object,
-  basicFields: PropTypes.array.isRequired,
-  advancedFields: PropTypes.array.isRequired,
-  properties: PropTypes.object.isRequired,
-  onPropertyChange: PropTypes.func.isRequired,
-  advancedProperties: PropTypes.object.isRequired,
-  onAdvancedPropertyChange: PropTypes.func.isRequired,
+  fieldConfig: PropTypes.object,
+  answers: PropTypes.object.isRequired,
+  fieldErrors: PropTypes.object,
+  onAnswerChange: PropTypes.func.isRequired,
+  inventory: PropTypes.object,
   roles: PropTypes.array.isRequired,
   onRolesChange: PropTypes.func.isRequired,
   artifacts: PropTypes.array,

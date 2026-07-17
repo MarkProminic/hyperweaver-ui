@@ -1,0 +1,423 @@
+// Provisioning-document editor — the dual-pane Roles tab (catalog left,
+// ordered execution list right; Foreman/PatternFly dual-list lineage, Mark's
+// mockup-approved design 2026-07-13) plus the shared variable rows and their
+// YAML structure editor. Palette rides the --bs-* custom properties only.
+
+// ---- layout: catalog | execution order ----
+.hw-prov-grid {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 880px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hw-prov-pane-title {
+  margin: 0 0 0.375rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+}
+
+// ---- the role catalog ----
+.hw-prov-catalog {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--bs-border-color);
+  background: var(--bs-tertiary-bg);
+}
+
+// the attach: which registry package feeds the catalog
+.hw-cat-picker {
+  display: flex;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--bs-border-color);
+
+  select:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.hw-cat-search {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.hw-cat-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.hw-cat-group {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem 0.25rem;
+  border: none;
+  background: var(--bs-tertiary-bg);
+  color: var(--bs-secondary-color);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+
+  &:hover {
+    color: var(--bs-body-color);
+  }
+
+  i {
+    transition: transform 0.12s;
+  }
+
+  &[aria-expanded='false'] i {
+    transform: rotate(-90deg);
+  }
+
+  .hw-cat-count {
+    margin-left: auto;
+    font-weight: 400;
+  }
+}
+
+.hw-cat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.625rem;
+  border-left: 3px solid transparent;
+  cursor: grab;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--bs-body-bg);
+    border-left-color: var(--bs-primary);
+  }
+
+  .hw-cat-text {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .hw-cat-name {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .hw-cat-desc {
+    font-size: 0.72rem;
+    color: var(--bs-secondary-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hw-cat-add {
+    flex: 0 0 auto;
+    color: var(--bs-primary);
+  }
+}
+
+.hw-cat-custom {
+  display: flex;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  border-top: 1px solid var(--bs-border-color);
+}
+
+.hw-cat-empty {
+  margin: 0;
+  padding: 0.625rem;
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color);
+}
+
+// ---- the ordered role cards ----
+.hw-role-card {
+  border: 1px solid var(--bs-border-color);
+  background: var(--bs-body-bg);
+
+  &.hw-dragging {
+    opacity: 0.45;
+    border-color: var(--bs-primary);
+  }
+
+  &.hw-drop-target {
+    box-shadow: 0 -2px 0 0 var(--bs-primary);
+  }
+}
+
+.hw-rc-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+}
+
+.hw-run-num {
+  flex: 0 0 auto;
+  min-width: 1.5rem;
+  padding: 0 0.2rem;
+  text-align: center;
+  border: 1px solid var(--bs-border-color);
+  background: var(--bs-tertiary-bg);
+  color: var(--bs-secondary-color);
+  font-family: var(--bs-font-monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.hw-rc-name {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex: 1 1 200px;
+  min-width: 0;
+  flex-wrap: wrap;
+
+  .hw-rc-role {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.82rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .hw-rc-coll {
+    font-size: 0.68rem;
+    color: var(--bs-secondary-color);
+  }
+
+  .hw-rc-name-input {
+    flex: 1 1 220px;
+    min-width: 160px;
+  }
+}
+
+.hw-rc-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.hw-expander i {
+  transition: transform 0.12s;
+}
+
+.hw-expander[aria-expanded='true'] i {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-expander i,
+  .hw-cat-group i {
+    transition: none;
+  }
+}
+
+.hw-dep-warning {
+  margin: 0 0.5rem 0.375rem 2.375rem;
+  padding: 0.2rem 0.5rem;
+  border-left: 3px solid var(--bs-warning);
+  background: rgba(var(--bs-warning-rgb), 0.1);
+  color: var(--bs-warning-text-emphasis);
+  font-size: 0.78rem;
+}
+
+.hw-rc-body {
+  border-top: 1px solid var(--bs-border-color);
+  background: var(--bs-tertiary-bg);
+  padding: 0.625rem;
+}
+
+.hw-rc-desc {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  color: var(--bs-secondary-color);
+}
+
+.hw-rc-sub {
+  margin: 0.625rem 0 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+
+  &:first-of-type {
+    margin-top: 0;
+  }
+}
+
+.hw-rc-fields {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.625rem;
+}
+
+.hw-field {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+
+  label {
+    font-size: 0.72rem;
+    color: var(--bs-secondary-color);
+    white-space: nowrap;
+  }
+}
+
+.hw-field-short {
+  width: 8rem;
+}
+
+.hw-field-med {
+  width: 13rem;
+}
+
+.hw-field-tiny {
+  width: 4.5rem;
+}
+
+.hw-field-wide {
+  flex: 1 1 260px;
+  min-width: 160px;
+}
+
+.hw-field-when {
+  width: 14rem;
+}
+
+.hw-lines-field {
+  flex: 1 1 260px;
+  min-width: 200px;
+
+  textarea {
+    width: 100%;
+  }
+}
+
+.hw-drop-endzone {
+  padding: 0.5rem;
+  border: 1px dashed var(--bs-primary);
+  color: var(--bs-secondary-color);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+// ---- variable rows (role vars, environment) + YAML structure editor ----
+.hw-var-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  align-items: stretch;
+
+  > div:last-child {
+    align-self: flex-start;
+  }
+}
+
+.hw-var-row {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+  min-width: 0;
+
+  // inputs shrink before buttons ever overflow
+  .hw-var-key {
+    flex: 0 1 340px;
+    min-width: 110px;
+  }
+
+  .hw-var-value {
+    flex: 1 1 320px;
+    min-width: 70px;
+  }
+
+  .btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
+.hw-val-preview {
+  flex: 1 1 320px;
+  min-width: 60px;
+  padding: 0.2rem 0.45rem;
+  border: 1px dashed var(--bs-border-color);
+  color: var(--bs-secondary-color);
+  font-family: var(--bs-font-monospace);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hw-yaml-edit {
+  margin-top: 0.25rem;
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.hw-invalid-msg {
+  color: var(--bs-danger);
+  font-size: 0.72rem;
+}
+
+// ---- info tooltip: hover/focus shows, click pins ----
+.hw-tip-wrap {
+  position: relative;
+  display: inline-flex;
+
+  .hw-tip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 7px);
+    right: -2px;
+    z-index: 10;
+    width: max-content;
+    max-width: 38ch;
+    padding: 0.375rem 0.55rem;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    font-size: 0.72rem;
+    line-height: 1.4;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      right: 8px;
+      border: 5px solid transparent;
+      border-top-color: var(--bs-border-color);
+    }
+  }
+
+  &:hover .hw-tip,
+  &:focus-within .hw-tip {
+    display: block;
+  }
+
+  &.hw-tip-pinned .hw-tip {
+    display: block;
+  }
+
+  &.hw-tip-pinned .btn {
+    color: var(--bs-primary);
+    border-color: var(--bs-primary);
+  }
+}

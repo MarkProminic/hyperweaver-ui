@@ -93,8 +93,9 @@ const CloneMachineModal = ({
       source,
       start_after_create: startAfter,
     };
+    // The wire key is snapshot_name (aligned to export/publish — sync ruling).
     if (source === 'current' && snapshot) {
-      body.snapshot = snapshot;
+      body.snapshot_name = snapshot;
     }
     if (source === 'current' && linked) {
       body.linked = true;

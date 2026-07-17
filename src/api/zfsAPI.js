@@ -2,8 +2,10 @@ import { makeAgentRequest } from './serverUtils';
 
 // ZFS pool/dataset/snapshot management — the /storage/* surface (zfs feature
 // token). Every mutation answers 202 with a queued task; list/detail calls
-// answer synchronously. Dataset and snapshot names ride URL-encoded in the
-// path (they carry '/' and '@').
+// answer synchronously. Dataset and snapshot names ride in the `?name=` QUERY
+// (never the path): they carry '/', which cannot transit the server proxy as
+// a path segment (sync ruling 2026-07-13). Pool names are slash-free and stay
+// in the path.
 
 /**
  * List ZFS pools.
@@ -333,7 +335,7 @@ export const createZfsDataset = async (hostname, port, protocol, body) =>
  * @returns {Promise<Object>} {name, properties: {prop: {value, source}}}
  */
 export const getZfsDataset = async (hostname, port, protocol, name) =>
-  await makeAgentRequest(hostname, port, protocol, `storage/datasets/${encodeURIComponent(name)}`);
+  await makeAgentRequest(hostname, port, protocol, 'storage/dataset', 'GET', null, { name });
 
 /**
  * Destroy a dataset (202 task).
@@ -345,14 +347,7 @@ export const getZfsDataset = async (hostname, port, protocol, name) =>
  * @returns {Promise<Object>} Queued task result
  */
 export const destroyZfsDataset = async (hostname, port, protocol, name, body = {}) =>
-  await makeAgentRequest(
-    hostname,
-    port,
-    protocol,
-    `storage/datasets/${encodeURIComponent(name)}`,
-    'DELETE',
-    body
-  );
+  await makeAgentRequest(hostname, port, protocol, 'storage/dataset', 'DELETE', body, { name });
 
 /**
  * Set dataset properties (202 task).
@@ -368,9 +363,10 @@ export const setZfsDatasetProperties = async (hostname, port, protocol, name, pr
     hostname,
     port,
     protocol,
-    `storage/datasets/${encodeURIComponent(name)}/properties`,
+    'storage/dataset/properties',
     'PUT',
-    { properties }
+    { properties },
+    { name }
   );
 
 /**
@@ -383,14 +379,9 @@ export const setZfsDatasetProperties = async (hostname, port, protocol, name, pr
  * @returns {Promise<Object>} Queued task result
  */
 export const renameZfsDataset = async (hostname, port, protocol, name, body) =>
-  await makeAgentRequest(
-    hostname,
-    port,
-    protocol,
-    `storage/datasets/${encodeURIComponent(name)}/rename`,
-    'POST',
-    body
-  );
+  await makeAgentRequest(hostname, port, protocol, 'storage/dataset/rename', 'POST', body, {
+    name,
+  });
 
 /**
  * Clone a snapshot to a new dataset (202 task).
@@ -402,14 +393,9 @@ export const renameZfsDataset = async (hostname, port, protocol, name, body) =>
  * @returns {Promise<Object>} Queued task result
  */
 export const cloneZfsSnapshot = async (hostname, port, protocol, snapshot, body) =>
-  await makeAgentRequest(
-    hostname,
-    port,
-    protocol,
-    `storage/datasets/${encodeURIComponent(snapshot)}/clone`,
-    'POST',
-    body
-  );
+  await makeAgentRequest(hostname, port, protocol, 'storage/dataset/clone', 'POST', body, {
+    name: snapshot,
+  });
 
 /**
  * Promote a clone to an independent dataset (202 task).
@@ -420,13 +406,9 @@ export const cloneZfsSnapshot = async (hostname, port, protocol, snapshot, body)
  * @returns {Promise<Object>} Queued task result
  */
 export const promoteZfsDataset = async (hostname, port, protocol, name) =>
-  await makeAgentRequest(
-    hostname,
-    port,
-    protocol,
-    `storage/datasets/${encodeURIComponent(name)}/promote`,
-    'POST'
-  );
+  await makeAgentRequest(hostname, port, protocol, 'storage/dataset/promote', 'POST', null, {
+    name,
+  });
 
 /**
  * Snapshot a dataset (202 task).
@@ -438,14 +420,9 @@ export const promoteZfsDataset = async (hostname, port, protocol, name) =>
  * @returns {Promise<Object>} Queued task result
  */
 export const createZfsSnapshot = async (hostname, port, protocol, name, body) =>
-  await makeAgentRequest(
-    hostname,
-    port,
-    protocol,
-    `storage/datasets/${encodeURIComponent(name)}/snapshots`,
-    'POST',
-    body
-  );
+  await makeAgentRequest(hostname, port, protocol, 'storage/dataset/snapshots', 'POST', body, {
+    name,
+  });
 
 /**
  * Destroy a snapshot (202 task).
@@ -457,14 +434,9 @@ export const createZfsSnapshot = async (hostname, port, protocol, name, body) =>
  * @returns {Promise<Object>} Queued task result
  */
 export const destroyZfsSnapshot = async (hostname, port, protocol, snapshot, body = {}) =>
-  await makeAgentRequest(
-    hostname,
-    port,
-    protocol,
-    `storage/snapshots/${encodeURIComponent(snapshot)}`,
-    'DELETE',
-    body
-  );
+  await makeAgentRequest(hostname, port, protocol, 'storage/snapshot', 'DELETE', body, {
+    name: snapshot,
+  });
 
 /**
  * Roll a dataset back to a snapshot (202 task).
@@ -476,14 +448,9 @@ export const destroyZfsSnapshot = async (hostname, port, protocol, snapshot, bod
  * @returns {Promise<Object>} Queued task result
  */
 export const rollbackZfsSnapshot = async (hostname, port, protocol, snapshot, body = {}) =>
-  await makeAgentRequest(
-    hostname,
-    port,
-    protocol,
-    `storage/snapshots/${encodeURIComponent(snapshot)}/rollback`,
-    'POST',
-    body
-  );
+  await makeAgentRequest(hostname, port, protocol, 'storage/snapshot/rollback', 'POST', body, {
+    name: snapshot,
+  });
 
 /**
  * List holds on a snapshot.
@@ -494,12 +461,9 @@ export const rollbackZfsSnapshot = async (hostname, port, protocol, snapshot, bo
  * @returns {Promise<Object>} {snapshot, holds: [{name, tag, timestamp}], total}
  */
 export const getZfsSnapshotHolds = async (hostname, port, protocol, snapshot) =>
-  await makeAgentRequest(
-    hostname,
-    port,
-    protocol,
-    `storage/snapshots/${encodeURIComponent(snapshot)}/holds`
-  );
+  await makeAgentRequest(hostname, port, protocol, 'storage/snapshot/holds', 'GET', null, {
+    name: snapshot,
+  });
 
 /**
  * Add a hold tag to a snapshot (202 task).
@@ -511,14 +475,9 @@ export const getZfsSnapshotHolds = async (hostname, port, protocol, snapshot) =>
  * @returns {Promise<Object>} Queued task result
  */
 export const holdZfsSnapshot = async (hostname, port, protocol, snapshot, body) =>
-  await makeAgentRequest(
-    hostname,
-    port,
-    protocol,
-    `storage/snapshots/${encodeURIComponent(snapshot)}/holds`,
-    'POST',
-    body
-  );
+  await makeAgentRequest(hostname, port, protocol, 'storage/snapshot/holds', 'POST', body, {
+    name: snapshot,
+  });
 
 /**
  * Release a hold tag from a snapshot (202 task).
@@ -530,10 +489,7 @@ export const holdZfsSnapshot = async (hostname, port, protocol, snapshot, body) 
  * @returns {Promise<Object>} Queued task result
  */
 export const releaseZfsSnapshotHold = async (hostname, port, protocol, snapshot, tag) =>
-  await makeAgentRequest(
-    hostname,
-    port,
-    protocol,
-    `storage/snapshots/${encodeURIComponent(snapshot)}/holds/${encodeURIComponent(tag)}`,
-    'DELETE'
-  );
+  await makeAgentRequest(hostname, port, protocol, 'storage/snapshot/holds', 'DELETE', null, {
+    name: snapshot,
+    tag,
+  });

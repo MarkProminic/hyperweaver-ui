@@ -9,7 +9,7 @@ import {
 } from '../../api/provisioningAPI';
 import { hasFeature } from '../../utils/capabilities';
 import { canCreateMachines, canStartStopMachines } from '../../utils/permissions';
-import { DismissibleAlert } from '../common';
+import { ConfirmModal, DismissibleAlert } from '../common';
 
 import ProvisioningEditor from './ProvisioningEditor';
 
@@ -52,6 +52,9 @@ const MachineProvisioning = ({
   const [msgVariant, setMsgVariant] = useState('info');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
+  // The 409 host-hooks pre-flight gate ({reason} from the agent) — confirming
+  // re-POSTs {confirm_host_hooks: true}; the agent remembers per machine.
+  const [hookConfirm, setHookConfirm] = useState(null);
 
   const machineName = machineDetails?.machine_info?.name;
   const configuration = parseConfiguration(machineDetails);
@@ -87,7 +90,7 @@ const MachineProvisioning = ({
     setMsgVariant(variant);
   };
 
-  const runPipeline = async kind => {
+  const runPipeline = async (kind, options = null) => {
     setLoading(true);
     setMsg('');
     let result;
@@ -96,7 +99,8 @@ const MachineProvisioning = ({
         currentServer.hostname,
         currentServer.port,
         currentServer.protocol,
-        machineName
+        machineName,
+        options
       );
     } else if (kind === 'sync' || kind === 'syncback') {
       result = await syncMachine(
@@ -116,6 +120,13 @@ const MachineProvisioning = ({
     }
     setLoading(false);
     if (!result.success) {
+      // Host-hooks pre-flight refusal (ruled: 409 BEFORE anything runs, never
+      // a mid-sequence failure) — surface the agent's reason and offer the
+      // one-time confirmation.
+      if (kind === 'provision' && result.status === 409 && result.data?.needs_confirmation) {
+        setHookConfirm({ reason: result.data.reason || result.message });
+        return;
+      }
       report(result.message, 'danger');
       return;
     }
@@ -270,6 +281,26 @@ const MachineProvisioning = ({
                 onDocumentStored();
               }
             }}
+          />
+        )}
+
+        {hookConfirm && (
+          <ConfirmModal
+            isOpen
+            onClose={() => {
+              setHookConfirm(null);
+              report('Provisioning not started — host hooks were not confirmed.', 'info');
+            }}
+            onConfirm={() => {
+              setHookConfirm(null);
+              runPipeline('provision', { confirm_host_hooks: true });
+            }}
+            title="This package runs scripts on the agent host"
+            message={`${hookConfirm.reason} Confirming runs them and is remembered for this machine — future provisions will not ask again.`}
+            confirmText="Confirm & Provision"
+            confirmVariant="warning"
+            icon="fas fa-triangle-exclamation"
+            loading={loading}
           />
         )}
       </div>

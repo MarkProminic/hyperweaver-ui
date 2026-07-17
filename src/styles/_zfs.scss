@@ -222,3 +222,101 @@ button.hw-bay:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+// --- zvol resize slider (ZvolManageModal): a gparted-style capacity bar with a
+//     draggable thumb. Zones are layered background segments; the native range
+//     rides on top with a transparent track so the segments show through. ---
+.hw-zvol {
+  position: relative;
+  height: 1.6rem;
+  margin: 0.4rem 0 0.6rem;
+}
+
+.hw-zvol-track {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--hw-border-light);
+  background: var(--bs-tertiary-bg);
+  overflow: hidden;
+}
+
+.hw-zvol-seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+// used data (strong), allocated-but-free within current (subtle), growable pool
+// free (green), over-provisioned headroom (amber) — all theme-driven.
+.hw-zvol-used {
+  background: rgb(var(--bs-primary-rgb) / 0.65);
+}
+.hw-zvol-alloc {
+  background: rgb(var(--bs-primary-rgb) / 0.22);
+}
+.hw-zvol-free {
+  background: rgb(var(--bs-success-rgb) / 0.18);
+}
+.hw-zvol-over {
+  background: rgb(var(--bs-warning-rgb) / 0.28);
+}
+
+.hw-zvol-mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  pointer-events: none;
+}
+.hw-zvol-mark-current {
+  border-left: 2px dashed var(--bs-secondary-color);
+}
+.hw-zvol-mark-cap {
+  border-left: 2px dotted var(--bs-success);
+}
+.hw-zvol-mark-target {
+  border-left: 2px solid var(--bs-primary);
+}
+
+.hw-zvol-range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: ew-resize;
+
+  &:focus {
+    outline: none;
+  }
+
+  &::-webkit-slider-runnable-track {
+    height: 100%;
+    background: transparent;
+  }
+  &::-moz-range-track {
+    height: 100%;
+    background: transparent;
+  }
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 0.7rem;
+    height: 1.6rem;
+    background: var(--bs-primary);
+    border: 1px solid #000;
+    cursor: ew-resize;
+  }
+  &::-moz-range-thumb {
+    width: 0.7rem;
+    height: 1.6rem;
+    background: var(--bs-primary);
+    border: 1px solid #000;
+    border-radius: 0;
+    cursor: ew-resize;
+  }
+}
