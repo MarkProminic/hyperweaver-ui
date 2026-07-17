@@ -937,8 +937,209 @@ BootZfsPlacement.propTypes = {
   loading: PropTypes.bool,
 };
 
+// The Boot Disk section — bootSource decides which typed-entry fields
+// render (disk spec: only that type's keys are expressible).
+const BootDiskSection = ({
+  bootSource,
+  setBootSource,
+  disks,
+  setDisks,
+  currentServer,
+  bhyve,
+  vbox,
+  volumeOptions,
+  mediaOptions,
+  zfsPools,
+  zfsDatasets,
+  advanced,
+  loading,
+}) => (
+  <div className="row g-3 mb-3">
+    {/* The TYPE selector — the same state as the OS/Box step's Boot media
+        radios, surfaced HERE too (the disks screen must show its own
+        discriminator; Mark's ask). */}
+    <div className="col-12">
+      <div className="btn-group" role="group" aria-label="Boot disk type">
+        {BOOT_SOURCES.map(source => (
+          <button
+            type="button"
+            key={source.id}
+            className={`btn btn-sm ${bootSource === source.id ? 'btn-primary' : 'btn-outline-secondary'}`}
+            title={source.hint}
+            onClick={() => setBootSource(source.id)}
+            disabled={loading}
+          >
+            {source.label}
+          </button>
+        ))}
+      </div>
+    </div>
+    {bootSource === 'none' && (
+      <p className="form-text text-muted mb-0">
+        Diskless — no boot medium rides this create. Attach disks later via Edit.
+      </p>
+    )}
+    {bootSource === 'existing' && (
+      <div className="col-12 col-md-8">
+        <label className="form-label" htmlFor="machine-disk-boot-path">
+          {bhyve ? 'Existing zvol (dataset path)' : 'Existing disk image path (on the agent host)'}
+        </label>
+        {bhyve && (
+          <PickOrType
+            id="machine-disk-boot-path"
+            value={disks.bootPath}
+            onChange={next => setDisks({ bootPath: next })}
+            options={volumeOptions}
+            blankLabel="Select a zvol…"
+            placeholder="e.g. rpool/vms/old-server/root"
+            disabled={loading}
+          />
+        )}
+        {!bhyve && mediaOptions.length > 0 && (
+          <PickOrType
+            id="machine-disk-boot-path"
+            value={disks.bootPath}
+            onChange={next => setDisks({ bootPath: next })}
+            options={mediaOptions}
+            blankLabel="Select a registered disk image…"
+            placeholder="path on the agent host"
+            disabled={loading}
+          />
+        )}
+        {!bhyve && mediaOptions.length === 0 && (
+          <PathInput
+            id="machine-disk-boot-path"
+            value={disks.bootPath}
+            onChange={next => setDisks({ bootPath: next })}
+            server={currentServer}
+            mode="file"
+            pickTitle="Pick the disk image"
+            disabled={loading}
+          />
+        )}
+        <p className="form-text text-muted mb-0">
+          Attached as-is — never created or deleted by the agent.
+        </p>
+      </div>
+    )}
+    {(bootSource === 'template' || bootSource === 'scratch') && (
+      <>
+        <div className="col-12 col-md-4">
+          <label className="form-label" htmlFor="machine-disk-boot-size">
+            {bootSource === 'template' ? 'Disk size (blank = template size)' : 'Disk size'}
+          </label>
+          <input
+            id="machine-disk-boot-size"
+            className="form-control"
+            type="text"
+            placeholder="e.g. 32G"
+            value={disks.bootSize}
+            onChange={e => setDisks({ bootSize: e.target.value })}
+            disabled={loading}
+          />
+        </div>
+        {advanced && (
+          <>
+            <div className="col-6 col-md-4">
+              <div className="form-check form-switch mt-4">
+                <input
+                  id="machine-disk-boot-sparse"
+                  className="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  checked={disks.bootSparse}
+                  onChange={e => setDisks({ bootSparse: e.target.checked })}
+                  disabled={loading}
+                />
+                <label className="form-check-label" htmlFor="machine-disk-boot-sparse">
+                  Sparse
+                </label>
+              </div>
+            </div>
+            <div className="col-6 col-md-4">
+              <label className="form-label" htmlFor="machine-disk-boot-volume">
+                Volume name
+              </label>
+              <input
+                id="machine-disk-boot-volume"
+                className="form-control"
+                type="text"
+                value={disks.bootVolumeName}
+                onChange={e => setDisks({ bootVolumeName: e.target.value })}
+                disabled={loading}
+              />
+            </div>
+            {bhyve && (
+              <BootZfsPlacement
+                disks={disks}
+                setDisks={setDisks}
+                zfsPools={zfsPools}
+                zfsDatasets={zfsDatasets}
+                showClone={bootSource === 'template'}
+                loading={loading}
+              />
+            )}
+          </>
+        )}
+      </>
+    )}
+    {/* VBox attachment placement — controller/port ride EVERY entry (the
+        frozen wire); blank = default controller / next free port. */}
+    {vbox && advanced && bootSource !== 'none' && (
+      <>
+        <div className="col-6 col-md-4">
+          <label className="form-label" htmlFor="machine-disk-boot-controller">
+            Controller
+          </label>
+          <input
+            id="machine-disk-boot-controller"
+            className="form-control"
+            list="machine-controller-names"
+            placeholder="(default controller)"
+            value={disks.bootController}
+            onChange={e => setDisks({ bootController: e.target.value })}
+            disabled={loading}
+          />
+        </div>
+        <div className="col-6 col-md-2">
+          <label className="form-label" htmlFor="machine-disk-boot-port">
+            Port
+          </label>
+          <input
+            id="machine-disk-boot-port"
+            className="form-control"
+            type="number"
+            min="0"
+            placeholder="(next free)"
+            value={disks.bootPort}
+            onChange={e => setDisks({ bootPort: e.target.value })}
+            disabled={loading}
+          />
+        </div>
+      </>
+    )}
+  </div>
+);
+
+BootDiskSection.propTypes = {
+  bootSource: PropTypes.string.isRequired,
+  setBootSource: PropTypes.func.isRequired,
+  disks: PropTypes.object.isRequired,
+  setDisks: PropTypes.func.isRequired,
+  currentServer: PropTypes.object,
+  bhyve: PropTypes.bool,
+  vbox: PropTypes.bool,
+  volumeOptions: PropTypes.array.isRequired,
+  mediaOptions: PropTypes.array.isRequired,
+  zfsPools: PropTypes.array.isRequired,
+  zfsDatasets: PropTypes.array.isRequired,
+  advanced: PropTypes.bool,
+  loading: PropTypes.bool,
+};
+
 export const DisksStep = ({
   bootSource,
+  setBootSource,
   disks,
   setDisks,
   bootOrder,
@@ -1002,119 +1203,21 @@ export const DisksStep = ({
   return (
     <>
       <h6 className="fw-bold">Boot Disk</h6>
-      <div className="row g-3 mb-3">
-        {bootSource === 'none' && (
-          <p className="form-text text-muted mb-0">
-            Diskless — no boot medium rides this create. Attach disks later via Edit.
-          </p>
-        )}
-        {bootSource === 'existing' && (
-          <div className="col-12 col-md-8">
-            <label className="form-label" htmlFor="machine-disk-boot-path">
-              {bhyve
-                ? 'Existing zvol (dataset path)'
-                : 'Existing disk image path (on the agent host)'}
-            </label>
-            {bhyve && (
-              <PickOrType
-                id="machine-disk-boot-path"
-                value={disks.bootPath}
-                onChange={next => setDisks({ bootPath: next })}
-                options={volumeOptions}
-                blankLabel="Select a zvol…"
-                placeholder="e.g. rpool/vms/old-server/root"
-                disabled={loading}
-              />
-            )}
-            {!bhyve && mediaOptions.length > 0 && (
-              <PickOrType
-                id="machine-disk-boot-path"
-                value={disks.bootPath}
-                onChange={next => setDisks({ bootPath: next })}
-                options={mediaOptions}
-                blankLabel="Select a registered disk image…"
-                placeholder="path on the agent host"
-                disabled={loading}
-              />
-            )}
-            {!bhyve && mediaOptions.length === 0 && (
-              <PathInput
-                id="machine-disk-boot-path"
-                value={disks.bootPath}
-                onChange={next => setDisks({ bootPath: next })}
-                server={currentServer}
-                mode="file"
-                pickTitle="Pick the disk image"
-                disabled={loading}
-              />
-            )}
-            <p className="form-text text-muted mb-0">
-              Attached as-is — never created or deleted by the agent.
-            </p>
-          </div>
-        )}
-        {(bootSource === 'template' || bootSource === 'scratch') && (
-          <>
-            <div className="col-12 col-md-4">
-              <label className="form-label" htmlFor="machine-disk-boot-size">
-                {bootSource === 'template' ? 'Disk size (blank = template size)' : 'Disk size'}
-              </label>
-              <input
-                id="machine-disk-boot-size"
-                className="form-control"
-                type="text"
-                placeholder="e.g. 32G"
-                value={disks.bootSize}
-                onChange={e => setDisks({ bootSize: e.target.value })}
-                disabled={loading}
-              />
-            </div>
-            {advanced && (
-              <>
-                <div className="col-6 col-md-4">
-                  <div className="form-check form-switch mt-4">
-                    <input
-                      id="machine-disk-boot-sparse"
-                      className="form-check-input"
-                      type="checkbox"
-                      role="switch"
-                      checked={disks.bootSparse}
-                      onChange={e => setDisks({ bootSparse: e.target.checked })}
-                      disabled={loading}
-                    />
-                    <label className="form-check-label" htmlFor="machine-disk-boot-sparse">
-                      Sparse
-                    </label>
-                  </div>
-                </div>
-                <div className="col-6 col-md-4">
-                  <label className="form-label" htmlFor="machine-disk-boot-volume">
-                    Volume name
-                  </label>
-                  <input
-                    id="machine-disk-boot-volume"
-                    className="form-control"
-                    type="text"
-                    value={disks.bootVolumeName}
-                    onChange={e => setDisks({ bootVolumeName: e.target.value })}
-                    disabled={loading}
-                  />
-                </div>
-                {bhyve && (
-                  <BootZfsPlacement
-                    disks={disks}
-                    setDisks={setDisks}
-                    zfsPools={zfsPools}
-                    zfsDatasets={zfsDatasets}
-                    showClone={bootSource === 'template'}
-                    loading={loading}
-                  />
-                )}
-              </>
-            )}
-          </>
-        )}
-      </div>
+      <BootDiskSection
+        bootSource={bootSource}
+        setBootSource={setBootSource}
+        disks={disks}
+        setDisks={setDisks}
+        currentServer={currentServer}
+        bhyve={bhyve}
+        vbox={vbox}
+        volumeOptions={volumeOptions}
+        mediaOptions={mediaOptions}
+        zfsPools={zfsPools}
+        zfsDatasets={zfsDatasets}
+        advanced={advanced}
+        loading={loading}
+      />
 
       {bhyve && volumeOptions.length > 0 && (
         <datalist id="machine-zvol-options">
@@ -1760,6 +1863,7 @@ export const DisksStep = ({
 
 DisksStep.propTypes = {
   bootSource: PropTypes.string.isRequired,
+  setBootSource: PropTypes.func.isRequired,
   disks: PropTypes.object.isRequired,
   setDisks: PropTypes.func.isRequired,
   bootOrder: PropTypes.arrayOf(PropTypes.string).isRequired,

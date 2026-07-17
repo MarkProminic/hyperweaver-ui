@@ -68,6 +68,10 @@ const emptyDiskConfig = () => ({
   bootPool: '',
   bootDataset: '',
   bootCloneStrategy: '',
+  // VBox attachment placement for the boot entry (controller/port ride
+  // every entry on the frozen wire).
+  bootController: '',
+  bootPort: '',
   additional: [],
   cdroms: [],
   // controllers[] rows + per-media controller/port addressing. Empty = the
@@ -209,6 +213,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
 
   const singular = resourceLabel(currentServer, { plural: false });
   const bhyve = !!currentServer && hasHypervisor(currentServer, 'bhyve');
+  const vbox = !!currentServer && hasHypervisor(currentServer, 'virtualbox');
 
   const family = useMemo(
     () => provisioners.find(collection => collection.name === familyName) || null,
@@ -594,6 +599,15 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
         if (bootSource === 'template' && diskConfig.bootCloneStrategy) {
           boot.clone_strategy = diskConfig.bootCloneStrategy;
         }
+      }
+    }
+    // VBox attachment placement — controller/port ride any non-none entry.
+    if (vbox && boot.type !== 'none') {
+      if (diskConfig.bootController.trim()) {
+        boot.controller = diskConfig.bootController.trim();
+      }
+      if (diskConfig.bootPort !== '') {
+        boot.port = Number(diskConfig.bootPort);
       }
     }
     disks.boot = boot;
@@ -1027,6 +1041,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       {currentStepId === 'disks' && (
         <DisksStep
           bootSource={bootSource}
+          setBootSource={setBootSource}
           disks={diskConfig}
           setDisks={patch => setDiskConfig(prev => ({ ...prev, ...patch }))}
           bootOrder={bootOrder}
