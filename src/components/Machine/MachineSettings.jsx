@@ -714,8 +714,9 @@ const MachineSettings = ({
   const [addZoneDisks, setAddZoneDisks] = useState([]);
   const [removeZoneDisks, setRemoveZoneDisks] = useState([]);
   // The zone disk whose management modal is open (null = closed). The modal
-  // sends its own resize_disks PUT; the agent applies a grow live where it can
-  // and ACCRUES the rest into pending_changes, which the panel above surfaces.
+  // sends its own resize_disks PUT — applied IMMEDIATELY by the agent (never
+  // accrued); the answer's resized_disks[] says per-disk whether the guest
+  // sees it live (virtio/NVMe) or after a power cycle (ahci/ide).
   const [manageDisk, setManageDisk] = useState(null);
   const [removeZoneCdroms, setRemoveZoneCdroms] = useState([]);
   const [removeZoneNics, setRemoveZoneNics] = useState([]);

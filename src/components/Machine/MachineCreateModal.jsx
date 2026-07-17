@@ -35,7 +35,10 @@ import { seedRoles } from './ProvisionerFormFields';
 // Machine-create wizard — stepped tabs with Back/Next and a footer Advanced
 // toggle. POST /machines answers the create-orchestration shape
 // {parent_task_id, machine_name, sub_tasks, requires_download}; the machine
-// row appears at the finalize child.
+// row appears at the finalize child. A package whose rendered document
+// carries hosts[] N>1 answers {multi_host: true, count, machines:
+// [{machine_name, parent_task_id, sub_tasks}, …hosts[] order]} — N parents,
+// names FINAL, machine k+1 chained on machine k (the converged M-Q1 wire).
 
 const STEPS = [
   { id: 'general', label: 'General' },
@@ -697,15 +700,33 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       setError(details.length > 0 ? '' : result.message);
       return;
     }
-    const warnings = resourceWarnings(result.data);
+    const data = result.data || {};
+    const warnings = resourceWarnings(data);
+    if (data.multi_host && Array.isArray(data.machines)) {
+      // hosts[] render fanned into N machines, created sequentially in
+      // list order (machine k+1 chains on machine k's last task). Track
+      // the FIRST parent; the rest follow it in the Tasks view.
+      const names = data.machines.map(machine => machine.machine_name);
+      onCompleted({
+        message: [
+          data.message || `Multi-host create queued — ${names.length} machines`,
+          `created in order: ${names.join(', ')}`,
+          ...warnings.map(warning => warning.message),
+        ].join(' — '),
+        machineName: names[0] || name.trim(),
+        taskId: data.machines[0]?.parent_task_id || null,
+        requiresDownload: warnings.length > 0,
+      });
+      onClose();
+      return;
+    }
     onCompleted({
-      message: [
-        result.data?.message || 'Creation queued',
-        ...warnings.map(warning => warning.message),
-      ].join(' — '),
-      machineName: result.data?.machine_name || name.trim(),
-      taskId: result.data?.parent_task_id || result.data?.task_id || null,
-      requiresDownload: !!result.data?.requires_download || warnings.length > 0,
+      message: [data.message || 'Creation queued', ...warnings.map(warning => warning.message)].join(
+        ' — '
+      ),
+      machineName: data.machine_name || name.trim(),
+      taskId: data.parent_task_id || data.task_id || null,
+      requiresDownload: !!data.requires_download || warnings.length > 0,
     });
     onClose();
   };

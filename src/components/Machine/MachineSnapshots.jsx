@@ -6,6 +6,7 @@ import {
   takeMachineSnapshot,
   restoreMachineSnapshot,
   deleteMachineSnapshot,
+  modifyMachineSnapshot,
   startMachine,
   getTask,
 } from '../../api/machineAPI';
@@ -502,6 +503,9 @@ const MachineSnapshots = ({
   });
   // {kind: 'restore'|'restore-start'|'delete', snapshot}
   const [confirm, setConfirm] = useState(null);
+  // The snapshot being renamed/re-described (snapshot_modify wire) + its form.
+  const [editSnap, setEditSnap] = useState(null);
+  const [editForm, setEditForm] = useState({ new_name: '', description: '' });
   // {mode: 'export'|'publish', snapshot} — build a template FROM a snapshot.
   const [templateFrom, setTemplateFrom] = useState(null);
   // The snapshot whose ZFS holds are being managed (needs dataset_names[]).
@@ -642,6 +646,40 @@ const MachineSnapshots = ({
     setMsg(start.success ? '' : `Restored, but the start failed: ${start.message}`);
   };
 
+  // Rename and/or edit the description — only CHANGED fields ride (a
+  // description edited to blank rides as "" and CLEARS it agent-side).
+  const handleEdit = async () => {
+    const body = {};
+    const newName = editForm.new_name.trim();
+    if (newName && newName !== editSnap.name) {
+      body.new_name = newName;
+    }
+    if (editForm.description !== (editSnap.description || '')) {
+      body.description = editForm.description;
+    }
+    if (Object.keys(body).length === 0) {
+      setMsg('Nothing changed — edit the name or the description first.');
+      return;
+    }
+    setBusy(true);
+    const result = await modifyMachineSnapshot(
+      currentServer.hostname,
+      currentServer.port,
+      currentServer.protocol,
+      machineName,
+      editSnap.name,
+      body
+    );
+    setBusy(false);
+    if (!result.success) {
+      setMsg(`Snapshot edit failed: ${result.message}`);
+      return;
+    }
+    setEditSnap(null);
+    setMsg('');
+    await followQueuedTask(result.data?.task_id);
+  };
+
   const handleConfirm = async () => {
     if (!confirm) {
       return;
@@ -756,6 +794,18 @@ const MachineSnapshots = ({
                 </div>
                 {canMutate && (
                   <div className="d-flex gap-1 flex-shrink-0">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary"
+                      title="Rename this snapshot or edit its description"
+                      disabled={busy}
+                      onClick={() => {
+                        setEditSnap(snapshot);
+                        setEditForm({ new_name: '', description: snapshot.description || '' });
+                      }}
+                    >
+                      <i className="fas fa-pen" />
+                    </button>
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-warning"
@@ -932,6 +982,46 @@ const MachineSnapshots = ({
           </div>
         )}
       </FormModal>
+
+      {editSnap && (
+        <FormModal
+          isOpen
+          onClose={() => setEditSnap(null)}
+          onSubmit={handleEdit}
+          title={`Edit Snapshot — ${editSnap.name}`}
+          icon="fas fa-pen"
+          submitText="Save"
+          loading={busy}
+          showCancelButton
+        >
+          <div className="mb-3">
+            <label className="form-label" htmlFor="snapshot-edit-name">
+              New name (blank = keep <code>{editSnap.name}</code>)
+            </label>
+            <input
+              id="snapshot-edit-name"
+              className="form-control"
+              value={editForm.new_name}
+              onChange={e => setEditForm(prev => ({ ...prev, new_name: e.target.value }))}
+            />
+            <p className="form-text text-muted mb-0">
+              The rename applies across every dataset this snapshot spans; a name collision fails
+              with the {`agent's`} own error.
+            </p>
+          </div>
+          <div className="mb-0">
+            <label className="form-label" htmlFor="snapshot-edit-description">
+              Description (clearing it REMOVES the stored description)
+            </label>
+            <input
+              id="snapshot-edit-description"
+              className="form-control"
+              value={editForm.description}
+              onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+            />
+          </div>
+        </FormModal>
+      )}
 
       {confirm && (
         <ConfirmModal

@@ -234,6 +234,35 @@ export const deleteMachineSnapshot = async (hostname, port, protocol, machineNam
   );
 
 /**
+ * Rename a snapshot and/or edit its description (queued task,
+ * snapshot_modify — sync 2026-07-17). Rename applies across every dataset
+ * the snapshot spans; description "" CLEARS the stored description.
+ * @param {string} hostname - Server hostname
+ * @param {number} port - Server port
+ * @param {string} protocol - Server protocol
+ * @param {string} machineName - Machine name
+ * @param {string} snapshotName - Snapshot to modify
+ * @param {Object} body - {new_name?, description?} (at least one; 400 with neither)
+ * @returns {Promise<Object>} QueuedOperation result
+ */
+export const modifyMachineSnapshot = async (
+  hostname,
+  port,
+  protocol,
+  machineName,
+  snapshotName,
+  body
+) =>
+  await makeAgentRequest(
+    hostname,
+    port,
+    protocol,
+    `machines/${machineName}/snapshots/${encodeURIComponent(snapshotName)}`,
+    'PUT',
+    body
+  );
+
+/**
  * Read a machine's guest properties (guest additions data — live IPs under
  * /VirtualBox/GuestInfo/Net/N/V4/IP, cloud-init seeds under /Hyperweaver/CloudInit/*)
  * @param {string} hostname - Server hostname

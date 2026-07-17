@@ -10,12 +10,14 @@ import { humanSize, parseZfsSize, queuedMessage } from '../Host/zfsUtils';
 /**
  * Zone disk (zvol) manager — a gparted-style capacity slider. Resize rides
  * `resize_disks` on the machine PUT (the path that also updates the zone's
- * disk SIZE ATTR). volsize is ONE value: drag or type the new size. Growing
- * is capped at what the pool can back until Over-provision is ticked, which
- * unlocks a thin size past the pool free. Shrinking has no floor — a zvol can
- * be set to any size (`allow_shrink` rides so the agent permits it). The agent
- * owns the safety: a running guest sees a grow live on virtio/NVMe, and a
- * change it cannot apply live ACCRUES to the next power cycle (pending_changes).
+ * disk SIZE ATTR) and applies IMMEDIATELY — never accrues, never queues
+ * (Mark's grow ruling, agent-shipped 2026-07-17). Growing is capped at what
+ * the pool can back until Over-provision is ticked, which unlocks a thin
+ * size past the pool free. Shrinking has no floor — a zvol can be set to
+ * any size (`allow_shrink` rides so the agent permits it; the agent also
+ * requires powered-off for shrinks). The answer's resized_disks[] carries
+ * the per-disk truth: virtio-blk/NVMe guests see the change live; ahci/ide
+ * answer requires_restart.
  */
 
 const GiB = 2 ** 30;
@@ -92,9 +94,6 @@ const computeBar = (disk, properties, pools, target, overprovision) => {
 
 /** The agent's per-disk resize outcome — the honest take-effect story. */
 const resizeOutcome = data => {
-  if (data?.status === 'pending_power_cycle') {
-    return `${data.message || 'Resize accepted'} — it applies on the next power cycle.`;
-  }
   const rows = Array.isArray(data?.resized_disks) ? data.resized_disks : [];
   if (rows.length === 0) {
     return data?.message || 'Resize applied.';
@@ -404,7 +403,7 @@ const ZvolManageModal = ({
     ? 'Shrink the filesystem and partition INSIDE the guest first — a zvol set below the written size loses everything past it.'
     : 'Grow is non-destructive; extend the partition and filesystem inside the guest afterwards.';
   const runningNote = isRunning
-    ? ' The machine is running — a grow applies live on virtio/NVMe; anything it cannot apply live accrues to the next power cycle.'
+    ? ' The machine is running — the resize applies NOW; virtio/NVMe guests see it live, ahci/ide guests after a power cycle (the result says which). Shrinks additionally need the machine powered off.'
     : '';
 
   return (

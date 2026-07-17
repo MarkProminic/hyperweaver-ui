@@ -12,6 +12,7 @@ import ProvisioningHooksTab from './ProvisioningHooksTab';
 import ProvisioningPlaybooksTab from './ProvisioningPlaybooksTab';
 import ProvisioningRolesTab from './ProvisioningRolesTab';
 import ProvisioningScriptsTab from './ProvisioningScriptsTab';
+import ProvisioningTransportTab from './ProvisioningTransportTab';
 import { VarRowList, VAR_NAME_PATTERN, ROLE_NAME_PATTERN } from './ProvisioningVarRows';
 
 /**
@@ -35,6 +36,7 @@ const TABS = [
   { id: 'playbooks', label: 'Playbooks' },
   { id: 'roles', label: 'Roles' },
   { id: 'hooks', label: 'Hooks' },
+  { id: 'transport', label: 'Transport' },
   { id: 'json', label: 'Raw JSON' },
 ];
 
@@ -262,6 +264,17 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
     updateDoc({ ...doc, provisioning });
   };
 
+  /** Patch a settings.* key (the document's settings section); undefined deletes. */
+  const patchSettings = (key, value) => {
+    const nextSettings = { ...(doc.settings || {}) };
+    if (value === undefined) {
+      delete nextSettings[key];
+    } else {
+      nextSettings[key] = value;
+    }
+    updateDoc({ ...doc, settings: nextSettings });
+  };
+
   // The attach: stamp (or clear) the document's package reference — the
   // catalog reloads via the effect above; the keys ride the next Store.
   const handlePackagePicked = (name, version) => {
@@ -403,6 +416,14 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
           packageName={typeof provName === 'string' ? provName : undefined}
           packageVersion={typeof provVersion === 'string' ? provVersion : undefined}
           onPackagePicked={handlePackagePicked}
+        />
+      )}
+
+      {tab === 'transport' && (
+        <ProvisioningTransportTab
+          settings={doc.settings}
+          disabled={loading}
+          onChange={patchSettings}
         />
       )}
 

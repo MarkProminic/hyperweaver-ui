@@ -11,6 +11,7 @@ import DatabasePanel from './Host/DatabasePanel';
 import FaultManagement from './Host/FaultManagement';
 import EnhancedFileManager from './Host/FileManager/EnhancedFileManager';
 import HostPageHeader from './Host/HostPageHeader';
+import HostsFileEditor from './Host/HostsFileEditor';
 import InstallerFiles from './Host/InstallerFiles';
 import NetworkHostnameManagement from './Host/NetworkHostnameManagement';
 import OrchestrationPanel from './Host/OrchestrationPanel';
@@ -48,6 +49,16 @@ const TABS = [
     feature: 'fault-management',
   },
   { id: 'file-manager', label: 'File Manager', icon: 'fas fa-folder', feature: 'file-browser' },
+  // The OS hosts-file editor (GET/PUT /system/hosts, `hosts-file` token —
+  // Mark's token-gated ruling 2026-07-17). zoneweaver's door stays its
+  // Network → Hosts File section, so this tab hides where that tab exists.
+  {
+    id: 'hosts-file',
+    label: 'Hosts File',
+    icon: 'fas fa-address-book',
+    feature: 'hosts-file',
+    hideWhen: 'vnics',
+  },
   { id: 'user-group', label: 'User and Groups', icon: 'fas fa-users', feature: 'system-users' },
   // Token regate (Mark's option-(a) word): the registry surface rides its
   // own `provisioner-registry` token — zoneweaver's always-on `provisioning`
@@ -89,12 +100,18 @@ const TABS = [
 
 const HostManage = () => {
   const [activeTab, setActiveTab] = useState('services');
+  const [hostsFileError, setHostsFileError] = useState('');
 
   const { user } = useAuth();
   const { currentServer } = useServers();
   const navigate = useNavigate();
 
   const visibleTabs = TABS.filter(tab => {
+    // hideWhen: another token already carries this surface elsewhere —
+    // the tab yields to that placement.
+    if (tab.hideWhen && hasFeature(currentServer, tab.hideWhen)) {
+      return false;
+    }
     const required = tab.features || (tab.feature ? [tab.feature] : []);
     return required.every(token => hasFeature(currentServer, token));
   });
@@ -399,6 +416,31 @@ const HostManage = () => {
                 </div>
 
                 <InstallerFiles server={currentServer} />
+              </div>
+            )}
+
+            {/* Hosts File Tab (agents without the Network tab's placement) */}
+            {effectiveTab === 'hosts-file' && (
+              <div>
+                <div className="mb-4">
+                  <p>
+                    The agent {`host's`} own hosts file on{' '}
+                    <strong>{currentServer.hostname}</strong> — edit parsed entries or the raw
+                    file; a timestamped backup precedes every save.
+                  </p>
+                </div>
+                {hostsFileError && (
+                  <div className="alert alert-danger d-flex justify-content-between align-items-start">
+                    <p className="mb-0">{hostsFileError}</p>
+                    <button
+                      type="button"
+                      className="btn-close"
+                      onClick={() => setHostsFileError('')}
+                      aria-label="Dismiss"
+                    />
+                  </div>
+                )}
+                <HostsFileEditor server={currentServer} onError={setHostsFileError} />
               </div>
             )}
 

@@ -9,6 +9,7 @@ import {
   getCatalog,
   getCatalogSources,
   installFromCatalog,
+  refreshProvisionerFromSource,
   getSecrets,
 } from '../../api/provisioningAPI';
 import { makeAgentRequest } from '../../api/serverUtils';
@@ -20,6 +21,27 @@ const wait = ms =>
   new Promise(resolve => {
     setTimeout(resolve, ms);
   });
+
+/** Dotted-version compare — true when a is strictly newer than b. */
+const versionNewer = (a, b) => {
+  const partsA = String(a).split('.');
+  const partsB = String(b).split('.');
+  const length = Math.max(partsA.length, partsB.length);
+  for (let i = 0; i < length; i += 1) {
+    const segA = partsA[i] ?? '0';
+    const segB = partsB[i] ?? '0';
+    const numA = Number(segA);
+    const numB = Number(segB);
+    if (Number.isNaN(numA) || Number.isNaN(numB)) {
+      if (segA !== segB) {
+        return segA > segB;
+      }
+    } else if (numA !== numB) {
+      return numA > numB;
+    }
+  }
+  return false;
+};
 
 /** Recursive task poller (2s ticks): the task row once terminal, null on timeout. */
 const pollTask = async (server, taskId, attempts) => {
@@ -250,6 +272,9 @@ const ProvisionerManagement = ({ server }) => {
   const [gitKeyNames, setGitKeyNames] = useState(null); // null = not readable (non-admin)
   // {name, version?} — version absent = whole family
   const [deleteTarget, setDeleteTarget] = useState(null);
+  // Newest default-catalog version per family — feeds the update badges
+  // (HACS-style, Mark's ask 2026-07-17). Advisory: fetch failure = no badges.
+  const [catalogNewest, setCatalogNewest] = useState({});
 
   const report = (text, variant = 'info') => {
     setMsg(text);
@@ -286,6 +311,42 @@ const ProvisionerManagement = ({ server }) => {
       );
     });
   }, [server]);
+
+  // Quiet default-catalog scan on load: newest version per family (the
+  // catalog serves versions semver-DESC, so [0] is newest).
+  useEffect(() => {
+    if (!server) {
+      return;
+    }
+    getCatalog(server.hostname, server.port, server.protocol).then(result => {
+      const families =
+        result.success && Array.isArray(result.data?.provisioners)
+          ? result.data.provisioners
+          : [];
+      setCatalogNewest(
+        Object.fromEntries(
+          families
+            .filter(family => Array.isArray(family.versions) && family.versions.length > 0)
+            .map(family => [family.name, family.versions[0].version])
+        )
+      );
+    });
+  }, [server]);
+
+  // "Update available" when the catalog's newest is strictly newer than
+  // EVERY installed version of the family (an installed dev build newer
+  // than the catalog never badges a downgrade).
+  const updateFor = collection => {
+    const newest = catalogNewest[collection.name];
+    if (!newest) {
+      return null;
+    }
+    const installed = (collection.versions || []).map(entry => entry.version);
+    if (installed.includes(newest)) {
+      return null;
+    }
+    return installed.every(version => versionNewer(newest, version)) ? newest : null;
+  };
 
   const handleImport = async () => {
     const body = { source_type: sourceType };
@@ -356,6 +417,36 @@ const ProvisionerManagement = ({ server }) => {
     }
   };
 
+  // One-click update to the catalog's newest (default source — the same
+  // feed the badges scan).
+  const handleUpdate = async (name, version) => {
+    const result = await installFromCatalog(server.hostname, server.port, server.protocol, {
+      name,
+      version,
+    });
+    if (result.success) {
+      trackInstall(`${name}/${version}`, result.data?.task_id || null);
+    } else {
+      report(`Update failed: ${result.message}`, 'danger');
+    }
+  };
+
+  // Git-imported families re-run their import against the STORED provenance
+  // — new release versions land beside the old ones (non-clobber).
+  const handleRefreshSource = async name => {
+    const result = await refreshProvisionerFromSource(
+      server.hostname,
+      server.port,
+      server.protocol,
+      name
+    );
+    if (result.success) {
+      trackInstall(`${name} (from source)`, result.data?.task_id || null);
+    } else {
+      report(`Update from source failed: ${result.message}`, 'danger');
+    }
+  };
+
   const handleDelete = async () => {
     const { name, version } = deleteTarget;
     setLoading(true);
@@ -418,7 +509,9 @@ const ProvisionerManagement = ({ server }) => {
         </div>
       )}
 
-      {provisioners.map(collection => (
+      {provisioners.map(collection => {
+        const update = updateFor(collection);
+        return (
         <div className="card mb-3" key={collection.name}>
           <div className="card-body">
             <div className="d-flex justify-content-between align-items-start">
@@ -433,20 +526,53 @@ const ProvisionerManagement = ({ server }) => {
                     <code className="small text-muted ms-2">{collection.name}</code>
                   )}
                   {!collection.valid && <span className="badge text-bg-danger ms-2">Invalid</span>}
+                  {update && (
+                    <span className="badge text-bg-warning ms-2">{update} available</span>
+                  )}
                 </h5>
                 {collection.description && (
                   <p className="text-muted small mb-2">{collection.description}</p>
                 )}
               </div>
-              <button
-                type="button"
-                className="btn btn-sm btn-danger"
-                onClick={() => setDeleteTarget({ name: collection.name })}
-                disabled={loading}
-              >
-                <i className="fas fa-trash me-2" />
-                Delete Family
-              </button>
+              <div className="d-flex gap-2">
+                {update && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary"
+                    onClick={() => handleUpdate(collection.name, update)}
+                    disabled={loading}
+                    title="Install the newer catalog version — existing versions and machines keep their pins"
+                  >
+                    <i className="fas fa-cloud-arrow-down me-2" />
+                    Update to {update}
+                  </button>
+                )}
+                {collection.source?.source_type === 'git' && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => handleRefreshSource(collection.name)}
+                    disabled={loading}
+                    title={`Re-import from ${collection.source.url}${
+                      collection.source.token_name
+                        ? ` (uses key ${collection.source.token_name})`
+                        : ''
+                    } — new versions land beside existing ones`}
+                  >
+                    <i className="fab fa-git-alt me-2" />
+                    Update from Source
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger"
+                  onClick={() => setDeleteTarget({ name: collection.name })}
+                  disabled={loading}
+                >
+                  <i className="fas fa-trash me-2" />
+                  Delete Family
+                </button>
+              </div>
             </div>
 
             {collection.versions?.length > 0 && (
@@ -488,7 +614,8 @@ const ProvisionerManagement = ({ server }) => {
             )}
           </div>
         </div>
-      ))}
+        );
+      })}
 
       <FormModal
         isOpen={showImport}

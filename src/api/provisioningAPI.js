@@ -102,6 +102,21 @@ export const installFromCatalog = async (hostname, port, protocol, body) =>
   await makeAgentRequest(hostname, port, protocol, 'provisioning/catalog/install', 'POST', body);
 
 /**
+ * Re-run the ordinary import against a git-imported family's STORED
+ * provenance (families expose it as `source`; null for folder/archive/
+ * catalog imports) — 202 {task_id}; existing versions refuse, new versions
+ * land beside. 400 when the family carries no git provenance.
+ */
+export const refreshProvisionerFromSource = async (hostname, port, protocol, name) =>
+  await makeAgentRequest(
+    hostname,
+    port,
+    protocol,
+    `provisioning/provisioners/${encodeURIComponent(name)}/refresh-from-source`,
+    'POST'
+  );
+
+/**
  * The global secrets document (admin-only; six SHI categories, plain values
  * by design — Mark's ruling).
  */
