@@ -782,29 +782,30 @@ BootOrderEditor.propTypes = {
   loading: PropTypes.bool,
 };
 
-// Boot-zvol ZFS placement (bhyve) — live pool/dataset pickers with the
-// Custom… escape. Pool free space rides the label (the exact number the
-// capacity gate checks against); datasets list RELATIVE to the effective
-// pool — the agent joins <pool>/<dataset> itself.
-const BootZfsPlacement = ({ disks, setDisks, zfsPools, zfsDatasets, showClone, loading }) => {
-  // pools[].free = RAW BYTES as a string (zpool list -p — the canonical
-  // shape per the converged A3 answer).
-  const poolFree = free => `${(Number(free) / 1024 ** 3).toFixed(1)}G`;
-  // Only REAL pools list (Mark's sanity ruling) — free space + any
-  // non-ONLINE health state ride the label so a degraded pool is never a
-  // blind pick.
-  const poolOptions = zfsPools.map(pool => {
-    const free = pool.free ? ` — ${poolFree(pool.free)} free` : '';
+// ---- ZFS picker option builders (shared: boot placement + additional
+// rows). pools[].free = RAW BYTES string (canonical A3 answer); non-ONLINE
+// health rides the label so a degraded pool is never a blind pick; datasets
+// list RELATIVE to the effective pool — the agent joins <pool>/<dataset>.
+const zfsPoolOptions = zfsPools =>
+  zfsPools.map(pool => {
+    const free = pool.free ? ` — ${(Number(pool.free) / 1024 ** 3).toFixed(1)}G free` : '';
     const health = pool.health && pool.health !== 'ONLINE' ? ` · ${pool.health}` : '';
     return { value: pool.name, label: `${pool.name}${free}${health}` };
   });
-  const bootPoolName = (disks.bootPool || '').trim() || 'rpool';
-  const datasetOptions = zfsDatasets
-    .filter(dataset => dataset.name.startsWith(`${bootPoolName}/`))
+
+const zfsDatasetOptions = (zfsDatasets, poolName) =>
+  zfsDatasets
+    .filter(dataset => dataset.name.startsWith(`${poolName}/`))
     .map(dataset => {
-      const relative = dataset.name.slice(bootPoolName.length + 1);
+      const relative = dataset.name.slice(poolName.length + 1);
       return { value: relative, label: relative };
     });
+
+// Boot-zvol ZFS placement (bhyve) — live pool/dataset pickers with the
+// Custom… escape.
+const BootZfsPlacement = ({ disks, setDisks, zfsPools, zfsDatasets, showClone, loading }) => {
+  const poolOptions = zfsPoolOptions(zfsPools);
+  const datasetOptions = zfsDatasetOptions(zfsDatasets, (disks.bootPool || '').trim() || 'rpool');
   return (
     <>
       <div className="col-6 col-md-4">
@@ -1023,17 +1024,20 @@ const BootDiskSection = ({
         <label className="form-label" htmlFor="machine-disk-boot-directory">
           Directory (where the created disk file lands)
         </label>
-        <input
+        <PathInput
           id="machine-disk-boot-directory"
           className="form-control font-monospace"
-          list="machine-media-dirs"
-          placeholder="(default — the machine folder)"
           value={disks.bootDirectory}
-          onChange={e => setDisks({ bootDirectory: e.target.value })}
+          onChange={next => setDisks({ bootDirectory: next })}
+          server={currentServer}
+          mode="directory"
+          pickTitle="Pick the folder for the created disk file"
+          placeholder="(default — the machine folder)"
+          list="machine-media-dirs"
           disabled={loading}
         />
         <span className="form-text text-muted">
-          Must be an absolute, existing folder on the agent host.
+          Browse, pick a known media folder, or type — must exist on the agent host.
         </span>
       </div>
     )}
@@ -1114,6 +1118,9 @@ export const DisksStep = ({
 }) => {
   const diskifDefault = agentDefaults?.zones?.diskif || 'sata';
   const knobValues = agentDefaults?.knob_values || null;
+  // The rows share the boot placement's pickers (Mark: same treatment
+  // everywhere) — per-row dataset options follow that ROW's pool.
+  const poolOptions = zfsPoolOptions(zfsPools);
   // Volume rows carry in_use_by (machine name | null) — an in-use zvol
   // stays pickable (the agent refuses; `force: true` is the override) but
   // the label says who holds it.
@@ -1319,13 +1326,16 @@ export const DisksStep = ({
                   <label className="form-label small mb-1" htmlFor={`${rowKey}-directory`}>
                     Directory
                   </label>
-                  <input
+                  <PathInput
                     id={`${rowKey}-directory`}
                     className="form-control form-control-sm font-monospace"
-                    list="machine-media-dirs"
-                    placeholder="(machine folder)"
                     value={row.directory ?? ''}
-                    onChange={e => setAdditional(index, { directory: e.target.value })}
+                    onChange={next => setAdditional(index, { directory: next })}
+                    server={currentServer}
+                    mode="directory"
+                    pickTitle="Pick the folder for the created disk file"
+                    placeholder="(machine folder)"
+                    list="machine-media-dirs"
                     disabled={loading}
                   />
                 </div>
@@ -1350,13 +1360,14 @@ export const DisksStep = ({
                     <label className="form-label small mb-1" htmlFor={`${rowKey}-pool`}>
                       Pool
                     </label>
-                    <input
+                    <PickOrType
                       id={`${rowKey}-pool`}
-                      className="form-control form-control-sm"
-                      type="text"
-                      placeholder="(default — rpool)"
                       value={row.pool ?? ''}
-                      onChange={e => setAdditional(index, { pool: e.target.value })}
+                      onChange={next => setAdditional(index, { pool: next })}
+                      options={poolOptions}
+                      blankLabel="(default — rpool)"
+                      placeholder="pool name"
+                      small
                       disabled={loading}
                     />
                   </div>
@@ -1364,13 +1375,14 @@ export const DisksStep = ({
                     <label className="form-label small mb-1" htmlFor={`${rowKey}-dataset`}>
                       Dataset
                     </label>
-                    <input
+                    <PickOrType
                       id={`${rowKey}-dataset`}
-                      className="form-control form-control-sm"
-                      type="text"
-                      placeholder="(default — zones)"
                       value={row.dataset ?? ''}
-                      onChange={e => setAdditional(index, { dataset: e.target.value })}
+                      onChange={next => setAdditional(index, { dataset: next })}
+                      options={zfsDatasetOptions(zfsDatasets, (row.pool || '').trim() || 'rpool')}
+                      blankLabel="(default — zones)"
+                      placeholder="e.g. zones/companyA"
+                      small
                       disabled={loading}
                     />
                   </div>

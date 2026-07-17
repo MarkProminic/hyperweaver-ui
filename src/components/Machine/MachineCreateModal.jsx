@@ -281,6 +281,93 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     setStartAfterCreate(false);
   }, []);
 
+  // ---- live picker feeds — fetched on open AND re-fetched on step entry
+  // (the staleness fix), so all three share one loader each. ----
+  const loadZfsFeeds = useCallback(() => {
+    if (!currentServer || !hasFeature(currentServer, 'zfs')) {
+      setZfsPools([]);
+      setZfsDatasets([]);
+      setZfsVolumes([]);
+      return;
+    }
+    getZfsPools(currentServer.hostname, currentServer.port, currentServer.protocol).then(result => {
+      setZfsPools(result.success ? result.data?.pools || [] : []);
+    });
+    getZfsDatasets(currentServer.hostname, currentServer.port, currentServer.protocol, {
+      type: 'filesystem',
+    }).then(result => {
+      setZfsDatasets(result.success ? result.data?.datasets || [] : []);
+    });
+    getZfsDatasets(currentServer.hostname, currentServer.port, currentServer.protocol, {
+      type: 'volume',
+    }).then(result => {
+      setZfsVolumes(result.success ? result.data?.datasets || [] : []);
+    });
+  }, [currentServer]);
+
+  // Registered media (VBox image pickers) — agents without the surface
+  // leave the list empty and the plain path input stands.
+  const loadMedia = useCallback(() => {
+    if (!currentServer || !hasHypervisor(currentServer, 'virtualbox')) {
+      setVboxMedia([]);
+      return;
+    }
+    getMediaList(currentServer.hostname, currentServer.port, currentServer.protocol).then(
+      result => {
+        setVboxMedia(result.success ? result.data?.media || [] : []);
+      }
+    );
+  }, [currentServer]);
+
+  // Uplink rows — failures leave the field free-text. The first option
+  // autofills the seeded external network's bridge (untouched rows only).
+  // Valid VNIC uplinks: phys + aggr + etherstub (Mark's ruling); the
+  // converged flat-rows wire is {name, class, state, provisioning?} and
+  // Go's bare-string spelling stays readable until it converges.
+  const loadUplinks = useCallback(() => {
+    if (!currentServer) {
+      return;
+    }
+    getBridgedInterfaces(currentServer.hostname, currentServer.port, currentServer.protocol).then(
+      result => {
+        const list = result.success
+          ? result.data?.interfaces || result.data?.bridged_interfaces || result.data || []
+          : [];
+        const rows = (Array.isArray(list) ? list : [])
+          .map(entry => (typeof entry === 'string' ? { name: entry } : entry || {}))
+          .filter(
+            entry =>
+              !entry.class ||
+              entry.class === 'phys' ||
+              entry.class === 'aggr' ||
+              entry.class === 'etherstub'
+          )
+          .map(entry => ({
+            name: entry.name || entry.device || '',
+            class: entry.class || '',
+            provisioning: entry.provisioning === true,
+          }))
+          .filter(entry => entry.name);
+        setBridgeOptions(rows.map(entry => entry.name));
+        setBridgeChoices(
+          rows.map(entry => {
+            const kind = entry.class
+              ? ` (${entry.class}${entry.provisioning ? ' · provisioning' : ''})`
+              : '';
+            return { value: entry.name, label: `${entry.name}${kind}` };
+          })
+        );
+        if (rows.length > 0) {
+          setNetworks(prev =>
+            prev.length > 0 && !prev[0].bridge
+              ? [{ ...prev[0], bridge: rows[0].name }, ...prev.slice(1)]
+              : prev
+          );
+        }
+      }
+    );
+  }, [currentServer]);
+
   useEffect(() => {
     if (!isOpen || !currentServer) {
       return;
@@ -427,85 +514,26 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       setArtifacts(null);
       setIsoOptions([]);
     }
-    // ZFS placement pickers — failures/absence leave the fields free-text.
-    if (hasFeature(currentServer, 'zfs')) {
-      getZfsPools(currentServer.hostname, currentServer.port, currentServer.protocol).then(
-        result => {
-          setZfsPools(result.success ? result.data?.pools || [] : []);
-        }
-      );
-      getZfsDatasets(currentServer.hostname, currentServer.port, currentServer.protocol, {
-        type: 'filesystem',
-      }).then(result => {
-        setZfsDatasets(result.success ? result.data?.datasets || [] : []);
-      });
-      getZfsDatasets(currentServer.hostname, currentServer.port, currentServer.protocol, {
-        type: 'volume',
-      }).then(result => {
-        setZfsVolumes(result.success ? result.data?.datasets || [] : []);
-      });
-    } else {
-      setZfsPools([]);
-      setZfsDatasets([]);
-      setZfsVolumes([]);
+    loadZfsFeeds();
+    loadMedia();
+    loadUplinks();
+  }, [isOpen, currentServer, resetForm, loadZfsFeeds, loadMedia, loadUplinks]);
+
+  // Re-fetch the feeds a step consumes each time it is ENTERED (Mark:
+  // "sometimes the dropdown data is stale") — picker data is only ever as
+  // old as the last visit to its step, never the modal open.
+  useEffect(() => {
+    if (!isOpen || !currentServer) {
+      return;
     }
-    // Registered media (VBox image pickers) — agents without the surface
-    // leave the list empty and the plain path input stands.
-    if (hasHypervisor(currentServer, 'virtualbox')) {
-      getMediaList(currentServer.hostname, currentServer.port, currentServer.protocol).then(
-        result => {
-          setVboxMedia(result.success ? result.data?.media || [] : []);
-        }
-      );
-    } else {
-      setVboxMedia([]);
+    const stepId = STEPS[stepIndex].id;
+    if (stepId === 'disks') {
+      loadZfsFeeds();
+      loadMedia();
+    } else if (stepId === 'network') {
+      loadUplinks();
     }
-    // Bridge suggestions — failures leave the field free-text. The first
-    // option autofills the seeded external network's bridge (untouched rows
-    // only — the user's own pick always wins).
-    getBridgedInterfaces(currentServer.hostname, currentServer.port, currentServer.protocol).then(
-      result => {
-        const list = result.success
-          ? result.data?.interfaces || result.data?.bridged_interfaces || result.data || []
-          : [];
-        // Valid VNIC uplinks: physical links, aggregates, AND etherstubs
-        // (Mark's ruling — zone uplinks are often estub_*). The converged
-        // flat-rows wire is {name, class, state, provisioning?}; Go's
-        // bare-string spelling stays readable until it converges.
-        const rows = (Array.isArray(list) ? list : [])
-          .map(entry => (typeof entry === 'string' ? { name: entry } : entry || {}))
-          .filter(
-            entry =>
-              !entry.class ||
-              entry.class === 'phys' ||
-              entry.class === 'aggr' ||
-              entry.class === 'etherstub'
-          )
-          .map(entry => ({
-            name: entry.name || entry.device || '',
-            class: entry.class || '',
-            provisioning: entry.provisioning === true,
-          }))
-          .filter(entry => entry.name);
-        setBridgeOptions(rows.map(entry => entry.name));
-        setBridgeChoices(
-          rows.map(entry => {
-            const kind = entry.class
-              ? ` (${entry.class}${entry.provisioning ? ' · provisioning' : ''})`
-              : '';
-            return { value: entry.name, label: `${entry.name}${kind}` };
-          })
-        );
-        if (rows.length > 0) {
-          setNetworks(prev =>
-            prev.length > 0 && !prev[0].bridge
-              ? [{ ...prev[0], bridge: rows[0].name }, ...prev.slice(1)]
-              : prev
-          );
-        }
-      }
-    );
-  }, [isOpen, currentServer, resetForm]);
+  }, [isOpen, currentServer, stepIndex, loadZfsFeeds, loadMedia, loadUplinks]);
 
   const setSetting = (key, value) => setSettings(prev => ({ ...prev, [key]: value }));
 
