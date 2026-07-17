@@ -1,9 +1,10 @@
 import PropTypes from 'prop-types';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getMachineDefaults, getMachineOsTypes } from '../../api/machineAPI';
 import {
   getProvisioners,
+  getProvisionerVersion,
   createMachine,
   getArtifacts,
   getIsoArtifacts,
@@ -12,7 +13,9 @@ import {
   getTemplates,
   getTemplateSources,
   getRemoteTemplates,
+  getMediaList,
 } from '../../api/provisioningAPI';
+import { getZfsPools, getZfsDatasets } from '../../api/zfsAPI';
 import { flattenBoxCatalog, pickDefaultSource } from '../../utils/boxCatalog';
 import { hasFeature, hasHypervisor } from '../../utils/capabilities';
 import { resourceLabel } from '../../utils/resourceLabel';
@@ -55,9 +58,16 @@ const BOX_SETTING_KEYS = ['box', 'box_version', 'box_arch', 'box_url'];
 
 const emptyDiskConfig = () => ({
   bootSize: '',
-  bootSparse: false,
+  // sparse rides the wire EXPLICITLY (disk spec v1: spelled, never
+  // defaulted) — seeded true, the agents' frozen default.
+  bootSparse: true,
   bootPath: '',
   bootVolumeName: '',
+  // ZFS placement (bhyve) — which pool + parent dataset the boot zvol lands
+  // in (zoneweaver executor: pool||'rpool', dataset||'zones').
+  bootPool: '',
+  bootDataset: '',
+  bootCloneStrategy: '',
   additional: [],
   cdroms: [],
   // controllers[] rows + per-media controller/port addressing. Empty = the
@@ -140,6 +150,12 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   const [boxPickCustom, setBoxPickCustom] = useState(false);
   const [familyName, setFamilyName] = useState('');
   const [versionKey, setVersionKey] = useState('');
+  // The registry LIST is a summary — metadata (roles + the field DSL) rides
+  // the version DETAIL only, fetched on pick. `pending` gates the
+  // "predates the field DSL" hint so it never flashes mid-fetch.
+  const [versionDetail, setVersionDetail] = useState(null);
+  const [versionPending, setVersionPending] = useState(false);
+  const versionFetchSeq = useRef(0);
   const [name, setName] = useState('');
   const [settings, setSettings] = useState(emptySettings);
   const [bootSource, setBootSource] = useState('template');
@@ -171,6 +187,17 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   // Cached ISO filenames — the cdrom rows' {iso} references resolve these.
   const [isoOptions, setIsoOptions] = useState([]);
   const [bridgeOptions, setBridgeOptions] = useState([]);
+  // ZFS placement pickers (bhyve Disks step) — live pools + filesystem
+  // datasets; the pickers keep a Custom… escape so any premade path stays
+  // typable.
+  const [zfsPools, setZfsPools] = useState([]);
+  const [zfsDatasets, setZfsDatasets] = useState([]);
+  // Existing zvols — the bhyve `image` pickers' feed (in-use flag rides
+  // once zoneweaver serves it; the agent refuses in-use attaches meanwhile).
+  const [zfsVolumes, setZfsVolumes] = useState([]);
+  // Registered media — the VBox `image` pickers' feed (GET /media, frozen
+  // disk-spec wire); [] until the agent serves it, the path input stands.
+  const [vboxMedia, setVboxMedia] = useState([]);
   // GET /machines/defaults — the ACTUAL values untouched fields get
   // (Mark's ask: never a bare "(agent default)" label). {settings, zones,
   // disks, notes}; agents without the endpoint leave it null and the
@@ -181,6 +208,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   const [osTypes, setOsTypes] = useState(null);
 
   const singular = resourceLabel(currentServer, { plural: false });
+  const bhyve = !!currentServer && hasHypervisor(currentServer, 'bhyve');
 
   const family = useMemo(
     () => provisioners.find(collection => collection.name === familyName) || null,
@@ -191,7 +219,14 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     [family, versionKey]
   );
 
-  const fieldConfig = useMemo(() => dslConfiguration(version), [version]);
+  // The DETAIL wins over the list row wherever both exist — the registry
+  // list is a summary; metadata (roles + the field DSL) rides the detail.
+  const versionInfo = versionDetail || version;
+  const fieldConfig = useMemo(() => dslConfiguration(versionInfo), [versionInfo]);
+  // Safe ID is PACKAGE-DECLARED need (manifest id_files — the agents'
+  // working-copy staging keys), never a standing field: the generic package
+  // ships no id files; domino-family manifests declare them.
+  const needsSafeId = !!versionInfo?.id_files;
   // options_source pickers draw on what the wizard already fetched: host
   // NICs as `networks`, the local template registry as `images`.
   const fieldInventory = useMemo(
@@ -210,6 +245,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     setShowAdvanced(false);
     setFamilyName('');
     setVersionKey('');
+    versionFetchSeq.current += 1;
+    setVersionDetail(null);
+    setVersionPending(false);
     setName('');
     setSettings(emptySettings());
     setBootSource('template');
@@ -378,6 +416,39 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       setArtifacts(null);
       setIsoOptions([]);
     }
+    // ZFS placement pickers — failures/absence leave the fields free-text.
+    if (hasFeature(currentServer, 'zfs')) {
+      getZfsPools(currentServer.hostname, currentServer.port, currentServer.protocol).then(
+        result => {
+          setZfsPools(result.success ? result.data?.pools || [] : []);
+        }
+      );
+      getZfsDatasets(currentServer.hostname, currentServer.port, currentServer.protocol, {
+        type: 'filesystem',
+      }).then(result => {
+        setZfsDatasets(result.success ? result.data?.datasets || [] : []);
+      });
+      getZfsDatasets(currentServer.hostname, currentServer.port, currentServer.protocol, {
+        type: 'volume',
+      }).then(result => {
+        setZfsVolumes(result.success ? result.data?.datasets || [] : []);
+      });
+    } else {
+      setZfsPools([]);
+      setZfsDatasets([]);
+      setZfsVolumes([]);
+    }
+    // Registered media (VBox image pickers) — agents without the surface
+    // leave the list empty and the plain path input stands.
+    if (hasHypervisor(currentServer, 'virtualbox')) {
+      getMediaList(currentServer.hostname, currentServer.port, currentServer.protocol).then(
+        result => {
+          setVboxMedia(result.success ? result.data?.media || [] : []);
+        }
+      );
+    } else {
+      setVboxMedia([]);
+    }
     // Bridge suggestions — failures leave the field free-text. The first
     // option autofills the seeded external network's bridge (untouched rows
     // only — the user's own pick always wins).
@@ -423,6 +494,40 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     // default-driven show_if is correct before the user touches anything.
     setProperties(seedAnswers(dslConfiguration(nextVersion)));
     setFieldErrors({});
+    // The list row carries no metadata — fetch the DETAIL and reseed when it
+    // lands (nothing DSL-driven can have been answered before that; the form
+    // only renders from the detail). The seq guards a quick re-pick.
+    versionFetchSeq.current += 1;
+    const seq = versionFetchSeq.current;
+    setVersionDetail(null);
+    if (!nextVersion || !familyName || !currentServer) {
+      setVersionPending(false);
+      return;
+    }
+    setVersionPending(true);
+    getProvisionerVersion(
+      currentServer.hostname,
+      currentServer.port,
+      currentServer.protocol,
+      familyName,
+      nextVersion.version || value
+    ).then(result => {
+      if (seq !== versionFetchSeq.current) {
+        return; // a newer pick superseded this fetch
+      }
+      setVersionPending(false);
+      if (!result.success) {
+        return; // list-row fallback stands; the pre-DSL hint tells the truth
+      }
+      // BOTH agents nest the FULL provisioner.yml under `metadata` on the
+      // version detail (converged A1/A2 answer) — the MANIFEST is what the
+      // seeding contract reads (metadata.roles / metadata.configuration /
+      // top-level id_files), so store exactly that.
+      const manifest = result.data?.metadata || null;
+      setVersionDetail(manifest);
+      setRoles(seedRoles(manifest));
+      setProperties(seedAnswers(dslConfiguration(manifest)));
+    });
   };
 
   const handleFamilyChange = value => {
@@ -431,6 +536,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     setRoles([]);
     setProperties({});
     setFieldErrors({});
+    versionFetchSeq.current += 1;
+    setVersionDetail(null);
+    setVersionPending(false);
   };
 
   /** Optional controller/port addressing on a media row (device model). */
@@ -458,27 +566,55 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     if (controllers.length > 0) {
       disks.controllers = controllers;
     }
-    if (bootSource === 'existing' && diskConfig.bootPath) {
-      disks.boot = { path: diskConfig.bootPath };
+    // DISK SPEC v1 — zero inference: the boot TYPE is DECLARED and the
+    // wizard ALWAYS writes it (template|image|blank|none). Per-type keys
+    // only; placement rides the entry (pool/dataset bhyve).
+    const boot = {
+      type: { template: 'template', scratch: 'blank', existing: 'image', none: 'none' }[bootSource],
+    };
+    if (bootSource === 'existing') {
+      if (diskConfig.bootPath) {
+        boot.path = diskConfig.bootPath;
+      }
     } else if (bootSource === 'scratch' || bootSource === 'template') {
-      const boot = {};
       if (diskConfig.bootSize) {
         boot.size = diskConfig.bootSize;
       }
-      if (diskConfig.bootSparse) {
-        boot.sparse = true;
-      }
+      boot.sparse = diskConfig.bootSparse;
       if (diskConfig.bootVolumeName) {
         boot.volume_name = diskConfig.bootVolumeName;
       }
-      if (Object.keys(boot).length > 0) {
-        disks.boot = boot;
+      if (bhyve) {
+        if (diskConfig.bootPool.trim()) {
+          boot.pool = diskConfig.bootPool.trim();
+        }
+        if (diskConfig.bootDataset.trim()) {
+          boot.dataset = diskConfig.bootDataset.trim();
+        }
+        if (bootSource === 'template' && diskConfig.bootCloneStrategy) {
+          boot.clone_strategy = diskConfig.bootCloneStrategy;
+        }
       }
     }
+    disks.boot = boot;
+    // additional_disks[] — the same TYPED entries (image | blank).
     const additional = diskConfig.additional
       .map(row => {
-        const base =
-          row.mode === 'existing' ? row.path && { path: row.path } : row.size && { size: row.size };
+        let base = null;
+        if (row.mode === 'existing') {
+          base = row.path && { type: 'image', path: row.path };
+        } else if (row.size) {
+          base = { type: 'blank', size: row.size, sparse: row.sparse !== false };
+          if (row.volume_name?.trim()) {
+            base.volume_name = row.volume_name.trim();
+          }
+          if (bhyve && row.pool?.trim()) {
+            base.pool = row.pool.trim();
+          }
+          if (bhyve && row.dataset?.trim()) {
+            base.dataset = row.dataset.trim();
+          }
+        }
         return base && withAddressing(base, row);
       })
       .filter(Boolean);
@@ -641,7 +777,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       // (Jinja undefined-renders-empty, the DSL contract).
       properties: pruneHidden(fieldConfig, properties, roles),
       sync_method: syncMethod,
-      safe_id_path: safeIdPath,
+      // Rides ONLY when the picked version's manifest declares id_files —
+      // package-declared need, never a standing key.
+      ...(needsSafeId && safeIdPath.trim() && { safe_id_path: safeIdPath.trim() }),
       start_after_create: startAfterCreate,
     };
   };
@@ -900,6 +1038,10 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           currentServer={currentServer}
           vbox={hasHypervisor(currentServer, 'virtualbox')}
           bhyve={hasHypervisor(currentServer, 'bhyve')}
+          zfsPools={zfsPools}
+          zfsDatasets={zfsDatasets}
+          zfsVolumes={zfsVolumes}
+          vboxMedia={vboxMedia}
           advanced={showAdvanced}
           loading={loading}
         />
@@ -924,7 +1066,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           family={family}
           versionKey={versionKey}
           onVersionChange={handleVersionChange}
-          version={version}
+          version={versionInfo}
+          versionPending={versionPending}
+          showSafeId={needsSafeId}
           settings={settings}
           setSetting={setSetting}
           fieldConfig={fieldConfig}

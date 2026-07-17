@@ -3,7 +3,7 @@ import { useRef, useEffect, useContext, memo, useState } from 'react';
 
 import { useFooter } from '../contexts/FooterContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
-import { taskOperationLabel } from '../utils/taskOperations';
+import { taskOperationLabel, transferProgressLine } from '../utils/taskOperations';
 
 import TaskDetailModal from './TaskDetailModal';
 
@@ -47,24 +47,30 @@ const renderProgress = task => {
   }
 
   if (status === 'running') {
+    // Registry transfers carry live byte counts (converged progress_info
+    // wire) — rendered under the bar; speed derives from the deltas.
+    const transfer = transferProgressLine(task);
     if (progress_percent !== null && progress_percent !== undefined) {
       return (
-        <div className="d-flex align-items-center gap-2 mb-0">
-          <div
-            className="progress flex-grow-1"
-            style={{ height: '0.5rem' }}
-            role="progressbar"
-            aria-valuenow={progress_percent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div className="progress-bar bg-primary" style={{ width: `${progress_percent}%` }} />
+        <div>
+          <div className="d-flex align-items-center gap-2 mb-0">
+            <div
+              className="progress flex-grow-1"
+              style={{ height: '0.5rem' }}
+              role="progressbar"
+              aria-valuenow={progress_percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div className="progress-bar bg-primary" style={{ width: `${progress_percent}%` }} />
+            </div>
+            <span className="small">{progress_percent}%</span>
           </div>
-          <span className="small">{progress_percent}%</span>
+          {transfer && <span className="small text-muted">{transfer}</span>}
         </div>
       );
     }
-    return 'running';
+    return transfer || 'running';
   }
 
   if (progress_percent !== null && progress_percent !== undefined) {

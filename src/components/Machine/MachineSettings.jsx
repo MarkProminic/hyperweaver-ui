@@ -114,6 +114,24 @@ const asFormString = value => {
 // needs the alias (zadm stores os_type as the `type` attr).
 const CONFIG_KEY_ALIASES = { os_type: 'type' };
 
+/**
+ * The zonecfg complex-topology echo — a complex-CPU zone's config carries
+ * vcpus="sockets=S,cores=C,threads=T" (the agents' documented spelling).
+ * null for a plain count.
+ */
+const parseCpuTopology = value => {
+  const match = /^sockets=(?<s>\d+),cores=(?<c>\d+),threads=(?<t>\d+)$/u.exec(
+    String(value ?? '').trim()
+  );
+  return match
+    ? {
+        sockets: Number(match.groups.s),
+        cores: Number(match.groups.c),
+        threads: Number(match.groups.t),
+      }
+    : null;
+};
+
 // knob_current beats the raw configuration document (zadm configs carry the
 // zone keys directly; VirtualBox current values only exist in knob_current).
 const prefillFrom = (configuration, knobCurrent) =>
@@ -688,6 +706,11 @@ const MachineSettings = ({
   const [bootPriority, setBootPriority] = useState(''); // '' = unchanged (DB-immediate)
   const [consolePort, setConsolePort] = useState(''); // '' = unchanged; 'dynamic' clears the pin
   const [consoleHost, setConsoleHost] = useState(''); // '' = unchanged
+  // bhyve CPU topology — PUT top-level cpu_configuration + complex_cpu_conf
+  // [{sockets, cores, threads}]. '' = unchanged; the current complex value
+  // seeds from the zonecfg vcpus echo.
+  const [cpuMode, setCpuMode] = useState('');
+  const [cpuTopo, setCpuTopo] = useState({ sockets: '', cores: '', threads: '' });
   const [vboxJson, setVboxJson] = useState(''); // raw passthrough, '' = unchanged
   const [addNics, setAddNics] = useState([]);
   const [addDisks, setAddDisks] = useState([]);
@@ -764,6 +787,8 @@ const MachineSettings = ({
     setBootPriority(seeded.bootPriority);
     setConsolePort(seeded.consolePort);
     setConsoleHost(seeded.consoleHost);
+    setCpuMode('');
+    setCpuTopo(parseCpuTopology(seeded.values.vcpus) || { sockets: '', cores: '', threads: '' });
     setVboxJson('');
     setAddNics([]);
     setAddDisks([]);
@@ -1046,6 +1071,23 @@ const MachineSettings = ({
     if (bootPriority !== '' && bootPriority !== seed.bootPriority) {
       changes.boot_priority = Number(bootPriority);
     }
+    // bhyve CPU topology — '' = unchanged; complex needs all three fields.
+    if (cpuMode === 'complex') {
+      if (!cpuTopo.sockets || !cpuTopo.cores || !cpuTopo.threads) {
+        setError('Complex CPU topology needs sockets, cores, and threads.');
+        return;
+      }
+      changes.cpu_configuration = 'complex';
+      changes.complex_cpu_conf = [
+        {
+          sockets: Number(cpuTopo.sockets),
+          cores: Number(cpuTopo.cores),
+          threads: Number(cpuTopo.threads),
+        },
+      ];
+    } else if (cpuMode === 'simple') {
+      changes.cpu_configuration = 'simple';
+    }
     // consoleport pins the noVNC web port (typing "dynamic" clears the pin
     // back to the agent's pool); consolehost sets the bind address.
     if (consolePort !== '' && consolePort !== seed.consolePort) {
@@ -1307,6 +1349,95 @@ const MachineSettings = ({
           formDisabled={formDisabled}
         />
       )}
+
+      {tab === 'general' &&
+        hasHypervisor(currentServer, 'bhyve') &&
+        (() => {
+          const currentTopo = parseCpuTopology(seed.values.vcpus);
+          const product =
+            (Number(cpuTopo.sockets) || 0) *
+            (Number(cpuTopo.cores) || 0) *
+            (Number(cpuTopo.threads) || 0);
+          return (
+            <div className="mt-3">
+              <h6 className="fw-bold">CPU Topology</h6>
+              <p className="form-text text-muted mt-0 mb-2">
+                Current:{' '}
+                {currentTopo
+                  ? `complex — sockets=${currentTopo.sockets}, cores=${currentTopo.cores}, threads=${currentTopo.threads}`
+                  : `simple — plain vCPU count${seed.values.vcpus ? ` (${seed.values.vcpus})` : ''}`}
+                . Applies with the other infrastructure changes on the next power cycle.
+              </p>
+              <div className="row g-3">
+                <div className="col-12 col-md-4">
+                  <label className="form-label" htmlFor="machine-cpu-mode">
+                    Mode
+                  </label>
+                  <select
+                    id="machine-cpu-mode"
+                    className="form-select"
+                    value={cpuMode}
+                    onChange={e => {
+                      const mode = e.target.value;
+                      setCpuMode(mode);
+                      if (mode === 'complex' && !cpuTopo.sockets) {
+                        setCpuTopo(
+                          currentTopo || {
+                            sockets: 1,
+                            cores: Number(seed.values.vcpus) || 1,
+                            threads: 1,
+                          }
+                        );
+                      }
+                    }}
+                    disabled={formDisabled}
+                  >
+                    <option value="">(unchanged)</option>
+                    <option value="simple">simple — vcpus is the count</option>
+                    <option value="complex">complex — sockets / cores / threads</option>
+                  </select>
+                </div>
+                {cpuMode === 'complex' && (
+                  <>
+                    {[
+                      ['sockets', 16],
+                      ['cores', 32],
+                      ['threads', 2],
+                    ].map(([key, max]) => (
+                      <div className="col-4 col-md-2" key={key}>
+                        <label className="form-label" htmlFor={`machine-cpu-topo-${key}`}>
+                          {key[0].toUpperCase() + key.slice(1)}
+                        </label>
+                        <input
+                          id={`machine-cpu-topo-${key}`}
+                          className="form-control"
+                          type="number"
+                          min="1"
+                          max={max}
+                          value={cpuTopo[key] ?? ''}
+                          onChange={e =>
+                            setCpuTopo(prev => ({
+                              ...prev,
+                              [key]: e.target.value === '' ? '' : Number(e.target.value),
+                            }))
+                          }
+                          disabled={formDisabled}
+                        />
+                      </div>
+                    ))}
+                    <div className="col-12">
+                      <span className={`form-text ${product > 32 ? 'text-danger' : 'text-muted'}`}>
+                        sockets × cores × threads = {product || '…'} vCPUs — bhyve limits: sockets
+                        ≤16, cores ≤32, threads ≤2, product ≤32. Over-limit values are refused by
+                        the agent.
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
       {tab === 'credentials' && (
         <div className="row g-3">

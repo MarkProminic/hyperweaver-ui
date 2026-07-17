@@ -416,6 +416,15 @@ export const deleteArtifacts = async (hostname, port, protocol, body) =>
   await makeAgentRequest(hostname, port, protocol, 'artifacts/files', 'DELETE', body);
 
 /**
+ * Registered media on the agent host (frozen disk-spec wire; rides the
+ * machine-create gate, no token of its own) — {media: [{path, format,
+ * size_bytes, source_stamp|null, in_use_by: []}], total}. Feeds the VBox
+ * `image` pickers.
+ */
+export const getMediaList = async (hostname, port, protocol) =>
+  await makeAgentRequest(hostname, port, protocol, 'media');
+
+/**
  * Host NICs usable as VirtualBox bridges — feeds the wizard's bridge picker.
  * The entry shape is implementation-flavored; callers flatten defensively.
  */

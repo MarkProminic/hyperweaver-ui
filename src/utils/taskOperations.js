@@ -41,3 +41,52 @@ const OPERATION_LABELS = {
 };
 
 export const taskOperationLabel = operation => OPERATION_LABELS[operation] || operation;
+
+/** Human-readable byte size — task transfer progress rendering. */
+export const formatByteSize = bytes => {
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return '';
+  }
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value >= 100 || unit === 0 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
+};
+
+/** progress_info — an OBJECT on the wire (canonical, converged A3 answer). */
+export const taskProgressInfo = task => {
+  const info = task?.progress_info;
+  return info && typeof info === 'object' ? info : null;
+};
+
+// Registry-transfer byte progress (the converged task wire): progress_info
+// {status: downloading|uploading, received_bytes, total_bytes|null}. Speed
+// is CLIENT-derived from received_bytes deltas — deliberately not on the
+// wire. Samples live per task and drop once it leaves the running state.
+const transferSamples = new Map();
+
+export const transferProgressLine = task => {
+  const info = taskProgressInfo(task);
+  if (!info || !Number.isFinite(info.received_bytes)) {
+    transferSamples.delete(task?.id);
+    return '';
+  }
+  const received = formatByteSize(info.received_bytes);
+  const total = Number.isFinite(info.total_bytes) ? ` / ${formatByteSize(info.total_bytes)}` : '';
+  let speed = '';
+  if (task.status === 'running') {
+    const now = Date.now();
+    const prev = transferSamples.get(task.id);
+    transferSamples.set(task.id, { bytes: info.received_bytes, at: now });
+    if (prev && now > prev.at && info.received_bytes > prev.bytes) {
+      speed = ` · ${formatByteSize(((info.received_bytes - prev.bytes) * 1000) / (now - prev.at))}/s`;
+    }
+  } else {
+    transferSamples.delete(task.id);
+  }
+  return `${received}${total}${speed}`;
+};

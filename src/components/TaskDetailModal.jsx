@@ -5,7 +5,11 @@ import { cancelTask } from '../api/machineAPI';
 import { getAgentBasePath, fetchWsTicket } from '../api/serverUtils';
 import { useServers } from '../contexts/ServerContext';
 import { copyText } from '../utils/clipboard';
-import { taskOperationLabel } from '../utils/taskOperations';
+import {
+  taskOperationLabel,
+  taskProgressInfo,
+  transferProgressLine,
+} from '../utils/taskOperations';
 import { buildWsUrl } from '../utils/websocket';
 
 import { ConfirmModal } from './common';
@@ -413,7 +417,10 @@ const TaskDetailModal = ({ task, onClose }) => {
             ansible_percent exists. */}
         {(() => {
           const progressPercent = row.progress_percent;
-          const progressInfo = row.progress_info;
+          const progressInfo = taskProgressInfo(row);
+          // Registry transfers (converged progress_info wire) — live byte
+          // counts + client-derived speed.
+          const transfer = transferProgressLine(row);
           if (!progressPercent || progressPercent <= 0) {
             return null;
           }
@@ -434,6 +441,14 @@ const TaskDetailModal = ({ task, onClose }) => {
                   />
                 </div>
                 <p className="text-center mb-1">{progressPercent}%</p>
+                {transfer && (
+                  <p className="text-center small mb-1">
+                    <i
+                      className={`fas ${progressInfo?.status === 'uploading' ? 'fa-upload' : 'fa-download'} me-2`}
+                    />
+                    {transfer}
+                  </p>
+                )}
                 {progressInfo?.message && (
                   <p className="text-center small mb-1">
                     <i className="fas fa-list-check me-2" />
@@ -447,7 +462,7 @@ const TaskDetailModal = ({ task, onClose }) => {
                       )}
                   </p>
                 )}
-                {progressInfo && !progressInfo.message && (
+                {progressInfo && !progressInfo.message && !transfer && (
                   <pre className="small mt-2">{JSON.stringify(progressInfo, null, 2)}</pre>
                 )}
               </div>
