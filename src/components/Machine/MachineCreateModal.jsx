@@ -72,6 +72,9 @@ const emptyDiskConfig = () => ({
   // every entry on the frozen wire).
   bootController: '',
   bootPort: '',
+  // VBox FILE placement — where the CREATED disk file lands (blank/template
+  // only; absent = the machine folder).
+  bootDirectory: '',
   additional: [],
   cdroms: [],
   // controllers[] rows + per-media controller/port addressing. Empty = the
@@ -191,6 +194,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   // Cached ISO filenames — the cdrom rows' {iso} references resolve these.
   const [isoOptions, setIsoOptions] = useState([]);
   const [bridgeOptions, setBridgeOptions] = useState([]);
+  // The same uplinks WITH their class for the Network step's dropdown —
+  // phys + aggr + etherstub (Mark: all three, labeled).
+  const [bridgeChoices, setBridgeChoices] = useState([]);
   // ZFS placement pickers (bhyve Disks step) — live pools + filesystem
   // datasets; the pickers keep a Custom… escape so any premade path stays
   // typable.
@@ -462,16 +468,38 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
         const list = result.success
           ? result.data?.interfaces || result.data?.bridged_interfaces || result.data || []
           : [];
-        const options = (Array.isArray(list) ? list : [])
+        // Valid VNIC uplinks: physical links, aggregates, AND etherstubs
+        // (Mark's ruling — zone uplinks are often estub_*). The converged
+        // flat-rows wire is {name, class, state, provisioning?}; Go's
+        // bare-string spelling stays readable until it converges.
+        const rows = (Array.isArray(list) ? list : [])
           .map(entry => (typeof entry === 'string' ? { name: entry } : entry || {}))
-          .filter(entry => !entry.class || entry.class === 'phys' || entry.class === 'aggr')
-          .map(entry => entry.name || entry.device || '')
-          .filter(Boolean);
-        setBridgeOptions(options);
-        if (options.length > 0) {
+          .filter(
+            entry =>
+              !entry.class ||
+              entry.class === 'phys' ||
+              entry.class === 'aggr' ||
+              entry.class === 'etherstub'
+          )
+          .map(entry => ({
+            name: entry.name || entry.device || '',
+            class: entry.class || '',
+            provisioning: entry.provisioning === true,
+          }))
+          .filter(entry => entry.name);
+        setBridgeOptions(rows.map(entry => entry.name));
+        setBridgeChoices(
+          rows.map(entry => {
+            const kind = entry.class
+              ? ` (${entry.class}${entry.provisioning ? ' · provisioning' : ''})`
+              : '';
+            return { value: entry.name, label: `${entry.name}${kind}` };
+          })
+        );
+        if (rows.length > 0) {
           setNetworks(prev =>
             prev.length > 0 && !prev[0].bridge
-              ? [{ ...prev[0], bridge: options[0] }, ...prev.slice(1)]
+              ? [{ ...prev[0], bridge: rows[0].name }, ...prev.slice(1)]
               : prev
           );
         }
@@ -600,6 +628,10 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           boot.clone_strategy = diskConfig.bootCloneStrategy;
         }
       }
+      // VBox file placement — created disks only (blank/template).
+      if (vbox && diskConfig.bootDirectory.trim()) {
+        boot.directory = diskConfig.bootDirectory.trim();
+      }
     }
     // VBox attachment placement — controller/port ride any non-none entry.
     if (vbox && boot.type !== 'none') {
@@ -627,6 +659,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           }
           if (bhyve && row.dataset?.trim()) {
             base.dataset = row.dataset.trim();
+          }
+          if (vbox && row.directory?.trim()) {
+            base.directory = row.directory.trim();
           }
         }
         return base && withAddressing(base, row);
@@ -668,7 +703,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     };
   };
 
-  const parseVbox = () => {
+  const parseVboxPassthrough = () => {
     if (!vboxJson.trim()) {
       return null;
     }
@@ -722,7 +757,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
         ...(row.options.trim() && { options: row.options.trim() }),
       }));
     const builtCloudInit = buildCloudInit();
-    const vbox = parseVbox();
+    const vboxPassthrough = parseVboxPassthrough();
     const hardwarePayload = buildHardwarePayload(hardware) || {};
     const serial = buildPortsPayload(serialRows);
     if (serial.length > 0) {
@@ -782,7 +817,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       ...(Object.keys(zoneFields).length > 0 && { zones: zoneFields }),
       ...(Object.keys(hardwarePayload).length > 0 && { hardware: hardwarePayload }),
       ...(builtCloudInit && { cloud_init: builtCloudInit }),
-      ...(vbox && { vbox }),
+      ...(vboxPassthrough && { vbox: vboxPassthrough }),
       ...(tags.length > 0 && { tags }),
       ...(notes.trim() && { notes: notes.trim() }),
       networks: cleanedNetworks,
@@ -1068,7 +1103,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
         <NetworkStep
           networks={networks}
           onNetworksChange={setNetworks}
-          bridgeOptions={bridgeOptions}
+          bridgeChoices={bridgeChoices}
           nicEnums={agentDefaults?.knob_values || null}
           loading={loading}
         />

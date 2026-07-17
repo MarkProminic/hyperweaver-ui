@@ -1,13 +1,16 @@
 import PropTypes from 'prop-types';
 
+import PickOrType from './PickOrType';
+
 /**
  * Networks editor for the machine-create wizard: one row per spec
  * `networks[]` entry — type (external = the user's bridged network,
- * host = host-only), bridge (picker fed by the agent's
- * GET /provisioning/bridged-interfaces, free text preserved), DHCP toggle,
- * static addressing, MAC (auto = the hypervisor assigns), and two DNS
- * entries (the networking role's netplan template reads dns[0] AND dns[1],
- * even under DHCP — proven sequence, sync 2026-07-07). Entries pass to the
+ * host = host-only), bridge/uplink (a REAL dropdown fed by the agent's
+ * GET /provisioning/bridged-interfaces — phys + aggr + etherstub, class
+ * labeled, Custom… escape for anything else), DHCP toggle, static
+ * addressing, MAC (auto = the hypervisor assigns), and two DNS entries
+ * (the networking role's netplan template reads dns[0] AND dns[1], even
+ * under DHCP — proven sequence, sync 2026-07-07). Entries pass to the
  * agent VERBATIM, so keys a row already carries beyond these fields survive
  * the round-trip untouched.
  */
@@ -34,7 +37,7 @@ const TUNING_FIELDS = [
 const NetworksEditor = ({
   networks,
   onNetworksChange,
-  bridgeOptions,
+  bridgeChoices = [],
   nicEnums = null,
   loading,
 }) => {
@@ -92,23 +95,28 @@ const NetworksEditor = ({
               </div>
               <div className="col-6 col-md-3">
                 <label className="form-label small mb-1" htmlFor={`${rowKey}-bridge`}>
-                  Bridge / NIC
+                  Bridge / Uplink
                 </label>
-                <input
-                  id={`${rowKey}-bridge`}
-                  className="form-control form-control-sm"
-                  type="text"
-                  list={bridgeOptions.length ? `${rowKey}-bridge-options` : undefined}
-                  value={network.bridge ?? ''}
-                  onChange={e => setNetwork(index, { bridge: e.target.value })}
-                  disabled={loading}
-                />
-                {bridgeOptions.length > 0 && (
-                  <datalist id={`${rowKey}-bridge-options`}>
-                    {bridgeOptions.map(option => (
-                      <option key={option} value={option} />
-                    ))}
-                  </datalist>
+                {bridgeChoices.length > 0 ? (
+                  <PickOrType
+                    id={`${rowKey}-bridge`}
+                    value={network.bridge ?? ''}
+                    onChange={next => setNetwork(index, { bridge: next })}
+                    options={bridgeChoices}
+                    blankLabel="Select an uplink…"
+                    placeholder="link name"
+                    small
+                    disabled={loading}
+                  />
+                ) : (
+                  <input
+                    id={`${rowKey}-bridge`}
+                    className="form-control form-control-sm"
+                    type="text"
+                    value={network.bridge ?? ''}
+                    onChange={e => setNetwork(index, { bridge: e.target.value })}
+                    disabled={loading}
+                  />
                 )}
               </div>
               <div className="col-6 col-md-2">
@@ -270,7 +278,9 @@ const NetworksEditor = ({
 NetworksEditor.propTypes = {
   networks: PropTypes.array.isRequired,
   onNetworksChange: PropTypes.func.isRequired,
-  bridgeOptions: PropTypes.arrayOf(PropTypes.string).isRequired,
+  bridgeChoices: PropTypes.arrayOf(
+    PropTypes.shape({ value: PropTypes.string.isRequired, label: PropTypes.string.isRequired })
+  ),
   nicEnums: PropTypes.object,
   loading: PropTypes.bool,
 };

@@ -10,6 +10,7 @@ import {
   ParallelPortsEditor,
 } from './HardwareEditor';
 import NetworksEditor from './NetworksEditor';
+import PickOrType from './PickOrType';
 import DslConfigForm from './ProvisionerFieldDsl';
 import { RolesEditor } from './ProvisionerFormFields';
 
@@ -61,75 +62,6 @@ SettingInput.propTypes = {
   list: PropTypes.string,
   min: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   max: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-};
-
-// Select-with-custom — the Image picker's "Custom…" switcher pattern,
-// generalized: pick from the live list, or flip to free text and back.
-// A value the list doesn't know keeps the text input showing.
-const PickOrType = ({ id, value, onChange, options, blankLabel, placeholder, disabled }) => {
-  const [custom, setCustom] = useState(false);
-  const known = options.some(option => option.value === value);
-  if (custom || (value && !known)) {
-    return (
-      <>
-        <input
-          id={id}
-          className="form-control"
-          type="text"
-          placeholder={placeholder}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          disabled={disabled}
-        />
-        <button
-          type="button"
-          className="btn btn-link btn-sm p-0"
-          onClick={() => {
-            setCustom(false);
-            onChange('');
-          }}
-        >
-          back to the list
-        </button>
-      </>
-    );
-  }
-  return (
-    <select
-      id={id}
-      className="form-select"
-      value={value}
-      onChange={e => {
-        if (e.target.value === '__custom__') {
-          setCustom(true);
-          onChange('');
-        } else {
-          onChange(e.target.value);
-        }
-      }}
-      disabled={disabled}
-    >
-      <option value="">{blankLabel}</option>
-      {options.map(option => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-      <option value="__custom__">Custom…</option>
-    </select>
-  );
-};
-
-PickOrType.propTypes = {
-  id: PropTypes.string.isRequired,
-  value: PropTypes.string.isRequired,
-  onChange: PropTypes.func.isRequired,
-  options: PropTypes.arrayOf(
-    PropTypes.shape({ value: PropTypes.string.isRequired, label: PropTypes.string.isRequired })
-  ).isRequired,
-  blankLabel: PropTypes.string.isRequired,
-  placeholder: PropTypes.string,
-  disabled: PropTypes.bool,
 };
 
 export const GeneralStep = ({
@@ -1083,6 +1015,28 @@ const BootDiskSection = ({
         )}
       </>
     )}
+    {/* VBox FILE placement (frozen addendum): `directory` — where the
+        CREATED disk file lands, blank/template only; absent = the machine
+        folder. Must exist on the agent host — the agent never creates it. */}
+    {vbox && advanced && (bootSource === 'template' || bootSource === 'scratch') && (
+      <div className="col-12 col-md-6">
+        <label className="form-label" htmlFor="machine-disk-boot-directory">
+          Directory (where the created disk file lands)
+        </label>
+        <input
+          id="machine-disk-boot-directory"
+          className="form-control font-monospace"
+          list="machine-media-dirs"
+          placeholder="(default — the machine folder)"
+          value={disks.bootDirectory}
+          onChange={e => setDisks({ bootDirectory: e.target.value })}
+          disabled={loading}
+        />
+        <span className="form-text text-muted">
+          Must be an absolute, existing folder on the agent host.
+        </span>
+      </div>
+    )}
     {/* VBox attachment placement — controller/port ride EVERY entry (the
         frozen wire); blank = default controller / next free port. */}
     {vbox && advanced && bootSource !== 'none' && (
@@ -1179,6 +1133,19 @@ export const DisksStep = ({
         : '';
     return { value: medium.path, label: `${medium.path}${size}${holders}` };
   });
+  // Known media directories (from registered-media paths, both separators —
+  // the agent host may be Windows) — the `directory` datalist feed.
+  const mediaDirs = [
+    ...new Set(
+      vboxMedia
+        .map(medium => {
+          const path = String(medium.path || '');
+          const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+          return cut > 0 ? path.slice(0, cut) : '';
+        })
+        .filter(Boolean)
+    ),
+  ];
   const diskifOptions = knobValues?.['zones.diskif'] || DISKIF_OPTIONS;
   const controllerTypeOptions = knobValues?.['disks.controller_type'] || [
     ...DISKIF_OPTIONS,
@@ -1226,6 +1193,13 @@ export const DisksStep = ({
           ))}
         </datalist>
       )}
+      {vbox && mediaDirs.length > 0 && (
+        <datalist id="machine-media-dirs">
+          {mediaDirs.map(dir => (
+            <option key={dir} value={dir} />
+          ))}
+        </datalist>
+      )}
 
       <h6 className="fw-bold">Additional Disks</h6>
       <div className="d-flex flex-column gap-2 mb-3">
@@ -1267,20 +1241,33 @@ export const DisksStep = ({
                 ) : (
                   <>
                     <label className="form-label small mb-1" htmlFor={`${rowKey}-path`}>
-                      {bhyve ? 'Existing zvol (dataset path)' : 'Path (on the agent host)'}
+                      {bhyve ? 'Existing zvol' : 'Existing disk image'}
                     </label>
-                    {bhyve ? (
-                      <input
+                    {bhyve && (
+                      <PickOrType
                         id={`${rowKey}-path`}
-                        className="form-control form-control-sm"
-                        type="text"
-                        list="machine-zvol-options"
-                        placeholder="e.g. rpool/vols/data"
                         value={row.path}
-                        onChange={e => setAdditional(index, { path: e.target.value })}
+                        onChange={next => setAdditional(index, { path: next })}
+                        options={volumeOptions}
+                        blankLabel="Select a zvol…"
+                        placeholder="e.g. rpool/vols/data"
+                        small
                         disabled={loading}
                       />
-                    ) : (
+                    )}
+                    {!bhyve && mediaOptions.length > 0 && (
+                      <PickOrType
+                        id={`${rowKey}-path`}
+                        value={row.path}
+                        onChange={next => setAdditional(index, { path: next })}
+                        options={mediaOptions}
+                        blankLabel="Select a registered disk image…"
+                        placeholder="path on the agent host"
+                        small
+                        disabled={loading}
+                      />
+                    )}
+                    {!bhyve && mediaOptions.length === 0 && (
                       <PathInput
                         id={`${rowKey}-path`}
                         className="form-control form-control-sm"
@@ -1326,6 +1313,22 @@ export const DisksStep = ({
                     />
                   </div>
                 </>
+              )}
+              {advanced && vbox && row.mode === 'new' && (
+                <div className="col-4 col-md-3">
+                  <label className="form-label small mb-1" htmlFor={`${rowKey}-directory`}>
+                    Directory
+                  </label>
+                  <input
+                    id={`${rowKey}-directory`}
+                    className="form-control form-control-sm font-monospace"
+                    list="machine-media-dirs"
+                    placeholder="(machine folder)"
+                    value={row.directory ?? ''}
+                    onChange={e => setAdditional(index, { directory: e.target.value })}
+                    disabled={loading}
+                  />
+                </div>
               )}
               {advanced && bhyve && row.mode === 'new' && (
                 <>
@@ -1424,6 +1427,7 @@ export const DisksStep = ({
                     volume_name: '',
                     pool: '',
                     dataset: '',
+                    directory: '',
                     sparse: true,
                   },
                 ],
@@ -2353,11 +2357,11 @@ SystemStep.propTypes = {
   loading: PropTypes.bool,
 };
 
-export const NetworkStep = ({ networks, onNetworksChange, bridgeOptions, nicEnums, loading }) => (
+export const NetworkStep = ({ networks, onNetworksChange, bridgeChoices, nicEnums, loading }) => (
   <NetworksEditor
     networks={networks}
     onNetworksChange={onNetworksChange}
-    bridgeOptions={bridgeOptions}
+    bridgeChoices={bridgeChoices}
     nicEnums={nicEnums}
     loading={loading}
   />
@@ -2366,7 +2370,7 @@ export const NetworkStep = ({ networks, onNetworksChange, bridgeOptions, nicEnum
 NetworkStep.propTypes = {
   networks: PropTypes.array.isRequired,
   onNetworksChange: PropTypes.func.isRequired,
-  bridgeOptions: PropTypes.arrayOf(PropTypes.string).isRequired,
+  bridgeChoices: PropTypes.array.isRequired,
   nicEnums: PropTypes.object,
   loading: PropTypes.bool,
 };
