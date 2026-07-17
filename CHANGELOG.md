@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.10.12](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.11...v0.10.12) (2026-07-17)
+
+
+### Bug Fixes
+
+* RDP, API Shaping, General Improvments ([8abd57d](https://github.com/MarkProminic/hyperweaver-ui/commit/8abd57d83deed8be85d6987e90e6ae6e03e36984))
+* RDP, API Shaping, General Improvments ([98c99e3](https://github.com/MarkProminic/hyperweaver-ui/commit/98c99e3c0a9a4b300861d91aab85f1d63df35f3c))
+* RDP, API Shaping, General Improvments ([f0f35ee](https://github.com/MarkProminic/hyperweaver-ui/commit/f0f35ee53b39a309ad2d784dbed6c5d5a799f53d))
+* RDP, API Shaping, General Improvments ([efccbf2](https://github.com/MarkProminic/hyperweaver-ui/commit/efccbf2f6da89cc7aca59912c1a1795018b118fb))
+* RDP, API Shaping, General Improvments ([6a45eed](https://github.com/MarkProminic/hyperweaver-ui/commit/6a45eeda76e37f7bb214db36be4b499101884c9e))
+* updating provisioning system ([9408450](https://github.com/MarkProminic/hyperweaver-ui/commit/9408450537644ca42686af357a45f2debaa24ee7))
+* updating provisioning system ([d52912c](https://github.com/MarkProminic/hyperweaver-ui/commit/d52912c7634d53a247328e6efbf6b2fc509574d9))
+* updating provisioning system ([d029d7f](https://github.com/MarkProminic/hyperweaver-ui/commit/d029d7f6637ff0109a32d9a730362e6e6c9c45dc))
+* updating provisioning system ([8aa10cb](https://github.com/MarkProminic/hyperweaver-ui/commit/8aa10cb30dffd52afed08125fd8b62cb879d8c9f))
+* updating provisioning system ([87b6a7e](https://github.com/MarkProminic/hyperweaver-ui/commit/87b6a7e76222b1d5823b33164dd77517068b6514))
+* updating provisioning system ([7aed37f](https://github.com/MarkProminic/hyperweaver-ui/commit/7aed37f2cff5dad22042c98b96d88612367a176d))
+* updating provisioning system ([dc41769](https://github.com/MarkProminic/hyperweaver-ui/commit/dc41769a74864e269ab5a5f9ba46dc41f1e8caa3))
+* version ([91fd65e](https://github.com/MarkProminic/hyperweaver-ui/commit/91fd65e3e6d5994b6337c15569697ab99f668396))
+
 ## [0.10.11](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.10...v0.10.11) (2026-07-06)
 
 
