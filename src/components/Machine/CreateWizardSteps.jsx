@@ -1888,6 +1888,8 @@ export const ProvisioningStep = ({
   versionKey,
   onVersionChange,
   version,
+  settings,
+  setSetting,
   fieldConfig,
   answers,
   fieldErrors,
@@ -2021,6 +2023,146 @@ export const ProvisioningStep = ({
         />
       </div>
     </div>
+
+    {/* Package template values are DEFAULTS, never locks (Mark's ruling
+        2026-07-17): the rendered settings become the machine's settings,
+        so anything the template would write must be overridable here.
+        Blank = the package default rides. */}
+    {version && advanced && (
+      <>
+        <h6 className="fw-bold mt-3">Package Setting Overrides</h6>
+        <p className="form-text text-muted mt-0">
+          The {`package's`} template values are defaults — set a field to override it in the
+          rendered document; blank keeps the package default.
+        </p>
+        <div className="row g-3">
+          <SettingInput
+            id="machine-setting-firmware_type"
+            label="Firmware Type"
+            placeholder="(package default)"
+            value={settings.firmware_type}
+            onChange={e => setSetting('firmware_type', e.target.value)}
+            disabled={loading}
+          />
+          <SettingInput
+            id="machine-setting-provider_type"
+            label="Provider Type"
+            placeholder="(package default)"
+            value={settings.provider_type}
+            onChange={e => setSetting('provider_type', e.target.value)}
+            disabled={loading}
+          />
+          <SettingInput
+            id="machine-setting-setup_wait"
+            label="Setup Wait (seconds)"
+            type="number"
+            placeholder="(package default)"
+            value={settings.setup_wait}
+            onChange={e => setSetting('setup_wait', e.target.value)}
+            disabled={loading}
+          />
+          <div className="col-12 col-md-4">
+            <label className="form-label" htmlFor="machine-setting-show_console">
+              Show Console
+            </label>
+            <select
+              id="machine-setting-show_console"
+              className="form-select"
+              value={settings.show_console ?? ''}
+              onChange={e => setSetting('show_console', e.target.value)}
+              disabled={loading}
+            >
+              <option value="">(package default)</option>
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+          <div className="col-12 col-md-4">
+            <label className="form-label" htmlFor="machine-setting-debug_build">
+              Debug Build
+            </label>
+            <select
+              id="machine-setting-debug_build"
+              className="form-select"
+              value={settings.debug_build ?? ''}
+              onChange={e => setSetting('debug_build', e.target.value)}
+              disabled={loading}
+            >
+              <option value="">(package default)</option>
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+          <div className="col-12 col-md-4">
+            <label className="form-label" htmlFor="machine-setting-post_provision">
+              Post-Provision Triggers
+            </label>
+            <select
+              id="machine-setting-post_provision"
+              className="form-select"
+              value={settings.post_provision ?? ''}
+              onChange={e => setSetting('post_provision', e.target.value)}
+              disabled={loading}
+            >
+              <option value="">(package default)</option>
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+          <SettingInput
+            id="machine-setting-consoleport"
+            label="Console Port"
+            type="number"
+            placeholder="(package default)"
+            value={settings.consoleport}
+            onChange={e => setSetting('consoleport', e.target.value)}
+            disabled={loading}
+          />
+          <SettingInput
+            id="machine-setting-vagrant_user"
+            label="Guest SSH User"
+            placeholder="(package default)"
+            value={settings.vagrant_user}
+            onChange={e => setSetting('vagrant_user', e.target.value)}
+            disabled={loading}
+          />
+          <div className="col-12 col-md-4">
+            <label className="form-label" htmlFor="machine-setting-vagrant_user_pass">
+              Guest SSH Password
+            </label>
+            <input
+              id="machine-setting-vagrant_user_pass"
+              className="form-control"
+              type="password"
+              autoComplete="new-password"
+              placeholder="(package default)"
+              value={settings.vagrant_user_pass ?? ''}
+              onChange={e => setSetting('vagrant_user_pass', e.target.value)}
+              disabled={loading}
+            />
+          </div>
+          <div className="col-12 col-md-4">
+            <label className="form-label" htmlFor="machine-setting-vagrant_ssh_insert_key">
+              Rotate SSH Key After Provision
+            </label>
+            <select
+              id="machine-setting-vagrant_ssh_insert_key"
+              className="form-select"
+              value={settings.vagrant_ssh_insert_key ?? ''}
+              onChange={e => setSetting('vagrant_ssh_insert_key', e.target.value)}
+              disabled={loading}
+            >
+              <option value="">(package default)</option>
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+            <span className="form-text text-muted">
+              Swaps the shared bootstrap key for a per-machine key once provisioning completes.
+            </span>
+          </div>
+        </div>
+      </>
+    )}
   </>
 );
 
@@ -2032,6 +2174,8 @@ ProvisioningStep.propTypes = {
   versionKey: PropTypes.string.isRequired,
   onVersionChange: PropTypes.func.isRequired,
   version: PropTypes.object,
+  settings: PropTypes.object.isRequired,
+  setSetting: PropTypes.func.isRequired,
   fieldConfig: PropTypes.object,
   answers: PropTypes.object.isRequired,
   fieldErrors: PropTypes.object,

@@ -77,7 +77,11 @@ const emptyCloudInit = () => ({
 
 // Every settings.* key the wizard edits. hostname/domain required;
 // server_id required under prefix naming, prefilled from
-// GET /machines/ids/next; box fields optional.
+// GET /machines/ids/next; box fields optional. The package-override keys
+// (firmware_type…vagrant_user_pass) exist because template values are
+// DEFAULTS, never locks (Mark's ruling 2026-07-17) — the rendered
+// settings BECOME the machine's settings, so the wizard must let the
+// user override what the package would otherwise write.
 const SETTING_KEYS = [
   'hostname',
   'domain',
@@ -91,6 +95,16 @@ const SETTING_KEYS = [
   'box_version',
   'box_arch',
   'box_url',
+  'firmware_type',
+  'provider_type',
+  'setup_wait',
+  'show_console',
+  'debug_build',
+  'post_provision',
+  'consoleport',
+  'vagrant_user',
+  'vagrant_user_pass',
+  'vagrant_ssh_insert_key',
 ];
 
 const emptySettings = () => ({
@@ -533,6 +547,17 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     if (mergedSettings.boot_priority !== undefined) {
       mergedSettings.boot_priority = Number(mergedSettings.boot_priority);
     }
+    // Numeric/boolean settings keep their JSON types on the wire.
+    ['setup_wait', 'consoleport'].forEach(key => {
+      if (mergedSettings[key] !== undefined) {
+        mergedSettings[key] = Number(mergedSettings[key]);
+      }
+    });
+    ['show_console', 'debug_build', 'post_provision', 'vagrant_ssh_insert_key'].forEach(key => {
+      if (mergedSettings[key] !== undefined) {
+        mergedSettings[key] = mergedSettings[key] === 'true';
+      }
+    });
     // Ordered floppy|dvd|disk|net|none list (max 4) — empty means agent default.
     if (bootOrder.length > 0) {
       mergedSettings.boot_order = bootOrder;
@@ -721,9 +746,10 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       return;
     }
     onCompleted({
-      message: [data.message || 'Creation queued', ...warnings.map(warning => warning.message)].join(
-        ' — '
-      ),
+      message: [
+        data.message || 'Creation queued',
+        ...warnings.map(warning => warning.message),
+      ].join(' — '),
       machineName: data.machine_name || name.trim(),
       taskId: data.parent_task_id || data.task_id || null,
       requiresDownload: !!data.requires_download || warnings.length > 0,
@@ -899,6 +925,8 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           versionKey={versionKey}
           onVersionChange={handleVersionChange}
           version={version}
+          settings={settings}
+          setSetting={setSetting}
           fieldConfig={fieldConfig}
           answers={properties}
           fieldErrors={fieldErrors}

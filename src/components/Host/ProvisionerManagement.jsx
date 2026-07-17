@@ -320,9 +320,7 @@ const ProvisionerManagement = ({ server }) => {
     }
     getCatalog(server.hostname, server.port, server.protocol).then(result => {
       const families =
-        result.success && Array.isArray(result.data?.provisioners)
-          ? result.data.provisioners
-          : [];
+        result.success && Array.isArray(result.data?.provisioners) ? result.data.provisioners : [];
       setCatalogNewest(
         Object.fromEntries(
           families
@@ -512,108 +510,110 @@ const ProvisionerManagement = ({ server }) => {
       {provisioners.map(collection => {
         const update = updateFor(collection);
         return (
-        <div className="card mb-3" key={collection.name}>
-          <div className="card-body">
-            <div className="d-flex justify-content-between align-items-start">
-              <div>
-                <h5 className="fs-6 fw-bold mb-1">
-                  <i className="fas fa-cubes me-2" />
-                  {/* metadata.label = optional display name (sync convention,
+          <div className="card mb-3" key={collection.name}>
+            <div className="card-body">
+              <div className="d-flex justify-content-between align-items-start">
+                <div>
+                  <h5 className="fs-6 fw-bold mb-1">
+                    <i className="fas fa-cubes me-2" />
+                    {/* metadata.label = optional display name (sync convention,
                       2026-07-06); the slug stays visible — import/delete and
                       machine specs address the family by it. */}
-                  {collection.metadata?.label || collection.name}
-                  {collection.metadata?.label && (
-                    <code className="small text-muted ms-2">{collection.name}</code>
+                    {collection.metadata?.label || collection.name}
+                    {collection.metadata?.label && (
+                      <code className="small text-muted ms-2">{collection.name}</code>
+                    )}
+                    {!collection.valid && (
+                      <span className="badge text-bg-danger ms-2">Invalid</span>
+                    )}
+                    {update && (
+                      <span className="badge text-bg-warning ms-2">{update} available</span>
+                    )}
+                  </h5>
+                  {collection.description && (
+                    <p className="text-muted small mb-2">{collection.description}</p>
                   )}
-                  {!collection.valid && <span className="badge text-bg-danger ms-2">Invalid</span>}
+                </div>
+                <div className="d-flex gap-2">
                   {update && (
-                    <span className="badge text-bg-warning ms-2">{update} available</span>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary"
+                      onClick={() => handleUpdate(collection.name, update)}
+                      disabled={loading}
+                      title="Install the newer catalog version — existing versions and machines keep their pins"
+                    >
+                      <i className="fas fa-cloud-arrow-down me-2" />
+                      Update to {update}
+                    </button>
                   )}
-                </h5>
-                {collection.description && (
-                  <p className="text-muted small mb-2">{collection.description}</p>
-                )}
-              </div>
-              <div className="d-flex gap-2">
-                {update && (
+                  {collection.source?.source_type === 'git' && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() => handleRefreshSource(collection.name)}
+                      disabled={loading}
+                      title={`Re-import from ${collection.source.url}${
+                        collection.source.token_name
+                          ? ` (uses key ${collection.source.token_name})`
+                          : ''
+                      } — new versions land beside existing ones`}
+                    >
+                      <i className="fab fa-git-alt me-2" />
+                      Update from Source
+                    </button>
+                  )}
                   <button
                     type="button"
-                    className="btn btn-sm btn-primary"
-                    onClick={() => handleUpdate(collection.name, update)}
+                    className="btn btn-sm btn-danger"
+                    onClick={() => setDeleteTarget({ name: collection.name })}
                     disabled={loading}
-                    title="Install the newer catalog version — existing versions and machines keep their pins"
                   >
-                    <i className="fas fa-cloud-arrow-down me-2" />
-                    Update to {update}
+                    <i className="fas fa-trash me-2" />
+                    Delete Family
                   </button>
-                )}
-                {collection.source?.source_type === 'git' && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-primary"
-                    onClick={() => handleRefreshSource(collection.name)}
-                    disabled={loading}
-                    title={`Re-import from ${collection.source.url}${
-                      collection.source.token_name
-                        ? ` (uses key ${collection.source.token_name})`
-                        : ''
-                    } — new versions land beside existing ones`}
-                  >
-                    <i className="fab fa-git-alt me-2" />
-                    Update from Source
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger"
-                  onClick={() => setDeleteTarget({ name: collection.name })}
-                  disabled={loading}
-                >
-                  <i className="fas fa-trash me-2" />
-                  Delete Family
-                </button>
+                </div>
               </div>
-            </div>
 
-            {collection.versions?.length > 0 && (
-              <div className="table-responsive">
-                <table className="table table-striped table-sm mb-0">
-                  <thead>
-                    <tr>
-                      <th>Version</th>
-                      <th>Name</th>
-                      <th>Description</th>
-                      <th aria-label="Actions" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {collection.versions.map(version => (
-                      <tr key={version.dir}>
-                        <td>
-                          <code className="small">{version.version}</code>
-                        </td>
-                        <td>{version.name || '-'}</td>
-                        <td className="small">{version.description || '-'}</td>
-                        <td className="text-end">
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() =>
-                              setDeleteTarget({ name: collection.name, version: version.version })
-                            }
-                            disabled={loading}
-                          >
-                            <i className="fas fa-trash" />
-                          </button>
-                        </td>
+              {collection.versions?.length > 0 && (
+                <div className="table-responsive">
+                  <table className="table table-striped table-sm mb-0">
+                    <thead>
+                      <tr>
+                        <th>Version</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th aria-label="Actions" />
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody>
+                      {collection.versions.map(version => (
+                        <tr key={version.dir}>
+                          <td>
+                            <code className="small">{version.version}</code>
+                          </td>
+                          <td>{version.name || '-'}</td>
+                          <td className="small">{version.description || '-'}</td>
+                          <td className="text-end">
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() =>
+                                setDeleteTarget({ name: collection.name, version: version.version })
+                              }
+                              disabled={loading}
+                            >
+                              <i className="fas fa-trash" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
         );
       })}
 

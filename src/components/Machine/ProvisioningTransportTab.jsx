@@ -100,9 +100,9 @@ const ProvisioningTransportTab = ({ settings, onChange, disabled }) => {
 
       {hasOldSpelling && (
         <p className="form-text text-muted mb-0">
-          This document also carries the old <code>vagrant_*</code> spelling of one or more of
-          these keys — it stays verbatim (documents are never rewritten); the agents use the new
-          spelling and narrate the shadowed key.
+          This document also carries the old <code>vagrant_*</code> spelling of one or more of these
+          keys — it stays verbatim (documents are never rewritten); the agents use the new spelling
+          and narrate the shadowed key.
         </p>
       )}
     </div>

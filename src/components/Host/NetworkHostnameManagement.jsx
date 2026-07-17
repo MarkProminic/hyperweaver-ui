@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { useState } from 'react';
 
 import { useServers } from '../../contexts/ServerContext';
+import { hasFeature } from '../../utils/capabilities';
 
 import AggregateManagement from './AggregateManagement';
 import BridgeManagement from './BridgeManagement';
@@ -12,6 +13,28 @@ import HostsFileEditor from './HostsFileEditor';
 import IpAddressManagement from './IpAddressManagement';
 import VlanManagement from './VlanManagement';
 import VnicManagement from './VnicManagement';
+
+// ONE Network component for every agent (Mark's ruling: same components
+// everywhere) — each SECTION gates on capability tokens (any-of). The
+// `vnics` family token also carries hostname/dns/addresses today (those
+// surfaces exist wherever it does); their own tokens light them up on
+// agents that ship the surfaces individually (sync ask 2026-07-17).
+const SECTIONS = [
+  { key: 'hostname', label: 'Hostname', icon: 'fa-server', features: ['hostname', 'vnics'] },
+  { key: 'hosts', label: 'Hosts File', icon: 'fa-address-book', features: ['hosts-file'] },
+  { key: 'dns', label: 'DNS', icon: 'fa-route', features: ['dns', 'vnics'] },
+  { key: 'vnics', label: 'VNICs', icon: 'fa-network-wired', features: ['vnics'] },
+  { key: 'vlans', label: 'VLANs', icon: 'fa-tags', features: ['vnics'] },
+  {
+    key: 'addresses',
+    label: 'IP Addresses',
+    icon: 'fa-globe',
+    features: ['ip-addresses', 'vnics'],
+  },
+  { key: 'aggregates', label: 'Link Aggregates', icon: 'fa-link', features: ['vnics'] },
+  { key: 'bridges', label: 'Bridges', icon: 'fa-bridge-water', features: ['vnics'] },
+  { key: 'etherstubs', label: 'Etherstubs', icon: 'fa-ethernet', features: ['vnics'] },
+];
 
 const NetworkHostnameManagement = ({ server }) => {
   const [activeSection, setActiveSection] = useState('hostname');
@@ -27,17 +50,14 @@ const NetworkHostnameManagement = ({ server }) => {
     );
   }
 
-  const sections = [
-    { key: 'hostname', label: 'Hostname', icon: 'fa-server' },
-    { key: 'hosts', label: 'Hosts File', icon: 'fa-address-book' },
-    { key: 'dns', label: 'DNS', icon: 'fa-route' },
-    { key: 'vnics', label: 'VNICs', icon: 'fa-network-wired' },
-    { key: 'vlans', label: 'VLANs', icon: 'fa-tags' },
-    { key: 'addresses', label: 'IP Addresses', icon: 'fa-globe' },
-    { key: 'aggregates', label: 'Link Aggregates', icon: 'fa-link' },
-    { key: 'bridges', label: 'Bridges', icon: 'fa-bridge-water' },
-    { key: 'etherstubs', label: 'Etherstubs', icon: 'fa-ethernet' },
-  ];
+  const sections = SECTIONS.filter(section =>
+    section.features.some(token => hasFeature(server, token))
+  );
+  // An agent switch can hide the selected section — fall back to the first
+  // visible one without touching state.
+  const effectiveSection = sections.some(section => section.key === activeSection)
+    ? activeSection
+    : sections[0]?.key;
 
   return (
     <div>
@@ -47,7 +67,7 @@ const NetworkHostnameManagement = ({ server }) => {
           <li className="nav-item" key={section.key}>
             <button
               type="button"
-              className={`nav-link ${activeSection === section.key ? 'active' : ''}`}
+              className={`nav-link ${effectiveSection === section.key ? 'active' : ''}`}
               onClick={() => setActiveSection(section.key)}
             >
               <i className={`fas ${section.icon} me-2`} />
@@ -67,27 +87,27 @@ const NetworkHostnameManagement = ({ server }) => {
 
       {/* Section Content */}
       <div className="section-content">
-        {activeSection === 'hostname' && <HostnameSettings server={server} onError={setError} />}
+        {effectiveSection === 'hostname' && <HostnameSettings server={server} onError={setError} />}
 
-        {activeSection === 'hosts' && <HostsFileEditor server={server} onError={setError} />}
+        {effectiveSection === 'hosts' && <HostsFileEditor server={server} onError={setError} />}
 
-        {activeSection === 'dns' && <DnsSettings server={server} onError={setError} />}
+        {effectiveSection === 'dns' && <DnsSettings server={server} onError={setError} />}
 
-        {activeSection === 'vnics' && <VnicManagement server={server} onError={setError} />}
+        {effectiveSection === 'vnics' && <VnicManagement server={server} onError={setError} />}
 
-        {activeSection === 'vlans' && <VlanManagement server={server} onError={setError} />}
+        {effectiveSection === 'vlans' && <VlanManagement server={server} onError={setError} />}
 
-        {activeSection === 'addresses' && (
+        {effectiveSection === 'addresses' && (
           <IpAddressManagement server={server} onError={setError} />
         )}
 
-        {activeSection === 'aggregates' && (
+        {effectiveSection === 'aggregates' && (
           <AggregateManagement server={server} onError={setError} />
         )}
 
-        {activeSection === 'bridges' && <BridgeManagement server={server} onError={setError} />}
+        {effectiveSection === 'bridges' && <BridgeManagement server={server} onError={setError} />}
 
-        {activeSection === 'etherstubs' && (
+        {effectiveSection === 'etherstubs' && (
           <EtherstubManagement server={server} onError={setError} />
         )}
       </div>
