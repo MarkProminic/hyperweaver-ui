@@ -30,6 +30,7 @@ import {
   healthTextClass,
   humanSize,
   queuedMessage,
+  vdevKey,
 } from './zfsUtils';
 
 /**
@@ -264,10 +265,10 @@ const PoolTopology = ({ parsed, onDiskClick }) => {
           same line always; an over-wide row scrolls inside itself. Multiple
           vdevs stack as the pool's real layers. */}
       <div className="d-flex flex-column gap-2">
-        {groups.map((group, index) => {
+        {groups.map(group => {
           const bare = group.type === 'disk';
           return (
-            <div className="hw-vdev" key={`${group.type}-${index}`}>
+            <div className="hw-vdev" key={vdevKey(group)}>
               <div className="hw-vdev-head">
                 <i className={`fas ${bare ? 'fa-hard-drive' : 'fa-layer-group'} text-muted`} />
                 <span>{bare ? 'stripe' : group.type}</span>

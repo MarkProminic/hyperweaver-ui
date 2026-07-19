@@ -67,6 +67,14 @@ export const isoFilenames = result => {
     : [];
 };
 
+export const agentDefaultLabel = (defaultsDoc, key) => {
+  const value =
+    defaultsDoc?.knob_defaults?.[`zones.${key}`] ??
+    defaultsDoc?.zones?.[key] ??
+    defaultsDoc?.settings?.[key];
+  return value !== undefined && value !== null && value !== '' ? String(value) : 'n/a';
+};
+
 export const machineStatusVariant = status => {
   switch ((status || '').toLowerCase()) {
     case 'running':

@@ -12,7 +12,7 @@ import {
   VocabularySelect,
   CpuTopologyInputs,
 } from './HardwareEditor';
-import { zfsPoolOptions, zfsDatasetOptions } from './machineHelpers';
+import { agentDefaultLabel, zfsPoolOptions, zfsDatasetOptions } from './machineHelpers';
 import {
   CdromSourceFields,
   ControllerPortFields,
@@ -88,16 +88,19 @@ export const GeneralStep = ({
   advanced,
   loading,
 }) => {
-  // SHI's "Computed name (FQDN)" live preview — the derived-name rule
-  // (server_id--hostname.domain under prefix naming) shown as you type;
-  // the agent has the final word.
-  const namingDomain = settings.machine_domain || settings.domain;
-  const computedName = name.trim()
-    ? name.trim()
-    : `${settings.server_id ? `${settings.server_id}--` : ''}${settings.hostname || '…'}.${namingDomain || '…'}`;
+  const [overrideName, setOverrideName] = useState(!!name.trim());
+  const derivedName = `${settings.server_id ? `${settings.server_id}--` : ''}${settings.hostname || '…'}.${settings.domain || '…'}`;
+  const computedName = name.trim() ? name.trim() : derivedName;
 
   return (
     <div className="row g-3">
+      <SettingInput
+        id="machine-setting-server_id"
+        label="Server ID"
+        value={settings.server_id}
+        onChange={e => setSetting('server_id', e.target.value)}
+        disabled={loading}
+      />
       <SettingInput
         id="machine-setting-hostname"
         label="Hostname"
@@ -114,30 +117,6 @@ export const GeneralStep = ({
         required
         disabled={loading}
       />
-      <SettingInput
-        id="machine-setting-server_id"
-        label="Server ID"
-        value={settings.server_id}
-        onChange={e => setSetting('server_id', e.target.value)}
-        disabled={loading}
-      />
-      <SettingInput
-        id="machine-create-name"
-        label="Name"
-        placeholder="derived from server_id/hostname/domain"
-        value={name}
-        onChange={e => setName(e.target.value)}
-        disabled={loading}
-      />
-      {advanced && (
-        <SettingInput
-          id="machine-setting-machine_domain"
-          label="Naming Domain (optional override)"
-          value={settings.machine_domain}
-          onChange={e => setSetting('machine_domain', e.target.value)}
-          disabled={loading}
-        />
-      )}
       <SettingInput
         id="machine-create-tags"
         label="Tags (comma separated)"
@@ -183,9 +162,45 @@ export const GeneralStep = ({
         </div>
       )}
       <div className="col-12">
-        <span className="form-text text-muted">
-          Computed name: <code>{computedName}</code>
-        </span>
+        <div className="d-flex align-items-center gap-3 flex-wrap">
+          <span className="form-text text-muted mt-0">
+            Computed name: <code>{computedName}</code>
+          </span>
+          <div className="form-check form-switch mb-0">
+            <input
+              id="machine-create-name-override"
+              className="form-check-input"
+              type="checkbox"
+              role="switch"
+              checked={overrideName}
+              onChange={e => {
+                setOverrideName(e.target.checked);
+                setName(e.target.checked ? derivedName : '');
+              }}
+              disabled={loading}
+            />
+            <label className="form-check-label small" htmlFor="machine-create-name-override">
+              Override name
+            </label>
+          </div>
+        </div>
+        {overrideName && (
+          <div className="col-12 col-md-6 mt-2">
+            <input
+              id="machine-create-name"
+              className="form-control"
+              type="text"
+              aria-label="Machine name"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              disabled={loading}
+            />
+            <span className="form-text text-muted">
+              This exact name is used instead of the computed one; hostname and domain above still
+              feed the guest and ansible.
+            </span>
+          </div>
+        )}
       </div>
       <div className="col-12">
         <div className="form-check form-switch">
@@ -1098,7 +1113,7 @@ export const DisksStep = ({
   advanced,
   loading,
 }) => {
-  const diskifDefault = agentDefaults?.zones?.diskif || 'sata';
+  const diskifDefault = agentDefaultLabel(agentDefaults, 'diskif');
   const knobValues = agentDefaults?.knob_values || null;
   // The rows share the boot placement's pickers (Mark: same treatment
   // everywhere) — per-row dataset options follow that ROW's pool.
@@ -1785,10 +1800,7 @@ export const SystemStep = ({
   advanced,
   loading,
 }) => {
-  const defaultLabel = key => {
-    const value = agentDefaults?.zones?.[key] ?? agentDefaults?.settings?.[key];
-    return value !== undefined && value !== null && value !== '' ? String(value) : 'n/a';
-  };
+  const defaultLabel = key => agentDefaultLabel(agentDefaults, key);
   const knobValues = agentDefaults?.knob_values || null;
   const cpuTopo = Array.isArray(zones.complex_cpu_conf) ? zones.complex_cpu_conf[0] || {} : {};
   const setCpuTopo = patch => setZone('complex_cpu_conf', [{ ...cpuTopo, ...patch }]);

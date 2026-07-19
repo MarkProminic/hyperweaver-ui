@@ -10,6 +10,7 @@ import {
   stepMemory,
 } from './CreateWizardSteps';
 import { VocabularySelect } from './HardwareEditor';
+import { agentDefaultLabel } from './machineHelpers';
 import SecureBootPanel from './SecureBootPanel';
 
 /** Settings → General: the flat zones.* knob fields + autoboot, the
@@ -18,14 +19,6 @@ import SecureBootPanel from './SecureBootPanel';
  *  freeText knobs (agent-stated free strings legal) render as a select
  *  with a "Custom value…" escape. Blank labels show the agent's REAL
  *  default from GET /machines/defaults where it reports one. */
-
-const defaultLabelFor = (defaultsDoc, key) => {
-  const value =
-    defaultsDoc?.knob_defaults?.[`zones.${key}`] ??
-    defaultsDoc?.zones?.[key] ??
-    defaultsDoc?.settings?.[key];
-  return value !== undefined && value !== null && value !== '' ? String(value) : 'n/a';
-};
 
 /** " — default disk,dvd" suffix for the boot-order labels; '' when the
  *  defaults doc reports nothing. */
@@ -271,7 +264,7 @@ const GeneralSettingsTab = ({
           // (uefivars/rng on|off) keeps the control a select either way.
           const vocabulary = knobValues?.[`zones.${field.key}`] || field.options || null;
           const value = values[field.key] ?? '';
-          const blankLabel = defaultLabelFor(defaultsDoc, field.key);
+          const blankLabel = agentDefaultLabel(defaultsDoc, field.key);
           const commit = next => setValues(prev => ({ ...prev, [field.key]: next }));
           let control;
           if (field.key === 'ram') {
@@ -340,7 +333,7 @@ const GeneralSettingsTab = ({
           onChange={e => setAutoboot(e.target.value)}
           disabled={formDisabled}
         >
-          <option value="">{defaultLabelFor(defaultsDoc, 'autoboot')}</option>
+          <option value="">{agentDefaultLabel(defaultsDoc, 'autoboot')}</option>
           <option value="true">on</option>
           <option value="false">off</option>
         </select>
@@ -511,7 +504,7 @@ const GeneralSettingsTab = ({
                   id="machine-edit-ci-enabled"
                   value={cloudInit.enabled ?? ''}
                   entries={['on', 'off']}
-                  blankLabel={defaultLabelFor(defaultsDoc, 'cloud_init')}
+                  blankLabel={agentDefaultLabel(defaultsDoc, 'cloud_init')}
                   onChange={next => setCloudInit(prev => ({ ...prev, enabled: next }))}
                   onCustom={() => {
                     setCiCustomUrl(true);

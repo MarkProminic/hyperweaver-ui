@@ -18,7 +18,7 @@ import { DismissibleAlert } from './common';
 import ConsoleDisplay from './ConsoleDisplay';
 import CloneMachineModal from './Machine/CloneMachineModal';
 import ConvertToTemplateModal from './Machine/ConvertToTemplateModal';
-import { parseHardware } from './Machine/CurrentHardware';
+import { currentHardwareOf } from './Machine/CurrentHardware';
 import DisplayResizeModal from './Machine/DisplayResizeModal';
 import GuestExecModal from './Machine/GuestExecModal';
 import ImportMachineModal from './Machine/ImportMachineModal';
@@ -820,7 +820,7 @@ const Machines = () => {
 
                             <MachineHardware
                               machineDetails={machineDetails}
-                              currentHardware={parseHardware(machineDetails.configuration)}
+                              currentHardware={currentHardwareOf(machineDetails)}
                               colClass="col-12 col-lg-6 col-xxl-4"
                             />
 
@@ -842,9 +842,7 @@ const Machines = () => {
                                 <MachineResourceCharts
                                   currentServer={currentServer}
                                   machineName={selectedMachine}
-                                  links={(
-                                    parseHardware(machineDetails.configuration).zone?.nics || []
-                                  )
+                                  links={(currentHardwareOf(machineDetails).zone?.nics || [])
                                     .map(nic => nic.physical)
                                     .filter(Boolean)}
                                 />

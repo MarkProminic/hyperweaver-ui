@@ -110,7 +110,6 @@ const emptyCloudInit = () => ({
 const SETTING_KEYS = [
   'hostname',
   'domain',
-  'machine_domain',
   'server_id',
   'vcpus',
   'memory',

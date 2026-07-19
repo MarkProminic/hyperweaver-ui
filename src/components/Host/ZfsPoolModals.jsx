@@ -18,7 +18,7 @@ import { ContentModal, FormModal } from '../common';
 
 import { shortDevice } from './ZfsDiskActionModal';
 import ZfsPropertiesEditor, { propertyEdits } from './ZfsPropertiesEditor';
-import { healthBadgeClass, parsePropertyLines, queuedMessage } from './zfsUtils';
+import { healthBadgeClass, parsePropertyLines, queuedMessage, vdevKey } from './zfsUtils';
 
 const VDEV_TYPES = [
   { value: '', label: 'stripe', note: 'no redundancy — data stripes across these disks' },
@@ -747,12 +747,12 @@ export const PoolStatusModal = ({ isOpen, onClose, server, pool, health }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {groups.flatMap((group, index) => {
+                  {groups.flatMap(group => {
                     const bare = group.type === 'disk';
                     const header = bare
                       ? []
                       : [
-                          <tr key={`group-${index}`}>
+                          <tr key={vdevKey(group)}>
                             <td>
                               <i className="fas fa-layer-group text-muted me-2" />
                               <code className="small">{group.type}</code>
@@ -771,7 +771,7 @@ export const PoolStatusModal = ({ isOpen, onClose, server, pool, health }) => {
                     return [
                       ...header,
                       ...group.devices.map(device => (
-                        <tr key={`group-${index}-${device.name}`}>
+                        <tr key={`${vdevKey(group)}-${device.name}`}>
                           <td style={{ paddingLeft: bare ? undefined : '1.75rem' }}>
                             <i className="fas fa-hard-drive text-muted me-2" />
                             <code className="small">{device.name}</code>

@@ -1,15 +1,6 @@
 import PropTypes from 'prop-types';
 import { Fragment } from 'react';
 
-// The VirtualBox flat showvminfo map: NICs as nic{N}/macaddress{N}/…,
-// controllers as storagecontrollername{N}/-type{N}, attachments as
-// "<Controller>-<port>-<device>". zadm configs carry their devices as
-// bootdisk/disk[]/cdrom/net[] instead and parse via the zone branch below
-// (Mark's word: keep the UI-parses-config pattern we have).
-const NIC_KEY = /^nic(?<adapter>\d+)$/u;
-const CTRL_NAME_KEY = /^storagecontrollername(?<index>\d+)$/u;
-const ATTACHMENT_KEY = /^(?<controller>.+)-(?<port>\d+)-(?<device>\d+)$/u;
-
 const listOf = value => {
   if (Array.isArray(value)) {
     return value;
@@ -68,59 +59,14 @@ export const parseZoneHardware = configuration => {
   return { disks, cdroms, nics };
 };
 
-export const parseHardware = configuration => {
-  const nics = [];
-  const controllers = [];
-  const attachments = [];
-  const entries = Object.entries(configuration || {});
-  // Controllers FIRST: attachment keys only parse against KNOWN controller
-  // names — per-attachment metadata keys ("SATA Controller-discard-0-0",
-  // "-nonrotational-", "-ImageUUID-", "-IsEjected-") never render as devices.
-  entries.forEach(([key, value]) => {
-    const ctrlMatch = CTRL_NAME_KEY.exec(key);
-    if (ctrlMatch) {
-      controllers.push({
-        name: String(value),
-        type: configuration[`storagecontrollertype${ctrlMatch.groups.index}`] || '',
-      });
-    }
-  });
-  const controllerNames = new Set(controllers.map(controller => controller.name));
-  entries.forEach(([key, value]) => {
-    const nicMatch = NIC_KEY.exec(key);
-    if (nicMatch && value && value !== 'none') {
-      const { adapter } = nicMatch.groups;
-      nics.push({
-        adapter: Number(adapter),
-        mode: String(value),
-        mac: configuration[`macaddress${adapter}`] || '',
-        bridge:
-          configuration[`bridgeadapter${adapter}`] ||
-          configuration[`hostonlyadapter${adapter}`] ||
-          '',
-      });
-      return;
-    }
-    const attachMatch = ATTACHMENT_KEY.exec(key);
-    if (
-      attachMatch &&
-      controllerNames.has(attachMatch.groups.controller) &&
-      value &&
-      value !== 'none'
-    ) {
-      const path = String(value);
-      attachments.push({
-        controller: attachMatch.groups.controller,
-        port: Number(attachMatch.groups.port),
-        device: Number(attachMatch.groups.device),
-        path,
-        kind: path === 'emptydrive' || /\.iso$/iu.test(path) ? 'cdrom' : 'disk',
-      });
-    }
-  });
-  nics.sort((a, b) => a.adapter - b.adapter);
-  attachments.sort((a, b) => a.controller.localeCompare(b.controller) || a.port - b.port);
-  return { nics, controllers, attachments, zone: parseZoneHardware(configuration) };
+export const currentHardwareOf = machineDetails => {
+  const devices = machineDetails?.knob_current?.devices;
+  return {
+    nics: Array.isArray(devices?.nics) ? devices.nics : [],
+    controllers: Array.isArray(devices?.controllers) ? devices.controllers : [],
+    attachments: Array.isArray(devices?.attachments) ? devices.attachments : [],
+    zone: parseZoneHardware(machineDetails?.configuration),
+  };
 };
 
 // Mark-for-removal affordances shared by the Settings device editors — the
@@ -138,7 +84,7 @@ const AttachmentRow = ({ entry }) => (
       port {entry.port} · dev {entry.device}
     </span>
     <span className="hw-device-path" title={entry.path}>
-      {entry.path === 'emptydrive' ? '(empty drive)' : entry.path}
+      {entry.path || 'empty drive'}
     </span>
     {entry.port === 0 && entry.kind === 'disk' && (
       <span

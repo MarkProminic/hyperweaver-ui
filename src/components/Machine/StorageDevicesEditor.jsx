@@ -32,7 +32,7 @@ const EditableAttachmentRow = ({ entry, isMarked, onToggle, formDisabled }) => {
         port {entry.port} · dev {entry.device}
       </span>
       <span className="hw-device-path" title={entry.path}>
-        {entry.path === 'emptydrive' ? '(empty drive)' : entry.path}
+        {entry.path || 'empty drive'}
       </span>
       {bootDisk ? (
         <span

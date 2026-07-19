@@ -111,3 +111,5 @@ export const healthTextClass = health => {
 
 export const flatVdevDevices = parsed =>
   (Array.isArray(parsed?.vdevs) ? parsed.vdevs : []).flatMap(group => group.devices);
+
+export const vdevKey = group => `${group.type}:${group.devices[0]?.name || 'empty'}`;

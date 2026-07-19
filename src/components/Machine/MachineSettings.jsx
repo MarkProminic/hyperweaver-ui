@@ -13,7 +13,7 @@ import { hasHypervisor } from '../../utils/capabilities';
 import { pollUntil, pollTaskRow } from '../../utils/taskOperations';
 import { PathInput, validationDetails } from '../common';
 
-import { parseHardware } from './CurrentHardware';
+import { currentHardwareOf } from './CurrentHardware';
 import FilesystemsEditor from './FilesystemsEditor';
 import GeneralSettingsTab from './GeneralSettingsTab';
 import {
@@ -124,24 +124,6 @@ const asFormString = value => {
 // needs the alias (zadm stores os_type as the `type` attr).
 const CONFIG_KEY_ALIASES = { os_type: 'type' };
 
-/**
- * The zonecfg complex-topology echo — a complex-CPU zone's config carries
- * vcpus="sockets=S,cores=C,threads=T" (the agents' documented spelling).
- * null for a plain count.
- */
-const parseCpuTopology = value => {
-  const match = /^sockets=(?<s>\d+),cores=(?<c>\d+),threads=(?<t>\d+)$/u.exec(
-    String(value ?? '').trim()
-  );
-  return match
-    ? {
-        sockets: Number(match.groups.s),
-        cores: Number(match.groups.c),
-        threads: Number(match.groups.t),
-      }
-    : null;
-};
-
 // knob_current beats the raw configuration document (zadm configs carry the
 // zone keys directly; VirtualBox current values only exist in knob_current).
 const prefillFrom = (configuration, knobCurrent) =>
@@ -251,6 +233,7 @@ const buildSeed = (configuration, knobCurrent) => ({
   consolePort: asFormString(knobCurrent?.consoleport),
   consoleHost: asFormString(knobCurrent?.consolehost),
   bootOrder: Array.isArray(knobCurrent?.boot_order) ? knobCurrent.boot_order : [],
+  cpuTopology: knobCurrent?.cpu_topology ?? null,
   hardware: seedHardwareValues(knobCurrent),
   serialRows: seedSerialRows(knobCurrent?.hardware?.serial),
   parallelRows: seedParallelRows(knobCurrent?.hardware?.parallel),
@@ -767,7 +750,7 @@ const MachineSettings = ({
     setConsolePort(seeded.consolePort);
     setConsoleHost(seeded.consoleHost);
     setCpuMode('');
-    setCpuTopo(parseCpuTopology(seeded.values.vcpus) || { sockets: '', cores: '', threads: '' });
+    setCpuTopo(seeded.cpuTopology || { sockets: '', cores: '', threads: '' });
     setVboxJson('');
     setAddNics([]);
     setAddDisks([]);
@@ -1174,7 +1157,7 @@ const MachineSettings = ({
   const currentFilesystems = filesystemsOf(configuration);
   const activeSection = sectionForTab(tab);
   const autostartSection = HARDWARE_SECTIONS.find(section => section.id === 'autostart');
-  const currentHardware = parseHardware(configuration);
+  const currentHardware = currentHardwareOf({ configuration, knob_current: knobCurrent });
   // The zone's REAL devices as bhyve boot tokens (short names: bootdisk,
   // disk0, cdrom0, net0) — feeds the boot-order editor's slots/picker so
   // it behaves like the VirtualBox one instead of a bare typed input.
@@ -1316,7 +1299,7 @@ const MachineSettings = ({
       {tab === 'general' &&
         hasHypervisor(currentServer, 'bhyve') &&
         (() => {
-          const currentTopo = parseCpuTopology(seed.values.vcpus);
+          const currentTopo = seed.cpuTopology;
           return (
             <div className="mt-3">
               <h6 className="fw-bold">CPU Topology</h6>
