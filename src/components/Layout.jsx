@@ -7,9 +7,11 @@ import { FooterProvider } from '../contexts/FooterContext';
 import { useMode } from '../contexts/ModeContext';
 import { useServers } from '../contexts/ServerContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
+import { hasFeature, hasManageSurface } from '../utils/capabilities';
 
 import Footer from './Footer';
 import Navbar from './Navbar';
+import NotAvailableStub from './NotAvailableStub';
 import SideMenu from './Sidemenu';
 
 const Dashboard = React.lazy(() => import('./Dashboard'));
@@ -134,10 +136,46 @@ const LayoutContent = () => {
               <Route path="settings/agent" element={<AgentSettings />} />
               <Route path="machines" element={<Machines />} />
               <Route path="hosts" element={<Hosts />} />
-              <Route path="host-manage" element={<HostManage />} />
-              <Route path="host-networking" element={<HostNetworking />} />
-              <Route path="host-storage" element={<HostStorage />} />
-              <Route path="host-devices" element={<HostDevices />} />
+              <Route
+                path="host-manage"
+                element={
+                  hasManageSurface(currentServer) ? (
+                    <HostManage />
+                  ) : (
+                    <NotAvailableStub title="Host Management" tokenLabel="any Manage surface" />
+                  )
+                }
+              />
+              <Route
+                path="host-networking"
+                element={
+                  hasFeature(currentServer, 'vnics') ? (
+                    <HostNetworking />
+                  ) : (
+                    <NotAvailableStub title="Host Networking" tokenLabel="vnics" />
+                  )
+                }
+              />
+              <Route
+                path="host-storage"
+                element={
+                  hasFeature(currentServer, 'zfs') ? (
+                    <HostStorage />
+                  ) : (
+                    <NotAvailableStub title="Host Storage" tokenLabel="zfs" />
+                  )
+                }
+              />
+              <Route
+                path="host-devices"
+                element={
+                  hasFeature(currentServer, 'devices') ? (
+                    <HostDevices />
+                  ) : (
+                    <NotAvailableStub title="Device Monitoring" tokenLabel="devices" />
+                  )
+                }
+              />
               <Route path="zone-register" element={<ZoneRegister />} />
               <Route
                 path="profile"

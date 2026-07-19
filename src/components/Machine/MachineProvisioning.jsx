@@ -65,9 +65,6 @@ const MachineProvisioning = ({
     });
   }, [currentServer, machineName]);
 
-  // Each details reload hands a fresh document object, so this fires per
-  // poll — the status refreshes WITHOUT blanking first; only a machine
-  // switch clears the previous machine's answer.
   const statusMachineRef = useRef(null);
   useEffect(() => {
     if (statusMachineRef.current !== machineName) {

@@ -22,7 +22,7 @@ const COL = 'col-12 col-xl-6';
 const sinceIso = () => new Date(Date.now() - WINDOW_MINUTES * 60 * 1000).toISOString();
 const cutoffMs = () => Date.now() - WINDOW_MINUTES * 60 * 1000;
 
-const chartOptions = (unit, series) => ({
+export const chartOptions = (unit, series) => ({
   chart: { type: 'spline', height: 190, backgroundColor: 'transparent', marginRight: 10 },
   time: { useUTC: false },
   title: { text: undefined },
@@ -42,11 +42,12 @@ const freshRows = (rows, lastMs) =>
     .sort((a, b) => new Date(a.scan_timestamp) - new Date(b.scan_timestamp))
     .filter(row => !lastMs || new Date(row.scan_timestamp).getTime() > lastMs);
 
-const push = (list, ts, value) => [...list, [ts, value]].filter(([time]) => time >= cutoffMs());
+export const push = (list, ts, value) =>
+  [...list, [ts, value]].filter(([time]) => time >= cutoffMs());
 
-const latest = list => (list.length > 0 ? list[list.length - 1][1] : 0);
+export const latest = list => (list.length > 0 ? list[list.length - 1][1] : 0);
 
-const ChartCard = ({ icon, title, subtitle, badges = null, options }) => (
+export const ChartCard = ({ icon, title, subtitle, badges = null, options }) => (
   <div className={COL}>
     <div className="card h-100">
       <div className="card-body">

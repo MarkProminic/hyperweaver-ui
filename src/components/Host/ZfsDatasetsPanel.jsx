@@ -2,7 +2,12 @@ import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
 import Dropdown from 'react-bootstrap/Dropdown';
 
-import { getZfsDatasets, getZfsPools, promoteZfsDataset } from '../../api/zfsAPI';
+import {
+  destroyZfsSnapshot,
+  getZfsDatasets,
+  getZfsPools,
+  promoteZfsDataset,
+} from '../../api/zfsAPI';
 import { ConfirmModal } from '../common';
 
 import {
@@ -241,12 +246,20 @@ DatasetRow.propTypes = {
   onPromote: PropTypes.func.isRequired,
 };
 
-const SnapshotRow = ({ snap, depth, busy, onModal }) => (
+const SnapshotRow = ({ snap, depth, busy, isSelected, onSelect, onModal }) => (
   <div
     className="d-flex align-items-center gap-2 border-bottom py-1"
     style={{ paddingLeft: `${depth * 1.5}rem` }}
   >
     <span style={{ width: '1.25rem' }} />
+    <input
+      type="checkbox"
+      className="form-check-input flex-shrink-0 mt-0"
+      checked={isSelected}
+      onChange={() => onSelect(snap.name)}
+      disabled={busy}
+      aria-label={`Select ${snap.name}`}
+    />
     <i className="fas fa-camera text-muted" />
     <code className="small" title={snap.name}>
       @{snap.name.split('@')[1] || snap.name}
@@ -310,10 +323,22 @@ SnapshotRow.propTypes = {
   snap: PropTypes.object.isRequired,
   depth: PropTypes.number.isRequired,
   busy: PropTypes.bool,
+  isSelected: PropTypes.bool,
+  onSelect: PropTypes.func.isRequired,
   onModal: PropTypes.func.isRequired,
 };
 
-const TreeNode = ({ node, depth, needle, show, collapsed, snapsOpen, busy, handlers }) => {
+const TreeNode = ({
+  node,
+  depth,
+  needle,
+  show,
+  collapsed,
+  snapsOpen,
+  busy,
+  selected,
+  handlers,
+}) => {
   if (!nodeMatches(node, needle, show)) {
     return null;
   }
@@ -365,6 +390,8 @@ const TreeNode = ({ node, depth, needle, show, collapsed, snapsOpen, busy, handl
             snap={snap}
             depth={depth + 2}
             busy={busy}
+            isSelected={selected.has(snap.name)}
+            onSelect={handlers.onSelect}
             onModal={handlers.onModal}
             key={snap.name}
           />
@@ -379,6 +406,7 @@ const TreeNode = ({ node, depth, needle, show, collapsed, snapsOpen, busy, handl
             collapsed={collapsed}
             snapsOpen={snapsOpen}
             busy={busy}
+            selected={selected}
             handlers={handlers}
             key={child.name}
           />
@@ -395,6 +423,7 @@ TreeNode.propTypes = {
   collapsed: PropTypes.instanceOf(Set).isRequired,
   snapsOpen: PropTypes.instanceOf(Set).isRequired,
   busy: PropTypes.bool,
+  selected: PropTypes.instanceOf(Set).isRequired,
   handlers: PropTypes.object.isRequired,
 };
 
@@ -519,6 +548,8 @@ const ZfsDatasetsPanel = ({ server }) => {
   const [msgVariant, setMsgVariant] = useState('info');
   // {kind: 'create'|'snapshot'|'rename'|'clone'|'rollback'|'holds'|'properties'|'destroy', name?, isSnapshot?}
   const [modal, setModal] = useState(null);
+  const [selected, setSelected] = useState(() => new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const report = (text, variant) => {
     setMsg(text);
@@ -554,6 +585,7 @@ const ZfsDatasetsPanel = ({ server }) => {
       ...(Array.isArray(snapshotsResult.data?.datasets) ? snapshotsResult.data.datasets : []),
     ].forEach(row => merged.set(row.name, row));
     setTree(buildTree([...merged.values()]));
+    setSelected(prev => new Set([...prev].filter(name => merged.has(name))));
     setLoading(false);
   }, [server, poolFilter]);
 
@@ -593,12 +625,46 @@ const ZfsDatasetsPanel = ({ server }) => {
     onQueued(queuedMessage(result, `Promote queued for ${name}.`));
   };
 
+  const runBulkDestroy = async () => {
+    const targets = [...selected];
+    if (targets.length === 0) {
+      return;
+    }
+    setBusy(true);
+    setMsg('');
+    const failures = [];
+    await Promise.all(
+      targets.map(name =>
+        destroyZfsSnapshot(server.hostname, server.port, server.protocol, name)
+          .then(result => {
+            if (!result.success) {
+              failures.push(`${name}: ${result.message || 'failed'}`);
+            }
+          })
+          .catch(err => failures.push(`${name}: ${err.message}`))
+      )
+    );
+    setBusy(false);
+    setBulkOpen(false);
+    setSelected(new Set());
+    if (failures.length > 0) {
+      report(`${failures.length} failed — ${failures.join('; ')}`, 'danger');
+    } else {
+      report(
+        `Destroy queued for ${targets.length} snapshot${targets.length === 1 ? '' : 's'}.`,
+        'success'
+      );
+    }
+    setTimeout(load, 2000);
+  };
+
   const handlers = {
     onModal: setModal,
     // Promote confirms first — it silently rewires clone/origin dependency.
     onPromote: name => setModal({ kind: 'promote', name }),
     onToggle: name => setCollapsed(prev => toggleIn(prev, name)),
     onToggleSnaps: name => setSnapsOpen(prev => toggleIn(prev, name)),
+    onSelect: name => setSelected(prev => toggleIn(prev, name)),
   };
 
   const needle = nameFilter.trim().toLowerCase();
@@ -611,7 +677,17 @@ const ZfsDatasetsPanel = ({ server }) => {
           <i className="fas fa-folder-tree me-2" />
           Datasets
         </h3>
-        <div className="d-flex gap-2">
+        <div className="d-flex gap-2 align-items-center">
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-danger"
+            title="Destroy every ticked snapshot"
+            onClick={() => setBulkOpen(true)}
+            disabled={loading || busy || selected.size === 0}
+          >
+            <i className="fas fa-trash me-2" />
+            Destroy selected snapshots ({selected.size})
+          </button>
           <button
             type="button"
             className="btn btn-sm btn-outline-secondary"
@@ -715,6 +791,7 @@ const ZfsDatasetsPanel = ({ server }) => {
               collapsed={collapsed}
               snapsOpen={snapsOpen}
               busy={busy}
+              selected={selected}
               handlers={handlers}
               key={node.name}
             />
@@ -734,6 +811,19 @@ const ZfsDatasetsPanel = ({ server }) => {
           runPromote(name);
         }}
       />
+
+      {bulkOpen && (
+        <ConfirmModal
+          isOpen={bulkOpen}
+          onClose={() => setBulkOpen(false)}
+          onConfirm={runBulkDestroy}
+          title={`Destroy ${selected.size} snapshot${selected.size === 1 ? '' : 's'}`}
+          message={`Destroy ${[...selected].join(', ')}? This cannot be undone.`}
+          confirmText={`Destroy ${selected.size}`}
+          confirmVariant="is-danger"
+          loading={busy}
+        />
+      )}
     </div>
   );
 };

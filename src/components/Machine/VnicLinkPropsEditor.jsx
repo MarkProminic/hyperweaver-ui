@@ -200,12 +200,18 @@ const VnicLinkPropsEditor = ({ currentServer, vnic, disabled }) => {
                         }
                         disabled={disabled || busy}
                       >
-                        <option value="">{displayValue(row)}</option>
-                        {row.possible.map(option => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
+                        <option value="">
+                          {row.possible.some(option => String(option) === displayValue(row))
+                            ? `${displayValue(row)} - Default`
+                            : displayValue(row)}
+                        </option>
+                        {row.possible
+                          .filter(option => String(option) !== displayValue(row))
+                          .map(option => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
                       </select>
                     ) : (
                       <input

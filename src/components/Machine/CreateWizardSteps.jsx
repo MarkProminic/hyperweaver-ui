@@ -1907,6 +1907,7 @@ export const SystemStep = ({
   setSerialRows,
   parallelRows,
   setParallelRows,
+  bhyveBootDevices = [],
   vbox,
   bhyve,
   advanced,
@@ -2068,7 +2069,7 @@ export const SystemStep = ({
               <BootOrderEditor
                 bootOrder={splitBhyveBootOrder(zones.bootorder)}
                 setBootOrder={list => setZone('bootorder', list.join(','))}
-                deviceOptions={[]}
+                deviceOptions={bhyveBootDevices}
                 maxSlots={Infinity}
                 allowCustom
                 loading={loading}
@@ -2086,12 +2087,20 @@ export const SystemStep = ({
                 id="machine-zones-bootnext"
                 className="form-control"
                 type="text"
+                list={bhyveBootDevices.length > 0 ? 'machine-zones-bootnext-options' : undefined}
                 placeholder="e.g. cdrom0"
                 title="Same syntax as Boot Order — applies to the next boot only"
                 value={zones.bootnext ?? ''}
                 onChange={e => setZone('bootnext', e.target.value)}
                 disabled={loading}
               />
+              {bhyveBootDevices.length > 0 && (
+                <datalist id="machine-zones-bootnext-options">
+                  {bhyveBootDevices.map(device => (
+                    <option key={device} value={device} />
+                  ))}
+                </datalist>
+              )}
             </div>
             <div className="col-6 col-md-4">
               <label className="form-label" htmlFor="machine-zones-cpu-config">
@@ -2114,8 +2123,7 @@ export const SystemStep = ({
                 }}
                 disabled={loading}
               >
-                <option value="">simple</option>
-                <option value="simple">simple</option>
+                <option value="">simple - Default</option>
                 <option value="complex">complex (sockets / cores / threads)</option>
               </select>
             </div>
@@ -2286,6 +2294,7 @@ SystemStep.propTypes = {
   setSerialRows: PropTypes.func.isRequired,
   parallelRows: PropTypes.array.isRequired,
   setParallelRows: PropTypes.func.isRequired,
+  bhyveBootDevices: PropTypes.arrayOf(PropTypes.string),
   vbox: PropTypes.bool,
   bhyve: PropTypes.bool,
   advanced: PropTypes.bool,

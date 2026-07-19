@@ -204,12 +204,18 @@ const NicPropsEditor = ({
                     onChange={e => onChange(key, e.target.value)}
                     disabled={disabled}
                   >
-                    <option value="">{blankLabel}</option>
-                    {vocabulary.map(option => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
+                    <option value="">
+                      {vocabulary.some(option => String(option) === blankLabel)
+                        ? `${blankLabel} - Default`
+                        : blankLabel}
+                    </option>
+                    {vocabulary
+                      .filter(option => String(option) !== blankLabel)
+                      .map(option => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
                   </select>
                 ) : (
                   <input

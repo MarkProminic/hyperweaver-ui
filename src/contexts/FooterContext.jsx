@@ -16,6 +16,7 @@ export const FooterProvider = ({ children }) => {
   const { currentServer, makeAgentRequest } = useServers();
   const { footerActiveView, footerIsActive, taskMinPriority } = useContext(UserSettings);
   const [tasks, setTasks] = useState([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
   const [tasksError, setTasksError] = useState('');
   const [session, setSession] = useState(null);
 
@@ -144,8 +145,9 @@ export const FooterProvider = ({ children }) => {
       // Only fetch and refresh tasks when footer is active and tasks view is selected
       if (shouldPoll) {
         const loadAndStartRefresh = async () => {
-          // Wait for initial load to complete
+          setLoadingTasks(true);
           await fetchTasks();
+          setLoadingTasks(false);
           // Only start the interval after initial load is done and if conditions are still met
           if (currentServer && tasksAvailable && footerIsActive && footerActiveView === 'tasks') {
             intervalRef.current = setInterval(() => {
@@ -336,12 +338,13 @@ export const FooterProvider = ({ children }) => {
   const value = React.useMemo(
     () => ({
       tasks,
+      loadingTasks,
       tasksError,
       fetchTasks,
       session,
       restartShell,
     }),
-    [tasks, tasksError, fetchTasks, session, restartShell]
+    [tasks, loadingTasks, tasksError, fetchTasks, session, restartShell]
   );
 
   return <FooterContext.Provider value={value}>{children}</FooterContext.Provider>;

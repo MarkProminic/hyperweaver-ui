@@ -10,8 +10,8 @@ import { resourceLabel } from '../../utils/resourceLabel';
 /**
  * BulkActionsModal — the Proxmox-style bulk power flow (contract §2 / I2D-2/3).
  *
- * Scope = the `servers` passed in: one host (host-scope) or many (Datacenter-scope, where the
- * Node column + filter become the cross-host "union" selector). Candidates are fetched per
+ * Scope = the `servers` passed in: one host (host-scope) or many (Datacenter-scope, where a
+ * host tag-cloud filter + per-host sections make the cross-host "union" selector). Candidates are fetched per
  * server (`stats`) and pre-filtered by the action (Start→stopped, Shutdown/Restart→running).
  * The operator ticks targets and confirms; the button names the count. No floating bar, no
  * tree checkboxes — bulk is deliberate and lives here.
@@ -23,6 +23,7 @@ const ACTIONS = {
 };
 
 const keyFor = (server, name) => `${server.id ?? server.hostname}:${name}`;
+const serverKey = server => server.id ?? server.hostname;
 
 const BulkActionsModal = ({ show, onClose, action, servers }) => {
   const { makeAgentRequest, startMachine, stopMachine, restartMachine } = useServers();
@@ -37,7 +38,7 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
   const [checked, setChecked] = useState(() => new Set());
   const [nameFilter, setNameFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [nodeFilter, setNodeFilter] = useState('all');
+  const [hostFilter, setHostFilter] = useState(() => new Set());
 
   // Fetch each in-scope host's machines when the modal opens; preselect the action-relevant set.
   useEffect(() => {
@@ -49,7 +50,7 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
     setError('');
     setStatusFilter(cfg.wantRunning ? 'running' : 'stopped');
     setNameFilter('');
-    setNodeFilter('all');
+    setHostFilter(new Set());
 
     Promise.all(
       servers.map(server =>
@@ -95,13 +96,42 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
         if (statusFilter === 'stopped' && c.running) {
           return false;
         }
-        if (nodeFilter !== 'all' && (c.server.id ?? c.server.hostname) !== nodeFilter) {
+        if (hostFilter.size > 0 && !hostFilter.has(serverKey(c.server))) {
           return false;
         }
         return true;
       }),
-    [candidates, nameFilter, statusFilter, nodeFilter]
+    [candidates, nameFilter, statusFilter, hostFilter]
   );
+
+  const groups = useMemo(
+    () =>
+      servers
+        .map(server => ({
+          server,
+          rows: visible.filter(c => serverKey(c.server) === serverKey(server)),
+        }))
+        .filter(group => group.rows.length > 0),
+    [servers, visible]
+  );
+
+  const toggleHost = key =>
+    setHostFilter(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+
+  const chipClassFor = key => {
+    if (hostFilter.has(key)) {
+      return 'btn-primary';
+    }
+    return hostFilter.size === 0 ? 'btn-outline-primary' : 'btn-outline-secondary';
+  };
 
   const visibleKeys = visible.map(c => keyFor(c.server, c.name));
   const allVisibleChecked = visibleKeys.length > 0 && visibleKeys.every(k => checked.has(k));
@@ -128,6 +158,39 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
       }
       return next;
     });
+
+  const toggleKeys = keys =>
+    setChecked(prev => {
+      const next = new Set(prev);
+      const all = keys.every(k => next.has(k));
+      keys.forEach(k => (all ? next.delete(k) : next.add(k)));
+      return next;
+    });
+
+  const machineRow = c => {
+    const k = keyFor(c.server, c.name);
+    return (
+      <tr key={k}>
+        <td>
+          <input
+            type="checkbox"
+            className="form-check-input"
+            checked={checked.has(k)}
+            onChange={() => toggleOne(k)}
+            disabled={running}
+            aria-label={`Select ${c.name}`}
+          />
+        </td>
+        <td>{c.name}</td>
+        <td>
+          <span className={c.running ? 'text-success' : 'text-secondary'}>
+            <i className={`${c.running ? 'fas' : 'far'} fa-circle fa-xs me-1`} />
+            {c.running ? 'running' : 'stopped'}
+          </span>
+        </td>
+      </tr>
+    );
+  };
 
   const runFn = useCallback(
     (server, name) => {
@@ -197,22 +260,44 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
             <option value="running">Running</option>
             <option value="stopped">Stopped</option>
           </select>
-          {multiHost && (
-            <select
-              className="form-select form-select-sm w-auto"
-              value={nodeFilter}
-              onChange={e => setNodeFilter(e.target.value)}
-              disabled={loading || running}
-            >
-              <option value="all">All hosts</option>
-              {servers.map(server => (
-                <option key={server.id ?? server.hostname} value={server.id ?? server.hostname}>
-                  {server.entityName || server.hostname}
-                </option>
-              ))}
-            </select>
-          )}
         </div>
+
+        {multiHost && (
+          <div className="d-flex flex-wrap align-items-center gap-1 mb-3">
+            {servers.map(server => {
+              const k = serverKey(server);
+              const count = candidates.filter(c => serverKey(c.server) === k).length;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  className={`btn btn-sm ${chipClassFor(k)}`}
+                  onClick={() => toggleHost(k)}
+                  disabled={loading || running}
+                  title={
+                    hostFilter.has(k)
+                      ? 'Click to drop this host from the filter'
+                      : 'Click to filter to this host'
+                  }
+                >
+                  <i className="fas fa-server me-1" />
+                  {server.entityName || server.hostname}
+                  <span className="badge text-bg-light ms-1">{count}</span>
+                </button>
+              );
+            })}
+            {hostFilter.size > 0 && (
+              <button
+                type="button"
+                className="btn btn-sm btn-link"
+                onClick={() => setHostFilter(new Set())}
+                disabled={loading || running}
+              >
+                All hosts
+              </button>
+            )}
+          </div>
+        )}
 
         {loading ? (
           <div className="text-center text-muted py-4">
@@ -235,43 +320,46 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
                     />
                   </th>
                   <th>Name</th>
-                  {multiHost && <th>Host</th>}
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {visible.length === 0 && (
                   <tr>
-                    <td colSpan={multiHost ? 4 : 3} className="text-center text-muted py-3">
+                    <td colSpan={3} className="text-center text-muted py-3">
                       No matching machines
                     </td>
                   </tr>
                 )}
-                {visible.map(c => {
-                  const k = keyFor(c.server, c.name);
-                  return (
-                    <tr key={k}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          className="form-check-input"
-                          checked={checked.has(k)}
-                          onChange={() => toggleOne(k)}
-                          disabled={running}
-                          aria-label={`Select ${c.name}`}
-                        />
-                      </td>
-                      <td>{c.name}</td>
-                      {multiHost && <td>{c.server.entityName || c.server.hostname}</td>}
-                      <td>
-                        <span className={c.running ? 'text-success' : 'text-secondary'}>
-                          <i className={`${c.running ? 'fas' : 'far'} fa-circle fa-xs me-1`} />
-                          {c.running ? 'running' : 'stopped'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {!multiHost && visible.map(c => machineRow(c))}
+                {multiHost &&
+                  groups.map(group => {
+                    const groupKeys = group.rows.map(c => keyFor(c.server, c.name));
+                    const groupAllChecked = groupKeys.every(k => checked.has(k));
+                    const runningCount = group.rows.filter(c => c.running).length;
+                    return [
+                      <tr className="table-secondary" key={`host-${serverKey(group.server)}`}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            className="form-check-input"
+                            checked={groupAllChecked}
+                            onChange={() => toggleKeys(groupKeys)}
+                            disabled={running}
+                            aria-label={`Select all on ${group.server.hostname}`}
+                          />
+                        </td>
+                        <td colSpan={2}>
+                          <i className="fas fa-server me-2" />
+                          <strong>{group.server.entityName || group.server.hostname}</strong>
+                          <span className="text-muted small ms-2">
+                            {runningCount}/{group.rows.length} running
+                          </span>
+                        </td>
+                      </tr>,
+                      ...group.rows.map(c => machineRow(c)),
+                    ];
+                  })}
               </tbody>
             </table>
           </div>

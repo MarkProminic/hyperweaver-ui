@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Resource-validation rendering (catalog §3), shared by create/clone/modify:
@@ -29,9 +30,11 @@ export const resourceWarnings = data =>
   Array.isArray(data?.resource_warnings) ? data.resource_warnings : [];
 
 /** Blocking list for a 400 Insufficient-resources answer. */
-export const ResourceIssueList = ({ details }) => (
-  <div className="alert alert-danger py-2">
-    <strong>Insufficient resources</strong>
+export const ResourceIssueList = ({ details }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="alert alert-danger py-2">
+      <strong>{t('A1-01.resourceIssueList.insufficientResources')}</strong>
     <ul className="mb-0 mt-1 list-unstyled">
       {details.map(detail => (
         <li key={`${detail.resource || 'issue'}:${detail.message}`}>

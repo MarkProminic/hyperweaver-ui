@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import { register } from 'register-service-worker';
 
 import App from './App';
+import './i18n';
 import reportWebVitals from './reportWebVitals';
 
 // Bootstrap: precompiled CSS + JS bundle. We consume the prebuilt CSS so Bootstrap's own

@@ -262,7 +262,10 @@ const GeneralSettingsTab = ({
         .map(field => {
           // Served vocabulary wins; a field's own agent-stated option set
           // (uefivars/rng on|off) keeps the control a select either way.
-          const vocabulary = knobValues?.[`zones.${field.key}`] || field.options || null;
+          const vocabulary =
+            field.key === 'bootnext' && bhyveBootDevices.length > 0
+              ? bhyveBootDevices
+              : knobValues?.[`zones.${field.key}`] || field.options || null;
           const value = values[field.key] ?? '';
           const blankLabel = agentDefaultLabel(defaultsDoc, field.key);
           const commit = next => setValues(prev => ({ ...prev, [field.key]: next }));

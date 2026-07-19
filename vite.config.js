@@ -24,11 +24,22 @@ const devConfig = loadDevConfig();
 const devPort = devConfig.server?.port || 3000;
 const apiTarget = devConfig.server?.api_target || 'http://localhost:3443';
 
+// Supported UI languages come from the locale folders themselves: dropping
+// public/locales/<lang>/common.json is all it takes to add a language.
+const localeDirs = fs.existsSync('./public/locales')
+  ? fs
+      .readdirSync('./public/locales', { withFileTypes: true })
+      .filter(entry => entry.isDirectory())
+      .map(entry => entry.name)
+  : [];
+const supportedLocales = localeDirs.length ? localeDirs : ['en'];
+
 export default defineConfig({
   define: {
     // Replaced at build time from this package's own package.json
     __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_NAME__: JSON.stringify(pkg.name),
+    __SUPPORTED_LOCALES__: JSON.stringify(supportedLocales),
   },
   css: {
     preprocessorOptions: {

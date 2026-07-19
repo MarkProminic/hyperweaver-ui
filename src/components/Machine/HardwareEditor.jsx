@@ -205,9 +205,13 @@ export const VocabularySelect = ({
   small = false,
   disabled = false,
 }) => {
-  const rows = entries.map(entry =>
+  const allRows = entries.map(entry =>
     entry && typeof entry === 'object' ? entry : { value: entry, label: String(entry) }
   );
+  const rows = allRows.filter(
+    row => String(row.value) !== blankLabel && String(row.label) !== blankLabel
+  );
+  const blankText = rows.length === allRows.length ? blankLabel : `${blankLabel} - Default`;
   return (
     <select
       id={id}
@@ -222,7 +226,7 @@ export const VocabularySelect = ({
       }}
       disabled={disabled}
     >
-      <option value="">{blankLabel}</option>
+      <option value="">{blankText}</option>
       {value && !rows.some(row => row.value === value) && <option value={value}>{value}</option>}
       {rows.map(row => (
         <option key={row.value} value={row.value}>

@@ -35,6 +35,7 @@ import MachineSnapshots from './Machine/MachineSnapshots';
 import MoveMachineModal from './Machine/MoveMachineModal';
 import TagsNotesPanel from './Machine/TagsNotesPanel';
 import UnattendedInstallModal from './Machine/UnattendedInstallModal';
+import VboxResourceCharts from './Machine/VboxResourceCharts';
 import VncModal from './Machine/VncModal';
 import ZloginModal from './Machine/ZloginModal';
 
@@ -845,6 +846,14 @@ const Machines = () => {
                                   links={(currentHardwareOf(machineDetails).zone?.nics || [])
                                     .map(nic => nic.physical)
                                     .filter(Boolean)}
+                                />
+                              )}
+
+                            {hasFeature(currentServer, 'monitoring') &&
+                              hasHypervisor(currentServer, 'virtualbox') && (
+                                <VboxResourceCharts
+                                  currentServer={currentServer}
+                                  machineName={selectedMachine}
                                 />
                               )}
                           </div>

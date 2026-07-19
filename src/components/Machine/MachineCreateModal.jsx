@@ -282,6 +282,18 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     return landingPool ? [landingPool] : null;
   }, [templates, settings.box, settings.box_version, agentDefaults]);
 
+  const wizardBhyveBootDevices = useMemo(() => {
+    if (!bhyve) {
+      return [];
+    }
+    return [
+      ...(bootSource !== 'none' ? ['bootdisk'] : []),
+      ...[...diskConfig.additional.keys()].map(index => `disk${index}`),
+      ...[...diskConfig.cdroms.keys()].map(index => `cdrom${index}`),
+      ...[...networks.keys()].map(index => `net${index}`),
+    ];
+  }, [bhyve, bootSource, diskConfig.additional, diskConfig.cdroms, networks]);
+
   const resetForm = useCallback(() => {
     setError('');
     setErrorDetails([]);
@@ -1121,6 +1133,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           setSerialRows={setSerialRows}
           parallelRows={parallelRows}
           setParallelRows={setParallelRows}
+          bhyveBootDevices={wizardBhyveBootDevices}
           cloudInit={cloudInit}
           setCloudInit={patch => setCloudInit(prev => ({ ...prev, ...patch }))}
           vboxJson={vboxJson}

@@ -8,7 +8,12 @@ import { useState } from 'react';
  */
 const PickOrType = ({ id, value, onChange, options, blankLabel, placeholder, small, disabled }) => {
   const [custom, setCustom] = useState(false);
-  const known = options.some(option => option.value === value);
+  const visibleOptions = options.filter(
+    option => String(option.value) !== blankLabel && String(option.label) !== blankLabel
+  );
+  const blankText =
+    visibleOptions.length === options.length ? blankLabel : `${blankLabel} - Default`;
+  const known = visibleOptions.some(option => option.value === value);
   if (custom || (value && !known)) {
     return (
       <>
@@ -49,8 +54,8 @@ const PickOrType = ({ id, value, onChange, options, blankLabel, placeholder, sma
       }}
       disabled={disabled}
     >
-      <option value="">{blankLabel}</option>
-      {options.map(option => (
+      <option value="">{blankText}</option>
+      {visibleOptions.map(option => (
         <option key={option.value} value={option.value}>
           {option.label}
         </option>
