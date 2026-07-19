@@ -4,11 +4,14 @@ import StepCardList from './ProvisioningStepList';
 import { LinesField, OptionalBoolSelect } from './ProvisioningVarRows';
 
 /**
- * The Playbooks tab — one card per provisioning.ansible.playbooks.local[]
- * entry, same treatment as Roles (Mark's parity ask 2026-07-14): the fields
- * that used to hide in Raw JSON (collections/remote_collections/install_mode/
- * interpreter/config_file/callbacks…) edit structured. Unknown keys survive
- * untouched.
+ * The Playbooks tab — the first playbook group's local[] and remote[] lists,
+ * one card per entry, same treatment as Roles (Mark's parity ask 2026-07-14):
+ * the fields that used to hide in Raw JSON (collections/remote_collections/
+ * install_mode/interpreter/config_file/callbacks…) edit structured. Unknown
+ * keys survive untouched. Execution order IS the render order: the group's
+ * local[] top to bottom, then its remote[] top to bottom. Drag reorders
+ * within a list only; the "runs" selector is the sole way an entry crosses
+ * lists, and it lands at the END of the other list.
  */
 
 const RUN_MODES = ['always', 'once', 'not_first'];
@@ -34,7 +37,7 @@ PlaybookTitle.propTypes = {
   playbook: PropTypes.object.isRequired,
 };
 
-const PlaybookBody = ({ playbook, patch, disabled, pathListId }) => {
+const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlacementChange }) => {
   const uiId = playbook._ui_id;
   const text = (key, value) => patch({ [key]: value === '' ? undefined : value });
   return (
@@ -52,6 +55,23 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId }) => {
             disabled={disabled}
             onChange={e => patch({ playbook: e.target.value })}
           />
+        </span>
+        <span className="hw-field">
+          <label htmlFor={`playbook-placement-${uiId}`}>runs</label>
+          <select
+            id={`playbook-placement-${uiId}`}
+            className="form-select form-select-sm w-auto"
+            value={placement}
+            disabled={disabled}
+            onChange={e => {
+              if (e.target.value !== placement) {
+                onPlacementChange(e.target.value);
+              }
+            }}
+          >
+            <option value="local">in the guest (ansible-local)</option>
+            <option value="remote">from the host (remote ansible)</option>
+          </select>
         </span>
         <span className="hw-field">
           <label htmlFor={`playbook-run-${uiId}`}>run</label>
@@ -204,17 +224,56 @@ PlaybookBody.propTypes = {
   patch: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
   pathListId: PropTypes.string,
+  placement: PropTypes.oneOf(['local', 'remote']).isRequired,
+  onPlacementChange: PropTypes.func.isRequired,
 };
 
-const ProvisioningPlaybooksTab = ({ playbooks, pathOptions, onChange, disabled, makeRow }) => {
+const ProvisioningPlaybooksTab = ({ playbookLists, pathOptions, onChange, disabled, makeRow }) => {
+  const { local, remote } = playbookLists;
   // Registry playbook candidates (advisory, design D16) — a datalist under
   // the path input; free text always stands.
   const pathListId =
     Array.isArray(pathOptions) && pathOptions.length > 0 ? 'playbook-path-options' : undefined;
+
+  // The one cross-list move: out of its list, onto the END of the other.
+  const moveTo = (row, target) => {
+    const without = list => list.filter(entry => entry._ui_id !== row._ui_id);
+    onChange(
+      target === 'remote'
+        ? { local: without(local), remote: [...remote, row] }
+        : { local: [...local, row], remote: without(remote) }
+    );
+  };
+
+  const renderList = (rows, placement, addLabel) => (
+    <StepCardList
+      rows={rows}
+      onChange={next =>
+        onChange(placement === 'local' ? { local: next, remote } : { local, remote: next })
+      }
+      disabled={disabled}
+      addLabel={addLabel}
+      makeRow={makeRow}
+      renderTitle={playbook => <PlaybookTitle playbook={playbook} />}
+      renderBody={(playbook, patch) => (
+        <PlaybookBody
+          playbook={playbook}
+          patch={patch}
+          disabled={disabled}
+          pathListId={pathListId}
+          placement={placement}
+          onPlacementChange={target => moveTo(playbook, target)}
+        />
+      )}
+    />
+  );
+
   return (
     <div>
       <p className="form-text text-muted mt-0 mb-2">
-        Playbooks run top to bottom — drag to reorder. <code>run</code> gates each against the
+        Order is exactly what you see: the local playbooks run first, top to bottom, then the remote
+        playbooks, top to bottom. Drag reorders within a list; the <code>runs</code> selector moves
+        an entry to the end of the other list. <code>run</code> gates each against the
         machine&apos;s provision history: <code>always</code> every run, <code>once</code> only when
         never provisioned, <code>not_first</code> only after a prior success.
       </p>
@@ -225,28 +284,25 @@ const ProvisioningPlaybooksTab = ({ playbooks, pathOptions, onChange, disabled, 
           ))}
         </datalist>
       )}
-      <StepCardList
-        rows={playbooks}
-        onChange={onChange}
-        disabled={disabled}
-        addLabel="Add Playbook"
-        makeRow={makeRow}
-        renderTitle={playbook => <PlaybookTitle playbook={playbook} />}
-        renderBody={(playbook, patch) => (
-          <PlaybookBody
-            playbook={playbook}
-            patch={patch}
-            disabled={disabled}
-            pathListId={pathListId}
-          />
-        )}
-      />
+      <h6 className="fs-6 fw-bold mb-2">
+        <i className="fas fa-box me-2" />
+        Local — ansible-local, inside the guest
+      </h6>
+      {renderList(local, 'local', 'Add Playbook')}
+      <h6 className="fs-6 fw-bold mt-3 mb-2">
+        <i className="fas fa-tower-broadcast me-2" />
+        Remote — host ansible over the guest transport
+      </h6>
+      {renderList(remote, 'remote', 'Add Remote Playbook')}
     </div>
   );
 };
 
 ProvisioningPlaybooksTab.propTypes = {
-  playbooks: PropTypes.array.isRequired,
+  playbookLists: PropTypes.shape({
+    local: PropTypes.array.isRequired,
+    remote: PropTypes.array.isRequired,
+  }).isRequired,
   pathOptions: PropTypes.array,
   onChange: PropTypes.func.isRequired,
   disabled: PropTypes.bool,

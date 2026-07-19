@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   getProvisioners,
@@ -21,8 +21,9 @@ import { VarRowList, VAR_NAME_PATTERN, ROLE_NAME_PATTERN } from './ProvisioningV
  * /machines/{name} stores the document verbatim — a Hosts.yml host entry,
  * edited structured. Keys the tabs don't cover survive untouched; Raw JSON
  * is the escape hatch. Playbooks live at provisioning.ansible.playbooks —
- * sometimes an ARRAY wrapping {local:[]}, sometimes {local:[]} directly;
- * reads tolerate both, writes keep the shape they found. Storing a FIRST
+ * sometimes an ARRAY wrapping {local:[], remote:[]} groups, sometimes one
+ * group directly; reads tolerate both, writes keep the shape they found and
+ * edit the FIRST group only (later groups ride untouched). Storing a FIRST
  * document on a bare machine enables the pipeline.
  */
 
@@ -40,26 +41,42 @@ const TABS = [
   { id: 'json', label: 'Raw JSON' },
 ];
 
-/** The playbooks.local list, whichever wrapping the document uses. */
-const localPlaybooksOf = doc => {
+/**
+ * The FIRST playbook group's local[]/remote[] lists, whichever wrapping the
+ * document uses. Execution order is the group's local[] then its remote[],
+ * each in list order — the tab renders in exactly that order.
+ */
+const playbookListsOf = doc => {
   const playbooks = doc?.provisioning?.ansible?.playbooks;
-  if (Array.isArray(playbooks)) {
-    return Array.isArray(playbooks[0]?.local) ? playbooks[0].local : [];
-  }
-  return Array.isArray(playbooks?.local) ? playbooks.local : [];
+  const group = (Array.isArray(playbooks) ? playbooks[0] : playbooks) || {};
+  return {
+    local: Array.isArray(group.local) ? group.local : [],
+    remote: Array.isArray(group.remote) ? group.remote : [],
+  };
 };
 
-/** Write the local list back in the SAME wrapping it came in. */
-const withLocalPlaybooks = (doc, local) => {
+/**
+ * Write the first group's lists back in the SAME wrapping. A list key is
+ * written only when it has entries or already existed — an edit never grows
+ * an empty key the document didn't carry.
+ */
+const withPlaybookLists = (doc, lists) => {
   const playbooks = doc?.provisioning?.ansible?.playbooks;
-  const wrapped = Array.isArray(playbooks)
-    ? [{ ...(playbooks[0] || {}), local }, ...playbooks.slice(1)]
-    : { ...(playbooks || {}), local };
+  const base = (Array.isArray(playbooks) ? playbooks[0] : playbooks) || {};
+  const group = { ...base };
+  ['local', 'remote'].forEach(key => {
+    if (lists[key].length > 0 || Array.isArray(base[key])) {
+      group[key] = lists[key];
+    }
+  });
   return {
     ...doc,
     provisioning: {
       ...(doc.provisioning || {}),
-      ansible: { ...(doc.provisioning?.ansible || {}), playbooks: wrapped },
+      ansible: {
+        ...(doc.provisioning?.ansible || {}),
+        playbooks: Array.isArray(playbooks) ? [group, ...playbooks.slice(1)] : group,
+      },
     },
   };
 };
@@ -115,9 +132,12 @@ const tagRows = doc => {
   if (Array.isArray(next.roles)) {
     next.roles = next.roles.map(tagRow);
   }
-  const local = localPlaybooksOf(next);
-  if (local.length > 0) {
-    next = withLocalPlaybooks(next, local.map(tagRow));
+  const lists = playbookListsOf(next);
+  if (lists.local.length > 0 || lists.remote.length > 0) {
+    next = withPlaybookLists(next, {
+      local: lists.local.map(tagRow),
+      remote: lists.remote.map(tagRow),
+    });
   }
   next = mapShellScripts(next, list => list.map(entry => tagRow({ script: entry })));
   return mapHooks(next, tagRow);
@@ -130,9 +150,12 @@ const clean = doc => {
   if (Array.isArray(next.roles)) {
     next.roles = next.roles.map(stripTag);
   }
-  const local = localPlaybooksOf(next);
-  if (local.length > 0) {
-    next = withLocalPlaybooks(next, local.map(stripTag));
+  const lists = playbookListsOf(next);
+  if (lists.local.length > 0 || lists.remote.length > 0) {
+    next = withPlaybookLists(next, {
+      local: lists.local.map(stripTag),
+      remote: lists.remote.map(stripTag),
+    });
   }
   next = mapShellScripts(next, list => list.map(row => row.script));
   return mapHooks(next, stripTag);
@@ -230,13 +253,25 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
     });
   }, [currentServer, provName, provVersion]);
 
-  // Reseed from the stored document — on machine switch and after each
-  // store (the parent reloads details, the document prop changes).
+  // Reseed from the stored document — on machine switch and whenever the
+  // stored CONTENT changes (after a store, the parent reloads details). The
+  // 30s detail poll hands a fresh but identical object every pass — comparing
+  // content keeps it from clobbering in-progress edits, and only a machine
+  // switch resets the selected tab.
+  const lastSeedRef = useRef({ machine: null, json: null });
   useEffect(() => {
+    const seedJson = JSON.stringify(document ?? {});
+    const machineChanged = lastSeedRef.current.machine !== machineName;
+    if (!machineChanged && lastSeedRef.current.json === seedJson) {
+      return;
+    }
+    lastSeedRef.current = { machine: machineName, json: seedJson };
     const initial = tagRows(document ?? {});
     setDoc(initial);
     setJsonText(JSON.stringify(clean(initial), null, 2));
-    setTab('folders');
+    if (machineChanged) {
+      setTab('folders');
+    }
     setError('');
   }, [machineName, document]);
 
@@ -248,7 +283,7 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
   };
 
   const folders = Array.isArray(doc.folders) ? doc.folders : [];
-  const playbooks = localPlaybooksOf(doc);
+  const playbookLists = playbookListsOf(doc);
   const roles = Array.isArray(doc.roles) ? doc.roles : [];
   const preHooks = Array.isArray(doc.provisioning?.pre) ? doc.provisioning.pre : [];
   const postHooks = Array.isArray(doc.provisioning?.post) ? doc.provisioning.post : [];
@@ -381,10 +416,10 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
 
       {tab === 'playbooks' && (
         <ProvisioningPlaybooksTab
-          playbooks={playbooks}
+          playbookLists={playbookLists}
           pathOptions={playbookCandidates}
           disabled={loading}
-          onChange={next => updateDoc(withLocalPlaybooks(doc, next))}
+          onChange={next => updateDoc(withPlaybookLists(doc, next))}
           makeRow={() => tagRow({ playbook: '', run: 'once' })}
         />
       )}
