@@ -107,11 +107,11 @@ export const resumeMachine = async (hostname, port, protocol, machineName) =>
   await makeAgentRequest(hostname, port, protocol, `machines/${machineName}/resume`, 'POST');
 
 /**
- * Delete a machine. Both flags ride the wire EXPLICITLY on every call: the two
- * agents' defaults disagree (VirtualBox cleanup_disks defaults true, zoneweaver
- * cleanup_datasets defaults false), so relying on a default would delete media
- * on one agent and keep it on the other. Media outside the machine's working
- * directory are always preserved regardless of the flag.
+ * Delete a machine. `cleanup_disks` is the CONVERGED key on both agents
+ * (zoneweaver renamed cleanup_datasets → cleanup_disks, 2026-07-19). Sent
+ * EXPLICITLY on every call because the agents' defaults disagree (Go true,
+ * zoneweaver false). Only agent-created media die; user-attached media and
+ * anything outside the machine's working directory always survive.
  * @param {string} hostname - Server hostname
  * @param {number} port - Server port
  * @param {string} protocol - Server protocol
