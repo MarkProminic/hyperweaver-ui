@@ -193,9 +193,58 @@ export const HARDWARE_SECTIONS = [
 
 const fieldLabel = key => key.replace(/_/gu, ' ');
 
-// Enumerated knobs render as real dropdowns; a current value outside the
-// vocabulary stays selectable so the field never lies. `enumValues` (the
-// agent's knob_values map) beats the hardcoded suggest list when present.
+export const VocabularySelect = ({
+  id,
+  value,
+  entries,
+  blankLabel,
+  onChange,
+  onCustom = null,
+  customLabel = 'Custom value…',
+  small = false,
+  disabled = false,
+}) => {
+  const rows = entries.map(entry =>
+    entry && typeof entry === 'object' ? entry : { value: entry, label: String(entry) }
+  );
+  return (
+    <select
+      id={id}
+      className={small ? 'form-select form-select-sm' : 'form-select'}
+      value={value}
+      onChange={e => {
+        if (onCustom && e.target.value === '__custom__') {
+          onCustom();
+          return;
+        }
+        onChange(e.target.value);
+      }}
+      disabled={disabled}
+    >
+      <option value="">{blankLabel}</option>
+      {value && !rows.some(row => row.value === value) && <option value={value}>{value}</option>}
+      {rows.map(row => (
+        <option key={row.value} value={row.value}>
+          {row.label}
+        </option>
+      ))}
+      {onCustom && <option value="__custom__">{customLabel}</option>}
+    </select>
+  );
+};
+
+VocabularySelect.propTypes = {
+  id: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  entries: PropTypes.array.isRequired,
+  blankLabel: PropTypes.string.isRequired,
+  onChange: PropTypes.func.isRequired,
+  onCustom: PropTypes.func,
+  customLabel: PropTypes.string,
+  small: PropTypes.bool,
+  disabled: PropTypes.bool,
+};
+
 const HardwareFieldControl = ({
   inputId,
   sectionId,
@@ -209,21 +258,15 @@ const HardwareFieldControl = ({
   const vocabulary = enumValues || (field.kind === 'onoff' ? ['on', 'off'] : field.suggest);
   if (vocabulary) {
     return (
-      <select
+      <VocabularySelect
         id={inputId}
-        className="form-select form-select-sm"
         value={value}
-        onChange={e => onChange(sectionId, field.key, e.target.value)}
+        entries={vocabulary}
+        blankLabel={blankLabel}
+        small
+        onChange={next => onChange(sectionId, field.key, next)}
         disabled={disabled}
-      >
-        <option value="">{blankLabel}</option>
-        {value && !vocabulary.includes(value) && <option value={value}>{value}</option>}
-        {vocabulary.map(option => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+      />
     );
   }
   return (
@@ -260,7 +303,7 @@ export const HardwareSectionForm = ({
   values,
   onChange,
   knobValues = null,
-  blankLabel = '(unchanged)',
+  blankLabel = 'unchanged',
   disabled,
 }) => (
   <div className="row g-2">
@@ -342,6 +385,50 @@ export const diffHardwarePayload = (hardware, seededHardware) => {
     }
   });
   return Object.keys(payload).length > 0 ? payload : null;
+};
+
+const CPU_TOPO_FIELDS = [
+  ['sockets', 16],
+  ['cores', 32],
+  ['threads', 2],
+];
+
+export const cpuTopoProduct = topo =>
+  (Number(topo.sockets) || 0) * (Number(topo.cores) || 0) * (Number(topo.threads) || 0);
+
+export const CpuTopologyInputs = ({ idPrefix, topo, onField, disabled }) => (
+  <>
+    {CPU_TOPO_FIELDS.map(([key, max]) => (
+      <div className="col-4 col-md-2" key={key}>
+        <label className="form-label" htmlFor={`${idPrefix}-${key}`}>
+          {key[0].toUpperCase() + key.slice(1)}
+        </label>
+        <input
+          id={`${idPrefix}-${key}`}
+          className="form-control"
+          type="number"
+          min="1"
+          max={max}
+          value={topo[key] ?? ''}
+          onChange={e => onField(key, e.target.value === '' ? '' : Number(e.target.value))}
+          disabled={disabled}
+        />
+      </div>
+    ))}
+    <div className="col-12">
+      <span className={`form-text ${cpuTopoProduct(topo) > 32 ? 'text-danger' : 'text-muted'}`}>
+        sockets × cores × threads = {cpuTopoProduct(topo) || '…'} vCPUs — bhyve limits: sockets ≤16,
+        cores ≤32, threads ≤2, product ≤32. Over-limit values are refused by the agent.
+      </span>
+    </div>
+  </>
+);
+
+CpuTopologyInputs.propTypes = {
+  idPrefix: PropTypes.string.isRequired,
+  topo: PropTypes.object.isRequired,
+  onField: PropTypes.func.isRequired,
+  disabled: PropTypes.bool,
 };
 
 const portRow = fields => ({ key: Date.now() + Math.random(), ...fields });

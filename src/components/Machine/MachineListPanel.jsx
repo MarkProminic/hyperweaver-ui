@@ -9,6 +9,7 @@ import { canCreateMachines, canStartStopMachines } from '../../utils/permissions
 import { resourceLabel } from '../../utils/resourceLabel';
 
 import CloneMachineModal from './CloneMachineModal';
+import { machineStatusVariant, parseConfiguration } from './machineHelpers';
 
 /**
  * Machine list panel — SHI's ServerPage recreated for the web UI (Mark's
@@ -20,47 +21,7 @@ import CloneMachineModal from './CloneMachineModal';
  * them (Go `spec`, zoneweaver `configuration.provisioner`).
  */
 
-// SHI's ServerItem status coloring, spoken in the shared status vocabulary
-// (MachineInfo uses the same palette on the detail card).
-const statusClass = status => {
-  switch ((status || '').toLowerCase()) {
-    case 'running':
-      return 'text-bg-success';
-    case 'starting':
-    case 'stopping':
-    case 'shutting_down':
-      return 'text-bg-info';
-    case 'suspended':
-    case 'paused':
-    case 'configured':
-    case 'installed':
-    case 'ready':
-      return 'text-bg-warning';
-    case 'stopped':
-    case 'aborted':
-    case 'incomplete':
-    case 'down':
-      return 'text-bg-danger';
-    default:
-      return 'text-bg-secondary';
-  }
-};
-
-/** Parse a possibly-JSON-string configuration document (zoneweaver rows). */
-const parseConfiguration = row => {
-  const { configuration } = row;
-  if (!configuration) {
-    return {};
-  }
-  if (typeof configuration === 'string') {
-    try {
-      return JSON.parse(configuration);
-    } catch {
-      return {};
-    }
-  }
-  return configuration;
-};
+const statusClass = status => `text-bg-${machineStatusVariant(status)}`;
 
 /**
  * Provisioner reference of a row, whichever agent shaped it: the Go agent's

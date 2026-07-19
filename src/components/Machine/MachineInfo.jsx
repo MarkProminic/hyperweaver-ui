@@ -1,27 +1,8 @@
 import PropTypes from 'prop-types';
 
-// VirtualBox-flavored status vocabulary rides in VALUES (sync-file ruling):
-// configured | running | stopped | suspended | paused | aborted | starting | stopping | unknown.
-// bhyve reports its own set (running/installed/...). Color by meaning, not by hypervisor.
-const statusClass = status => {
-  switch ((status || '').toLowerCase()) {
-    case 'running':
-      return 'text-success';
-    case 'starting':
-    case 'stopping':
-      return 'text-info';
-    case 'suspended':
-    case 'paused':
-    case 'configured':
-      return 'text-warning';
-    case 'stopped':
-    case 'aborted':
-    case 'incomplete':
-      return 'text-danger';
-    default:
-      return 'text-muted';
-  }
-};
+import { machineStatusVariant } from './machineHelpers';
+
+const statusClass = status => `text-${machineStatusVariant(status)}`;
 
 const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selectedMachine }) => {
   if (!machineDetails || !machineDetails.machine_info) {

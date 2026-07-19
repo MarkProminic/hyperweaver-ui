@@ -78,7 +78,7 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId }) => {
             disabled={disabled}
             onChange={e => text('install_mode', e.target.value)}
           >
-            <option value="">(not set)</option>
+            <option value="">not set</option>
             <option value="pip">pip</option>
             <option value="pkg">pkg</option>
           </select>
@@ -103,7 +103,7 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId }) => {
             id={`playbook-config-${uiId}`}
             className="form-control form-control-sm font-monospace hw-field-med"
             type="text"
-            placeholder="(/vagrant/ansible/ansible.cfg)"
+            placeholder="/vagrant/ansible/ansible.cfg"
             value={playbook.config_file ?? ''}
             disabled={disabled}
             onChange={e => text('config_file', e.target.value)}
@@ -115,7 +115,7 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId }) => {
             id={`playbook-workdir-${uiId}`}
             className="form-control form-control-sm font-monospace hw-field-short"
             type="text"
-            placeholder="(/vagrant)"
+            placeholder="/vagrant"
             value={playbook.provisioning_path ?? ''}
             disabled={disabled}
             onChange={e => text('provisioning_path', e.target.value)}

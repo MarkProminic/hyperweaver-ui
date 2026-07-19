@@ -77,7 +77,7 @@ const FolderBody = ({ folder, patch, disabled }) => {
             id={`folder-owner-${uiId}`}
             className="form-control form-control-sm hw-field-short"
             type="text"
-            placeholder="(ssh user)"
+            placeholder="ssh user"
             value={folder.owner ?? ''}
             disabled={disabled}
             onChange={e => patch({ owner: e.target.value === '' ? undefined : e.target.value })}
@@ -89,7 +89,7 @@ const FolderBody = ({ folder, patch, disabled }) => {
             id={`folder-group-${uiId}`}
             className="form-control form-control-sm hw-field-short"
             type="text"
-            placeholder="(owner)"
+            placeholder="owner"
             value={folder.group ?? ''}
             disabled={disabled}
             onChange={e => patch({ group: e.target.value === '' ? undefined : e.target.value })}

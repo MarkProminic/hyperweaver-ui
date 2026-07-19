@@ -2,13 +2,23 @@ import PropTypes from 'prop-types';
 import { useState } from 'react';
 
 import { PathInput } from '../common';
+import { humanSize } from '../Host/zfsUtils';
 
 import {
   HARDWARE_SECTIONS,
   HardwareSectionForm,
   SerialPortsEditor,
   ParallelPortsEditor,
+  VocabularySelect,
+  CpuTopologyInputs,
 } from './HardwareEditor';
+import { zfsPoolOptions, zfsDatasetOptions } from './machineHelpers';
+import {
+  CdromSourceFields,
+  ControllerPortFields,
+  DiskSourceFields,
+  RemoveRowButton,
+} from './MediaRowFields';
 import NetworksEditor from './NetworksEditor';
 import PickOrType from './PickOrType';
 import DslConfigForm from './ProvisionerFieldDsl';
@@ -114,7 +124,7 @@ export const GeneralStep = ({
       <SettingInput
         id="machine-create-name"
         label="Name"
-        placeholder="blank = derived from server_id/hostname/domain"
+        placeholder="derived from server_id/hostname/domain"
         value={name}
         onChange={e => setName(e.target.value)}
         disabled={loading}
@@ -162,7 +172,7 @@ export const GeneralStep = ({
             type="number"
             min="1"
             max="100"
-            placeholder="95 (default)"
+            placeholder="95"
             value={settings.boot_priority ?? ''}
             onChange={e => setSetting('boot_priority', e.target.value)}
             disabled={loading}
@@ -293,12 +303,6 @@ export const BoxStep = ({
   const showBoxSelect = !boxPickCustom;
 
   const handleBoxSelect = key => {
-    if (key === '__custom__') {
-      setBoxPickCustom(true);
-      setSetting('box', '');
-      onBoxPicked(null);
-      return;
-    }
     const entry = boxOptions.find(row => row.key === key);
     if (!entry) {
       return;
@@ -371,25 +375,22 @@ export const BoxStep = ({
               Image
             </label>
             {showBoxSelect ? (
-              <select
+              <VocabularySelect
                 id="machine-setting-box"
-                className="form-select"
                 value={catalogEntry ? catalogEntry.key : ''}
-                onChange={e => handleBoxSelect(e.target.value)}
+                entries={visibleOptions.map(entry => ({ value: entry.key, label: entry.value }))}
+                blankLabel={
+                  visibleOptions.length > 0 ? 'Select an image…' : 'no images found — use Custom'
+                }
+                onChange={key => handleBoxSelect(key)}
+                onCustom={() => {
+                  setBoxPickCustom(true);
+                  setSetting('box', '');
+                  onBoxPicked(null);
+                }}
+                customLabel="Custom (type org/name)…"
                 disabled={loading}
-              >
-                <option value="">
-                  {visibleOptions.length > 0
-                    ? 'Select an image…'
-                    : '(no images found — use Custom)'}
-                </option>
-                {visibleOptions.map(entry => (
-                  <option key={entry.key} value={entry.key}>
-                    {entry.value}
-                  </option>
-                ))}
-                <option value="__custom__">Custom (type org/name)…</option>
-              </select>
+              />
             ) : (
               <input
                 id="machine-setting-box"
@@ -439,7 +440,7 @@ export const BoxStep = ({
                 disabled={loading || !catalogEntry}
               >
                 <option value="">
-                  {catalogEntry ? '(unpinned — resolves locally only)' : '(pick an image first)'}
+                  {catalogEntry ? 'unpinned — resolves locally only' : 'pick an image first'}
                 </option>
                 {(catalogEntry?.versions || []).map(versionNumber => (
                   <option key={versionNumber} value={versionNumber}>
@@ -473,7 +474,7 @@ export const BoxStep = ({
                     onChange={e => setSetting('box_arch', e.target.value)}
                     disabled={loading}
                   >
-                    <option value="">(default)</option>
+                    <option value="">n/a</option>
                     {catalogEntry.architectures.map(arch => (
                       <option key={arch} value={arch}>
                         {arch}
@@ -782,25 +783,6 @@ BootOrderEditor.propTypes = {
   loading: PropTypes.bool,
 };
 
-// ---- ZFS picker option builders (shared: boot placement + additional
-// rows). pools[].free = RAW BYTES string (canonical A3 answer); non-ONLINE
-// health rides the label so a degraded pool is never a blind pick; datasets
-// list RELATIVE to the effective pool — the agent joins <pool>/<dataset>.
-const zfsPoolOptions = zfsPools =>
-  zfsPools.map(pool => {
-    const free = pool.free ? ` — ${(Number(pool.free) / 1024 ** 3).toFixed(1)}G free` : '';
-    const health = pool.health && pool.health !== 'ONLINE' ? ` · ${pool.health}` : '';
-    return { value: pool.name, label: `${pool.name}${free}${health}` };
-  });
-
-const zfsDatasetOptions = (zfsDatasets, poolName) =>
-  zfsDatasets
-    .filter(dataset => dataset.name.startsWith(`${poolName}/`))
-    .map(dataset => {
-      const relative = dataset.name.slice(poolName.length + 1);
-      return { value: relative, label: relative };
-    });
-
 // Boot-zvol ZFS placement (bhyve) — live pool/dataset pickers with the
 // Custom… escape.
 const BootZfsPlacement = ({ disks, setDisks, zfsPools, zfsDatasets, showClone, loading }) => {
@@ -817,7 +799,7 @@ const BootZfsPlacement = ({ disks, setDisks, zfsPools, zfsDatasets, showClone, l
           value={disks.bootPool}
           onChange={next => setDisks({ bootPool: next })}
           options={poolOptions}
-          blankLabel="(default — rpool)"
+          blankLabel="rpool"
           placeholder="pool name"
           disabled={loading}
         />
@@ -831,7 +813,7 @@ const BootZfsPlacement = ({ disks, setDisks, zfsPools, zfsDatasets, showClone, l
           value={disks.bootDataset}
           onChange={next => setDisks({ bootDataset: next })}
           options={datasetOptions}
-          blankLabel="(default — zones)"
+          blankLabel="zones"
           placeholder="e.g. zones/companyA"
           disabled={loading}
         />
@@ -851,7 +833,7 @@ const BootZfsPlacement = ({ disks, setDisks, zfsPools, zfsDatasets, showClone, l
             onChange={e => setDisks({ bootCloneStrategy: e.target.value })}
             disabled={loading}
           >
-            <option value="">(default — clone)</option>
+            <option value="">clone</option>
             <option value="clone">clone — thin ZFS clone of the template</option>
             <option value="copy">copy — full independent send/recv</option>
           </select>
@@ -1032,7 +1014,7 @@ const BootDiskSection = ({
           server={currentServer}
           mode="directory"
           pickTitle="Pick the folder for the created disk file"
-          placeholder="(default — the machine folder)"
+          placeholder="machine folder"
           list="machine-media-dirs"
           disabled={loading}
         />
@@ -1053,7 +1035,7 @@ const BootDiskSection = ({
             id="machine-disk-boot-controller"
             className="form-control"
             list="machine-controller-names"
-            placeholder="(default controller)"
+            placeholder="n/a"
             value={disks.bootController}
             onChange={e => setDisks({ bootController: e.target.value })}
             disabled={loading}
@@ -1068,7 +1050,7 @@ const BootDiskSection = ({
             className="form-control"
             type="number"
             min="0"
-            placeholder="(next free)"
+            placeholder="next free"
             value={disks.bootPort}
             onChange={e => setDisks({ bootPort: e.target.value })}
             disabled={loading}
@@ -1131,9 +1113,7 @@ export const DisksStep = ({
   // GET /media rows (frozen wire): in_use_by is an ARRAY (VBox media can
   // multi-attach); size_bytes numeric.
   const mediaOptions = vboxMedia.map(medium => {
-    const size = Number.isFinite(medium.size_bytes)
-      ? ` — ${(medium.size_bytes / 1024 ** 3).toFixed(1)}G`
-      : '';
+    const size = Number.isFinite(medium.size_bytes) ? ` — ${humanSize(medium.size_bytes)}` : '';
     const holders =
       Array.isArray(medium.in_use_by) && medium.in_use_by.length > 0
         ? ` · in use by ${medium.in_use_by.join(', ')}`
@@ -1153,6 +1133,17 @@ export const DisksStep = ({
         .filter(Boolean)
     ),
   ];
+  const mediaPicker =
+    mediaOptions.length > 0
+      ? {
+          options: mediaOptions,
+          blankLabel: 'Select a registered disk image…',
+          placeholder: 'path on the agent host',
+        }
+      : null;
+  const existingDiskPicker = bhyve
+    ? { options: volumeOptions, blankLabel: 'Select a zvol…', placeholder: 'e.g. rpool/vols/data' }
+    : mediaPicker;
   const diskifOptions = knobValues?.['zones.diskif'] || DISKIF_OPTIONS;
   const controllerTypeOptions = knobValues?.['disks.controller_type'] || [
     ...DISKIF_OPTIONS,
@@ -1214,112 +1205,27 @@ export const DisksStep = ({
           const rowKey = `additional-disk-${index}`;
           return (
             <div className="row g-2 align-items-end" key={rowKey}>
-              <div className="col-4 col-md-3">
-                <label className="form-label small mb-1" htmlFor={`${rowKey}-mode`}>
-                  Source
-                </label>
-                <select
-                  id={`${rowKey}-mode`}
-                  className="form-select form-select-sm"
-                  value={row.mode}
-                  onChange={e => setAdditional(index, { mode: e.target.value })}
-                  disabled={loading}
-                >
-                  <option value="new">New disk</option>
-                  <option value="existing">Existing image</option>
-                </select>
-              </div>
-              <div className="col-6 col-md-5">
-                {row.mode === 'new' ? (
-                  <>
-                    <label className="form-label small mb-1" htmlFor={`${rowKey}-size`}>
-                      Size
-                    </label>
-                    <input
-                      id={`${rowKey}-size`}
-                      className="form-control form-control-sm"
-                      type="text"
-                      placeholder="e.g. 20G"
-                      value={row.size}
-                      onChange={e => setAdditional(index, { size: e.target.value })}
-                      disabled={loading}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <label className="form-label small mb-1" htmlFor={`${rowKey}-path`}>
-                      {bhyve ? 'Existing zvol' : 'Existing disk image'}
-                    </label>
-                    {bhyve && (
-                      <PickOrType
-                        id={`${rowKey}-path`}
-                        value={row.path}
-                        onChange={next => setAdditional(index, { path: next })}
-                        options={volumeOptions}
-                        blankLabel="Select a zvol…"
-                        placeholder="e.g. rpool/vols/data"
-                        small
-                        disabled={loading}
-                      />
-                    )}
-                    {!bhyve && mediaOptions.length > 0 && (
-                      <PickOrType
-                        id={`${rowKey}-path`}
-                        value={row.path}
-                        onChange={next => setAdditional(index, { path: next })}
-                        options={mediaOptions}
-                        blankLabel="Select a registered disk image…"
-                        placeholder="path on the agent host"
-                        small
-                        disabled={loading}
-                      />
-                    )}
-                    {!bhyve && mediaOptions.length === 0 && (
-                      <PathInput
-                        id={`${rowKey}-path`}
-                        className="form-control form-control-sm"
-                        value={row.path}
-                        onChange={next => setAdditional(index, { path: next })}
-                        server={currentServer}
-                        mode="file"
-                        pickTitle="Pick the disk image"
-                        disabled={loading}
-                      />
-                    )}
-                  </>
-                )}
-              </div>
+              <DiskSourceFields
+                idPrefix={rowKey}
+                sourceLabel="Source"
+                valueCol="col-6 col-md-5"
+                sizeLabel="Size"
+                sizePlaceholder="e.g. 20G"
+                existingLabel={bhyve ? 'Existing zvol' : 'Existing disk image'}
+                row={row}
+                onPatch={patch => setAdditional(index, patch)}
+                picker={existingDiskPicker}
+                currentServer={currentServer}
+                disabled={loading}
+              />
               {advanced && vbox && (
-                <>
-                  <div className="col-3 col-md-2">
-                    <label className="form-label small mb-1" htmlFor={`${rowKey}-controller`}>
-                      Controller
-                    </label>
-                    <input
-                      id={`${rowKey}-controller`}
-                      className="form-control form-control-sm"
-                      list="machine-controller-names"
-                      placeholder="(default)"
-                      value={row.controller ?? ''}
-                      onChange={e => setAdditional(index, { controller: e.target.value })}
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="col-2 col-md-1">
-                    <label className="form-label small mb-1" htmlFor={`${rowKey}-port`}>
-                      Port
-                    </label>
-                    <input
-                      id={`${rowKey}-port`}
-                      className="form-control form-control-sm"
-                      type="number"
-                      min="0"
-                      value={row.port ?? ''}
-                      onChange={e => setAdditional(index, { port: e.target.value })}
-                      disabled={loading}
-                    />
-                  </div>
-                </>
+                <ControllerPortFields
+                  idPrefix={rowKey}
+                  row={row}
+                  onPatch={patch => setAdditional(index, patch)}
+                  controllerList="machine-controller-names"
+                  disabled={loading}
+                />
               )}
               {advanced && vbox && row.mode === 'new' && (
                 <div className="col-4 col-md-3">
@@ -1334,7 +1240,7 @@ export const DisksStep = ({
                     server={currentServer}
                     mode="directory"
                     pickTitle="Pick the folder for the created disk file"
-                    placeholder="(machine folder)"
+                    placeholder="machine folder"
                     list="machine-media-dirs"
                     disabled={loading}
                   />
@@ -1350,7 +1256,7 @@ export const DisksStep = ({
                       id={`${rowKey}-volume`}
                       className="form-control form-control-sm"
                       type="text"
-                      placeholder={`(default — disk${index})`}
+                      placeholder={`disk${index}`}
                       value={row.volume_name ?? ''}
                       onChange={e => setAdditional(index, { volume_name: e.target.value })}
                       disabled={loading}
@@ -1365,7 +1271,7 @@ export const DisksStep = ({
                       value={row.pool ?? ''}
                       onChange={next => setAdditional(index, { pool: next })}
                       options={poolOptions}
-                      blankLabel="(default — rpool)"
+                      blankLabel="rpool"
                       placeholder="pool name"
                       small
                       disabled={loading}
@@ -1380,7 +1286,7 @@ export const DisksStep = ({
                       value={row.dataset ?? ''}
                       onChange={next => setAdditional(index, { dataset: next })}
                       options={zfsDatasetOptions(zfsDatasets, (row.pool || '').trim() || 'rpool')}
-                      blankLabel="(default — zones)"
+                      blankLabel="zones"
                       placeholder="e.g. zones/companyA"
                       small
                       disabled={loading}
@@ -1404,23 +1310,17 @@ export const DisksStep = ({
                   </div>
                 </>
               )}
-              <div className="col-auto">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-danger"
-                  aria-label="Remove disk"
-                  onClick={() =>
-                    setDisks({
-                      additional: disks.additional
-                        .slice(0, index)
-                        .concat(disks.additional.slice(index + 1)),
-                    })
-                  }
-                  disabled={loading}
-                >
-                  <i className="fas fa-trash" />
-                </button>
-              </div>
+              <RemoveRowButton
+                label="Remove disk"
+                onClick={() =>
+                  setDisks({
+                    additional: disks.additional
+                      .slice(0, index)
+                      .concat(disks.additional.slice(index + 1)),
+                  })
+                }
+                disabled={loading}
+              />
             </div>
           );
         })}
@@ -1457,122 +1357,38 @@ export const DisksStep = ({
       <div className="d-flex flex-column gap-2">
         {disks.cdroms.map((row, index) => {
           const rowKey = `cdrom-${index}`;
-          const useCached = (row.source || 'path') === 'iso' && isoList.length > 0;
           return (
             <div className="row g-2 align-items-end" key={rowKey}>
-              {isoList.length > 0 && (
-                <div className="col-4 col-md-2">
-                  <label className="form-label small mb-1" htmlFor={`${rowKey}-source`}>
-                    Source
-                  </label>
-                  <select
-                    id={`${rowKey}-source`}
-                    className="form-select form-select-sm"
-                    value={row.source || 'path'}
-                    onChange={e => setCdrom(index, { source: e.target.value })}
-                    disabled={loading}
-                  >
-                    <option value="iso">Cached ISO</option>
-                    <option value="path">Agent path</option>
-                  </select>
-                </div>
-              )}
-              {useCached ? (
-                <div className="col-6 col-md-6">
-                  <label className="form-label small mb-1" htmlFor={`${rowKey}-iso`}>
-                    Cached ISO
-                  </label>
-                  <select
-                    id={`${rowKey}-iso`}
-                    className="form-select form-select-sm"
-                    value={row.iso ?? ''}
-                    onChange={e => setCdrom(index, { iso: e.target.value })}
-                    disabled={loading}
-                  >
-                    <option value="">Select…</option>
-                    {isoList.map(filename => (
-                      <option key={filename} value={filename}>
-                        {filename}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="col-10 col-md-6">
-                  <label className="form-label small mb-1" htmlFor={`${rowKey}-path`}>
-                    ISO path (on the agent host)
-                  </label>
-                  <PathInput
-                    id={`${rowKey}-path`}
-                    className="form-control form-control-sm"
-                    value={row.path}
-                    onChange={next => setCdrom(index, { path: next })}
-                    server={currentServer}
-                    mode="file"
-                    pickTitle="Pick the ISO"
-                    disabled={loading}
-                  />
-                </div>
-              )}
+              <CdromSourceFields
+                idPrefix={rowKey}
+                sourceLabel="Source"
+                sourceCol="col-4 col-md-2"
+                isoCol="col-6 col-md-6"
+                pathCol="col-10 col-md-6"
+                row={row}
+                onPatch={patch => setCdrom(index, patch)}
+                isoOptions={isoList}
+                currentServer={currentServer}
+                disabled={loading}
+              />
               {advanced && (
-                <>
-                  <div className="col-3 col-md-2">
-                    <label className="form-label small mb-1" htmlFor={`${rowKey}-controller`}>
-                      Controller
-                    </label>
-                    <input
-                      id={`${rowKey}-controller`}
-                      className="form-control form-control-sm"
-                      list="machine-controller-names"
-                      placeholder="(default)"
-                      value={row.controller ?? ''}
-                      onChange={e =>
-                        setDisks({
-                          cdroms: disks.cdroms.map((entry, i) =>
-                            i === index ? { ...entry, controller: e.target.value } : entry
-                          ),
-                        })
-                      }
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="col-2 col-md-1">
-                    <label className="form-label small mb-1" htmlFor={`${rowKey}-port`}>
-                      Port
-                    </label>
-                    <input
-                      id={`${rowKey}-port`}
-                      className="form-control form-control-sm"
-                      type="number"
-                      min="0"
-                      value={row.port ?? ''}
-                      onChange={e =>
-                        setDisks({
-                          cdroms: disks.cdroms.map((entry, i) =>
-                            i === index ? { ...entry, port: e.target.value } : entry
-                          ),
-                        })
-                      }
-                      disabled={loading}
-                    />
-                  </div>
-                </>
-              )}
-              <div className="col-auto">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-danger"
-                  aria-label="Remove ISO"
-                  onClick={() =>
-                    setDisks({
-                      cdroms: disks.cdroms.slice(0, index).concat(disks.cdroms.slice(index + 1)),
-                    })
-                  }
+                <ControllerPortFields
+                  idPrefix={rowKey}
+                  row={row}
+                  onPatch={patch => setCdrom(index, patch)}
+                  controllerList="machine-controller-names"
                   disabled={loading}
-                >
-                  <i className="fas fa-trash" />
-                </button>
-              </div>
+                />
+              )}
+              <RemoveRowButton
+                label="Remove ISO"
+                onClick={() =>
+                  setDisks({
+                    cdroms: disks.cdroms.slice(0, index).concat(disks.cdroms.slice(index + 1)),
+                  })
+                }
+                disabled={loading}
+              />
             </div>
           );
         })}
@@ -1665,21 +1481,15 @@ export const DisksStep = ({
                       disabled={loading}
                     />
                   </div>
-                  <div className="col-auto">
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-danger"
-                      aria-label="Remove mount"
-                      onClick={() =>
-                        setDisks({
-                          filesystems: disks.filesystems.filter(entry => entry.key !== row.key),
-                        })
-                      }
-                      disabled={loading}
-                    >
-                      <i className="fas fa-trash" />
-                    </button>
-                  </div>
+                  <RemoveRowButton
+                    label="Remove mount"
+                    onClick={() =>
+                      setDisks({
+                        filesystems: disks.filesystems.filter(entry => entry.key !== row.key),
+                      })
+                    }
+                    disabled={loading}
+                  />
                 </div>
               );
             })}
@@ -1724,20 +1534,14 @@ export const DisksStep = ({
               <label className="form-label" htmlFor="machine-zones-diskif">
                 Default Controller Type
               </label>
-              <select
+              <VocabularySelect
                 id="machine-zones-diskif"
-                className="form-select"
                 value={diskif}
-                onChange={e => setDiskif(e.target.value)}
+                entries={diskifOptions}
+                blankLabel={diskifDefault}
+                onChange={setDiskif}
                 disabled={loading}
-              >
-                <option value="">{`(default — ${diskifDefault})`}</option>
-                {diskifOptions.map(option => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              />
               <span className="form-text text-muted">
                 The single-controller shape — create-only; VirtualBox fixes the type once media
                 attach. For MULTIPLE controllers use the rows below instead.
@@ -1828,21 +1632,15 @@ export const DisksStep = ({
                         </label>
                       </div>
                     </div>
-                    <div className="col-auto">
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline-danger"
-                        aria-label="Remove controller"
-                        onClick={() =>
-                          setDisks({
-                            controllers: disks.controllers.filter(entry => entry.key !== row.key),
-                          })
-                        }
-                        disabled={loading}
-                      >
-                        <i className="fas fa-trash" />
-                      </button>
-                    </div>
+                    <RemoveRowButton
+                      label="Remove controller"
+                      onClick={() =>
+                        setDisks({
+                          controllers: disks.controllers.filter(entry => entry.key !== row.key),
+                        })
+                      }
+                      disabled={loading}
+                    />
                   </div>
                 ))}
               </div>
@@ -1987,22 +1785,13 @@ export const SystemStep = ({
   advanced,
   loading,
 }) => {
-  // The actual default per field, from GET /machines/defaults.
   const defaultLabel = key => {
     const value = agentDefaults?.zones?.[key] ?? agentDefaults?.settings?.[key];
-    return value !== undefined && value !== null && value !== ''
-      ? `(default — ${value})`
-      : '(agent default)';
+    return value !== undefined && value !== null && value !== '' ? String(value) : 'n/a';
   };
   const knobValues = agentDefaults?.knob_values || null;
-  // bhyve CPU topology — zones.cpu_configuration simple|complex +
-  // zones.complex_cpu_conf [{sockets, cores, threads}] (ONE object in a
-  // list — the agents' wire). Limits enforced agent-side (sockets ≤16,
-  // cores ≤32, threads ≤2, product ≤32); the hint here is convenience.
   const cpuTopo = Array.isArray(zones.complex_cpu_conf) ? zones.complex_cpu_conf[0] || {} : {};
   const setCpuTopo = patch => setZone('complex_cpu_conf', [{ ...cpuTopo, ...patch }]);
-  const topoProduct =
-    (Number(cpuTopo.sockets) || 0) * (Number(cpuTopo.cores) || 0) * (Number(cpuTopo.threads) || 0);
 
   return (
     <>
@@ -2041,23 +1830,14 @@ export const SystemStep = ({
                   </datalist>
                 </>
               ) : (
-                <select
+                <VocabularySelect
                   id={`machine-zones-${field.key}`}
-                  className="form-select"
                   value={current}
-                  onChange={e => setZone(field.key, e.target.value)}
+                  entries={vocabulary || field.options}
+                  blankLabel={defaultLabel(field.key)}
+                  onChange={next => setZone(field.key, next)}
                   disabled={loading}
-                >
-                  <option value="">{defaultLabel(field.key)}</option>
-                  {current && !(vocabulary || field.options).includes(current) && (
-                    <option value={current}>{current}</option>
-                  )}
-                  {(vocabulary || field.options).map(option => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                />
               )}
             </div>
           );
@@ -2165,44 +1945,18 @@ export const SystemStep = ({
                 }}
                 disabled={loading}
               >
-                <option value="">(default — simple: vcpus count)</option>
+                <option value="">simple</option>
                 <option value="simple">simple</option>
                 <option value="complex">complex (sockets / cores / threads)</option>
               </select>
             </div>
             {zones.cpu_configuration === 'complex' && (
-              <>
-                {[
-                  ['sockets', 16],
-                  ['cores', 32],
-                  ['threads', 2],
-                ].map(([key, max]) => (
-                  <div className="col-4 col-md-2" key={key}>
-                    <label className="form-label" htmlFor={`machine-cpu-${key}`}>
-                      {key[0].toUpperCase() + key.slice(1)}
-                    </label>
-                    <input
-                      id={`machine-cpu-${key}`}
-                      className="form-control"
-                      type="number"
-                      min="1"
-                      max={max}
-                      value={cpuTopo[key] ?? ''}
-                      onChange={e =>
-                        setCpuTopo({ [key]: e.target.value === '' ? '' : Number(e.target.value) })
-                      }
-                      disabled={loading}
-                    />
-                  </div>
-                ))}
-                <div className="col-12">
-                  <span className={`form-text ${topoProduct > 32 ? 'text-danger' : 'text-muted'}`}>
-                    sockets × cores × threads = {topoProduct || '…'} vCPUs — bhyve limits: sockets
-                    ≤16, cores ≤32, threads ≤2, product ≤32. Over-limit values are refused by the
-                    agent.
-                  </span>
-                </div>
-              </>
+              <CpuTopologyInputs
+                idPrefix="machine-cpu"
+                topo={cpuTopo}
+                onField={(key, next) => setCpuTopo({ [key]: next })}
+                disabled={loading}
+              />
             )}
           </>
         )}
@@ -2302,7 +2056,7 @@ export const SystemStep = ({
                   values={hardware[section.id] || {}}
                   onChange={onHardwareChange}
                   knobValues={knobValues}
-                  blankLabel="(default)"
+                  blankLabel="n/a"
                   disabled={loading}
                 />
               </div>
@@ -2394,6 +2148,13 @@ NetworkStep.propTypes = {
   ipSuggestions: PropTypes.object,
   nicEnums: PropTypes.object,
   loading: PropTypes.bool,
+};
+
+const removeTransportBlankLabel = value => {
+  if (value === null) {
+    return 'n/a';
+  }
+  return value ? 'remove' : 'keep';
 };
 
 export const ProvisioningStep = ({
@@ -2506,17 +2267,13 @@ export const ProvisioningStep = ({
             onChange={e => setRemoveTransport(e.target.value)}
             disabled={loading}
           >
-            <option value="">
-              {removeTransportDefault === null
-                ? '(agent default)'
-                : `(agent default — ${removeTransportDefault ? 'remove' : 'keep'})`}
-            </option>
+            <option value="">{removeTransportBlankLabel(removeTransportDefault)}</option>
             <option value="true">remove — drop the transport NIC after provisioning</option>
             <option value="false">keep — leave the transport in place (dev access)</option>
           </select>
           <span className="form-text text-muted">
-            Removal runs as pipeline steps after the final stamp: transport NIC + its document
-            entry go, then a power cycle — the machine comes up on its real networks only.
+            Removal runs as pipeline steps after the final stamp: transport NIC + its document entry
+            go, then a power cycle — the machine comes up on its real networks only.
           </span>
         </div>
       </div>
@@ -2605,7 +2362,7 @@ export const ProvisioningStep = ({
           <SettingInput
             id="machine-setting-firmware_type"
             label="Firmware Type"
-            placeholder="(package default)"
+            placeholder="n/a"
             value={settings.firmware_type}
             onChange={e => setSetting('firmware_type', e.target.value)}
             disabled={loading}
@@ -2613,7 +2370,7 @@ export const ProvisioningStep = ({
           <SettingInput
             id="machine-setting-provider_type"
             label="Provider Type"
-            placeholder="(package default)"
+            placeholder="n/a"
             value={settings.provider_type}
             onChange={e => setSetting('provider_type', e.target.value)}
             disabled={loading}
@@ -2622,7 +2379,7 @@ export const ProvisioningStep = ({
             id="machine-setting-setup_wait"
             label="Setup Wait (seconds)"
             type="number"
-            placeholder="(package default)"
+            placeholder="n/a"
             value={settings.setup_wait}
             onChange={e => setSetting('setup_wait', e.target.value)}
             disabled={loading}
@@ -2638,7 +2395,7 @@ export const ProvisioningStep = ({
               onChange={e => setSetting('show_console', e.target.value)}
               disabled={loading}
             >
-              <option value="">(package default)</option>
+              <option value="">n/a</option>
               <option value="true">true</option>
               <option value="false">false</option>
             </select>
@@ -2654,7 +2411,7 @@ export const ProvisioningStep = ({
               onChange={e => setSetting('debug_build', e.target.value)}
               disabled={loading}
             >
-              <option value="">(package default)</option>
+              <option value="">n/a</option>
               <option value="true">true</option>
               <option value="false">false</option>
             </select>
@@ -2670,7 +2427,7 @@ export const ProvisioningStep = ({
               onChange={e => setSetting('post_provision', e.target.value)}
               disabled={loading}
             >
-              <option value="">(package default)</option>
+              <option value="">n/a</option>
               <option value="true">true</option>
               <option value="false">false</option>
             </select>
@@ -2681,7 +2438,7 @@ export const ProvisioningStep = ({
             type="number"
             min={1025}
             max={65535}
-            placeholder="(package default)"
+            placeholder="n/a"
             value={settings.consoleport}
             onChange={e => setSetting('consoleport', e.target.value)}
             disabled={loading}
@@ -2689,7 +2446,7 @@ export const ProvisioningStep = ({
           <SettingInput
             id="machine-setting-vagrant_user"
             label="Guest SSH User"
-            placeholder="(package default)"
+            placeholder="n/a"
             value={settings.vagrant_user}
             onChange={e => setSetting('vagrant_user', e.target.value)}
             disabled={loading}
@@ -2703,7 +2460,7 @@ export const ProvisioningStep = ({
               className="form-control"
               type="password"
               autoComplete="new-password"
-              placeholder="(package default)"
+              placeholder="n/a"
               value={settings.vagrant_user_pass ?? ''}
               onChange={e => setSetting('vagrant_user_pass', e.target.value)}
               disabled={loading}
@@ -2720,7 +2477,7 @@ export const ProvisioningStep = ({
               onChange={e => setSetting('vagrant_ssh_insert_key', e.target.value)}
               disabled={loading}
             >
-              <option value="">(package default)</option>
+              <option value="">n/a</option>
               <option value="true">true</option>
               <option value="false">false</option>
             </select>

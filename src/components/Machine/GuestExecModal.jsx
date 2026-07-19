@@ -171,7 +171,7 @@ const GuestExecModal = ({
             type="number"
             min="1"
             {...(qga && { max: 600 })}
-            placeholder={qga ? '(default 30, max 600)' : '(agent default)'}
+            placeholder={qga ? '30, max 600' : 'n/a'}
             value={timeoutSeconds}
             onChange={e => setTimeoutSeconds(e.target.value)}
             disabled={loading}
@@ -200,7 +200,7 @@ const GuestExecModal = ({
                 id="guest-exec-username"
                 className="form-control"
                 type="text"
-                placeholder="(blank = the machine's stored SSH user)"
+                placeholder="the machine's stored SSH user"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 disabled={loading}
@@ -214,7 +214,7 @@ const GuestExecModal = ({
                 id="guest-exec-password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="(blank = the stored password)"
+                placeholder="the stored password"
                 disabled={loading}
               />
             </div>

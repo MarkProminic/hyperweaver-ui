@@ -1,9 +1,14 @@
 import PropTypes from 'prop-types';
 import { Fragment } from 'react';
 
-import { PathInput } from '../common';
-
 import { markButtonClass, markIconClass } from './CurrentHardware';
+import {
+  CdromSourceFields,
+  ControllerPortFields,
+  DiskSourceFields,
+  RemoveRowButton,
+} from './MediaRowFields';
+import PickOrType from './PickOrType';
 
 /**
  * The Settings → Storage editor: ONE device tree. Each existing controller
@@ -71,89 +76,29 @@ const PendingDiskRow = ({
 }) => (
   <div className="hw-device-row hw-device-child hw-device-child-form">
     <div className="row g-2 align-items-end">
-      <div className="col-4 col-md-3">
-        <label className="form-label small mb-1" htmlFor={`add-disk-mode-${row.key}`}>
-          New disk — source
-        </label>
-        <select
-          id={`add-disk-mode-${row.key}`}
-          className="form-select form-select-sm"
-          value={row.mode}
-          onChange={e => onPatch({ mode: e.target.value })}
-          disabled={formDisabled}
-        >
-          <option value="new">New disk</option>
-          <option value="existing">Existing image</option>
-        </select>
-      </div>
-      <div className="col-5 col-md-3">
-        <label className="form-label small mb-1" htmlFor={`add-disk-value-${row.key}`}>
-          {row.mode === 'new' ? 'Size (e.g. 20G)' : 'Path (on the agent host)'}
-        </label>
-        {row.mode === 'new' ? (
-          <input
-            id={`add-disk-value-${row.key}`}
-            className="form-control form-control-sm"
-            value={row.size}
-            onChange={e => onPatch({ size: e.target.value })}
-            disabled={formDisabled}
-          />
-        ) : (
-          <PathInput
-            id={`add-disk-value-${row.key}`}
-            className="form-control form-control-sm"
-            value={row.path}
-            onChange={next => onPatch({ path: next })}
-            server={currentServer}
-            mode="file"
-            pickTitle="Pick the disk image"
-            disabled={formDisabled}
-          />
-        )}
-      </div>
-      {showController && (
-        <div className="col-3 col-md-2">
-          <label className="form-label small mb-1" htmlFor={`add-disk-controller-${row.key}`}>
-            Controller
-          </label>
-          <input
-            id={`add-disk-controller-${row.key}`}
-            className="form-control form-control-sm"
-            placeholder="(default)"
-            value={row.controller ?? ''}
-            onChange={e => onPatch({ controller: e.target.value })}
-            disabled={formDisabled}
-          />
-        </div>
-      )}
-      {showPort && (
-        <div className="col-2 col-md-1">
-          <label className="form-label small mb-1" htmlFor={`add-disk-port-${row.key}`}>
-            Port
-          </label>
-          <input
-            id={`add-disk-port-${row.key}`}
-            className="form-control form-control-sm"
-            type="number"
-            min="0"
-            placeholder="auto"
-            value={row.port ?? ''}
-            onChange={e => onPatch({ port: e.target.value })}
-            disabled={formDisabled}
-          />
-        </div>
-      )}
-      <div className="col-auto">
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-danger"
-          aria-label="Drop this disk row"
-          onClick={onDrop}
-          disabled={formDisabled}
-        >
-          <i className="fas fa-trash" />
-        </button>
-      </div>
+      <DiskSourceFields
+        idPrefix="add-disk"
+        idSuffix={`-${row.key}`}
+        sourceLabel="New disk — source"
+        valueCol="col-5 col-md-3"
+        sizeLabel="Size (e.g. 20G)"
+        existingLabel="Path (on the agent host)"
+        row={row}
+        onPatch={onPatch}
+        currentServer={currentServer}
+        disabled={formDisabled}
+      />
+      <ControllerPortFields
+        idPrefix="add-disk"
+        idSuffix={`-${row.key}`}
+        row={row}
+        onPatch={onPatch}
+        showController={showController}
+        showPort={showPort}
+        portPlaceholder="auto"
+        disabled={formDisabled}
+      />
+      <RemoveRowButton label="Drop this disk row" onClick={onDrop} disabled={formDisabled} />
     </div>
   </div>
 );
@@ -177,112 +122,36 @@ const PendingCdromRow = ({
   showController,
   showPort = true,
   formDisabled,
-}) => {
-  const useIso = (row.source || 'path') === 'iso' && isoOptions.length > 0;
-  return (
-    <div className="hw-device-row hw-device-child hw-device-child-form">
-      <div className="row g-2 align-items-end">
-        {isoOptions.length > 0 && (
-          <div className="col-3 col-md-2">
-            <label className="form-label small mb-1" htmlFor={`add-cdrom-source-${row.key}`}>
-              New ISO — source
-            </label>
-            <select
-              id={`add-cdrom-source-${row.key}`}
-              className="form-select form-select-sm"
-              value={row.source || 'path'}
-              onChange={e => onPatch({ source: e.target.value })}
-              disabled={formDisabled}
-            >
-              <option value="iso">Cached ISO</option>
-              <option value="path">Agent path</option>
-            </select>
-          </div>
-        )}
-        {useIso ? (
-          <div className="col-6 col-md-3">
-            <label className="form-label small mb-1" htmlFor={`add-cdrom-iso-${row.key}`}>
-              Cached ISO
-            </label>
-            <select
-              id={`add-cdrom-iso-${row.key}`}
-              className="form-select form-select-sm"
-              value={row.iso ?? ''}
-              onChange={e => onPatch({ iso: e.target.value })}
-              disabled={formDisabled}
-            >
-              <option value="">Select…</option>
-              {isoOptions.map(filename => (
-                <option key={filename} value={filename}>
-                  {filename}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <div className="col-9 col-md-3">
-            <label className="form-label small mb-1" htmlFor={`add-cdrom-path-${row.key}`}>
-              ISO path (on the agent host)
-            </label>
-            <PathInput
-              id={`add-cdrom-path-${row.key}`}
-              className="form-control form-control-sm"
-              value={row.path}
-              onChange={next => onPatch({ path: next })}
-              server={currentServer}
-              mode="file"
-              pickTitle="Pick the ISO"
-              disabled={formDisabled}
-            />
-          </div>
-        )}
-        {showController && (
-          <div className="col-3 col-md-2">
-            <label className="form-label small mb-1" htmlFor={`add-cdrom-controller-${row.key}`}>
-              Controller
-            </label>
-            <input
-              id={`add-cdrom-controller-${row.key}`}
-              className="form-control form-control-sm"
-              placeholder="(default)"
-              value={row.controller ?? ''}
-              onChange={e => onPatch({ controller: e.target.value })}
-              disabled={formDisabled}
-            />
-          </div>
-        )}
-        {showPort && (
-          <div className="col-2 col-md-1">
-            <label className="form-label small mb-1" htmlFor={`add-cdrom-port-${row.key}`}>
-              Port
-            </label>
-            <input
-              id={`add-cdrom-port-${row.key}`}
-              className="form-control form-control-sm"
-              type="number"
-              min="0"
-              placeholder="auto"
-              value={row.port ?? ''}
-              onChange={e => onPatch({ port: e.target.value })}
-              disabled={formDisabled}
-            />
-          </div>
-        )}
-        <div className="col-auto">
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-danger"
-            aria-label="Drop this ISO row"
-            onClick={onDrop}
-            disabled={formDisabled}
-          >
-            <i className="fas fa-trash" />
-          </button>
-        </div>
-      </div>
+}) => (
+  <div className="hw-device-row hw-device-child hw-device-child-form">
+    <div className="row g-2 align-items-end">
+      <CdromSourceFields
+        idPrefix="add-cdrom"
+        idSuffix={`-${row.key}`}
+        sourceLabel="New ISO — source"
+        sourceCol="col-3 col-md-2"
+        isoCol="col-6 col-md-3"
+        pathCol="col-9 col-md-3"
+        row={row}
+        onPatch={onPatch}
+        isoOptions={isoOptions}
+        currentServer={currentServer}
+        disabled={formDisabled}
+      />
+      <ControllerPortFields
+        idPrefix="add-cdrom"
+        idSuffix={`-${row.key}`}
+        row={row}
+        onPatch={onPatch}
+        showController={showController}
+        showPort={showPort}
+        portPlaceholder="auto"
+        disabled={formDisabled}
+      />
+      <RemoveRowButton label="Drop this ISO row" onClick={onDrop} disabled={formDisabled} />
     </div>
-  );
-};
+  </div>
+);
 
 PendingCdromRow.propTypes = {
   row: PropTypes.object.isRequired,
@@ -295,11 +164,7 @@ PendingCdromRow.propTypes = {
   formDisabled: PropTypes.bool,
 };
 
-/** A zone disk-add row — the agent's zvol shape: mint a new zvol under
- *  <pool>/<dataset>/<zone>/<volume_name> (defaults rpool/zones/diskN/50G
- *  sparse) or attach an existing dataset. The preview line shows the exact
- *  zvol the defaults produce as you type. */
-const ZonePendingDiskRow = ({ row, onPatch, onDrop, poolOptions, zoneName, formDisabled }) => (
+const ZonePendingDiskRow = ({ row, onPatch, onDrop, poolChoices, zoneName, formDisabled }) => (
   <div className="hw-device-row hw-device-child hw-device-child-form">
     <div className="row g-2 align-items-end">
       <div className="col-4 col-md-2">
@@ -326,7 +191,7 @@ const ZonePendingDiskRow = ({ row, onPatch, onDrop, poolOptions, zoneName, formD
             <input
               id={`add-zdisk-size-${row.key}`}
               className="form-control form-control-sm"
-              placeholder="(50G)"
+              placeholder="e.g. 50G"
               value={row.size}
               onChange={e => onPatch({ size: e.target.value })}
               disabled={formDisabled}
@@ -336,20 +201,16 @@ const ZonePendingDiskRow = ({ row, onPatch, onDrop, poolOptions, zoneName, formD
             <label className="form-label small mb-1" htmlFor={`add-zdisk-pool-${row.key}`}>
               Pool
             </label>
-            <select
+            <PickOrType
               id={`add-zdisk-pool-${row.key}`}
-              className="form-select form-select-sm"
               value={row.pool}
-              onChange={e => onPatch({ pool: e.target.value })}
+              onChange={next => onPatch({ pool: next })}
+              options={poolChoices}
+              blankLabel="rpool"
+              placeholder="pool name"
+              small
               disabled={formDisabled}
-            >
-              <option value="">(default — rpool)</option>
-              {poolOptions.map(pool => (
-                <option key={pool} value={pool}>
-                  {pool}
-                </option>
-              ))}
-            </select>
+            />
           </div>
           <div className="col-4 col-md-2">
             <label className="form-label small mb-1" htmlFor={`add-zdisk-volume-${row.key}`}>
@@ -358,7 +219,7 @@ const ZonePendingDiskRow = ({ row, onPatch, onDrop, poolOptions, zoneName, formD
             <input
               id={`add-zdisk-volume-${row.key}`}
               className="form-control form-control-sm"
-              placeholder="(auto — diskN)"
+              placeholder="diskN"
               value={row.volume_name}
               onChange={e => onPatch({ volume_name: e.target.value })}
               disabled={formDisabled}
@@ -371,7 +232,7 @@ const ZonePendingDiskRow = ({ row, onPatch, onDrop, poolOptions, zoneName, formD
             <input
               id={`add-zdisk-dataset-${row.key}`}
               className="form-control form-control-sm"
-              placeholder="(zones)"
+              placeholder="zones"
               value={row.dataset}
               onChange={e => onPatch({ dataset: e.target.value })}
               disabled={formDisabled}
@@ -409,17 +270,7 @@ const ZonePendingDiskRow = ({ row, onPatch, onDrop, poolOptions, zoneName, formD
           />
         </div>
       )}
-      <div className="col-auto">
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-danger"
-          aria-label="Drop this disk row"
-          onClick={onDrop}
-          disabled={formDisabled}
-        >
-          <i className="fas fa-trash" />
-        </button>
-      </div>
+      <RemoveRowButton label="Drop this disk row" onClick={onDrop} disabled={formDisabled} />
     </div>
     {row.mode === 'new' && (
       <span className="form-text text-muted small">
@@ -428,7 +279,7 @@ const ZonePendingDiskRow = ({ row, onPatch, onDrop, poolOptions, zoneName, formD
           {row.pool.trim() || 'rpool'}/{row.dataset.trim() || 'zones'}/{zoneName || '<zone>'}/
           {row.volume_name.trim() || 'disk<N>'}
         </code>{' '}
-        — {row.size.trim() || '50G'}
+        — {row.size.trim() || 'size required'}
         {row.sparse ? ', sparse' : ''}
       </span>
     )}
@@ -439,7 +290,9 @@ ZonePendingDiskRow.propTypes = {
   row: PropTypes.object.isRequired,
   onPatch: PropTypes.func.isRequired,
   onDrop: PropTypes.func.isRequired,
-  poolOptions: PropTypes.arrayOf(PropTypes.string).isRequired,
+  poolChoices: PropTypes.arrayOf(
+    PropTypes.shape({ value: PropTypes.string.isRequired, label: PropTypes.string.isRequired })
+  ).isRequired,
   zoneName: PropTypes.string,
   formDisabled: PropTypes.bool,
 };
@@ -458,7 +311,7 @@ const StorageDevicesEditor = ({
   onToggleController,
   addZoneDisks = [],
   onAddZoneDisksChange = () => {},
-  poolOptions = [],
+  poolChoices = [],
   zoneName = '',
   zoneDiskRemovals = [],
   onToggleZoneDisk = () => {},
@@ -649,7 +502,7 @@ const StorageDevicesEditor = ({
               onDrop={() =>
                 onAddZoneDisksChange(addZoneDisks.filter(entry => entry.key !== row.key))
               }
-              poolOptions={poolOptions}
+              poolChoices={poolChoices}
               zoneName={zoneName}
               formDisabled={formDisabled}
             />
@@ -859,7 +712,9 @@ StorageDevicesEditor.propTypes = {
   onToggleController: PropTypes.func.isRequired,
   addZoneDisks: PropTypes.array,
   onAddZoneDisksChange: PropTypes.func,
-  poolOptions: PropTypes.arrayOf(PropTypes.string),
+  poolChoices: PropTypes.arrayOf(
+    PropTypes.shape({ value: PropTypes.string.isRequired, label: PropTypes.string.isRequired })
+  ),
   zoneName: PropTypes.string,
   zoneDiskRemovals: PropTypes.arrayOf(PropTypes.string),
   onToggleZoneDisk: PropTypes.func,

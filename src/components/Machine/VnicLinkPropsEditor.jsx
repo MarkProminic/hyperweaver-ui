@@ -21,8 +21,8 @@ const SPOOF_GUARDS = ['mac-nospoof', 'ip-nospoof', 'dhcp-nospoof', 'restricted']
 const displayValue = row => {
   if (row.value === null || row.value === undefined || row.value === '') {
     return row.default === null || row.default === undefined || row.default === ''
-      ? '(unset)'
-      : `(default: ${row.default})`;
+      ? 'n/a'
+      : String(row.default);
   }
   return row.value;
 };

@@ -89,7 +89,7 @@ const PackagePicker = ({ packages, packageName, packageVersion, disabled, onPick
         <option value="">
           {emptyRegistry
             ? 'Catalog: registry is empty — import a package (Host → Provisioners)'
-            : 'Catalog: (no package)'}
+            : 'Catalog: no package'}
         </option>
         {packageName && !family && (
           <option value={packageName}>{packageName} (not in this host&apos;s registry)</option>
@@ -146,7 +146,7 @@ const RoleCatalog = ({ specs, disabled, onAdd, onDragNew }) => {
     if (!matches) {
       return;
     }
-    const collection = spec.collection || '(no collection)';
+    const collection = spec.collection || 'no collection';
     (groups[collection] = groups[collection] || []).push(bare);
   });
 
@@ -280,7 +280,7 @@ const RoleKeywordFields = ({ role, uiId, disabled, onPatch }) => (
           onPatch({ become: e.target.value === '' ? undefined : e.target.value === 'true' })
         }
       >
-        <option value="">(not set)</option>
+        <option value="">not set</option>
         <option value="true">yes</option>
         <option value="false">no</option>
       </select>
@@ -291,7 +291,7 @@ const RoleKeywordFields = ({ role, uiId, disabled, onPatch }) => (
         id={`role-become-user-${uiId}`}
         className="form-control form-control-sm hw-field-short"
         type="text"
-        placeholder="(root)"
+        placeholder="root"
         value={role.become_user ?? ''}
         disabled={disabled}
         onChange={e => onPatch({ become_user: e.target.value === '' ? undefined : e.target.value })}
@@ -303,7 +303,7 @@ const RoleKeywordFields = ({ role, uiId, disabled, onPatch }) => (
         id={`role-delegate-${uiId}`}
         className="form-control form-control-sm hw-field-short"
         type="text"
-        placeholder="(this machine)"
+        placeholder="this machine"
         value={role.delegate_to ?? ''}
         disabled={disabled}
         onChange={e => onPatch({ delegate_to: e.target.value === '' ? undefined : e.target.value })}
@@ -342,7 +342,7 @@ const RoleCardBody = ({ role, spec, disabled, onPatch }) => (
           id={`role-when-${role._ui_id}`}
           className="form-control form-control-sm font-monospace hw-field-when"
           type="text"
-          placeholder="(always)"
+          placeholder="always"
           value={role.when ?? ''}
           disabled={disabled}
           onChange={e => onPatch({ when: e.target.value === '' ? undefined : e.target.value })}

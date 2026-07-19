@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 
+import { VocabularySelect } from './HardwareEditor';
 import PickOrType from './PickOrType';
 
 /**
@@ -233,7 +234,7 @@ const NetworksEditor = ({
                   id={`${rowKey}-route`}
                   className="form-control form-control-sm font-monospace"
                   type="text"
-                  placeholder="(default)"
+                  placeholder="default"
                   title="OPTIONAL. Blank = the default route. A scoped CIDR (e.g. 10.190.190.0/24) confines this NIC's route so it never takes the guest's default."
                   value={network.route ?? ''}
                   onChange={e => setNetwork(index, { route: e.target.value })}
@@ -248,21 +249,20 @@ const NetworksEditor = ({
                   <label className="form-label small mb-1" htmlFor={`${rowKey}-cable`}>
                     Cable
                   </label>
-                  <select
+                  <VocabularySelect
                     id={`${rowKey}-cable`}
-                    className="form-select form-select-sm"
                     value={network.cable_connected ?? ''}
-                    onChange={e => setNetwork(index, { cable_connected: e.target.value })}
+                    entries={[
+                      { value: 'on', label: 'connected' },
+                      { value: 'off', label: 'disconnected' },
+                    ]}
+                    blankLabel="n/a"
+                    small
+                    onChange={next => setNetwork(index, { cable_connected: next })}
                     disabled={loading}
-                  >
-                    <option value="">(default)</option>
-                    <option value="on">connected</option>
-                    <option value="off">disconnected</option>
-                  </select>
+                  />
                 </div>
                 {TUNING_FIELDS.map(field => {
-                  // knob_values (flat dotted keys) beats the hardcoded list
-                  // when the agent maps it.
                   const vocabulary = nicEnums?.[`nics.${field.key}`] || field.suggest;
                   return (
                     <div className="col-6 col-md-2" key={field.key}>
@@ -270,26 +270,21 @@ const NetworksEditor = ({
                         {field.label}
                       </label>
                       {vocabulary ? (
-                        <select
+                        <VocabularySelect
                           id={`${rowKey}-${field.key}`}
-                          className="form-select form-select-sm"
                           value={network[field.key] ?? ''}
-                          onChange={e => setNetwork(index, { [field.key]: e.target.value })}
+                          entries={vocabulary}
+                          blankLabel="n/a"
+                          small
+                          onChange={next => setNetwork(index, { [field.key]: next })}
                           disabled={loading}
-                        >
-                          <option value="">(default)</option>
-                          {vocabulary.map(option => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       ) : (
                         <input
                           id={`${rowKey}-${field.key}`}
                           className="form-control form-control-sm"
                           type={field.type || 'text'}
-                          placeholder="(default)"
+                          placeholder="n/a"
                           value={network[field.key] ?? ''}
                           onChange={e => setNetwork(index, { [field.key]: e.target.value })}
                           disabled={loading}

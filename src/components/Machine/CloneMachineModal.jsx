@@ -194,7 +194,7 @@ const CloneMachineModal = ({
               onChange={e => setSnapshot(e.target.value)}
             >
               <option value="">
-                {isRunning ? 'Pick a snapshot…' : '(none — clone the live disk state)'}
+                {isRunning ? 'Pick a snapshot…' : 'none — clone the live disk state'}
               </option>
               {snapshots.map(entry => (
                 <option key={entry.uuid || entry.name} value={entry.name}>
@@ -236,7 +236,7 @@ const CloneMachineModal = ({
             id="clone-name"
             className="form-control"
             type="text"
-            placeholder="blank = derived from hostname/domain"
+            placeholder="derived from hostname/domain"
             value={name}
             onChange={e => setName(e.target.value)}
           />

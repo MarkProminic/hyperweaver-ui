@@ -42,6 +42,35 @@ const OPERATION_LABELS = {
 
 export const taskOperationLabel = operation => OPERATION_LABELS[operation] || operation;
 
+export const TERMINAL_TASK_STATUSES = ['completed', 'completed_with_errors', 'failed', 'cancelled'];
+
+const waitMs = ms =>
+  new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+
+export const pollUntil = async (check, attempts, intervalMs = 2000) => {
+  const outcome = await check();
+  if (outcome !== undefined) {
+    return outcome;
+  }
+  if (attempts <= 1) {
+    return null;
+  }
+  await waitMs(intervalMs);
+  return pollUntil(check, attempts - 1, intervalMs);
+};
+
+export const pollTaskRow = (fetchRow, attempts, intervalMs = 2000) =>
+  pollUntil(
+    async () => {
+      const row = await fetchRow();
+      return row && TERMINAL_TASK_STATUSES.includes(row.status) ? row : undefined;
+    },
+    attempts,
+    intervalMs
+  );
+
 /** Human-readable byte size — task transfer progress rendering. */
 export const formatByteSize = bytes => {
   if (!Number.isFinite(bytes) || bytes < 0) {

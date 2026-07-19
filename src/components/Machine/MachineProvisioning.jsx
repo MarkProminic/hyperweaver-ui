@@ -11,6 +11,7 @@ import { hasFeature } from '../../utils/capabilities';
 import { canCreateMachines, canStartStopMachines } from '../../utils/permissions';
 import { ConfirmModal, DismissibleAlert } from '../common';
 
+import { parseConfiguration } from './machineHelpers';
 import ProvisioningEditor from './ProvisioningEditor';
 
 /**
@@ -23,22 +24,6 @@ import ProvisioningEditor from './ProvisioningEditor';
  * provisioner document gets the same editor: storing a first document turns
  * the pipeline on (package-created machines carry one automatically).
  */
-
-/** Parse a possibly-JSON-string configuration document. */
-const parseConfiguration = machineDetails => {
-  const configuration = machineDetails?.configuration;
-  if (!configuration) {
-    return {};
-  }
-  if (typeof configuration === 'string') {
-    try {
-      return JSON.parse(configuration);
-    } catch {
-      return {};
-    }
-  }
-  return configuration;
-};
 
 const MachineProvisioning = ({
   machineDetails,

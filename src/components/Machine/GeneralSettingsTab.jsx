@@ -9,6 +9,7 @@ import {
   splitBhyveBootOrder,
   stepMemory,
 } from './CreateWizardSteps';
+import { VocabularySelect } from './HardwareEditor';
 import SecureBootPanel from './SecureBootPanel';
 
 /** Settings → General: the flat zones.* knob fields + autoboot, the
@@ -19,16 +20,11 @@ import SecureBootPanel from './SecureBootPanel';
  *  default from GET /machines/defaults where it reports one. */
 
 const defaultLabelFor = (defaultsDoc, key) => {
-  // knob_defaults = the value an UNSET attr effectively RUNS with (zadm
-  // brand schema, flat dotted) — Mark's ruling: blank always shows what
-  // the machine actually operates under. Never the word "unchanged".
   const value =
     defaultsDoc?.knob_defaults?.[`zones.${key}`] ??
     defaultsDoc?.zones?.[key] ??
     defaultsDoc?.settings?.[key];
-  return value !== undefined && value !== null && value !== ''
-    ? `(default: ${value})`
-    : '(agent default)';
+  return value !== undefined && value !== null && value !== '' ? String(value) : 'n/a';
 };
 
 /** " — default disk,dvd" suffix for the boot-order labels; '' when the
@@ -47,38 +43,23 @@ const FieldControl = ({
   field,
   vocabulary,
   value,
-  onChange,
+  onValue,
   blankLabel,
   isCustom,
   onToggleCustom,
   disabled,
 }) => {
-  // freeText + served vocabulary: a real dropdown with a Custom escape —
-  // off-list current values stay selectable, so the field never lies.
   if (field.freeText && vocabulary && !isCustom) {
     return (
-      <select
+      <VocabularySelect
         id={`machine-edit-${field.key}`}
-        className="form-select"
         value={value}
-        onChange={e => {
-          if (e.target.value === '__custom__') {
-            onToggleCustom(true);
-            return;
-          }
-          onChange(e);
-        }}
+        entries={vocabulary}
+        blankLabel={blankLabel}
+        onChange={onValue}
+        onCustom={() => onToggleCustom(true)}
         disabled={disabled}
-      >
-        <option value="">{blankLabel}</option>
-        {value && !vocabulary.includes(value) && <option value={value}>{value}</option>}
-        {vocabulary.map(option => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-        <option value="__custom__">Custom value…</option>
-      </select>
+      />
     );
   }
   if (field.freeText) {
@@ -92,7 +73,7 @@ const FieldControl = ({
           placeholder={field.placeholder || blankLabel}
           title={field.hint}
           value={value}
-          onChange={onChange}
+          onChange={e => onValue(e.target.value)}
           disabled={disabled}
         />
         {vocabulary && (
@@ -116,21 +97,14 @@ const FieldControl = ({
   }
   if (vocabulary) {
     return (
-      <select
+      <VocabularySelect
         id={`machine-edit-${field.key}`}
-        className="form-select"
         value={value}
-        onChange={onChange}
+        entries={vocabulary}
+        blankLabel={blankLabel}
+        onChange={onValue}
         disabled={disabled}
-      >
-        <option value="">{blankLabel}</option>
-        {value && !vocabulary.includes(value) && <option value={value}>{value}</option>}
-        {vocabulary.map(option => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+      />
     );
   }
   return (
@@ -141,7 +115,7 @@ const FieldControl = ({
       placeholder={field.placeholder || blankLabel}
       title={field.hint}
       value={value}
-      onChange={onChange}
+      onChange={e => onValue(e.target.value)}
       disabled={disabled}
     />
   );
@@ -151,7 +125,7 @@ FieldControl.propTypes = {
   field: PropTypes.object.isRequired,
   vocabulary: PropTypes.arrayOf(PropTypes.string),
   value: PropTypes.string.isRequired,
-  onChange: PropTypes.func.isRequired,
+  onValue: PropTypes.func.isRequired,
   blankLabel: PropTypes.string.isRequired,
   isCustom: PropTypes.bool,
   onToggleCustom: PropTypes.func.isRequired,
@@ -298,7 +272,7 @@ const GeneralSettingsTab = ({
           const vocabulary = knobValues?.[`zones.${field.key}`] || field.options || null;
           const value = values[field.key] ?? '';
           const blankLabel = defaultLabelFor(defaultsDoc, field.key);
-          const onChange = e => setValues(prev => ({ ...prev, [field.key]: e.target.value }));
+          const commit = next => setValues(prev => ({ ...prev, [field.key]: next }));
           let control;
           if (field.key === 'ram') {
             control = (
@@ -326,7 +300,7 @@ const GeneralSettingsTab = ({
                 id={`machine-edit-${field.key}`}
                 osTypes={osTypes}
                 value={value}
-                onChange={onChange}
+                onChange={e => commit(e.target.value)}
                 blankLabel={blankLabel}
                 disabled={formDisabled}
               />
@@ -337,7 +311,7 @@ const GeneralSettingsTab = ({
                 field={field}
                 vocabulary={vocabulary}
                 value={value}
-                onChange={onChange}
+                onValue={commit}
                 blankLabel={blankLabel}
                 isCustom={!!customFields[field.key]}
                 onToggleCustom={next => setCustomFields(prev => ({ ...prev, [field.key]: next }))}
@@ -402,7 +376,7 @@ const GeneralSettingsTab = ({
           type="number"
           min="1"
           max="100"
-          placeholder="(default: 95)"
+          placeholder="95"
           value={bootPriority}
           onChange={e => setBootPriority(e.target.value)}
           disabled={formDisabled}
@@ -421,7 +395,7 @@ const GeneralSettingsTab = ({
               id="machine-edit-consoleport"
               className="form-control"
               type="text"
-              placeholder="(dynamic — agent pool)"
+              placeholder="dynamic"
               title="Pin the noVNC web port (1025-65535); type dynamic to clear the pin back to the pool"
               value={consolePort}
               onChange={e => setConsolePort(e.target.value)}
@@ -440,7 +414,7 @@ const GeneralSettingsTab = ({
               id="machine-edit-consolehost"
               className="form-control"
               type="text"
-              placeholder="(default: 0.0.0.0)"
+              placeholder="0.0.0.0"
               value={consoleHost}
               onChange={e => setConsoleHost(e.target.value)}
               disabled={formDisabled}
@@ -515,7 +489,7 @@ const GeneralSettingsTab = ({
                     id="machine-edit-ci-enabled"
                     className="form-control"
                     type="text"
-                    placeholder="https://… (cloud-init config URL)"
+                    placeholder="https://…"
                     title="A URL serves that cloud-init config to the guest"
                     value={cloudInit.enabled ?? ''}
                     onChange={e => setCloudInit(prev => ({ ...prev, enabled: e.target.value }))}
@@ -533,25 +507,19 @@ const GeneralSettingsTab = ({
                   </button>
                 </>
               ) : (
-                <select
+                <VocabularySelect
                   id="machine-edit-ci-enabled"
-                  className="form-select"
                   value={cloudInit.enabled ?? ''}
-                  onChange={e => {
-                    if (e.target.value === '__url__') {
-                      setCiCustomUrl(true);
-                      setCloudInit(prev => ({ ...prev, enabled: '' }));
-                      return;
-                    }
-                    setCloudInit(prev => ({ ...prev, enabled: e.target.value }));
+                  entries={['on', 'off']}
+                  blankLabel={defaultLabelFor(defaultsDoc, 'cloud_init')}
+                  onChange={next => setCloudInit(prev => ({ ...prev, enabled: next }))}
+                  onCustom={() => {
+                    setCiCustomUrl(true);
+                    setCloudInit(prev => ({ ...prev, enabled: '' }));
                   }}
+                  customLabel="Config URL…"
                   disabled={formDisabled}
-                >
-                  <option value="">{defaultLabelFor(defaultsDoc, 'cloud_init')}</option>
-                  <option value="on">on</option>
-                  <option value="off">off</option>
-                  <option value="__url__">Config URL…</option>
-                </select>
+                />
               )}
             </div>
             <div className="col-12 col-md-4">
@@ -562,7 +530,7 @@ const GeneralSettingsTab = ({
                 id="machine-edit-ci-domain"
                 className="form-control"
                 type="text"
-                placeholder="(keep current)"
+                placeholder="keep current"
                 value={cloudInit.dns_domain ?? ''}
                 onChange={e => setCloudInit(prev => ({ ...prev, dns_domain: e.target.value }))}
                 disabled={formDisabled}
@@ -591,7 +559,7 @@ const GeneralSettingsTab = ({
                 className="form-control"
                 type="password"
                 autoComplete="new-password"
-                placeholder="(keep current)"
+                placeholder="keep current"
                 value={cloudInit.password ?? ''}
                 onChange={e => setCloudInit(prev => ({ ...prev, password: e.target.value }))}
                 disabled={formDisabled}

@@ -33,6 +33,13 @@ import {
   ConfirmStep,
 } from './CreateWizardSteps';
 import { buildHardwarePayload, buildPortsPayload } from './HardwareEditor';
+import {
+  withAddressing,
+  cdromEntry,
+  filesystemEntries,
+  flattenBridgedInterfaces,
+  isoFilenames,
+} from './machineHelpers';
 import { dslConfiguration, seedAnswers, pruneHidden, validateAnswers } from './ProvisionerFieldDsl';
 import { seedRoles } from './ProvisionerFormFields';
 
@@ -352,24 +359,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     }
     getBridgedInterfaces(currentServer.hostname, currentServer.port, currentServer.protocol).then(
       result => {
-        const list = result.success
-          ? result.data?.interfaces || result.data?.bridged_interfaces || result.data || []
-          : [];
-        const rows = (Array.isArray(list) ? list : [])
-          .map(entry => (typeof entry === 'string' ? { name: entry } : entry || {}))
-          .filter(
-            entry =>
-              !entry.class ||
-              entry.class === 'phys' ||
-              entry.class === 'aggr' ||
-              entry.class === 'etherstub'
-          )
-          .map(entry => ({
-            name: entry.name || entry.device || '',
-            class: entry.class || '',
-            provisioning: entry.provisioning === true,
-          }))
-          .filter(entry => entry.name);
+        const rows = result.success ? flattenBridgedInterfaces(result.data) : [];
         setBridgeOptions(rows.map(entry => entry.name));
         setBridgeChoices(
           rows.map(entry => {
@@ -528,12 +518,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       );
       getIsoArtifacts(currentServer.hostname, currentServer.port, currentServer.protocol).then(
         result => {
-          const rows = Array.isArray(result.data) ? result.data : result.data?.artifacts || [];
-          setIsoOptions(
-            result.success
-              ? rows.filter(row => row.file_exists !== false).map(row => row.filename)
-              : []
-          );
+          setIsoOptions(isoFilenames(result));
         }
       );
     } else {
@@ -629,17 +614,6 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     setVersionPending(false);
   };
 
-  /** Optional controller/port addressing on a media row (device model). */
-  const withAddressing = (entry, row) => {
-    if (row.controller?.trim()) {
-      entry.controller = row.controller.trim();
-    }
-    if (row.port !== undefined && row.port !== '') {
-      entry.port = Number(row.port);
-    }
-    return entry;
-  };
-
   /** disks{controllers, boot, additional_disks, cdroms} — the device model. */
   const buildDisks = () => {
     const disks = {};
@@ -725,12 +699,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     if (additional.length > 0) {
       disks.additional_disks = additional;
     }
-    // {iso} references the cached-ISO registry by filename; {path} stays the
-    // raw agent-host passthrough.
     const cdroms = diskConfig.cdroms
       .map(row => {
-        const base =
-          row.source === 'iso' ? row.iso && { iso: row.iso } : row.path && { path: row.path };
+        const base = cdromEntry(row);
         return base && withAddressing(base, row);
       })
       .filter(Boolean);
@@ -803,14 +774,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       mergedSettings.boot_order = bootOrder;
     }
     const disks = buildDisks();
-    const filesystems = (diskConfig.filesystems || [])
-      .filter(row => row.special.trim() && row.dir.trim())
-      .map(row => ({
-        special: row.special.trim(),
-        dir: row.dir.trim(),
-        ...(row.type.trim() && { type: row.type.trim() }),
-        ...(row.options.trim() && { options: row.options.trim() }),
-      }));
+    const filesystems = filesystemEntries(diskConfig.filesystems);
     const builtCloudInit = buildCloudInit();
     const vboxPassthrough = parseVboxPassthrough();
     const hardwarePayload = buildHardwarePayload(hardware) || {};

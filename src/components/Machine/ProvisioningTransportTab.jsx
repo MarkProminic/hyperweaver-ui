@@ -46,7 +46,7 @@ const ProvisioningTransportTab = ({ settings, onChange, disabled }) => {
             disabled={disabled}
             onChange={e => onChange('communicator', e.target.value || undefined)}
           >
-            <option value="">(default — ssh)</option>
+            <option value="">ssh</option>
             <option value="ssh">ssh</option>
             <option value="winrm">winrm</option>
           </select>
@@ -79,7 +79,7 @@ const ProvisioningTransportTab = ({ settings, onChange, disabled }) => {
                 disabled={disabled}
                 onChange={e => onChange('winrm_transport', e.target.value || undefined)}
               >
-                <option value="">(default — negotiate)</option>
+                <option value="">negotiate</option>
                 {TRANSPORTS.map(mode => (
                   <option key={mode} value={mode}>
                     {mode}

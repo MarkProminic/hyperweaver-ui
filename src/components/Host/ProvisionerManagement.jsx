@@ -13,14 +13,8 @@ import {
   getSecrets,
 } from '../../api/provisioningAPI';
 import { makeAgentRequest } from '../../api/serverUtils';
+import { pollTaskRow } from '../../utils/taskOperations';
 import { ConfirmModal, ContentModal, FormModal } from '../common';
-
-const TERMINAL_STATUSES = ['completed', 'completed_with_errors', 'failed', 'cancelled'];
-
-const wait = ms =>
-  new Promise(resolve => {
-    setTimeout(resolve, ms);
-  });
 
 /** Dotted-version compare — true when a is strictly newer than b. */
 const versionNewer = (a, b) => {
@@ -43,27 +37,19 @@ const versionNewer = (a, b) => {
   return false;
 };
 
-/** Recursive task poller (2s ticks): the task row once terminal, null on timeout. */
-const pollTask = async (server, taskId, attempts) => {
-  const result = await makeAgentRequest(
-    server.hostname,
-    server.port,
-    server.protocol,
-    'tasks',
-    'GET',
-    null,
-    { limit: 50 }
-  );
-  const task = result.success ? (result.data?.tasks || []).find(row => row.id === taskId) : null;
-  if (task && TERMINAL_STATUSES.includes(task.status)) {
-    return task;
-  }
-  if (attempts <= 1) {
-    return null;
-  }
-  await wait(2000);
-  return pollTask(server, taskId, attempts - 1);
-};
+const pollTask = (server, taskId, attempts) =>
+  pollTaskRow(async () => {
+    const result = await makeAgentRequest(
+      server.hostname,
+      server.port,
+      server.protocol,
+      'tasks',
+      'GET',
+      null,
+      { limit: 50 }
+    );
+    return result.success ? (result.data?.tasks || []).find(row => row.id === taskId) : null;
+  }, attempts);
 
 /**
  * Provisioner management (sync item 11) — the registry surface of the

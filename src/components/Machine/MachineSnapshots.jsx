@@ -14,6 +14,7 @@ import { modifyInfrastructure } from '../../api/provisioningAPI';
 import { getZfsSnapshotHolds, holdZfsSnapshot, releaseZfsSnapshotHold } from '../../api/zfsAPI';
 import { hasFeature } from '../../utils/capabilities';
 import { canCreateMachines } from '../../utils/permissions';
+import { formatByteSize, pollTaskRow } from '../../utils/taskOperations';
 import { ConfirmModal, ContentModal, FormModal } from '../common';
 import TaskDetailModal from '../TaskDetailModal';
 
@@ -32,39 +33,6 @@ import SnapshotTemplateModal from './SnapshotTemplateModal';
  */
 
 const depthOf = node => (String(node || '').match(/-/gu) || []).length;
-
-const TERMINAL_STATUSES = ['completed', 'completed_with_errors', 'failed', 'cancelled'];
-
-const wait = ms =>
-  new Promise(resolve => {
-    setTimeout(resolve, ms);
-  });
-
-/** Recursive poll — answers the terminal task row, or null when it runs out. */
-const pollTask = async (fetchRow, attempts) => {
-  const row = await fetchRow();
-  if (row && TERMINAL_STATUSES.includes(row.status)) {
-    return row;
-  }
-  if (attempts <= 1) {
-    return null;
-  }
-  await wait(2000);
-  return pollTask(fetchRow, attempts - 1);
-};
-
-const formatBytes = bytes => {
-  if (bytes >= 1024 ** 3) {
-    return `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
-  }
-  if (bytes >= 1024 ** 2) {
-    return `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
-  }
-  if (bytes >= 1024) {
-    return `${(bytes / 1024).toFixed(0)} KiB`;
-  }
-  return `${bytes} B`;
-};
 
 const CONFIRM_TITLES = {
   restore: 'Restore Snapshot',
@@ -622,7 +590,7 @@ const MachineSnapshots = ({
       setMsg('Restore queued, but no task id came back — start the machine yourself.');
       return;
     }
-    const task = await pollTask(
+    const task = await pollTaskRow(
       () =>
         getTask(currentServer.hostname, currentServer.port, currentServer.protocol, taskId).then(
           result => (result.success ? result.data?.task || result.data : null)
@@ -785,7 +753,7 @@ const MachineSnapshots = ({
                   )}
                   {typeof snapshot.used_bytes === 'number' && (
                     <span className="text-muted small ms-2">
-                      {formatBytes(snapshot.used_bytes)}
+                      {formatByteSize(snapshot.used_bytes)}
                     </span>
                   )}
                   {snapshot.description && (

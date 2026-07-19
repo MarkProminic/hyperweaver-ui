@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { Fragment, useState } from 'react';
 
 import { markButtonClass, markIconClass, nicSummary } from './CurrentHardware';
+import { VocabularySelect } from './HardwareEditor';
 import VnicLinkPropsEditor from './VnicLinkPropsEditor';
 
 /** A locally-administered unicast MAC (02:xx:…) — the random-MAC dice. */
@@ -176,11 +177,11 @@ const NicPropsEditor = ({
             const current = currentProps[key];
             // Set → show it; unset → the default it actually runs with —
             // except the props bhyve doesn't document, which say so honestly.
-            let blankLabel = `(default: ${fallback ?? 'agent default'})`;
+            let blankLabel = fallback === undefined ? 'n/a' : String(fallback);
             if (current !== undefined && current !== '') {
-              blankLabel = `(current: ${current})`;
+              blankLabel = String(current);
             } else if (fallback === undefined && UNDOCUMENTED_PROPS.has(key)) {
-              blankLabel = '(undocumented — may be a bhyve no-op)';
+              blankLabel = 'undocumented — may be a bhyve no-op';
             }
             const warning = PROP_WARNINGS[key];
             return (
@@ -242,13 +243,20 @@ NicPropsEditor.propTypes = {
   disabled: PropTypes.bool,
 };
 
+const removeOnCompletionLabel = current => {
+  if (current?.remove_on_completion === undefined) {
+    return 'n/a';
+  }
+  return current.remove_on_completion ? 'remove' : 'keep';
+};
+
 const zoneNicPlaceholder = (field, nic, live) => {
   const current = field.currentOf(nic);
   if (current) {
     return current;
   }
   const liveValue = field.liveOf(live);
-  return liveValue ? `unset — live: ${liveValue}` : '(unset)';
+  return liveValue ? `unset — live: ${liveValue}` : 'unset';
 };
 
 const liveSpeed = speed => {
@@ -319,32 +327,20 @@ export const blankNicRow = adapter => ({
 });
 
 const NicTuningField = ({ inputId, field, value, nicEnums, onChange, disabled }) => {
-  // nicEnums is the agent's whole knob_values map (flat dotted keys).
   const vocabulary =
     field.options ||
     (field.enumKey ? nicEnums?.[`nics.${field.enumKey}`] || FALLBACK_ENUMS[field.enumKey] : null);
   if (vocabulary) {
-    const entries = field.options
-      ? field.options
-      : vocabulary.map(option => ({ value: option, label: option }));
     return (
-      <select
+      <VocabularySelect
         id={inputId}
-        className="form-select form-select-sm"
         value={value}
-        onChange={e => onChange(e.target.value)}
+        entries={vocabulary}
+        blankLabel="n/a"
+        small
+        onChange={onChange}
         disabled={disabled}
-      >
-        <option value="">(default)</option>
-        {value && !entries.some(entry => entry.value === value) && (
-          <option value={value}>{value}</option>
-        )}
-        {entries.map(entry => (
-          <option key={entry.value} value={entry.value}>
-            {entry.label}
-          </option>
-        ))}
-      </select>
+      />
     );
   }
   return (
@@ -352,7 +348,7 @@ const NicTuningField = ({ inputId, field, value, nicEnums, onChange, disabled })
       id={inputId}
       className="form-control form-control-sm"
       type={field.type || 'text'}
-      placeholder="(default)"
+      placeholder="n/a"
       value={value}
       onChange={e => onChange(e.target.value)}
       disabled={disabled}
@@ -499,11 +495,7 @@ const NetworkAdaptersEditor = ({
                         }
                         disabled={formDisabled}
                       >
-                        <option value="">
-                          {current?.remove_on_completion === undefined
-                            ? '(current — agent default)'
-                            : `(current — ${current.remove_on_completion ? 'remove' : 'keep'})`}
-                        </option>
+                        <option value="">{removeOnCompletionLabel(current)}</option>
                         <option value="true">remove</option>
                         <option value="false">keep</option>
                       </select>
@@ -731,7 +723,7 @@ const NetworkAdaptersEditor = ({
                       className="form-control form-control-sm"
                       type="number"
                       min="0"
-                      placeholder="(none)"
+                      placeholder="none"
                       value={row.vlan_id ?? ''}
                       onChange={e => patchAddNic(row.key, { vlan_id: e.target.value })}
                       disabled={formDisabled}
@@ -773,7 +765,7 @@ const NetworkAdaptersEditor = ({
                     <input
                       id={`add-nic-address-${row.key}`}
                       className="form-control form-control-sm font-monospace"
-                      placeholder="(none)"
+                      placeholder="none"
                       value={row.address ?? ''}
                       onChange={e => patchAddNic(row.key, { address: e.target.value })}
                       disabled={formDisabled}
@@ -789,7 +781,7 @@ const NetworkAdaptersEditor = ({
                     <input
                       id={`add-nic-defrouter-${row.key}`}
                       className="form-control form-control-sm font-monospace"
-                      placeholder="(none)"
+                      placeholder="none"
                       value={row.defrouter ?? ''}
                       onChange={e => patchAddNic(row.key, { defrouter: e.target.value })}
                       disabled={formDisabled}

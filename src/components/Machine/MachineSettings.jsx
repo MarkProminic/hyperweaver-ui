@@ -10,6 +10,7 @@ import {
 import { getZfsPools } from '../../api/zfsAPI';
 import { useServers } from '../../contexts/ServerContext';
 import { hasHypervisor } from '../../utils/capabilities';
+import { pollUntil, pollTaskRow } from '../../utils/taskOperations';
 import { PathInput, validationDetails } from '../common';
 
 import { parseHardware } from './CurrentHardware';
@@ -22,7 +23,16 @@ import {
   ParallelPortsEditor,
   diffHardwarePayload,
   buildPortsPayload,
+  CpuTopologyInputs,
 } from './HardwareEditor';
+import {
+  withAddressing,
+  cdromEntry,
+  filesystemEntries,
+  flattenBridgedInterfaces,
+  isoFilenames,
+  zfsPoolOptions,
+} from './machineHelpers';
 import MachineSettingsStatus from './MachineSettingsStatus';
 import NetworkAdaptersEditor from './NetworkAdaptersEditor';
 import StorageDevicesEditor from './StorageDevicesEditor';
@@ -250,37 +260,6 @@ const buildSeed = (configuration, knobCurrent) => ({
 
 const rowsChanged = (rows, seededRows) => JSON.stringify(rows) !== JSON.stringify(seededRows);
 
-const wait = ms =>
-  new Promise(resolve => {
-    setTimeout(resolve, ms);
-  });
-
-const TERMINAL_STATUSES = ['completed', 'completed_with_errors', 'failed', 'cancelled'];
-
-// Recursive poller: `check` answers undefined to keep waiting; null when
-// the attempts run out.
-const poll = async (check, attempts, intervalMs) => {
-  const outcome = await check();
-  if (outcome !== undefined) {
-    return outcome;
-  }
-  if (attempts <= 1) {
-    return null;
-  }
-  await wait(intervalMs);
-  return poll(check, attempts - 1, intervalMs);
-};
-
-const withAddressing = (entry, row) => {
-  if (row.controller?.trim()) {
-    entry.controller = row.controller.trim();
-  }
-  if (row.port !== undefined && row.port !== '') {
-    entry.port = Number(row.port);
-  }
-  return entry;
-};
-
 const NIC_TUNING_KEYS = [
   'cable_connected',
   'promisc',
@@ -368,21 +347,17 @@ const buildDeviceChanges = state => {
     .map(row => {
       const base =
         row.mode === 'existing'
-          ? row.path.trim() && { path: row.path.trim() }
-          : row.size.trim() && { size: row.size.trim() };
+          ? row.path.trim() && { type: 'image', path: row.path.trim() }
+          : row.size.trim() && { type: 'blank', size: row.size.trim() };
       return base && withAddressing(base, row);
     })
     .filter(Boolean);
   if (disks.length > 0) {
     changes.add_disks = disks;
   }
-  // {iso} references the cached-ISO registry by filename; {path} is raw.
   const cdroms = state.addCdroms
     .map(row => {
-      const base =
-        row.source === 'iso'
-          ? row.iso?.trim() && { iso: row.iso.trim() }
-          : row.path?.trim() && { path: row.path.trim() };
+      const base = cdromEntry(row);
       return base && withAddressing(base, row);
     })
     .filter(Boolean);
@@ -513,18 +488,17 @@ const zoneNicUpdateEntry = (physical, patch) => {
   return Object.keys(entry).length > 1 ? entry : null;
 };
 
-/** One zone disk-add entry — the agent's zvol shape (mint new | attach existing). */
 const zoneDiskAddEntry = row => {
   if (row.mode === 'existing') {
-    return row.existing_dataset.trim() && { existing_dataset: row.existing_dataset.trim() };
+    return row.existing_dataset.trim() && { type: 'image', path: row.existing_dataset.trim() };
   }
   return {
-    create_new: true,
+    type: 'blank',
+    sparse: row.sparse === true,
+    ...(row.size.trim() && { size: row.size.trim() }),
+    ...(row.volume_name.trim() && { volume_name: row.volume_name.trim() }),
     ...(row.pool.trim() && { pool: row.pool.trim() }),
     ...(row.dataset.trim() && { dataset: row.dataset.trim() }),
-    ...(row.volume_name.trim() && { volume_name: row.volume_name.trim() }),
-    ...(row.size.trim() && { size: row.size.trim() }),
-    ...(row.sparse && { sparse: true }),
   };
 };
 
@@ -593,13 +567,6 @@ const filesystemsOf = configuration => {
   }
   return Array.isArray(configuration?.filesystems) ? configuration.filesystems : [];
 };
-
-const filesystemEntry = row => ({
-  special: row.special.trim(),
-  dir: row.dir.trim(),
-  ...(row.type.trim() && { type: row.type.trim() }),
-  ...(row.options.trim() && { options: row.options.trim() }),
-});
 
 // The SSH credentials family on PUT — DB-immediate merge into
 // configuration.settings; a SENT empty string DELETES that key.
@@ -776,7 +743,6 @@ const MachineSettings = ({
   const [errorDetails, setErrorDetails] = useState([]);
   const [osTypes, setOsTypes] = useState(null); // null = keep the text input
   const [isoOptions, setIsoOptions] = useState([]); // cached-ISO filenames
-  const [poolOptions, setPoolOptions] = useState([]); // zone zvol-add pool picker
   const [pools, setPools] = useState([]); // full pool rows (carry .free for the resize bar)
   // The host's live VNIC records (dladm layer) — zone NIC rows merge them
   // with the zonecfg net resource so "unset in zonecfg" still shows the
@@ -849,12 +815,7 @@ const MachineSettings = ({
     );
     getIsoArtifacts(currentServer.hostname, currentServer.port, currentServer.protocol).then(
       result => {
-        const rows = Array.isArray(result.data) ? result.data : result.data?.artifacts || [];
-        setIsoOptions(
-          result.success
-            ? rows.filter(row => row.file_exists !== false).map(row => row.filename)
-            : []
-        );
+        setIsoOptions(isoFilenames(result));
       }
     );
     // knob_values feeds the enum dropdowns; agents without it fall back to
@@ -864,18 +825,10 @@ const MachineSettings = ({
         setAgentDefaults(result.success ? result.data : null);
       }
     );
-    // Bridge/uplink suggestions — the same feed the create wizard uses.
     getBridgedInterfaces(currentServer.hostname, currentServer.port, currentServer.protocol).then(
       result => {
-        const list = result.success
-          ? result.data?.interfaces || result.data?.bridged_interfaces || result.data || []
-          : [];
         setBridgeOptions(
-          (Array.isArray(list) ? list : [])
-            .map(entry => (typeof entry === 'string' ? { name: entry } : entry || {}))
-            .filter(entry => !entry.class || entry.class === 'phys' || entry.class === 'aggr')
-            .map(entry => entry.name || entry.device || '')
-            .filter(Boolean)
+          result.success ? flattenBridgedInterfaces(result.data).map(entry => entry.name) : []
         );
       }
     );
@@ -883,9 +836,7 @@ const MachineSettings = ({
     if (hasHypervisor(currentServer, 'bhyve')) {
       getZfsPools(currentServer.hostname, currentServer.port, currentServer.protocol).then(
         result => {
-          const rows = result.success && Array.isArray(result.data?.pools) ? result.data.pools : [];
-          setPools(rows);
-          setPoolOptions(rows.map(pool => pool.name));
+          setPools(result.success && Array.isArray(result.data?.pools) ? result.data.pools : []);
         }
       );
       makeAgentRequest(
@@ -898,52 +849,40 @@ const MachineSettings = ({
       });
     } else {
       setPools([]);
-      setPoolOptions([]);
       setHostVnics([]);
     }
   }, [currentServer, makeAgentRequest]);
 
   const waitForStopped = async () => {
-    const outcome = await poll(
-      async () => {
-        const result = await makeAgentRequest(
-          currentServer.hostname,
-          currentServer.port,
-          currentServer.protocol,
-          'stats'
-        );
-        return result.success &&
-          Array.isArray(result.data?.runningmachines) &&
-          !result.data.runningmachines.includes(machineName)
-          ? true
-          : undefined;
-      },
-      60,
-      2000
-    );
+    const outcome = await pollUntil(async () => {
+      const result = await makeAgentRequest(
+        currentServer.hostname,
+        currentServer.port,
+        currentServer.protocol,
+        'stats'
+      );
+      return result.success &&
+        Array.isArray(result.data?.runningmachines) &&
+        !result.data.runningmachines.includes(machineName)
+        ? true
+        : undefined;
+    }, 60);
     return outcome === true;
   };
 
   const waitForTask = (taskId, attempts) =>
-    poll(
-      async () => {
-        const result = await makeAgentRequest(
-          currentServer.hostname,
-          currentServer.port,
-          currentServer.protocol,
-          'tasks',
-          'GET',
-          null,
-          { limit: 50 }
-        );
-        const row = result.success
-          ? (result.data?.tasks || []).find(task => task.id === taskId)
-          : null;
-        return row && TERMINAL_STATUSES.includes(row.status) ? row : undefined;
-      },
-      attempts,
-      2000
-    );
+    pollTaskRow(async () => {
+      const result = await makeAgentRequest(
+        currentServer.hostname,
+        currentServer.port,
+        currentServer.protocol,
+        'tasks',
+        'GET',
+        null,
+        { limit: 50 }
+      );
+      return result.success ? (result.data?.tasks || []).find(task => task.id === taskId) : null;
+    }, attempts);
 
   const applyChanges = async (
     changes,
@@ -1114,9 +1053,7 @@ const MachineSettings = ({
     credsTouched.forEach(key => {
       changes[key] = creds[key] ?? '';
     });
-    const filesystemAdds = addFilesystems
-      .filter(row => row.special.trim() && row.dir.trim())
-      .map(filesystemEntry);
+    const filesystemAdds = filesystemEntries(addFilesystems);
     if (filesystemAdds.length > 0) {
       changes.add_filesystems = filesystemAdds;
     }
@@ -1380,10 +1317,6 @@ const MachineSettings = ({
         hasHypervisor(currentServer, 'bhyve') &&
         (() => {
           const currentTopo = parseCpuTopology(seed.values.vcpus);
-          const product =
-            (Number(cpuTopo.sockets) || 0) *
-            (Number(cpuTopo.cores) || 0) *
-            (Number(cpuTopo.threads) || 0);
           return (
             <div className="mt-3">
               <h6 className="fw-bold">CPU Topology</h6>
@@ -1418,47 +1351,18 @@ const MachineSettings = ({
                     }}
                     disabled={formDisabled}
                   >
-                    <option value="">(unchanged)</option>
+                    <option value="">unchanged</option>
                     <option value="simple">simple — vcpus is the count</option>
                     <option value="complex">complex — sockets / cores / threads</option>
                   </select>
                 </div>
                 {cpuMode === 'complex' && (
-                  <>
-                    {[
-                      ['sockets', 16],
-                      ['cores', 32],
-                      ['threads', 2],
-                    ].map(([key, max]) => (
-                      <div className="col-4 col-md-2" key={key}>
-                        <label className="form-label" htmlFor={`machine-cpu-topo-${key}`}>
-                          {key[0].toUpperCase() + key.slice(1)}
-                        </label>
-                        <input
-                          id={`machine-cpu-topo-${key}`}
-                          className="form-control"
-                          type="number"
-                          min="1"
-                          max={max}
-                          value={cpuTopo[key] ?? ''}
-                          onChange={e =>
-                            setCpuTopo(prev => ({
-                              ...prev,
-                              [key]: e.target.value === '' ? '' : Number(e.target.value),
-                            }))
-                          }
-                          disabled={formDisabled}
-                        />
-                      </div>
-                    ))}
-                    <div className="col-12">
-                      <span className={`form-text ${product > 32 ? 'text-danger' : 'text-muted'}`}>
-                        sockets × cores × threads = {product || '…'} vCPUs — bhyve limits: sockets
-                        ≤16, cores ≤32, threads ≤2, product ≤32. Over-limit values are refused by
-                        the agent.
-                      </span>
-                    </div>
-                  </>
+                  <CpuTopologyInputs
+                    idPrefix="machine-cpu-topo"
+                    topo={cpuTopo}
+                    onField={(key, next) => setCpuTopo(prev => ({ ...prev, [key]: next }))}
+                    disabled={formDisabled}
+                  />
                 )}
               </div>
             </div>
@@ -1483,7 +1387,7 @@ const MachineSettings = ({
                   server={currentServer}
                   mode="file"
                   pickTitle="Pick the private key file"
-                  placeholder="(unchanged)"
+                  placeholder="unchanged"
                   disabled={formDisabled}
                 />
               );
@@ -1495,7 +1399,7 @@ const MachineSettings = ({
                     className="form-control"
                     type={revealPass ? 'text' : 'password'}
                     autoComplete="new-password"
-                    placeholder="(unchanged)"
+                    placeholder="unchanged"
                     value={creds[field.key] ?? ''}
                     onChange={e => setCred(field.key, e.target.value)}
                     disabled={formDisabled}
@@ -1517,7 +1421,7 @@ const MachineSettings = ({
                   id={`machine-cred-${field.key}`}
                   className="form-control"
                   type="text"
-                  placeholder="(unchanged)"
+                  placeholder="unchanged"
                   value={creds[field.key] ?? ''}
                   onChange={e => setCred(field.key, e.target.value)}
                   disabled={formDisabled}
@@ -1551,7 +1455,7 @@ const MachineSettings = ({
           onToggleController={toggleControllerRemoval}
           addZoneDisks={addZoneDisks}
           onAddZoneDisksChange={setAddZoneDisks}
-          poolOptions={poolOptions}
+          poolChoices={zfsPoolOptions(pools)}
           zoneName={machineName}
           zoneDiskRemovals={removeZoneDisks}
           onToggleZoneDisk={toggleName(setRemoveZoneDisks)}

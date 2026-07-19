@@ -94,7 +94,7 @@ export const OptionalBoolSelect = ({ id, label, value, onChange, disabled }) => 
       disabled={disabled}
       onChange={e => onChange(e.target.value === '' ? undefined : e.target.value === 'true')}
     >
-      <option value="">(not set)</option>
+      <option value="">not set</option>
       <option value="true">true</option>
       <option value="false">false</option>
     </select>
