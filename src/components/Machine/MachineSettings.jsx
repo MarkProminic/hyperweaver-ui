@@ -206,6 +206,10 @@ const seedNicRows = entries =>
     boot_prio: asFormString(entry.boot_prio),
     bandwidth_group: asFormString(entry.bandwidth_group),
     nic_type: asFormString(entry.nic_type),
+    // The converged flag rides knob_current beside the provisional marker;
+    // absent = the agent's ruled default stays in force.
+    remove_on_completion:
+      entry.remove_on_completion === undefined ? '' : String(entry.remove_on_completion),
   }));
 
 // Credentials live in configuration.settings (the PUT family's documented
@@ -284,6 +288,7 @@ const NIC_TUNING_KEYS = [
   'boot_prio',
   'bandwidth_group',
   'nic_type',
+  'remove_on_completion',
 ];
 
 /** A NIC's net-resource props → the wire's flat {name: value} object; blank
@@ -301,6 +306,9 @@ const cleanNicProps = props => {
 const nicTuningValue = (key, value) => {
   if (key === 'cable_connected') {
     return value === 'on';
+  }
+  if (key === 'remove_on_completion') {
+    return value === 'true';
   }
   if (key === 'speed' || key === 'boot_prio') {
     return Number(value);
@@ -496,6 +504,11 @@ const zoneNicUpdateEntry = (physical, patch) => {
   const props = cleanNicProps(patch.props);
   if (props) {
     entry.props = props;
+  }
+  // The converged remove-on-completion flag — boolean on the wire; the
+  // agent maps the NIC to its document entry (pairing rule) and updates it.
+  if (patch.remove_on_completion === 'true' || patch.remove_on_completion === 'false') {
+    entry.remove_on_completion = patch.remove_on_completion === 'true';
   }
   return Object.keys(entry).length > 1 ? entry : null;
 };
@@ -1138,8 +1151,21 @@ const MachineSettings = ({
     setError('');
     setErrorDetails([]);
     // DB-immediate keys alone need no task and no restart — skip the
-    // stop/apply/start choice even while running.
-    const immediateOnly = Object.keys(changes).every(key => IMMEDIATE_KEYS.includes(key));
+    // stop/apply/start choice even while running. A nics/update_nics set
+    // that ONLY flips remove-on-completion is DB-immediate too (both
+    // agents' stated semantics).
+    const flagOnlyEntries = list =>
+      Array.isArray(list) &&
+      list.every(entry =>
+        Object.keys(entry).every(key =>
+          ['physical', 'adapter', 'remove_on_completion'].includes(key)
+        )
+      );
+    const immediateOnly = Object.keys(changes).every(
+      key =>
+        IMMEDIATE_KEYS.includes(key) ||
+        ((key === 'update_nics' || key === 'nics') && flagOnlyEntries(changes[key]))
+    );
     if (isRunning && !immediateOnly) {
       setStagedChanges(changes);
       setPhase('choice');

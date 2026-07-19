@@ -416,6 +416,16 @@ export const deleteArtifacts = async (hostname, port, protocol, body) =>
   await makeAgentRequest(hostname, port, protocol, 'artifacts/files', 'DELETE', body);
 
 /**
+ * ADVISORY free-IP suggestions from the host's own network (converged wire,
+ * both agents): {interface, subnet, gateway, used[], suggestions[],
+ * total_used}. Point-in-time, never a reservation — pickers keep free text.
+ */
+export const getIpSuggestions = async (hostname, port, protocol, count = 20) =>
+  await makeAgentRequest(hostname, port, protocol, 'network/ip-suggestions', 'GET', null, {
+    count,
+  });
+
+/**
  * Registered media on the agent host (frozen disk-spec wire; rides the
  * machine-create gate, no token of its own) — {media: [{path, format,
  * size_bytes, source_stamp|null, in_use_by: []}], total}. Feeds the VBox

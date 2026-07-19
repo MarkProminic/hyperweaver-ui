@@ -64,6 +64,17 @@ const TUNING_FIELDS = [
   { key: 'boot_prio', label: 'Boot prio', type: 'number' },
   { key: 'bandwidth_group', label: 'Bandwidth group' },
   { key: 'nic_type', label: 'NIC type', enumKey: 'nic_type' },
+  // The converged remove-on-completion flag (legal per entry; the
+  // provisioning NAT is the load-bearing case). Blank = the agent's
+  // ruled default (keep on VirtualBox, remove on zoneweaver).
+  {
+    key: 'remove_on_completion',
+    label: 'Remove on completion',
+    options: [
+      { value: 'true', label: 'remove' },
+      { value: 'false', label: 'keep' },
+    ],
+  },
 ];
 
 // Hardcoded vocabularies are the no-knob_values fallback (HardwareEditor's).
@@ -304,6 +315,7 @@ export const blankNicRow = adapter => ({
   boot_prio: '',
   bandwidth_group: '',
   nic_type: '',
+  remove_on_completion: '',
 });
 
 const NicTuningField = ({ inputId, field, value, nicEnums, onChange, disabled }) => {
@@ -412,6 +424,10 @@ const NetworkAdaptersEditor = ({
           // knob_current.nics[] — the NIC's effective backend and the props
           // that are EXPLICITLY set on it.
           const current = zoneNicCurrent.find(entry => entry.physical === nic.physical) || null;
+          // The agent-attached provisioning transport (knob_current marker,
+          // the declared pairing rule) — badged and LOCKED against
+          // hand-edits: breaking it mid-pipeline strands the provision.
+          const isProvisional = current?.provisional === true;
           return (
             <Fragment key={nic.name}>
               <div
@@ -425,12 +441,21 @@ const NetworkAdaptersEditor = ({
                     <CopyButton value={nic.physical} label="VNIC name" />
                   </>
                 )}
+                {isProvisional && (
+                  <span
+                    className="badge text-bg-warning"
+                    title="Agent-attached provisioning transport — the pipeline's DHCP control network. Locked here; it is managed (and later removed) by the agent."
+                  >
+                    <i className="fas fa-cubes me-1" />
+                    provisional
+                  </span>
+                )}
                 {nic.allowedAddress && (
                   <span className="badge text-bg-light border" title="zonecfg allowed-address">
                     {nic.allowedAddress}
                   </span>
                 )}
-                {nic.physical && (
+                {nic.physical && !isProvisional && (
                   <div className="hw-device-actions">
                     <button
                       type="button"
@@ -455,6 +480,34 @@ const NetworkAdaptersEditor = ({
               {!isMarked && nic.physical && (
                 <div className="hw-device-row hw-device-child hw-device-child-form">
                   <div className="row g-2 align-items-end">
+                    {/* The converged remove-on-completion flag — the ONE
+                        control that stays live on provisional rows (the
+                        agent maps NIC → document entry and updates it). */}
+                    <div className="col-6 col-md-3">
+                      <label
+                        className="form-label small mb-1"
+                        htmlFor={`zone-nic-${nic.physical}-roc`}
+                      >
+                        Remove on completion
+                      </label>
+                      <select
+                        id={`zone-nic-${nic.physical}-roc`}
+                        className="form-select form-select-sm"
+                        value={edits.remove_on_completion ?? ''}
+                        onChange={e =>
+                          onZoneNicEdit(nic.physical, 'remove_on_completion', e.target.value)
+                        }
+                        disabled={formDisabled}
+                      >
+                        <option value="">
+                          {current?.remove_on_completion === undefined
+                            ? '(current — agent default)'
+                            : `(current — ${current.remove_on_completion ? 'remove' : 'keep'})`}
+                        </option>
+                        <option value="true">remove</option>
+                        <option value="false">keep</option>
+                      </select>
+                    </div>
                     {ZONE_NIC_EDIT_FIELDS.map(field => {
                       const inputId = `zone-nic-${nic.physical}-${field.key}`;
                       const isBridge = field.key === 'global_nic';
@@ -468,10 +521,14 @@ const NetworkAdaptersEditor = ({
                             isBridge && bridgeOptions.length > 0 ? `${inputId}-options` : undefined
                           }
                           placeholder={zoneNicPlaceholder(field, nic, live)}
-                          title="Blank = keep the current value; clearing a property needs detach + re-add"
+                          title={
+                            isProvisional
+                              ? 'Locked — the provisioning transport is agent-managed'
+                              : 'Blank = keep the current value; clearing a property needs detach + re-add'
+                          }
                           value={edits[field.key] ?? ''}
                           onChange={e => onZoneNicEdit(nic.physical, field.key, e.target.value)}
-                          disabled={formDisabled}
+                          disabled={formDisabled || isProvisional}
                         />
                       );
                       return (

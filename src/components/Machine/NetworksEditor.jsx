@@ -38,9 +38,11 @@ const NetworksEditor = ({
   networks,
   onNetworksChange,
   bridgeChoices = [],
+  ipSuggestions = null,
   nicEnums = null,
   loading,
 }) => {
+  const ipOptions = Array.isArray(ipSuggestions?.suggestions) ? ipSuggestions.suggestions : [];
   const setNetwork = (index, patch) => {
     onNetworksChange(
       networks.map((network, i) => (i === index ? { ...network, ...patch } : network))
@@ -58,6 +60,15 @@ const NetworksEditor = ({
 
   return (
     <div className="d-flex flex-column gap-2">
+      {/* ADVISORY free IPs from the host's own network (converged wire) —
+          point-in-time, never a reservation; free text always wins. */}
+      {ipOptions.length > 0 && (
+        <datalist id="machine-ip-suggestions">
+          {ipOptions.map(ip => (
+            <option key={ip} value={ip} />
+          ))}
+        </datalist>
+      )}
       {networks.length === 0 && (
         <p className="text-muted small mb-0">
           No networks defined — the provisioner template&apos;s defaults apply.
@@ -118,6 +129,15 @@ const NetworksEditor = ({
                     disabled={loading}
                   />
                 )}
+                {bridgeChoices.some(
+                  choice => choice.provisioning && choice.value === network.bridge
+                ) && (
+                  <span className="form-text text-warning small">
+                    <i className="fas fa-triangle-exclamation me-1" />
+                    This is the PROVISIONING etherstub — the agent&apos;s transport network, not a
+                    real uplink for guest traffic.
+                  </span>
+                )}
               </div>
               <div className="col-6 col-md-2">
                 <label className="form-label small mb-1" htmlFor={`${rowKey}-mac`}>
@@ -173,6 +193,16 @@ const NetworksEditor = ({
                     id={`${rowKey}-${field.key}`}
                     className="form-control form-control-sm"
                     type="text"
+                    list={
+                      field.key === 'address' && !network.dhcp4 && ipOptions.length > 0
+                        ? 'machine-ip-suggestions'
+                        : undefined
+                    }
+                    placeholder={
+                      field.key === 'gateway' && ipSuggestions?.gateway
+                        ? `e.g. ${ipSuggestions.gateway}`
+                        : undefined
+                    }
                     value={network[field.key] ?? ''}
                     onChange={e => setNetwork(index, { [field.key]: e.target.value })}
                     disabled={loading || !!network.dhcp4}
@@ -195,6 +225,21 @@ const NetworksEditor = ({
                   />
                 </div>
               ))}
+              <div className="col-6 col-md-2">
+                <label className="form-label small mb-1" htmlFor={`${rowKey}-route`}>
+                  Route
+                </label>
+                <input
+                  id={`${rowKey}-route`}
+                  className="form-control form-control-sm font-monospace"
+                  type="text"
+                  placeholder="(default)"
+                  title="OPTIONAL. Blank = the default route. A scoped CIDR (e.g. 10.190.190.0/24) confines this NIC's route so it never takes the guest's default."
+                  value={network.route ?? ''}
+                  onChange={e => setNetwork(index, { route: e.target.value })}
+                  disabled={loading}
+                />
+              </div>
             </div>
             <details className="mt-1">
               <summary className="small text-muted">Adapter tuning</summary>
@@ -281,6 +326,7 @@ NetworksEditor.propTypes = {
   bridgeChoices: PropTypes.arrayOf(
     PropTypes.shape({ value: PropTypes.string.isRequired, label: PropTypes.string.isRequired })
   ),
+  ipSuggestions: PropTypes.object,
   nicEnums: PropTypes.object,
   loading: PropTypes.bool,
 };

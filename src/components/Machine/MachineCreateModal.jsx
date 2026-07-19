@@ -14,6 +14,7 @@ import {
   getTemplateSources,
   getRemoteTemplates,
   getMediaList,
+  getIpSuggestions,
 } from '../../api/provisioningAPI';
 import { getZfsPools, getZfsDatasets } from '../../api/zfsAPI';
 import { flattenBoxCatalog, pickDefaultSource } from '../../utils/boxCatalog';
@@ -184,6 +185,10 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   const [properties, setProperties] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [syncMethod, setSyncMethod] = useState('rsync');
+  // The provisioning-transport removal SIGNAL (converged: option (b) — one
+  // per-create key both agents fold into their native transport; per-agent
+  // ruled defaults when absent: Go keep, zoneweaver remove). '' = unsent.
+  const [removeTransport, setRemoveTransport] = useState('');
   const [safeIdPath, setSafeIdPath] = useState('');
   const [startAfterCreate, setStartAfterCreate] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -197,6 +202,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   // The same uplinks WITH their class for the Network step's dropdown —
   // phys + aggr + etherstub (Mark: all three, labeled).
   const [bridgeChoices, setBridgeChoices] = useState([]);
+  // ADVISORY free-IP feed for static addressing (converged wire) — null =
+  // the agent doesn't serve it, the address field stays plain.
+  const [ipSuggestions, setIpSuggestions] = useState(null);
   // ZFS placement pickers (bhyve Disks step) — live pools + filesystem
   // datasets; the pickers keep a Custom… escape so any premade path stays
   // typable.
@@ -277,6 +285,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     setProperties({});
     setFieldErrors({});
     setSyncMethod('rsync');
+    setRemoveTransport('');
     setSafeIdPath('');
     setStartAfterCreate(false);
   }, []);
@@ -319,6 +328,19 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     );
   }, [currentServer]);
 
+  // Advisory free-IP suggestions for static addressing — absence (404/older
+  // agent) leaves the field a plain input.
+  const loadIpSuggestions = useCallback(() => {
+    if (!currentServer) {
+      return;
+    }
+    getIpSuggestions(currentServer.hostname, currentServer.port, currentServer.protocol).then(
+      result => {
+        setIpSuggestions(result.success ? result.data || null : null);
+      }
+    );
+  }, [currentServer]);
+
   // Uplink rows — failures leave the field free-text. The first option
   // autofills the seeded external network's bridge (untouched rows only).
   // Valid VNIC uplinks: phys + aggr + etherstub (Mark's ruling); the
@@ -354,7 +376,11 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
             const kind = entry.class
               ? ` (${entry.class}${entry.provisioning ? ' · provisioning' : ''})`
               : '';
-            return { value: entry.name, label: `${entry.name}${kind}` };
+            return {
+              value: entry.name,
+              label: `${entry.name}${kind}`,
+              provisioning: entry.provisioning,
+            };
           })
         );
         if (rows.length > 0) {
@@ -532,8 +558,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       loadMedia();
     } else if (stepId === 'network') {
       loadUplinks();
+      loadIpSuggestions();
     }
-  }, [isOpen, currentServer, stepIndex, loadZfsFeeds, loadMedia, loadUplinks]);
+  }, [isOpen, currentServer, stepIndex, loadZfsFeeds, loadMedia, loadUplinks, loadIpSuggestions]);
 
   const setSetting = (key, value) => setSettings(prev => ({ ...prev, [key]: value }));
 
@@ -813,8 +840,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       } else {
         delete entry.dns;
       }
-      // Adapter-tuning keys: blank = default, never sent; numbers numeric.
-      ['cable_connected', 'promisc', 'bandwidth_group', 'nic_type'].forEach(key => {
+      // Adapter-tuning keys (+ the optional route): blank = default, never
+      // sent; numbers numeric.
+      ['cable_connected', 'promisc', 'bandwidth_group', 'nic_type', 'route'].forEach(key => {
         if (entry[key] === '' || entry[key] === undefined) {
           delete entry[key];
         }
@@ -854,6 +882,12 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       // (Jinja undefined-renders-empty, the DSL contract).
       properties: pruneHidden(fieldConfig, properties, roles),
       sync_method: syncMethod,
+      // The transport-removal signal — rides ONLY when the user chose;
+      // absent = each agent's ruled default (Go keep, zoneweaver remove).
+      ...(familyName &&
+        removeTransport !== '' && {
+          remove_transport_on_completion: removeTransport === 'true',
+        }),
       // Rides ONLY when the picked version's manifest declares id_files —
       // package-declared need, never a standing key.
       ...(needsSafeId && safeIdPath.trim() && { safe_id_path: safeIdPath.trim() }),
@@ -1132,6 +1166,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           networks={networks}
           onNetworksChange={setNetworks}
           bridgeChoices={bridgeChoices}
+          ipSuggestions={ipSuggestions}
           nicEnums={agentDefaults?.knob_values || null}
           loading={loading}
         />
@@ -1160,6 +1195,11 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           syncMethod={syncMethod}
           setSyncMethod={setSyncMethod}
           syncMethodOptions={agentDefaults?.knob_values?.['settings.sync_method'] || null}
+          removeTransport={removeTransport}
+          setRemoveTransport={setRemoveTransport}
+          removeTransportDefault={
+            agentDefaults?.knob_defaults?.['transport.remove_on_completion'] ?? null
+          }
           safeIdPath={safeIdPath}
           setSafeIdPath={setSafeIdPath}
           advanced={showAdvanced}

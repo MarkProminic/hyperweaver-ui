@@ -2369,11 +2369,19 @@ SystemStep.propTypes = {
   loading: PropTypes.bool,
 };
 
-export const NetworkStep = ({ networks, onNetworksChange, bridgeChoices, nicEnums, loading }) => (
+export const NetworkStep = ({
+  networks,
+  onNetworksChange,
+  bridgeChoices,
+  ipSuggestions,
+  nicEnums,
+  loading,
+}) => (
   <NetworksEditor
     networks={networks}
     onNetworksChange={onNetworksChange}
     bridgeChoices={bridgeChoices}
+    ipSuggestions={ipSuggestions}
     nicEnums={nicEnums}
     loading={loading}
   />
@@ -2383,6 +2391,7 @@ NetworkStep.propTypes = {
   networks: PropTypes.array.isRequired,
   onNetworksChange: PropTypes.func.isRequired,
   bridgeChoices: PropTypes.array.isRequired,
+  ipSuggestions: PropTypes.object,
   nicEnums: PropTypes.object,
   loading: PropTypes.bool,
 };
@@ -2410,6 +2419,9 @@ export const ProvisioningStep = ({
   syncMethod,
   setSyncMethod,
   syncMethodOptions = null,
+  removeTransport,
+  setRemoveTransport,
+  removeTransportDefault = null,
   safeIdPath,
   setSafeIdPath,
   advanced,
@@ -2476,6 +2488,39 @@ export const ProvisioningStep = ({
       </div>
     </div>
     {version?.description && <p className="form-text text-muted">{version.description}</p>}
+
+    {/* The provisioning-transport removal signal (one per-create key, both
+        agents fold it into their native transport). Absent = each agent's
+        RULED default — keep on VirtualBox (home/dev), remove on zoneweaver
+        (datacenter); the effective default shows when the agent serves it. */}
+    {familyName && (
+      <div className="row g-3 mb-3">
+        <div className="col-12 col-md-6">
+          <label className="form-label" htmlFor="machine-create-remove-transport">
+            Remove Provisioning Network After Completion
+          </label>
+          <select
+            id="machine-create-remove-transport"
+            className="form-select"
+            value={removeTransport}
+            onChange={e => setRemoveTransport(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">
+              {removeTransportDefault === null
+                ? '(agent default)'
+                : `(agent default — ${removeTransportDefault ? 'remove' : 'keep'})`}
+            </option>
+            <option value="true">remove — drop the transport NIC after provisioning</option>
+            <option value="false">keep — leave the transport in place (dev access)</option>
+          </select>
+          <span className="form-text text-muted">
+            Removal runs as pipeline steps after the final stamp: transport NIC + its document
+            entry go, then a power cycle — the machine comes up on its real networks only.
+          </span>
+        </div>
+      </div>
+    )}
 
     {version && fieldConfig && (
       <div className="mb-3">
@@ -2712,6 +2757,9 @@ ProvisioningStep.propTypes = {
   syncMethod: PropTypes.string.isRequired,
   setSyncMethod: PropTypes.func.isRequired,
   syncMethodOptions: PropTypes.arrayOf(PropTypes.string),
+  removeTransport: PropTypes.string.isRequired,
+  setRemoveTransport: PropTypes.func.isRequired,
+  removeTransportDefault: PropTypes.bool,
   safeIdPath: PropTypes.string.isRequired,
   setSafeIdPath: PropTypes.func.isRequired,
   advanced: PropTypes.bool,
