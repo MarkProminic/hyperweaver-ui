@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { useDebounce } from '../../utils/debounce';
@@ -11,6 +12,7 @@ import UserEditModal from './UserEditModal';
 import UserTable from './UserTable';
 
 const UserSection = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -62,16 +64,16 @@ const UserSection = ({ server, onError }) => {
       if (result.success) {
         setUsers(result.data?.users || []);
       } else {
-        onError(result.message || 'Failed to load users');
+        onError(result.message || t('host.userSection.failedToLoadUsers'));
         setUsers([]);
       }
     } catch (err) {
-      onError(`Error loading users: ${err.message}`);
+      onError(t('host.userSection.errorLoadingUsers', { message: err.message }));
       setUsers([]);
     } finally {
       setLoading(false);
     }
-  }, [server, makeAgentRequest, debouncedPattern, filters, onError]);
+  }, [server, makeAgentRequest, debouncedPattern, filters, onError, t]);
 
   const pollTask = useCallback(
     taskId => {
@@ -172,10 +174,13 @@ const UserSection = ({ server, onError }) => {
         await loadUsers();
         return { success: true, message: result.message };
       }
-      onError(result.message || `Failed to ${action} user`);
+      onError(result.message || t('host.userSection.failedToPerformAction', { action }));
       return { success: false, message: result.message };
     } catch (err) {
-      const errorMsg = `Error performing ${action}: ${err.message}`;
+      const errorMsg = t('host.userSection.errorPerformingAction', {
+        action,
+        message: err.message,
+      });
       onError(errorMsg);
       return { success: false, message: errorMsg };
     } finally {
@@ -209,10 +214,10 @@ const UserSection = ({ server, onError }) => {
         setSelectedUser({ ...user, attributes: result.data });
         setShowDetailsModal(true);
       } else {
-        onError(result.message || 'Failed to load user details');
+        onError(result.message || t('host.userSection.failedToLoadUserDetails'));
       }
     } catch (err) {
-      onError(`Error loading user details: ${err.message}`);
+      onError(t('host.userSection.errorLoadingUserDetails', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -236,10 +241,10 @@ const UserSection = ({ server, onError }) => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">User Management</h2>
+        <h2 className="fs-5 fw-bold">{t('host.userSection.userManagement')}</h2>
         <p>
-          Manage system users on <strong>{server.hostname}</strong>. Create, modify, and delete user
-          accounts, set passwords, and manage user permissions.
+          {t('host.userSection.manageUsersIntroPrefix')} <strong>{server.hostname}</strong>
+          {t('host.userSection.manageUsersIntroSuffix')}
         </p>
       </div>
 
@@ -250,13 +255,13 @@ const UserSection = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-username">
-                  Filter by Username
+                  {t('host.userSection.filterByUsername')}
                 </label>
                 <input
                   id="filter-username"
                   className="form-control"
                   type="text"
-                  placeholder="Enter username pattern..."
+                  placeholder={t('host.userSection.enterUsernamePattern')}
                   value={filters.pattern}
                   onChange={e => handleFilterChange('pattern', e.target.value)}
                 />
@@ -265,7 +270,7 @@ const UserSection = ({ server, onError }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-include-system">
-                  Include System Users
+                  {t('host.userSection.includeSystemUsers')}
                 </label>
                 <div className="form-check form-switch">
                   <input
@@ -277,7 +282,7 @@ const UserSection = ({ server, onError }) => {
                     onChange={e => handleFilterChange('includeSystem', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="filter-include-system">
-                    Show All
+                    {t('host.userSection.showAll')}
                   </label>
                 </div>
               </div>
@@ -285,7 +290,7 @@ const UserSection = ({ server, onError }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-limit">
-                  Limit Results
+                  {t('host.userSection.limitResults')}
                 </label>
                 <select
                   id="filter-limit"
@@ -293,10 +298,10 @@ const UserSection = ({ server, onError }) => {
                   value={filters.limit}
                   onChange={e => handleFilterChange('limit', parseInt(e.target.value))}
                 >
-                  <option value={25}>25 Users</option>
-                  <option value={50}>50 Users</option>
-                  <option value={100}>100 Users</option>
-                  <option value={200}>200 Users</option>
+                  <option value={25}>{t('host.userSection.usersCount', { count: 25 })}</option>
+                  <option value={50}>{t('host.userSection.usersCount', { count: 50 })}</option>
+                  <option value={100}>{t('host.userSection.usersCount', { count: 100 })}</option>
+                  <option value={200}>{t('host.userSection.usersCount', { count: 200 })}</option>
                 </select>
               </div>
             </div>
@@ -312,7 +317,7 @@ const UserSection = ({ server, onError }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-sync-alt me-2" />
-                  <span>Refresh</span>
+                  <span>{t('host.userSection.refresh')}</span>
                 </button>
               </div>
             </div>
@@ -328,7 +333,7 @@ const UserSection = ({ server, onError }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-times me-2" />
-                  <span>Clear</span>
+                  <span>{t('host.userSection.clear')}</span>
                 </button>
               </div>
             </div>
@@ -342,7 +347,7 @@ const UserSection = ({ server, onError }) => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center gap-2">
               <h3 className="fs-6 fw-bold mb-0">
-                Users ({users.length})
+                {t('host.userSection.usersHeading', { count: users.length })}
                 {loading && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin" />
@@ -358,7 +363,7 @@ const UserSection = ({ server, onError }) => {
                 disabled={loading}
               >
                 <i className="fas fa-plus me-2" />
-                <span>Create User</span>
+                <span>{t('host.userSection.createUser')}</span>
               </button>
             </div>
           </div>

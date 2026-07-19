@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useRef, useEffect, useContext, memo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useFooter } from '../contexts/FooterContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
@@ -7,24 +8,24 @@ import { taskOperationLabel, transferProgressLine } from '../utils/taskOperation
 
 import TaskDetailModal from './TaskDetailModal';
 
-const renderPriority = task => {
+const renderPriority = (task, t) => {
   const p = task.priority;
   if (p >= 100) {
-    return <span className="text-danger">CRITICAL</span>;
+    return <span className="text-danger">{t('tasks.tasks.priorityCritical')}</span>;
   }
   if (p >= 80) {
-    return <span className="text-warning">HIGH</span>;
+    return <span className="text-warning">{t('tasks.tasks.priorityHigh')}</span>;
   }
   if (p >= 60) {
-    return <span>MEDIUM</span>;
+    return <span>{t('tasks.tasks.priorityMedium')}</span>;
   }
   if (p >= 50) {
-    return <span>SERVICE</span>;
+    return <span>{t('tasks.tasks.priorityService')}</span>;
   }
   if (p >= 40) {
-    return <span className="text-muted">LOW</span>;
+    return <span className="text-muted">{t('tasks.tasks.priorityLow')}</span>;
   }
-  return <span className="text-muted">BG</span>;
+  return <span className="text-muted">{t('tasks.tasks.priorityBg')}</span>;
 };
 
 const renderStatus = task => {
@@ -94,36 +95,44 @@ const truncate = (str, max = 40) => {
   return str.length > max ? `${str.substring(0, max)}...` : str;
 };
 
-export const TASK_COLUMNS = [
-  { key: 'id', label: 'ID', render: task => task.id },
-  { key: 'operation', label: 'Operation', render: task => taskOperationLabel(task.operation) },
-  { key: 'machine_name', label: 'Target', render: task => task.machine_name },
-  { key: 'status', label: 'Status', render: renderStatus },
-  { key: 'progress', label: 'Progress', render: renderProgress },
-  { key: 'priority', label: 'Priority', render: renderPriority },
+export const getTaskColumns = t => [
+  { key: 'id', label: t('tasks.tasks.columnId'), render: task => task.id },
+  {
+    key: 'operation',
+    label: t('tasks.tasks.columnOperation'),
+    render: task => taskOperationLabel(task.operation),
+  },
+  { key: 'machine_name', label: t('tasks.tasks.columnTarget'), render: task => task.machine_name },
+  { key: 'status', label: t('tasks.tasks.columnStatus'), render: renderStatus },
+  { key: 'progress', label: t('tasks.tasks.columnProgress'), render: renderProgress },
+  {
+    key: 'priority',
+    label: t('tasks.tasks.columnPriority'),
+    render: task => renderPriority(task, t),
+  },
   {
     key: 'created_by',
-    label: 'Created By',
+    label: t('tasks.tasks.columnCreatedBy'),
     render: task => task.created_by || '-',
   },
   {
     key: 'created_at',
-    label: 'Created',
+    label: t('tasks.tasks.columnCreated'),
     render: task => formatDate(task.created_at),
   },
   {
     key: 'started_at',
-    label: 'Started',
+    label: t('tasks.tasks.columnStarted'),
     render: task => formatDate(task.started_at),
   },
   {
     key: 'completed_at',
-    label: 'Completed',
+    label: t('tasks.tasks.columnCompleted'),
     render: task => formatDate(task.completed_at),
   },
   {
     key: 'error_message',
-    label: 'Error',
+    label: t('tasks.tasks.columnError'),
     render: task => truncate(task.error_message),
   },
 ];
@@ -168,6 +177,7 @@ TaskRow.propTypes = {
 };
 
 const Tasks = () => {
+  const { t } = useTranslation();
   const { tasks, loadingTasks, tasksError } = useFooter();
   const { tasksScrollPosition, setTasksScrollPosition, taskVisibleColumns } =
     useContext(UserSettings);
@@ -176,7 +186,8 @@ const Tasks = () => {
   const [isScrollRestored, setIsScrollRestored] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
 
-  const visibleColumns = TASK_COLUMNS.filter(col => taskVisibleColumns.includes(col.key));
+  const allColumns = getTaskColumns(t);
+  const visibleColumns = allColumns.filter(col => taskVisibleColumns.includes(col.key));
 
   // Only restore scroll position on initial load or server change
   useEffect(() => {
@@ -217,7 +228,7 @@ const Tasks = () => {
   return (
     <>
       <div onScroll={handleScroll} ref={tableContainerRef} className="has-overflow-y-scroll">
-        {loadingTasks && <p>Loading tasks...</p>}
+        {loadingTasks && <p>{t('tasks.tasks.loading')}</p>}
         {tasksError && <p className="text-danger">{tasksError}</p>}
         {!loadingTasks && !tasksError && (
           <table className="table table-striped">

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getMachineDefaults, getMachineOsTypes } from '../../api/machineAPI';
 import {
@@ -152,6 +153,7 @@ const defaultExternalNetwork = () => ({
 });
 
 const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => {
+  const { t } = useTranslation();
   const [stepIndex, setStepIndex] = useState(0);
   const [maxVisited, setMaxVisited] = useState(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -258,7 +260,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   const fieldInventory = useMemo(
     () => ({
       networks: bridgeOptions,
-      images: [...new Set(templates.map(t => `${t.organization}/${t.box_name}`))],
+      images: [...new Set(templates.map(row => `${row.organization}/${row.box_name}`))],
     }),
     [bridgeOptions, templates]
   );
@@ -269,11 +271,11 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   const templateAvailablePools = useMemo(() => {
     const row =
       templates.find(
-        t =>
-          `${t.organization}/${t.box_name}` === settings.box &&
-          (!settings.box_version || t.version === settings.box_version)
+        entry =>
+          `${entry.organization}/${entry.box_name}` === settings.box &&
+          (!settings.box_version || entry.version === settings.box_version)
       ) ||
-      templates.find(t => `${t.organization}/${t.box_name}` === settings.box) ||
+      templates.find(entry => `${entry.organization}/${entry.box_name}` === settings.box) ||
       null;
     if (row?.available_pools) {
       return row.available_pools;
@@ -425,7 +427,11 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
         if (result.success) {
           setProvisioners(result.data?.provisioners || []);
         } else {
-          setError(`Failed to load provisioners: ${result.message}`);
+          setError(
+            t('machineEdit.machineCreateModal.failedToLoadProvisioners', {
+              message: result.message,
+            })
+          );
         }
       }
     );
@@ -470,16 +476,16 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
         async result => {
           if (!result.success) {
             setCatalogNote(
-              `Template sources unavailable (${result.message}) — enter box values manually.`
+              t('machineEdit.machineCreateModal.templateSourcesUnavailable', {
+                message: result.message,
+              })
             );
             return;
           }
           const list = Array.isArray(result.data?.sources) ? result.data.sources : [];
           const enabled = list.filter(source => source.enabled !== false);
           if (enabled.length === 0) {
-            setCatalogNote(
-              'No template sources configured on the agent (Settings → template_sources or Manage → Templates → Add Registry) — enter box values manually.'
-            );
+            setCatalogNote(t('machineEdit.machineCreateModal.noTemplateSourcesConfigured'));
             return;
           }
           const defaultName = pickDefaultSource(list)?.name;
@@ -525,11 +531,15 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           setRemoteBoxes(merged);
           const catalogNotes = [];
           if (failures.length > 0) {
-            catalogNotes.push(`Catalog unreachable from: ${failures.join('; ')}`);
+            catalogNotes.push(
+              t('machineEdit.machineCreateModal.catalogUnreachable', {
+                failures: failures.join('; '),
+              })
+            );
           }
           if (merged.length === 0 && counts.length > 0) {
             catalogNotes.push(
-              `Registries answered but listed no boxes this host can use (${counts.join(', ')}) — the agent prunes non-virtualbox/foreign-arch boxes; if you expected entries, see the raw payload in the browser console`
+              t('machineEdit.machineCreateModal.noUsableBoxes', { counts: counts.join(', ') })
             );
           }
           setCatalogNote(catalogNotes.join('. '));
@@ -559,7 +569,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     loadZfsFeeds();
     loadMedia();
     loadUplinks();
-  }, [isOpen, currentServer, resetForm, loadZfsFeeds, loadMedia, loadUplinks]);
+  }, [isOpen, currentServer, resetForm, loadZfsFeeds, loadMedia, loadUplinks, t]);
 
   // Re-fetch the feeds a step consumes each time it is ENTERED (Mark:
   // "sometimes the dropdown data is stale") — picker data is only ever as
@@ -931,7 +941,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     // The DSL's live validation pass — the agent re-runs it authoritatively
     // pre-render; visible fields only, required-only-while-visible.
     if (stepId === 'provisioning' && fieldConfig) {
-      const errors = validateAnswers(fieldConfig, properties, roles);
+      const errors = validateAnswers(fieldConfig, properties, roles, t);
       setFieldErrors(errors);
       const names = Object.keys(errors);
       if (names.length > 0) {
@@ -991,8 +1001,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       const names = data.machines.map(machine => machine.machine_name);
       onCompleted({
         message: [
-          data.message || `Multi-host create queued — ${names.length} machines`,
-          `created in order: ${names.join(', ')}`,
+          data.message ||
+            t('machineEdit.machineCreateModal.multiHostCreateQueued', { count: names.length }),
+          t('machineEdit.machineCreateModal.createdInOrder', { names: names.join(', ') }),
           ...warnings.map(warning => warning.message),
         ].join(' — '),
         machineName: names[0] || name.trim(),
@@ -1004,7 +1015,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     }
     onCompleted({
       message: [
-        data.message || 'Creation queued',
+        data.message || t('machineEdit.machineCreateModal.creationQueued'),
         ...warnings.map(warning => warning.message),
       ].join(' — '),
       machineName: data.machine_name || name.trim(),
@@ -1027,7 +1038,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
         onClick={() => setStepIndex(prev => Math.max(prev - 1, 0))}
         disabled={loading || stepIndex === 0}
       >
-        Back
+        {t('machineEdit.machineCreateModal.back')}
       </button>
       <div className="form-check form-switch ms-2">
         <input
@@ -1040,7 +1051,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           disabled={loading}
         />
         <label className="form-check-label" htmlFor="machine-create-advanced">
-          Advanced
+          {t('machineEdit.machineCreateModal.advanced')}
         </label>
       </div>
     </>
@@ -1051,9 +1062,13 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={isLastStep ? handleCreate : handleNext}
-      title={`Create: ${singular}`}
+      title={t('machineEdit.machineCreateModal.createTitle', { resource: singular })}
       icon="fas fa-plus"
-      submitText={isLastStep ? 'Create' : 'Next'}
+      submitText={
+        isLastStep
+          ? t('machineEdit.machineCreateModal.create')
+          : t('machineEdit.machineCreateModal.next')
+      }
       loading={loading}
       showCancelButton
       additionalActions={footerExtras}
@@ -1070,7 +1085,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
               }}
               disabled={loading || index > maxVisited}
             >
-              {step.label}
+              {t(`machineEdit.machineCreateModal.step.${step.id}`)}
             </button>
           </li>
         ))}

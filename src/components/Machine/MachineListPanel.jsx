@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Dropdown from 'react-bootstrap/Dropdown';
+import { useTranslation } from 'react-i18next';
 
 import { provisionMachine } from '../../api/provisioningAPI';
 import { useServers } from '../../contexts/ServerContext';
@@ -68,22 +69,25 @@ const systemLineOf = row => {
 };
 
 /** SHI's status sentence — a human line, not just the badge. */
-const statusSentence = (row, singular) => {
+const statusSentence = (row, singular, t) => {
   const status = (row.status || '').toLowerCase();
   switch (status) {
     case 'running':
-      return `This ${singular.toLowerCase()} is running.`;
+      return t('machine.machineListPanel.runningSentence', { noun: singular.toLowerCase() });
     case 'stopped':
-      return `This ${singular.toLowerCase()} is stopped.`;
+      return t('machine.machineListPanel.stoppedSentence', { noun: singular.toLowerCase() });
     case 'paused':
-      return `Paused — frozen in RAM; resume to continue.`;
+      return t('machine.machineListPanel.pausedSentence');
     case 'suspended':
-      return `Suspended to disk — start to resume where it left off.`;
+      return t('machine.machineListPanel.suspendedSentence');
     case 'configured':
-      return `Configured but never started.`;
+      return t('machine.machineListPanel.configuredSentence');
     case 'starting':
     case 'stopping':
-      return `The ${singular.toLowerCase()} is ${status}…`;
+      return t('machine.machineListPanel.transitioningSentence', {
+        noun: singular.toLowerCase(),
+        status,
+      });
     default:
       return '';
   }
@@ -103,6 +107,7 @@ const matchesFilter = (row, needle) => {
 };
 
 const MachineListPanel = ({ currentServer, user, onSelect }) => {
+  const { t } = useTranslation();
   const {
     getAllMachines,
     startMachine,
@@ -142,10 +147,15 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
       setRows(result.data?.machines || []);
       setMsg('');
     } else {
-      setMsg(`Failed to load ${plural.toLowerCase()}: ${result.message}`);
+      setMsg(
+        t('machine.machineListPanel.loadFailed', {
+          plural: plural.toLowerCase(),
+          message: result.message,
+        })
+      );
     }
     setLoading(false);
-  }, [currentServer, getAllMachines, plural]);
+  }, [currentServer, getAllMachines, plural, t]);
 
   useEffect(() => {
     loadRows();
@@ -181,8 +191,13 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
     );
     setMsg(
       result.success
-        ? result.data?.message || `${action} queued for ${row.name}`
-        : `${action} failed for ${row.name}: ${result.message}`
+        ? result.data?.message ||
+            t('machine.machineListPanel.actionQueued', { action, name: row.name })
+        : t('machine.machineListPanel.actionFailed', {
+            action,
+            name: row.name,
+            message: result.message,
+          })
     );
     setLoading(false);
     // Statuses move through the task queue — refresh shortly after queueing.
@@ -199,11 +214,15 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
           </h4>
           <div className="d-flex align-items-center gap-2">
             <span className="d-inline-flex">
-              <span className="badge text-bg-secondary">Running</span>
+              <span className="badge text-bg-secondary">
+                {t('machine.machineListPanel.runningBadge')}
+              </span>
               <span className="badge text-bg-success">{runningCount}</span>
             </span>
             <span className="d-inline-flex">
-              <span className="badge text-bg-secondary">Stopped</span>
+              <span className="badge text-bg-secondary">
+                {t('machine.machineListPanel.stoppedBadge')}
+              </span>
               <span className="badge text-bg-danger">{rows.length - runningCount}</span>
             </span>
             <button
@@ -220,19 +239,25 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
         <input
           className="form-control form-control-sm mb-3"
           type="search"
-          placeholder={`Filter by name, server ID, tag, or provisioner…`}
-          aria-label={`Filter ${plural.toLowerCase()}`}
+          placeholder={t('machine.machineListPanel.filterPlaceholder')}
+          aria-label={t('machine.machineListPanel.filterAriaLabel', {
+            plural: plural.toLowerCase(),
+          })}
           value={filter}
           onChange={e => setFilter(e.target.value)}
         />
 
         {msg && <div className="alert alert-info py-2">{msg}</div>}
-        {loading && rows.length === 0 && <p className="text-muted">Loading…</p>}
+        {loading && rows.length === 0 && (
+          <p className="text-muted">{t('machine.machineListPanel.loading')}</p>
+        )}
         {!loading && rows.length === 0 && (
-          <p className="text-muted mb-0">No {plural.toLowerCase()} on this host yet.</p>
+          <p className="text-muted mb-0">
+            {t('machine.machineListPanel.noneOnHost', { plural: plural.toLowerCase() })}
+          </p>
         )}
         {rows.length > 0 && visible.length === 0 && (
-          <p className="text-muted mb-0">Nothing matches the filter.</p>
+          <p className="text-muted mb-0">{t('machine.machineListPanel.noMatch')}</p>
         )}
 
         <div className="d-flex flex-column gap-2">
@@ -241,7 +266,7 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
             const roles = rolesOf(row);
             const status = (row.status || 'unknown').toLowerCase();
             const systemLine = systemLineOf(row);
-            const sentence = statusSentence(row, singular);
+            const sentence = statusSentence(row, singular, t);
             return (
               <div className="border rounded p-2" key={row.name}>
                 <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
@@ -254,9 +279,17 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                       {row.name}
                     </button>
                     <div className="small text-muted">
-                      {row.server_id && <span className="me-2">ID {row.server_id}</span>}
+                      {row.server_id && (
+                        <span className="me-2">
+                          {t('machine.machineListPanel.idPrefix', { serverId: row.server_id })}
+                        </span>
+                      )}
                       {provisionerRef && <code className="small me-2">{provisionerRef}</code>}
-                      {roles.length > 0 && <span>Roles: {roles.join(', ')}</span>}
+                      {roles.length > 0 && (
+                        <span>
+                          {t('machine.machineListPanel.rolesLabel', { roles: roles.join(', ') })}
+                        </span>
+                      )}
                     </div>
                     {systemLine && <div className="small text-muted">{systemLine}</div>}
                     {sentence && <div className="small text-muted fst-italic">{sentence}</div>}
@@ -267,9 +300,15 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                       {row.backing && (
                         <span className="badge text-bg-secondary">{row.backing}</span>
                       )}
-                      {row.is_orphaned && <span className="badge text-bg-warning">Orphaned</span>}
+                      {row.is_orphaned && (
+                        <span className="badge text-bg-warning">
+                          {t('machine.machineListPanel.orphanedBadge')}
+                        </span>
+                      )}
                       {row.auto_discovered && (
-                        <span className="badge text-bg-info">Auto-discovered</span>
+                        <span className="badge text-bg-info">
+                          {t('machine.machineListPanel.autoDiscoveredBadge')}
+                        </span>
                       )}
                       {(Array.isArray(row.tags) ? row.tags : []).map(tag => (
                         <span className="badge text-bg-light" key={String(tag)}>
@@ -282,7 +321,9 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-info"
-                      title={`View ${singular.toLowerCase()}`}
+                      title={t('machine.machineListPanel.viewTooltip', {
+                        noun: singular.toLowerCase(),
+                      })}
                       onClick={() => onSelect(row.name)}
                     >
                       <i className="fas fa-eye" />
@@ -291,7 +332,7 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-success"
-                        title="Start"
+                        title={t('machine.machineListPanel.startTooltip')}
                         onClick={() => handleLifecycle(row, 'start')}
                         disabled={loading}
                       >
@@ -304,7 +345,7 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                           <button
                             type="button"
                             className="btn btn-sm btn-outline-warning"
-                            title="Pause (freeze in RAM)"
+                            title={t('machine.machineListPanel.pauseTooltip')}
                             onClick={() => handleLifecycle(row, 'pause')}
                             disabled={loading}
                           >
@@ -315,7 +356,7 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                           <button
                             type="button"
                             className="btn btn-sm btn-outline-warning"
-                            title="Suspend to disk — start or resume continues where it left off"
+                            title={t('machine.machineListPanel.suspendTooltip')}
                             onClick={() => handleLifecycle(row, 'suspend')}
                             disabled={loading}
                           >
@@ -325,7 +366,7 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-danger"
-                          title="Shutdown"
+                          title={t('machine.machineListPanel.shutdownTooltip')}
                           onClick={() => handleLifecycle(row, 'stop')}
                           disabled={loading}
                         >
@@ -339,7 +380,7 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-success"
-                          title="Resume"
+                          title={t('machine.machineListPanel.resumeTooltip')}
                           onClick={() => handleLifecycle(row, 'resume')}
                           disabled={loading}
                         >
@@ -350,7 +391,7 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-warning"
-                        title="Provision"
+                        title={t('machine.machineListPanel.provisionTooltip')}
                         onClick={() => handleLifecycle(row, 'provision')}
                         disabled={loading}
                       >
@@ -359,7 +400,11 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                     )}
                     {(canOperate || cloneAvailable) && (
                       <Dropdown align="end">
-                        <Dropdown.Toggle variant="outline-secondary" size="sm" title="More actions">
+                        <Dropdown.Toggle
+                          variant="outline-secondary"
+                          size="sm"
+                          title={t('machine.machineListPanel.moreActionsTooltip')}
+                        >
                           <i className="fas fa-gear" />
                         </Dropdown.Toggle>
                         <Dropdown.Menu>
@@ -370,7 +415,7 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                               onClick={() => handleLifecycle(row, 'restart')}
                             >
                               <i className="fas fa-redo text-warning me-2" />
-                              Restart
+                              {t('machine.machineListPanel.restartItem')}
                             </Dropdown.Item>
                           )}
                           {cloneAvailable && (
@@ -380,7 +425,7 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                               onClick={() => setCloneTarget(row)}
                             >
                               <i className="fas fa-clone me-2" />
-                              Clone…
+                              {t('machine.machineListPanel.cloneItem')}
                             </Dropdown.Item>
                           )}
                           <Dropdown.Item
@@ -389,7 +434,7 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                             onClick={() => onSelect(row.name)}
                           >
                             <i className="fas fa-eye text-info me-2" />
-                            Open
+                            {t('machine.machineListPanel.openItem')}
                           </Dropdown.Item>
                         </Dropdown.Menu>
                       </Dropdown>

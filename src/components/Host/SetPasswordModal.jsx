@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import FormModal from '../common/FormModal';
 import RevealInput from '../common/RevealInput';
 
 const SetPasswordModal = ({ user, onClose, onSuccess }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     password: '',
@@ -25,17 +27,17 @@ const SetPasswordModal = ({ user, onClose, onSuccess }) => {
     e.preventDefault();
 
     if (!formData.password) {
-      setError('Password is required');
+      setError(t('host.setPasswordModal.passwordRequired'));
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('host.setPasswordModal.passwordMismatch'));
       return;
     }
 
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
+      setError(t('host.setPasswordModal.passwordTooShort'));
       return;
     }
 
@@ -62,13 +64,13 @@ const SetPasswordModal = ({ user, onClose, onSuccess }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Set Password for ${user.username}`}
+      title={t('host.setPasswordModal.title', { username: user.username })}
       icon="fas fa-key"
-      submitText="Set Password"
+      submitText={t('host.setPasswordModal.submit')}
       submitIcon="fas fa-key"
       loading={loading}
       showCancelButton
-      aria-label={`Set password for user ${user.username}`}
+      aria-label={t('host.setPasswordModal.ariaLabel', { username: user.username })}
     >
       {error && (
         <div className="alert alert-danger mb-4">
@@ -79,7 +81,7 @@ const SetPasswordModal = ({ user, onClose, onSuccess }) => {
 
       <div className="mb-3">
         <label className="form-label" htmlFor="new-password-input">
-          New Password <span className="text-danger">*</span>
+          {t('host.setPasswordModal.newPassword')} <span className="text-danger">*</span>
         </label>
         <RevealInput
           id="new-password-input"
@@ -87,14 +89,14 @@ const SetPasswordModal = ({ user, onClose, onSuccess }) => {
           onChange={e => handleInputChange('password', e.target.value)}
           required
           disabled={loading}
-          placeholder="Enter new password"
+          placeholder={t('host.setPasswordModal.newPasswordPlaceholder')}
         />
-        <p className="form-text text-muted">Password must be at least 8 characters long</p>
+        <p className="form-text text-muted">{t('host.setPasswordModal.passwordHelp')}</p>
       </div>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="confirm-password-input">
-          Confirm Password <span className="text-danger">*</span>
+          {t('host.setPasswordModal.confirmPassword')} <span className="text-danger">*</span>
         </label>
         <RevealInput
           id="confirm-password-input"
@@ -102,7 +104,7 @@ const SetPasswordModal = ({ user, onClose, onSuccess }) => {
           onChange={e => handleInputChange('confirmPassword', e.target.value)}
           required
           disabled={loading}
-          placeholder="Confirm new password"
+          placeholder={t('host.setPasswordModal.confirmPasswordPlaceholder')}
         />
       </div>
 
@@ -120,12 +122,10 @@ const SetPasswordModal = ({ user, onClose, onSuccess }) => {
             disabled={loading}
           />
           <label className="form-check-label" htmlFor="set-password-force-change">
-            Force password change on next login
+            {t('host.setPasswordModal.forceChange')}
           </label>
         </div>
-        <p className="form-text text-muted">
-          User will be required to change password on their next login
-        </p>
+        <p className="form-text text-muted">{t('host.setPasswordModal.forceChangeHelp')}</p>
       </div>
 
       <div className="mb-3">
@@ -140,12 +140,10 @@ const SetPasswordModal = ({ user, onClose, onSuccess }) => {
             disabled={loading}
           />
           <label className="form-check-label" htmlFor="set-password-unlock-account">
-            Unlock account if locked
+            {t('host.setPasswordModal.unlockAccount')}
           </label>
         </div>
-        <p className="form-text text-muted">
-          Automatically unlock the account when setting the password
-        </p>
+        <p className="form-text text-muted">{t('host.setPasswordModal.unlockAccountHelp')}</p>
       </div>
     </FormModal>
   );

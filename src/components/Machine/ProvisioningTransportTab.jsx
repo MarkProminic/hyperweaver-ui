@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { OptionalBoolSelect } from './ProvisioningVarRows';
 
@@ -15,6 +16,7 @@ import { OptionalBoolSelect } from './ProvisioningVarRows';
 const TRANSPORTS = ['negotiate', 'ssl', 'ntlm', 'plaintext', 'kerberos'];
 
 const ProvisioningTransportTab = ({ settings, onChange, disabled }) => {
+  const { t } = useTranslation();
   const communicator = settings?.communicator ?? settings?.vagrant_communicator ?? '';
   const port = settings?.winrm_port ?? settings?.vagrant_winrm_port ?? '';
   const transport = settings?.winrm_transport ?? settings?.vagrant_winrm_transport ?? '';
@@ -30,15 +32,16 @@ const ProvisioningTransportTab = ({ settings, onChange, disabled }) => {
   return (
     <div>
       <p className="form-text text-muted mt-0 mb-2">
-        How the agent reaches the guest. <code>ssh</code> (the default) carries everything;{' '}
-        <code>winrm</code> is for Windows guests — folder sync, ansible-local, and docker skip
-        loudly over it, remote playbooks and scripts ride host-side ansible. Credentials stay the
-        machine&apos;s SSH user/password (Machine Settings → Credentials).
+        {t('provisioning.provisioningTransportTab.intro1')} <code>ssh</code>{' '}
+        {t('provisioning.provisioningTransportTab.intro2')} <code>winrm</code>{' '}
+        {t('provisioning.provisioningTransportTab.intro3')}
       </p>
 
       <div className="hw-rc-fields">
         <span className="hw-field">
-          <label htmlFor="prov-transport-communicator">communicator</label>
+          <label htmlFor="prov-transport-communicator">
+            {t('provisioning.provisioningTransportTab.communicatorLabel')}
+          </label>
           <select
             id="prov-transport-communicator"
             className="form-select form-select-sm w-auto"
@@ -55,7 +58,9 @@ const ProvisioningTransportTab = ({ settings, onChange, disabled }) => {
         {communicator === 'winrm' && (
           <>
             <span className="hw-field">
-              <label htmlFor="prov-transport-port">winrm port</label>
+              <label htmlFor="prov-transport-port">
+                {t('provisioning.provisioningTransportTab.winrmPortLabel')}
+              </label>
               <input
                 id="prov-transport-port"
                 className="form-control form-control-sm hw-field-tiny"
@@ -71,7 +76,9 @@ const ProvisioningTransportTab = ({ settings, onChange, disabled }) => {
               />
             </span>
             <span className="hw-field">
-              <label htmlFor="prov-transport-mode">winrm transport</label>
+              <label htmlFor="prov-transport-mode">
+                {t('provisioning.provisioningTransportTab.winrmTransportLabel')}
+              </label>
               <select
                 id="prov-transport-mode"
                 className="form-select form-select-sm w-auto"
@@ -89,7 +96,7 @@ const ProvisioningTransportTab = ({ settings, onChange, disabled }) => {
             </span>
             <OptionalBoolSelect
               id="prov-transport-sslverify"
-              label="ssl peer verification"
+              label={t('provisioning.provisioningTransportTab.sslPeerVerificationLabel')}
               value={sslVerify}
               disabled={disabled}
               onChange={value => onChange('winrm_ssl_peer_verification', value)}
@@ -100,9 +107,8 @@ const ProvisioningTransportTab = ({ settings, onChange, disabled }) => {
 
       {hasOldSpelling && (
         <p className="form-text text-muted mb-0">
-          This document also carries the old <code>vagrant_*</code> spelling of one or more of these
-          keys — it stays verbatim (documents are never rewritten); the agents use the new spelling
-          and narrate the shadowed key.
+          {t('provisioning.provisioningTransportTab.oldSpellingIntro')} <code>vagrant_*</code>{' '}
+          {t('provisioning.provisioningTransportTab.oldSpellingRest')}
         </p>
       )}
     </div>

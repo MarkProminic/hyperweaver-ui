@@ -1,21 +1,27 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import ContentModal from '../common/ContentModal';
 
 const RoleDetailsModal = ({ role, onClose }) => {
+  const { t } = useTranslation();
   const formatValue = value => {
     if (value === null || value === undefined || value === '') {
-      return <span className="text-muted">N/A</span>;
+      return <span className="text-muted">{t('host.roleDetailsModal.notAvailable')}</span>;
     }
     if (Array.isArray(value)) {
-      return value.length > 0 ? value.join(', ') : <span className="text-muted">None</span>;
+      return value.length > 0 ? (
+        value.join(', ')
+      ) : (
+        <span className="text-muted">{t('host.roleDetailsModal.none')}</span>
+      );
     }
     return value;
   };
 
   const formatShell = shell => {
     if (!shell) {
-      return 'N/A';
+      return t('host.roleDetailsModal.notAvailable');
     }
     return shell;
   };
@@ -33,7 +39,7 @@ const RoleDetailsModal = ({ role, onClose }) => {
         <div className="col">
           <h4 className="fs-5 fw-bold">
             <i className="fas fa-info-circle me-2" />
-            <span>Basic Information</span>
+            <span>{t('host.roleDetailsModal.basicInformation')}</span>
           </h4>
 
           <div className="table-responsive">
@@ -41,25 +47,25 @@ const RoleDetailsModal = ({ role, onClose }) => {
               <tbody>
                 <tr>
                   <td>
-                    <strong>Role Name</strong>
+                    <strong>{t('host.roleDetailsModal.roleName')}</strong>
                   </td>
                   <td className="font-monospace">{role.rolename}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Comment</strong>
+                    <strong>{t('host.roleDetailsModal.comment')}</strong>
                   </td>
                   <td>{formatValue(role.comment)}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Shell</strong>
+                    <strong>{t('host.roleDetailsModal.shell')}</strong>
                   </td>
                   <td className="font-monospace">{formatShell(role.shell)}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Home Directory</strong>
+                    <strong>{t('host.roleDetailsModal.homeDirectory')}</strong>
                   </td>
                   <td className="font-monospace">{formatValue(role.home)}</td>
                 </tr>
@@ -72,7 +78,7 @@ const RoleDetailsModal = ({ role, onClose }) => {
         <div className="col">
           <h4 className="fs-5 fw-bold">
             <i className="fas fa-shield-alt me-2" />
-            <span>RBAC Configuration</span>
+            <span>{t('host.roleDetailsModal.rbacConfiguration')}</span>
           </h4>
 
           <div className="table-responsive">
@@ -80,7 +86,7 @@ const RoleDetailsModal = ({ role, onClose }) => {
               <tbody>
                 <tr>
                   <td>
-                    <strong>Authorizations</strong>
+                    <strong>{t('host.roleDetailsModal.authorizations')}</strong>
                   </td>
                   <td>
                     {role.authorizations && role.authorizations.length > 0 ? (
@@ -92,14 +98,14 @@ const RoleDetailsModal = ({ role, onClose }) => {
                         ))}
                       </div>
                     ) : (
-                      <span className="text-muted">None</span>
+                      <span className="text-muted">{t('host.roleDetailsModal.none')}</span>
                     )}
                   </td>
                 </tr>
 
                 <tr>
                   <td>
-                    <strong>Profiles</strong>
+                    <strong>{t('host.roleDetailsModal.profiles')}</strong>
                   </td>
                   <td>
                     {role.profiles && role.profiles.length > 0 ? (
@@ -111,7 +117,7 @@ const RoleDetailsModal = ({ role, onClose }) => {
                         ))}
                       </div>
                     ) : (
-                      <span className="text-muted">None</span>
+                      <span className="text-muted">{t('host.roleDetailsModal.none')}</span>
                     )}
                   </td>
                 </tr>
@@ -125,38 +131,29 @@ const RoleDetailsModal = ({ role, onClose }) => {
       <hr />
       <h4 className="fs-6 fw-bold">
         <i className="fas fa-user-friends me-2" />
-        <span>Role Usage</span>
+        <span>{t('host.roleDetailsModal.roleUsage')}</span>
       </h4>
 
       <div>
         <div className="alert alert-secondary">
           <p>
-            <strong>How Roles Work:</strong>
+            <strong>{t('host.roleDetailsModal.howRolesWork')}</strong>
           </p>
           <ul>
-            <li>Roles are special accounts that provide collections of privileges</li>
-            <li>
-              Users can be granted the ability to assume roles using <code>su</code> or{' '}
-              <code>pfexec</code>
-            </li>
-            <li>
-              When a user assumes a role, they gain the role&apos;s authorizations and profiles
-            </li>
-            <li>
-              Roles typically use the profile shell (<code>/bin/pfsh</code>) for RBAC enforcement
-            </li>
-            <li>Users must be explicitly granted permission to assume specific roles</li>
+            <li>{t('host.roleDetailsModal.rolesAreSpecialAccounts')}</li>
+            <li>{t('host.roleDetailsModal.usersCanBeGrantedAbility')}</li>
+            <li>{t('host.roleDetailsModal.whenUserAssumesRole')}</li>
+            <li>{t('host.roleDetailsModal.rolesTypicallyUseProfileShell')}</li>
+            <li>{t('host.roleDetailsModal.usersMustBeExplicitlyGranted')}</li>
           </ul>
         </div>
 
         <div className="alert alert-info">
           <p>
-            <strong>Assigning Roles to Users:</strong>
+            <strong>{t('host.roleDetailsModal.assigningRolesToUsers')}</strong>
           </p>
           <p>
-            To allow users to assume this role, edit their user account and add &quot;
-            <strong>{role.rolename}</strong>&quot; to their roles list in the User Management
-            section.
+            {t('host.roleDetailsModal.toAllowUsersToAssumeThisRole', { rolename: role.rolename })}
           </p>
         </div>
       </div>
@@ -165,13 +162,13 @@ const RoleDetailsModal = ({ role, onClose }) => {
       {role.shell && (
         <div className="alert alert-warning">
           <p>
-            <strong>Shell Configuration:</strong>
+            <strong>{t('host.roleDetailsModal.shellConfiguration')}</strong>
           </p>
           <p>
-            This role uses <code>{role.shell}</code>.
+            {t('host.roleDetailsModal.thisRoleUses', { shell: role.shell })}
             {role.shell === '/bin/pfsh'
-              ? ' This is the recommended profile shell for RBAC roles.'
-              : ' Consider using /bin/pfsh for proper RBAC privilege enforcement.'}
+              ? ` ${t('host.roleDetailsModal.recommendedProfileShell')}`
+              : ` ${t('host.roleDetailsModal.considerUsingProfileShell')}`}
           </p>
         </div>
       )}

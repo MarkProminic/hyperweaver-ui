@@ -1,11 +1,11 @@
 import Highcharts from '../Highcharts';
 
-const SUMMARY_TITLE_MAP = {
-  rx: 'RX Bandwidth (Download) - All Interfaces',
-  tx: 'TX Bandwidth (Upload) - All Interfaces',
-  read: 'Read Bandwidth - All Storage Devices',
-  write: 'Write Bandwidth - All Storage Devices',
-  total: 'Total Bandwidth (Combined) - All Devices',
+const SUMMARY_TITLE_KEYS = {
+  rx: 'host.expandedChartOptions.summaryRx',
+  tx: 'host.expandedChartOptions.summaryTx',
+  read: 'host.expandedChartOptions.summaryRead',
+  write: 'host.expandedChartOptions.summaryWrite',
+  total: 'host.expandedChartOptions.summaryTotal',
 };
 
 const createChartConfig = ({
@@ -96,21 +96,21 @@ const createChartConfig = ({
   },
 });
 
-const createBandwidthSeries = data => [
+const createBandwidthSeries = (data, t) => [
   {
-    name: 'Read',
+    name: t('host.expandedChartOptions.seriesRead'),
     data: data.readData || [],
     color: '#64b5f6',
     fillOpacity: 0.3,
   },
   {
-    name: 'Write',
+    name: t('host.expandedChartOptions.seriesWrite'),
     data: data.writeData || [],
     color: '#ff9800',
     fillOpacity: 0.3,
   },
   {
-    name: 'Total',
+    name: t('host.expandedChartOptions.seriesTotal'),
     data: data.totalData || [],
     color: '#4caf50',
     fillOpacity: 0.2,
@@ -118,27 +118,26 @@ const createBandwidthSeries = data => [
   },
 ];
 
-const getBandwidthChartOptions = (id, titleSuffix, data) =>
+const getBandwidthChartOptions = (titleText, data, t) =>
   createChartConfig({
-    titleText: `${id} - ${titleSuffix}`,
-    yAxisTitle: 'Bandwidth (MB/s)',
+    titleText,
+    yAxisTitle: t('host.expandedChartOptions.axisBandwidthMBs'),
     tooltipSuffix: ' MB/s',
     animation: Highcharts.svg,
     marginRight: 10,
     tickPixelInterval: 150,
-    series: createBandwidthSeries(data),
+    series: createBandwidthSeries(data, t),
   });
 
-const isStorageBandwidth = summaryType =>
-  summaryType === 'read' ||
-  summaryType === 'write' ||
-  (summaryType === 'total' && SUMMARY_TITLE_MAP[summaryType].includes('Storage'));
+const isStorageBandwidth = summaryType => summaryType === 'read' || summaryType === 'write';
 
-const getSummaryChartOptions = (summaryType, chartData) => {
+const getSummaryChartOptions = (summaryType, chartData, t) => {
   const storageBw = isStorageBandwidth(summaryType);
   return createChartConfig({
-    titleText: SUMMARY_TITLE_MAP[summaryType],
-    yAxisTitle: storageBw ? 'Bandwidth (MB/s)' : 'Bandwidth (Mbps)',
+    titleText: t(SUMMARY_TITLE_KEYS[summaryType]),
+    yAxisTitle: storageBw
+      ? t('host.expandedChartOptions.axisBandwidthMBs')
+      : t('host.expandedChartOptions.axisBandwidthMbps'),
     tooltipSuffix: storageBw ? ' MB/s' : ' Mbps',
     marginRight: 10,
     tickPixelInterval: 150,
@@ -155,34 +154,34 @@ const getSummaryChartOptions = (summaryType, chartData) => {
   });
 };
 
-const getArcMemoryChartOptions = arcData =>
+const getArcMemoryChartOptions = (arcData, t) =>
   createChartConfig({
-    titleText: 'ZFS ARC Memory Allocation',
+    titleText: t('host.expandedChartOptions.arcMemoryTitle'),
     titleFontSize: '20px',
-    yAxisTitle: 'Memory (GB)',
+    yAxisTitle: t('host.expandedChartOptions.axisMemoryGb'),
     tooltipSuffix: ' GB',
     series: [
       {
-        name: 'ARC Size',
+        name: t('host.expandedChartOptions.seriesArcSize'),
         data: arcData.arcSize || [],
         color: '#64b5f6',
         lineWidth: 4,
       },
       {
-        name: 'Target Size',
+        name: t('host.expandedChartOptions.seriesTargetSize'),
         data: arcData.arcTargetSize || [],
         color: '#9c27b0',
         lineWidth: 3,
         dashStyle: 'Dash',
       },
       {
-        name: 'MRU Size',
+        name: t('host.expandedChartOptions.seriesMruSize'),
         data: arcData.mruSize || [],
         color: '#4caf50',
         lineWidth: 3,
       },
       {
-        name: 'MFU Size',
+        name: t('host.expandedChartOptions.seriesMfuSize'),
         data: arcData.mfuSize || [],
         color: '#ff9800',
         lineWidth: 3,
@@ -190,28 +189,28 @@ const getArcMemoryChartOptions = arcData =>
     ],
   });
 
-const getArcEfficiencyChartOptions = arcData =>
+const getArcEfficiencyChartOptions = (arcData, t) =>
   createChartConfig({
-    titleText: 'ZFS ARC Cache Efficiency',
+    titleText: t('host.expandedChartOptions.arcEfficiencyTitle'),
     titleFontSize: '20px',
-    yAxisTitle: 'Efficiency (%)',
+    yAxisTitle: t('host.expandedChartOptions.axisEfficiencyPct'),
     yAxisMax: 100,
     tooltipSuffix: '%',
     series: [
       {
-        name: 'Hit Ratio',
+        name: t('host.expandedChartOptions.seriesHitRatio'),
         data: arcData.hitRatio || [],
         color: '#2ecc71',
         lineWidth: 4,
       },
       {
-        name: 'Demand Efficiency',
+        name: t('host.expandedChartOptions.seriesDemandEfficiency'),
         data: arcData.dataDemandEfficiency || [],
         color: '#e74c3c',
         lineWidth: 3,
       },
       {
-        name: 'Prefetch Efficiency',
+        name: t('host.expandedChartOptions.seriesPrefetchEfficiency'),
         data: arcData.dataPrefetchEfficiency || [],
         color: '#f39c12',
         lineWidth: 3,
@@ -219,16 +218,16 @@ const getArcEfficiencyChartOptions = arcData =>
     ],
   });
 
-const getArcCompressionChartOptions = arcData =>
+const getArcCompressionChartOptions = (arcData, t) =>
   createChartConfig({
-    titleText: 'ZFS ARC Compression Effectiveness',
+    titleText: t('host.expandedChartOptions.arcCompressionTitle'),
     titleFontSize: '20px',
-    yAxisTitle: 'Compression Ratio (x)',
+    yAxisTitle: t('host.expandedChartOptions.axisCompressionRatio'),
     yAxisMin: 1,
     tooltipSuffix: 'x',
     series: [
       {
-        name: 'Compression Ratio',
+        name: t('host.expandedChartOptions.seriesCompressionRatio'),
         data: arcData.compressionRatio || [],
         color: '#8e44ad',
         lineWidth: 4,
@@ -236,46 +235,54 @@ const getArcCompressionChartOptions = arcData =>
     ],
   });
 
-const getChartTitle = (chartId, chartType) => {
+const getChartTitle = (chartId, chartType, t) => {
   if (chartType === 'individual') {
-    return `${chartId} - Bandwidth Detail`;
+    return t('host.expandedChartOptions.individualTitle', { id: chartId });
   }
   if (chartType === 'pool') {
-    return `${chartId} - ZFS Pool I/O Performance`;
+    return t('host.expandedChartOptions.poolTitle', { id: chartId });
   }
   if (chartType.startsWith('summary-')) {
-    return SUMMARY_TITLE_MAP[chartType.replace('summary-', '')];
+    return t(SUMMARY_TITLE_KEYS[chartType.replace('summary-', '')]);
   }
   if (chartType === 'arc-memory') {
-    return 'ZFS ARC Memory Allocation';
+    return t('host.expandedChartOptions.arcMemoryTitle');
   }
   if (chartType === 'arc-efficiency') {
-    return 'ZFS ARC Cache Efficiency';
+    return t('host.expandedChartOptions.arcEfficiencyTitle');
   }
   if (chartType === 'arc-compression') {
-    return 'ZFS ARC Compression Effectiveness';
+    return t('host.expandedChartOptions.arcCompressionTitle');
   }
-  return 'Performance Chart';
+  return t('host.expandedChartOptions.defaultTitle');
 };
 
-const getExpandedChartOptions = (chartId, chartType, chartData, poolChartData, arcChartData) => {
+const getExpandedChartOptions = (chartId, chartType, chartData, poolChartData, arcChartData, t) => {
   if (chartType === 'individual' && chartData[chartId]) {
-    return getBandwidthChartOptions(chartId, 'Bandwidth Detail', chartData[chartId]);
+    return getBandwidthChartOptions(
+      t('host.expandedChartOptions.individualTitle', { id: chartId }),
+      chartData[chartId],
+      t
+    );
   }
   if (chartType === 'pool' && poolChartData?.[chartId]) {
-    return getBandwidthChartOptions(chartId, 'ZFS Pool I/O Performance', poolChartData[chartId]);
+    return getBandwidthChartOptions(
+      t('host.expandedChartOptions.poolTitle', { id: chartId }),
+      poolChartData[chartId],
+      t
+    );
   }
   if (chartType.startsWith('summary-')) {
-    return getSummaryChartOptions(chartType.replace('summary-', ''), chartData);
+    return getSummaryChartOptions(chartType.replace('summary-', ''), chartData, t);
   }
   if (chartType === 'arc-memory' && arcChartData) {
-    return getArcMemoryChartOptions(arcChartData);
+    return getArcMemoryChartOptions(arcChartData, t);
   }
   if (chartType === 'arc-efficiency' && arcChartData) {
-    return getArcEfficiencyChartOptions(arcChartData);
+    return getArcEfficiencyChartOptions(arcChartData, t);
   }
   if (chartType === 'arc-compression' && arcChartData) {
-    return getArcCompressionChartOptions(arcChartData);
+    return getArcCompressionChartOptions(arcChartData, t);
   }
   return {};
 };

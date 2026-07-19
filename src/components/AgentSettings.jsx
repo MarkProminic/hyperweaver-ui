@@ -1,5 +1,6 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { checkAgentUpdate, applyAgentUpdate } from '../api/provisioningAPI';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,6 +18,7 @@ import ApplicationsTab from './ApplicationsTab';
 import HostPageHeader from './Host/HostPageHeader';
 
 const AgentSettings = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { currentServer, makeAgentRequest } = useServers();
   const [settings, setSettings] = useState(null);
@@ -42,7 +44,7 @@ const AgentSettings = () => {
     title: '',
     message: '',
     onConfirm: null,
-    confirmText: 'Confirm',
+    confirmText: t('agentSettings.agentSettings.confirmDefault'),
     variant: 'is-primary',
   });
 
@@ -78,15 +80,19 @@ const AgentSettings = () => {
           setActiveTab(sections[0].name);
         }
       } else {
-        setMsg(`Failed to load settings: ${response.message}`);
+        setMsg(t('agentSettings.agentSettings.failedLoadSettings', { message: response.message }));
       }
     } catch (loadErr) {
       console.error('Error loading settings:', loadErr);
-      setMsg(`Error loading settings: ${loadErr.response?.data?.message || loadErr.message}`);
+      setMsg(
+        t('agentSettings.agentSettings.errorLoadSettings', {
+          message: loadErr.response?.data?.message || loadErr.message,
+        })
+      );
     } finally {
       setLoading(false);
     }
-  }, [currentServer, makeAgentRequest, activeTab]);
+  }, [currentServer, makeAgentRequest, activeTab, t]);
 
   // Schema-driven decoration (sync-file contract 2026-07-05): GET /settings/schema
   // serves per-key metadata — type/description/default/min/max/enum, object fields
@@ -209,10 +215,14 @@ const AgentSettings = () => {
       );
       if (result.success) {
         setMsg(
-          `${result.data?.message || 'Update queued'} (task ${result.data?.task_id}, target ${result.data?.target_version})`
+          t('agentSettings.agentSettings.updateQueuedDetail', {
+            message: result.data?.message || t('agentSettings.agentSettings.updateQueuedFallback'),
+            taskId: result.data?.task_id,
+            targetVersion: result.data?.target_version,
+          })
         );
       } else {
-        setMsg(`Failed to queue update: ${result.message}`);
+        setMsg(t('agentSettings.agentSettings.failedQueueUpdate', { message: result.message }));
       }
     } finally {
       setLoading(false);
@@ -226,10 +236,13 @@ const AgentSettings = () => {
     }
     setConfirmDialog({
       isOpen: true,
-      title: 'Update Agent',
-      message: `Update the agent from ${updateInfo.current_version} to ${updateInfo.latest_version}? The installer is downloaded and hash-verified, then the agent EXITS so it can take over.`,
+      title: t('agentSettings.agentSettings.updateAgentTitle'),
+      message: t('agentSettings.agentSettings.updateAgentMessage', {
+        currentVersion: updateInfo.current_version,
+        latestVersion: updateInfo.latest_version,
+      }),
       onConfirm: performApplyUpdate,
-      confirmText: 'Update Now',
+      confirmText: t('agentSettings.agentSettings.updateNowButton'),
       variant: 'is-warning',
     });
   };
@@ -264,13 +277,17 @@ const AgentSettings = () => {
       );
 
       if (response.success) {
-        setMsg('Settings saved successfully.');
+        setMsg(t('agentSettings.agentSettings.settingsSaved'));
       } else {
-        setMsg(`Failed to save settings: ${response.message}`);
+        setMsg(t('agentSettings.agentSettings.failedSaveSettings', { message: response.message }));
       }
     } catch (saveErr) {
       console.error('Error saving settings:', saveErr);
-      setMsg(`Error saving settings: ${saveErr.response?.data?.message || saveErr.message}`);
+      setMsg(
+        t('agentSettings.agentSettings.errorSaveSettings', {
+          message: saveErr.response?.data?.message || saveErr.message,
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -290,14 +307,18 @@ const AgentSettings = () => {
       );
 
       if (response.success) {
-        setMsg('Backup restored successfully.');
+        setMsg(t('agentSettings.agentSettings.backupRestored'));
         await loadSettings();
       } else {
-        setMsg(`Failed to restore backup: ${response.message}`);
+        setMsg(t('agentSettings.agentSettings.failedRestoreBackup', { message: response.message }));
       }
     } catch (restoreErr) {
       console.error('Error restoring backup:', restoreErr);
-      setMsg(`Error restoring backup: ${restoreErr.response?.data?.message || restoreErr.message}`);
+      setMsg(
+        t('agentSettings.agentSettings.errorRestoreBackup', {
+          message: restoreErr.response?.data?.message || restoreErr.message,
+        })
+      );
     } finally {
       setLoading(false);
       setConfirmDialog(prev => ({ ...prev, isOpen: false }));
@@ -310,10 +331,10 @@ const AgentSettings = () => {
     }
     setConfirmDialog({
       isOpen: true,
-      title: 'Restore Backup',
-      message: `Are you sure you want to restore the configuration from ${filename}? This will overwrite current settings.`,
+      title: t('agentSettings.agentSettings.restoreBackupTitle'),
+      message: t('agentSettings.agentSettings.restoreBackupMessage', { filename }),
       onConfirm: () => performRestoreBackup(filename),
-      confirmText: 'Restore',
+      confirmText: t('agentSettings.agentSettings.restoreButton'),
       variant: 'is-warning',
     });
   };
@@ -321,7 +342,7 @@ const AgentSettings = () => {
   const performRestartServer = async () => {
     try {
       setLoading(true);
-      setMsg('Initiating server restart...');
+      setMsg(t('agentSettings.agentSettings.restartInitiating'));
 
       const response = await makeAgentRequest(
         currentServer.hostname,
@@ -332,14 +353,16 @@ const AgentSettings = () => {
       );
 
       if (response.success) {
-        setMsg('Server restart initiated.');
+        setMsg(t('agentSettings.agentSettings.restartInitiated'));
       } else {
-        setMsg(`Failed to restart server: ${response.message}`);
+        setMsg(t('agentSettings.agentSettings.failedRestartServer', { message: response.message }));
       }
     } catch (restartErr) {
       console.error('Error restarting server:', restartErr);
       setMsg(
-        `Error restarting server: ${restartErr.response?.data?.message || restartErr.message}`
+        t('agentSettings.agentSettings.errorRestartServer', {
+          message: restartErr.response?.data?.message || restartErr.message,
+        })
       );
     } finally {
       setLoading(false);
@@ -353,10 +376,10 @@ const AgentSettings = () => {
     }
     setConfirmDialog({
       isOpen: true,
-      title: 'Restart Server',
-      message: 'Are you sure you want to restart the Agent?',
+      title: t('agentSettings.agentSettings.restartServerTitle'),
+      message: t('agentSettings.agentSettings.restartServerMessage'),
       onConfirm: performRestartServer,
-      confirmText: 'Restart',
+      confirmText: t('agentSettings.agentSettings.restartButton'),
       variant: 'is-danger',
     });
   };
@@ -375,14 +398,18 @@ const AgentSettings = () => {
       );
 
       if (response.success) {
-        setMsg('Backup deleted successfully.');
+        setMsg(t('agentSettings.agentSettings.backupDeleted'));
         await loadBackups(); // Refresh the list
       } else {
-        setMsg(`Failed to delete backup: ${response.message}`);
+        setMsg(t('agentSettings.agentSettings.failedDeleteBackup', { message: response.message }));
       }
     } catch (deleteErr) {
       console.error('Error deleting backup:', deleteErr);
-      setMsg(`Error deleting backup: ${deleteErr.response?.data?.message || deleteErr.message}`);
+      setMsg(
+        t('agentSettings.agentSettings.errorDeleteBackup', {
+          message: deleteErr.response?.data?.message || deleteErr.message,
+        })
+      );
     } finally {
       setLoading(false);
       setConfirmDialog(prev => ({ ...prev, isOpen: false }));
@@ -395,10 +422,10 @@ const AgentSettings = () => {
     }
     setConfirmDialog({
       isOpen: true,
-      title: 'Delete Backup',
-      message: `Are you sure you want to permanently delete the backup ${filename}? This action cannot be undone.`,
+      title: t('agentSettings.agentSettings.deleteBackupTitle'),
+      message: t('agentSettings.agentSettings.deleteBackupMessage', { filename }),
       onConfirm: () => performDeleteBackup(filename),
-      confirmText: 'Delete',
+      confirmText: t('agentSettings.agentSettings.deleteButton'),
       variant: 'is-danger',
     });
   };
@@ -406,15 +433,19 @@ const AgentSettings = () => {
   const createBackup = async () => {
     try {
       setLoading(true);
-      setMsg('Creating backup...');
+      setMsg(t('agentSettings.agentSettings.creatingBackup'));
 
       // Trigger a save which creates a backup automatically
       await saveSettings();
       await loadBackups();
-      setMsg('Backup created successfully');
+      setMsg(t('agentSettings.agentSettings.backupCreated'));
     } catch (backupErr) {
       console.error('Error creating backup:', backupErr);
-      setMsg(`Error creating backup: ${backupErr.response?.data?.message || backupErr.message}`);
+      setMsg(
+        t('agentSettings.agentSettings.errorCreateBackup', {
+          message: backupErr.response?.data?.message || backupErr.message,
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -434,14 +465,16 @@ const AgentSettings = () => {
       );
 
       if (result.success) {
-        setMsg('Zone orchestration enabled successfully');
+        setMsg(t('agentSettings.agentSettings.orchestrationEnabled'));
         await loadOrchestrationStatus();
       } else {
-        setMsg(`Failed to enable orchestration: ${result.message}`);
+        setMsg(
+          t('agentSettings.agentSettings.failedEnableOrchestration', { message: result.message })
+        );
       }
     } catch (enableErr) {
       console.error('Error enabling orchestration:', enableErr);
-      setMsg('Error enabling zone orchestration');
+      setMsg(t('agentSettings.agentSettings.errorEnableOrchestration'));
     } finally {
       setOrchestrationLoading(false);
     }
@@ -461,14 +494,16 @@ const AgentSettings = () => {
       );
 
       if (result.success) {
-        setMsg('Zone orchestration disabled successfully');
+        setMsg(t('agentSettings.agentSettings.orchestrationDisabled'));
         await loadOrchestrationStatus();
       } else {
-        setMsg(`Failed to disable orchestration: ${result.message}`);
+        setMsg(
+          t('agentSettings.agentSettings.failedDisableOrchestration', { message: result.message })
+        );
       }
     } catch (disableErr) {
       console.error('Error disabling orchestration:', disableErr);
-      setMsg('Error disabling zone orchestration');
+      setMsg(t('agentSettings.agentSettings.errorDisableOrchestration'));
     } finally {
       setOrchestrationLoading(false);
     }
@@ -490,35 +525,40 @@ const AgentSettings = () => {
 
       if (result.success) {
         setMsg(
-          `Orchestration test completed: ${result.data.total_machines} machines, estimated ${result.data.estimated_duration}s duration`
+          t('agentSettings.agentSettings.orchestrationTestCompleted', {
+            machines: result.data.total_machines,
+            duration: result.data.estimated_duration,
+          })
         );
         console.log('Orchestration test result:', result.data);
       } else {
-        setMsg(`Failed to test orchestration: ${result.message}`);
+        setMsg(
+          t('agentSettings.agentSettings.failedTestOrchestration', { message: result.message })
+        );
       }
     } catch (testErr) {
       console.error('Error testing orchestration:', testErr);
-      setMsg('Error testing zone orchestration');
+      setMsg(t('agentSettings.agentSettings.errorTestOrchestration'));
     } finally {
       setOrchestrationLoading(false);
     }
   };
 
   if (!user || !canManageSettings(user.role)) {
-    return <div>Access Denied</div>;
+    return <div>{t('agentSettings.agentSettings.accessDenied')}</div>;
   }
 
   return (
     <div className="hw-page-content-scrollable">
       <Helmet>
         <meta charSet="utf-8" />
-        <title>Agent Settings - Hyperweaver</title>
+        <title>{t('agentSettings.agentSettings.pageTitle')}</title>
         <link rel="canonical" href={window.location.origin} />
       </Helmet>
       {/* Use consistent toggle switch styling with main Hyperweaver settings */}
       <div className="container-fluid p-0">
         <div className="card">
-          <HostPageHeader title="Agent Settings">
+          <HostPageHeader title={t('agentSettings.agentSettings.pageHeading')}>
             <button
               type="button"
               className="btn btn-sm btn-primary"
@@ -526,7 +566,7 @@ const AgentSettings = () => {
               disabled={loading || !settings}
             >
               <i className="fas fa-save me-2" />
-              <span>Save</span>
+              <span>{t('agentSettings.agentSettings.saveButton')}</span>
             </button>
             <button
               type="button"
@@ -535,7 +575,7 @@ const AgentSettings = () => {
               disabled={loading}
             >
               <i className="fas fa-download me-2" />
-              <span>Backup</span>
+              <span>{t('agentSettings.agentSettings.backupButton')}</span>
             </button>
             <button
               type="button"
@@ -544,7 +584,7 @@ const AgentSettings = () => {
               disabled={loading}
             >
               <i className="fas fa-history me-2" />
-              <span>Restore</span>
+              <span>{t('agentSettings.agentSettings.restoreButton')}</span>
             </button>
             <button
               type="button"
@@ -553,7 +593,7 @@ const AgentSettings = () => {
               disabled={loading}
             >
               <i className="fas fa-redo me-2" />
-              <span>Restart</span>
+              <span>{t('agentSettings.agentSettings.restartButton')}</span>
             </button>
             {updateInfo && (
               <button
@@ -561,10 +601,16 @@ const AgentSettings = () => {
                 className="btn btn-sm btn-success"
                 onClick={requestApplyUpdate}
                 disabled={loading}
-                title={`Update available: ${updateInfo.latest_version}`}
+                title={t('agentSettings.agentSettings.updateAvailableTooltip', {
+                  version: updateInfo.latest_version,
+                })}
               >
                 <i className="fas fa-circle-up me-2" />
-                <span>Update to {updateInfo.latest_version}</span>
+                <span>
+                  {t('agentSettings.agentSettings.updateToButton', {
+                    version: updateInfo.latest_version,
+                  })}
+                </span>
               </button>
             )}
           </HostPageHeader>
@@ -593,7 +639,7 @@ const AgentSettings = () => {
                   role="tab"
                   aria-selected={activeTab === 'api_management'}
                 >
-                  <span>API Management</span>
+                  <span>{t('agentSettings.agentSettings.apiManagementTab')}</span>
                 </button>
               </li>
               {/* Global secrets store — its own `secrets` token (Mark's
@@ -607,7 +653,7 @@ const AgentSettings = () => {
                     role="tab"
                     aria-selected={activeTab === 'secrets'}
                   >
-                    <span>Global Secrets</span>
+                    <span>{t('agentSettings.agentSettings.globalSecretsTab')}</span>
                   </button>
                 </li>
               )}
@@ -623,7 +669,7 @@ const AgentSettings = () => {
                     role="tab"
                     aria-selected={activeTab === 'applications'}
                   >
-                    <span>Applications</span>
+                    <span>{t('agentSettings.agentSettings.applicationsTab')}</span>
                   </button>
                 </li>
               )}
@@ -634,10 +680,12 @@ const AgentSettings = () => {
             {msg && <div className="alert alert-info py-2 mb-3">{msg}</div>}
             {!currentServer && (
               <div className="alert alert-warning">
-                Please select a host from the navbar to manage its settings.
+                {t('agentSettings.agentSettings.selectHostWarning')}
               </div>
             )}
-            {loading && <p className="text-muted">Loading...</p>}
+            {loading && (
+              <p className="text-muted">{t('agentSettings.agentSettings.loadingText')}</p>
+            )}
             {settings && currentServer && (
               <div className="tab-content">
                 {organizeBySection(settings).map(section => {
@@ -655,7 +703,7 @@ const AgentSettings = () => {
                       {sectionNode?.requires_restart && (
                         <div className="alert alert-warning py-2 mb-3">
                           <i className="fas fa-triangle-exclamation me-2" />
-                          Changes in this section require an agent restart to take effect.
+                          {t('agentSettings.agentSettings.restartRequiredWarning')}
                         </div>
                       )}
 
@@ -680,8 +728,9 @@ const AgentSettings = () => {
                                 .replace(/_/g, ' ')
                                 .replace(/\b\w/g, l => l.toUpperCase())}
                               <span className="badge text-bg-light ms-2">
-                                {directFields.length} setting
-                                {directFields.length !== 1 ? 's' : ''}
+                                {t('agentSettings.agentSettings.settingCount', {
+                                  count: directFields.length,
+                                })}
                               </span>
                             </h2>
                             {sectionHelp && <p className="form-text text-muted">{sectionHelp}</p>}
@@ -707,8 +756,9 @@ const AgentSettings = () => {
                                 {sub.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                 {subFieldCount > 0 && (
                                   <span className="badge text-bg-light ms-2">
-                                    {subFieldCount} setting
-                                    {subFieldCount !== 1 ? 's' : ''}
+                                    {t('agentSettings.agentSettings.settingCount', {
+                                      count: subFieldCount,
+                                    })}
                                   </span>
                                 )}
                               </h3>

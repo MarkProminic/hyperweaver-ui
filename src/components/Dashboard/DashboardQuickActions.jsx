@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { useMode } from '../../contexts/ModeContext';
 import { useServers } from '../../contexts/ServerContext';
@@ -9,69 +10,83 @@ import { resourceLabel } from '../../utils/resourceLabel';
  * Quick action buttons and machine distribution sidebar. All "Zones"/"Machines" wording is
  * capability-driven via resourceLabel (contract C7) — never hardcoded.
  */
-const ZoneDistribution = ({ servers, summary, label }) => (
-  <div>
-    {servers && servers.length > 0 ? (
-      <>
-        {servers
-          .filter(s => s.success && s.data)
-          .map(serverResult => {
-            const zoneCount = serverResult.data.allmachines?.length || 0;
-            const runningCount = serverResult.data.runningmachines?.length || 0;
-            const percentage =
-              summary.totalZones > 0 ? Math.round((zoneCount / summary.totalZones) * 100) : 0;
+const ZoneDistribution = ({ servers, summary, label }) => {
+  const { t } = useTranslation();
+  return (
+    <div>
+      {servers && servers.length > 0 ? (
+        <>
+          {servers
+            .filter(s => s.success && s.data)
+            .map(serverResult => {
+              const zoneCount = serverResult.data.allmachines?.length || 0;
+              const runningCount = serverResult.data.runningmachines?.length || 0;
+              const percentage =
+                summary.totalZones > 0 ? Math.round((zoneCount / summary.totalZones) * 100) : 0;
 
-            return (
-              <div
-                key={`${serverResult.server.hostname}-${serverResult.server.port}`}
-                className="mb-3"
-              >
-                <div className="d-flex justify-content-between mb-1">
-                  <strong className="small">{serverResult.server.hostname}</strong>
-                  <span className="small">
-                    {zoneCount} {resourceLabel(serverResult.server).toLowerCase()} ({percentage}
-                    %)
-                  </span>
-                </div>
+              return (
                 <div
-                  className="progress"
-                  style={{ height: '0.5rem' }}
-                  role="progressbar"
-                  aria-valuenow={zoneCount}
-                  aria-valuemin={0}
-                  aria-valuemax={summary.totalZones || 1}
+                  key={`${serverResult.server.hostname}-${serverResult.server.port}`}
+                  className="mb-3"
                 >
+                  <div className="d-flex justify-content-between mb-1">
+                    <strong className="small">{serverResult.server.hostname}</strong>
+                    <span className="small">
+                      {zoneCount} {resourceLabel(serverResult.server).toLowerCase()} ({percentage}
+                      %)
+                    </span>
+                  </div>
                   <div
-                    className="progress-bar bg-primary"
-                    style={{
-                      width: `${(zoneCount / (summary.totalZones || 1)) * 100}%`,
-                    }}
-                  />
+                    className="progress"
+                    style={{ height: '0.5rem' }}
+                    role="progressbar"
+                    aria-valuenow={zoneCount}
+                    aria-valuemin={0}
+                    aria-valuemax={summary.totalZones || 1}
+                  >
+                    <div
+                      className="progress-bar bg-primary"
+                      style={{
+                        width: `${(zoneCount / (summary.totalZones || 1)) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="small text-muted mb-0">
+                    {t('dashboard.quickActions.machineStatus', {
+                      runningCount,
+                      stoppedCount: zoneCount - runningCount,
+                    })}
+                  </p>
                 </div>
-                <p className="small text-muted mb-0">
-                  {runningCount} running, {zoneCount - runningCount} stopped
-                </p>
-              </div>
-            );
-          })}
+              );
+            })}
 
-        <hr className="my-3" />
+          <hr className="my-3" />
 
-        <div className="text-center">
-          <p className="text-uppercase small fw-semibold text-muted mb-1">Total Infrastructure</p>
-          <p className="h5 mb-1">
-            {summary?.totalZones || 0} {label}
+          <div className="text-center">
+            <p className="text-uppercase small fw-semibold text-muted mb-1">
+              {t('dashboard.quickActions.totalInfrastructure')}
+            </p>
+            <p className="h5 mb-1">
+              {summary?.totalZones || 0} {label}
+            </p>
+            <p className="small text-muted mb-0">
+              {t('dashboard.quickActions.acrossActiveHosts', {
+                onlineServers: summary?.onlineServers || 0,
+              })}
+            </p>
+          </div>
+        </>
+      ) : (
+        <div className="text-center text-muted">
+          <p className="mb-0">
+            {t('dashboard.quickActions.noDataAvailable', { label: label.toLowerCase() })}
           </p>
-          <p className="small text-muted mb-0">Across {summary?.onlineServers || 0} active hosts</p>
         </div>
-      </>
-    ) : (
-      <div className="text-center text-muted">
-        <p className="mb-0">No {label.toLowerCase()} data available</p>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
+};
 
 ZoneDistribution.propTypes = {
   servers: PropTypes.arrayOf(PropTypes.object).isRequired,
@@ -90,6 +105,7 @@ const DashboardQuickActions = ({
   onNavigateServerRegister,
   onNavigateSettings,
 }) => {
+  const { t } = useTranslation();
   const { isDirect } = useMode();
   const { servers: registryServers } = useServers();
   const plural = resourceLabel(registryServers);
@@ -108,7 +124,7 @@ const DashboardQuickActions = ({
           <div className="card-body">
             <h2 className="h4 mb-4 d-flex align-items-center gap-2">
               <i className="fas fa-bolt" />
-              <span>Quick Actions</span>
+              <span>{t('dashboard.quickActions.title')}</span>
             </h2>
 
             <div className="row g-3">
@@ -122,14 +138,14 @@ const DashboardQuickActions = ({
                         onClick={onNavigateZoneRegister}
                       >
                         <i className="fas fa-plus me-2" />
-                        Create New {singular}
+                        {t('dashboard.quickActions.createNew', { singular })}
                       </button>
                     </div>
                   )}
                   <div className="col-12 col-sm-6">
                     <button type="button" className="btn btn-info w-100" onClick={onNavigateZones}>
                       <i className="fas fa-list me-2" />
-                      Manage {plural}
+                      {t('dashboard.quickActions.manage', { plural })}
                     </button>
                   </div>
                 </>
@@ -144,7 +160,7 @@ const DashboardQuickActions = ({
                     onClick={onNavigateServerRegister}
                   >
                     <i className="fas fa-server me-2" />
-                    Add New Host
+                    {t('dashboard.quickActions.addNewHost')}
                   </button>
                 </div>
               )}
@@ -155,7 +171,7 @@ const DashboardQuickActions = ({
                   onClick={onNavigateSettings}
                 >
                   <i className="fas fa-cog me-2" />
-                  Settings
+                  {t('dashboard.quickActions.settings')}
                 </button>
               </div>
             </div>
@@ -169,7 +185,7 @@ const DashboardQuickActions = ({
             <div className="card-body">
               <h2 className="h4 mb-4 d-flex align-items-center gap-2">
                 <i className="fas fa-chart-pie" />
-                <span>{singular} Distribution</span>
+                <span>{t('dashboard.quickActions.distribution', { singular })}</span>
               </h2>
               <ZoneDistribution servers={servers} summary={summary} label={plural} />
             </div>

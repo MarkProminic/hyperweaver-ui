@@ -1,6 +1,7 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +12,7 @@ import { useMode } from '../contexts/ModeContext';
  * @returns {JSX.Element} Landing component
  */
 const Landing = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isAuthenticated, loading } = useAuth();
   const { isDirect, ready: modeReady } = useMode();
@@ -66,14 +68,14 @@ const Landing = () => {
       <section className="min-vh-100 d-flex align-items-center justify-content-center py-4 text-center">
         <Helmet>
           <meta charSet="utf-8" />
-          <title>Hyperweaver - Loading</title>
+          <title>{t('chrome.landing.loadingTitle')}</title>
           <link rel="canonical" href={window.location.origin} />
         </Helmet>
         <div>
           <div className="fs-3">
             <i className="fas fa-spinner fa-spin" />
           </div>
-          <p className="mt-3 mb-0">Checking system status...</p>
+          <p className="mt-3 mb-0">{t('chrome.landing.checkingStatus')}</p>
         </div>
       </section>
     );
@@ -84,27 +86,33 @@ const Landing = () => {
     <section className="min-vh-100 d-flex align-items-center justify-content-center py-4 text-center">
       <Helmet>
         <meta charSet="utf-8" />
-        <title>Hyperweaver</title>
+        <title>{t('chrome.landing.title')}</title>
         <link rel="canonical" href={window.location.origin} />
       </Helmet>
       <div className="container">
-        <h1 className="display-4 fw-semibold">Welcome to Hyperweaver</h1>
-        <p className="fs-4 text-muted">Machine Management Made Simple</p>
+        <h1 className="display-4 fw-semibold">{t('chrome.landing.welcome')}</h1>
+        <p className="fs-4 text-muted">{t('chrome.landing.tagline')}</p>
 
         {setupStatus && (
           <div className="mt-5">
             {setupStatus.needsSetup ? (
               <div>
-                <p>System needs initial setup.</p>
+                <p>{t('chrome.landing.needsSetup')}</p>
                 <a href="/register" className="btn btn-primary btn-lg mt-3">
-                  Get Started
+                  {t('chrome.landing.getStarted')}
                 </a>
               </div>
             ) : (
               <div>
-                <p>System is configured with {setupStatus.userCount} user(s).</p>
+                <p>
+                  {t(
+                    'chrome.landing.systemConfigured',
+                    { userCount: setupStatus.userCount },
+                    { count: setupStatus.userCount }
+                  )}
+                </p>
                 <a href="/login" className="btn btn-primary btn-lg mt-3">
-                  Login
+                  {t('chrome.landing.login')}
                 </a>
               </div>
             )}

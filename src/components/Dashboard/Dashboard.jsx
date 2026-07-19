@@ -1,5 +1,6 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { useMode } from '../../contexts/ModeContext';
@@ -20,6 +21,7 @@ import { calculateInfrastructureSummary } from './dashboardUtils';
  * Servers, showing aggregate data and health status.
  */
 const Dashboard = () => {
+  const { t } = useTranslation();
   const [infrastructureData, setInfrastructureData] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -47,7 +49,7 @@ const Dashboard = () => {
 
   const fetchInfrastructureData = useCallback(async () => {
     if (!servers || servers.length === 0) {
-      setError('No Servers configured. Please add a server first.');
+      setError(t('dashboard.dashboard.noServersConfigured'));
       return;
     }
 
@@ -106,7 +108,7 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [servers, makeAgentRequest, getMonitoringHealth]);
+  }, [servers, makeAgentRequest, getMonitoringHealth, t]);
 
   // Navigation helpers
   const navigateToServer = useCallback(
@@ -157,9 +159,9 @@ const Dashboard = () => {
             <div className="card">
               <div className="card-body text-center p-5">
                 <div className="spinner-border text-primary" role="status">
-                  <span className="visually-hidden">Loading...</span>
+                  <span className="visually-hidden">{t('dashboard.dashboard.loading')}</span>
                 </div>
-                <p className="mt-3 mb-0">Loading infrastructure overview...</p>
+                <p className="mt-3 mb-0">{t('dashboard.dashboard.loadingOverview')}</p>
               </div>
             </div>
           </div>
@@ -180,13 +182,11 @@ const Dashboard = () => {
         <div className="container-fluid p-0">
           <div className="p-4 bg-body-secondary">
             <div className="alert alert-info">
-              <h2 className="h4">Welcome to Hyperweaver</h2>
-              <p className="mb-4">
-                Get started by adding your first Server to begin managing your infrastructure.
-              </p>
+              <h2 className="h4">{t('dashboard.dashboard.welcome')}</h2>
+              <p className="mb-4">{t('dashboard.dashboard.welcomeDescription')}</p>
               <button type="button" onClick={navigateToServerRegister} className="btn btn-primary">
                 <i className="fas fa-plus me-2" />
-                Add Server
+                {t('dashboard.dashboard.addServer')}
               </button>
             </div>
           </div>
@@ -212,18 +212,26 @@ const Dashboard = () => {
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h1 className="h3 mb-1">Infrastructure Overview</h1>
+                  <h1 className="h3 mb-1">{t('dashboard.dashboard.infrastructureOverview')}</h1>
                   <p className="text-muted mb-0">
-                    Managing {summary?.totalServers || 0} servers
+                    {t('dashboard.dashboard.managing', {
+                      totalServers: summary?.totalServers || 0,
+                    })}
                     {servers.some(hasMachines) && (
                       <>
                         {' '}
-                        with {summary?.totalZones || 0} {resourceLabel(servers).toLowerCase()}
+                        {t('dashboard.dashboard.with', {
+                          totalZones: summary?.totalZones || 0,
+                          resource: resourceLabel(servers).toLowerCase(),
+                        })}
                       </>
                     )}
                     {lastRefresh && (
                       <span className="ms-2">
-                        • Last updated {lastRefresh.toLocaleTimeString()}
+                        •{' '}
+                        {t('dashboard.dashboard.lastUpdated', {
+                          time: lastRefresh.toLocaleTimeString(),
+                        })}
                       </span>
                     )}
                   </p>
@@ -244,7 +252,7 @@ const Dashboard = () => {
                     ) : (
                       <i className="fas fa-sync-alt me-2" />
                     )}
-                    Refresh
+                    {t('dashboard.dashboard.refresh')}
                   </button>
                 </div>
               </div>

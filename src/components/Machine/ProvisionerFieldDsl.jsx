@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * The manifest field DSL (design ruling 2026-07-16) — the ONE shape a
@@ -248,76 +249,80 @@ const isBlank = value =>
   value === undefined || value === null || value === '' || (Array.isArray(value) && !value.length);
 
 /** number rules: coercion + min/max. */
-const numberError = (field, value) => {
+const numberError = (field, value, t) => {
   const rules = field.validate || {};
   const parsed = numberOf(value);
   if (parsed === null) {
-    return 'Must be a number';
+    return t('provisioning.provisionerFieldDsl.errMustBeNumber');
   }
   if (rules.min !== undefined && parsed < rules.min) {
-    return `Must be at least ${rules.min}`;
+    return t('provisioning.provisionerFieldDsl.errMinNumber', { min: rules.min });
   }
   if (rules.max !== undefined && parsed > rules.max) {
-    return `Must be at most ${rules.max}`;
+    return t('provisioning.provisionerFieldDsl.errMaxNumber', { max: rules.max });
   }
   return '';
 };
 
 /** select/multiselect rule: every pick ∈ declared options. */
-const optionsError = (field, value) => {
+const optionsError = (field, value, t) => {
   const allowed = optionRows(field).map(option => option.value);
   if (allowed.length === 0) {
     return ''; // options_source pickers validate agent-side against inventory
   }
   const picks = field.type === 'multiselect' && Array.isArray(value) ? value : [value];
   const stray = picks.find(pick => !allowed.some(candidate => String(candidate) === String(pick)));
-  return stray === undefined ? '' : `"${stray}" is not one of the options`;
+  return stray === undefined
+    ? ''
+    : t('provisioning.provisionerFieldDsl.errNotOption', { value: stray });
 };
 
 /** String-length rules, password's floor of 8 included. */
-const lengthError = (field, text) => {
+const lengthError = (field, text, t) => {
   const rules = field.validate || {};
   if (field.type === 'password' && text.length < Math.max(8, rules.min_length || 0)) {
-    return `At least ${Math.max(8, rules.min_length || 0)} characters`;
+    return t('provisioning.provisionerFieldDsl.errMinLength', {
+      count: Math.max(8, rules.min_length || 0),
+    });
   }
   if (rules.min_length !== undefined && text.length < rules.min_length) {
-    return `At least ${rules.min_length} characters`;
+    return t('provisioning.provisionerFieldDsl.errMinLength', { count: rules.min_length });
   }
   if (rules.max_length !== undefined && text.length > rules.max_length) {
-    return `At most ${rules.max_length} characters`;
+    return t('provisioning.provisionerFieldDsl.errMaxLength', { count: rules.max_length });
   }
   return '';
 };
 
 /** Type-intrinsic format checks: fqdn / ipaddr / cidr. */
-const formatError = (field, text) => {
+const formatError = (field, text, t) => {
   if (field.type === 'fqdn' && !FQDN_PATTERN.test(text)) {
-    return 'Not a valid FQDN';
+    return t('provisioning.provisionerFieldDsl.errNotFqdn');
   }
   if (field.type === 'ipaddr' && !ipOk(text, field.version)) {
-    return `Not a valid IPv${field.version || '4/6'} address`;
+    return t('provisioning.provisionerFieldDsl.errNotIp', { version: field.version || '4/6' });
   }
   if (field.type === 'cidr') {
     const [address, prefix, extra] = text.split('/');
     if (extra !== undefined || !prefix || !/^\d{1,3}$/u.test(prefix) || !ipOk(address)) {
-      return 'Not valid CIDR notation (address/prefix)';
+      return t('provisioning.provisionerFieldDsl.errNotCidr');
     }
     if (Number(prefix) > (ipv4Ok(address) ? 32 : 128)) {
-      return 'CIDR prefix out of range';
+      return t('provisioning.provisionerFieldDsl.errCidrPrefixRange');
     }
   }
   return '';
 };
 
 /** The author's pattern rule — pattern_error is their message. */
-const patternError = (field, text) => {
+const patternError = (field, text, t) => {
   const rules = field.validate || {};
   if (!rules.pattern) {
     return '';
   }
   try {
     if (!new RegExp(rules.pattern, 'u').test(text)) {
-      return rules.pattern_error || 'Does not match the required pattern';
+      return rules.pattern_error || t('provisioning.provisionerFieldDsl.errPatternDefault');
     }
   } catch {
     // an unusable pattern is the manifest lint's problem, not the user's
@@ -326,27 +331,29 @@ const patternError = (field, text) => {
 };
 
 /** One field's error text, '' when fine. Required applies only while visible. */
-export const validateField = (field, value) => {
+export const validateField = (field, value, t) => {
   // A checkbox always answers — unchecked (undefined or false) passes
   // required identically regardless of touch history.
   if (field.type === 'checkbox') {
     return '';
   }
   if (isBlank(value)) {
-    return field.required ? `${field.label || field.name} is required` : '';
+    return field.required
+      ? t('provisioning.provisionerFieldDsl.errRequired', { label: field.label || field.name })
+      : '';
   }
   if (field.type === 'number') {
-    return numberError(field, value);
+    return numberError(field, value, t);
   }
   if (field.type === 'select' || field.type === 'multiselect') {
-    return optionsError(field, value);
+    return optionsError(field, value, t);
   }
   const text = String(value);
-  return lengthError(field, text) || formatError(field, text) || patternError(field, text);
+  return lengthError(field, text, t) || formatError(field, text, t) || patternError(field, text, t);
 };
 
 /** {FIELD: message} over the VISIBLE fields — the Next-gate + 422 mirror. */
-export const validateAnswers = (config, answers, roles) => {
+export const validateAnswers = (config, answers, roles, t) => {
   const errors = {};
   if (!config) {
     return errors;
@@ -356,7 +363,7 @@ export const validateAnswers = (config, answers, roles) => {
     if (!visible.has(field.name)) {
       return;
     }
-    const message = validateField(field, answers[field.name]);
+    const message = validateField(field, answers[field.name], t);
     if (message) {
       errors[field.name] = message;
     }
@@ -375,6 +382,7 @@ const generateSecret = length => {
 // ---- the renderer ----
 
 const PasswordInput = ({ field, fieldId, value, error, onChange, disabled }) => {
+  const { t } = useTranslation();
   const [shown, setShown] = useState(false);
   return (
     <div className="input-group">
@@ -390,7 +398,11 @@ const PasswordInput = ({ field, fieldId, value, error, onChange, disabled }) => 
       <button
         type="button"
         className="btn btn-outline-secondary"
-        aria-label={shown ? 'Hide the value' : 'Show the value'}
+        aria-label={
+          shown
+            ? t('provisioning.provisionerFieldDsl.hideValue')
+            : t('provisioning.provisionerFieldDsl.showValue')
+        }
         onClick={() => setShown(prev => !prev)}
         disabled={disabled}
       >
@@ -400,7 +412,7 @@ const PasswordInput = ({ field, fieldId, value, error, onChange, disabled }) => 
         <button
           type="button"
           className="btn btn-outline-secondary"
-          title="Generate a random value"
+          title={t('provisioning.provisionerFieldDsl.generateRandomValue')}
           onClick={() => onChange(generateSecret(field.generate.length || 24))}
           disabled={disabled}
         >
@@ -437,6 +449,7 @@ const rowsFor = (field, inventory) => {
 };
 
 const SelectInput = ({ field, fieldId, rows, value, error, onChange, disabled }) => {
+  const { t } = useTranslation();
   if (rows.length === 0 && field.options_source) {
     // The inventory picker with nothing listed degrades to free text.
     return (
@@ -444,7 +457,9 @@ const SelectInput = ({ field, fieldId, rows, value, error, onChange, disabled })
         id={fieldId}
         className={`form-control ${error ? 'is-invalid' : ''}`}
         type="text"
-        placeholder={`(${field.options_source} — none listed; type a value)`}
+        placeholder={t('provisioning.provisionerFieldDsl.noneListedPlaceholder', {
+          source: field.options_source,
+        })}
         value={value ?? ''}
         onChange={e => onChange(e.target.value)}
         disabled={disabled}
@@ -469,7 +484,7 @@ const SelectInput = ({ field, fieldId, rows, value, error, onChange, disabled })
       onChange={e => commit(e.target.value)}
       disabled={disabled}
     >
-      <option value="">Select…</option>
+      <option value="">{t('provisioning.provisionerFieldDsl.selectOption')}</option>
       {value !== undefined &&
         value !== '' &&
         !rows.some(row => String(row.value) === String(value)) && (
@@ -495,12 +510,16 @@ SelectInput.propTypes = {
 };
 
 const MultiselectInput = ({ field, fieldId, rows, value, error, onChange, disabled }) => {
+  const { t } = useTranslation();
   const picks = Array.isArray(value) ? value : [];
   if (rows.length === 0) {
     return (
       <p className="form-text text-muted mb-0">
-        (no options{' '}
-        {field.options_source ? `— ${field.options_source} inventory empty` : 'declared'})
+        {field.options_source
+          ? t('provisioning.provisionerFieldDsl.noOptionsInventoryEmpty', {
+              source: field.options_source,
+            })
+          : t('provisioning.provisionerFieldDsl.noOptionsDeclared')}
       </p>
     );
   }
@@ -546,6 +565,7 @@ MultiselectInput.propTypes = {
 };
 
 const DslFieldInput = ({ field, fieldId, value, error, onChange, inventory, disabled }) => {
+  const { t } = useTranslation();
   const invalid = error ? 'is-invalid' : '';
 
   if (field.type === 'checkbox') {
@@ -635,8 +655,8 @@ const DslFieldInput = ({ field, fieldId, value, error, onChange, inventory, disa
     // Fail-closed, mirroring the agents' import lint — no silent text input.
     return (
       <div className="alert alert-danger py-1 px-2 mb-0 small">
-        Unknown field type <code>{String(field.type)}</code> — the manifest fails the agent&apos;s
-        schema lint.
+        {t('provisioning.provisionerFieldDsl.unknownFieldType1')} <code>{String(field.type)}</code>{' '}
+        {t('provisioning.provisionerFieldDsl.unknownFieldType2')}
       </div>
     );
   }

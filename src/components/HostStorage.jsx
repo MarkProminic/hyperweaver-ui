@@ -1,5 +1,6 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ArcStats from './Host/ArcStats';
 import DatasetsTable from './Host/DatasetsTable';
@@ -14,6 +15,7 @@ import StorageSummary from './Host/StorageSummary';
 import { useHostStorageData } from './Host/useHostStorageData';
 
 const HostStorage = () => {
+  const { t } = useTranslation();
   const {
     storagePools,
     storageDatasets,
@@ -78,19 +80,19 @@ const HostStorage = () => {
       <div className="hw-page-content-scrollable">
         <Helmet>
           <meta charSet="utf-8" />
-          <title>Storage Monitoring - Hyperweaver</title>
+          <title>{t('pages.hostStorage.titlePage')}</title>
           <link rel="canonical" href={window.location.origin} />
         </Helmet>
         <div className="container-fluid p-0">
           <div className="card">
             <div className="titlebar active card-header d-flex justify-content-between align-items-center mb-0 p-3">
               <div className="d-flex align-items-center gap-2">
-                <strong>Access Denied</strong>
+                <strong>{t('pages.hostStorage.accessDenied')}</strong>
               </div>
             </div>
             <div className="card-body px-4">
               <div className="alert alert-danger">
-                <p>Please log in to access storage monitoring.</p>
+                <p>{t('pages.hostStorage.loginRequired')}</p>
               </div>
             </div>
           </div>
@@ -104,27 +106,24 @@ const HostStorage = () => {
       <div className="hw-page-content-scrollable">
         <Helmet>
           <meta charSet="utf-8" />
-          <title>Storage Monitoring - Hyperweaver</title>
+          <title>{t('pages.hostStorage.titlePage')}</title>
           <link rel="canonical" href={window.location.origin} />
         </Helmet>
         <div className="container-fluid p-0">
           <div className="card">
             <div className="titlebar active card-header d-flex justify-content-between align-items-center mb-0 p-3">
               <div className="d-flex align-items-center gap-2">
-                <strong>Storage Monitoring</strong>
+                <strong>{t('pages.hostStorage.heading')}</strong>
               </div>
             </div>
             <div className="card-body px-4">
               <div className="alert alert-info">
-                <h2 className="fs-4 fw-bold">No Servers</h2>
-                <p>
-                  You haven&apos;t added any Servers yet. Add a server to start monitoring storage
-                  systems.
-                </p>
+                <h2 className="fs-4 fw-bold">{t('pages.hostStorage.noServersHeading')}</h2>
+                <p>{t('pages.hostStorage.noServersBody')}</p>
                 <div className="mt-4">
                   <a href="/ui/settings/hyperweaver?tab=servers" className="btn btn-primary">
                     <i className="fas fa-plus me-2" />
-                    Add Server
+                    {t('pages.hostStorage.addServer')}
                   </a>
                 </div>
               </div>
@@ -139,7 +138,7 @@ const HostStorage = () => {
     <div className="hw-page-content-scrollable">
       <Helmet>
         <meta charSet="utf-8" />
-        <title>Storage Monitoring - Hyperweaver</title>
+        <title>{t('pages.hostStorage.titlePage')}</title>
         <link rel="canonical" href={window.location.origin} />
       </Helmet>
       <div className="container-fluid p-0">

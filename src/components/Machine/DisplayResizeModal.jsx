@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { setMachineDisplay } from '../../api/machineAPI';
 import { FormModal } from '../common';
@@ -7,6 +8,7 @@ import { FormModal } from '../common';
 const PRESETS = ['1280x720', '1366x768', '1600x900', '1920x1080', '2560x1440', '3840x2160'];
 
 const DisplayResizeModal = ({ isOpen, onClose, currentServer, machineName, isRunning, onDone }) => {
+  const { t } = useTranslation();
   const [width, setWidth] = useState('1920');
   const [height, setHeight] = useState('1080');
   const [depth, setDepth] = useState('');
@@ -28,7 +30,7 @@ const DisplayResizeModal = ({ isOpen, onClose, currentServer, machineName, isRun
 
   const handleSubmit = async () => {
     if (!width || !height) {
-      setError('Width and height are required.');
+      setError(t('machine.displayResizeModal.dimensionsRequired'));
       return;
     }
     setLoading(true);
@@ -51,7 +53,9 @@ const DisplayResizeModal = ({ isOpen, onClose, currentServer, machineName, isRun
       return;
     }
     onDone({
-      text: result.data?.message || `Display hint ${width}×${height} sent to ${machineName}.`,
+      text:
+        result.data?.message ||
+        t('machine.displayResizeModal.hintSentFallback', { width, height, machineName }),
       warning: false,
     });
     onClose();
@@ -62,16 +66,16 @@ const DisplayResizeModal = ({ isOpen, onClose, currentServer, machineName, isRun
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Set Display Size — ${machineName}`}
+      title={t('machine.displayResizeModal.title', { machineName })}
       icon="fas fa-display"
-      submitText="Resize"
+      submitText={t('machine.displayResizeModal.submit')}
       submitIcon="fas fa-check"
       loading={loading}
       showCancelButton
     >
       {!isRunning && (
         <div className="alert alert-warning py-2">
-          {machineName} is not running — the resize hint needs a running guest with Guest Additions.
+          {t('machine.displayResizeModal.notRunningWarning', { machineName })}
         </div>
       )}
       {error && <div className="alert alert-danger py-2">{error}</div>}
@@ -93,7 +97,7 @@ const DisplayResizeModal = ({ isOpen, onClose, currentServer, machineName, isRun
       <div className="row g-3">
         <div className="col-6 col-md-3">
           <label className="form-label" htmlFor="display-width">
-            Width <span className="text-danger">*</span>
+            {t('machine.displayResizeModal.widthLabel')} <span className="text-danger">*</span>
           </label>
           <input
             id="display-width"
@@ -107,7 +111,7 @@ const DisplayResizeModal = ({ isOpen, onClose, currentServer, machineName, isRun
         </div>
         <div className="col-6 col-md-3">
           <label className="form-label" htmlFor="display-height">
-            Height <span className="text-danger">*</span>
+            {t('machine.displayResizeModal.heightLabel')} <span className="text-danger">*</span>
           </label>
           <input
             id="display-height"
@@ -121,13 +125,13 @@ const DisplayResizeModal = ({ isOpen, onClose, currentServer, machineName, isRun
         </div>
         <div className="col-6 col-md-3">
           <label className="form-label" htmlFor="display-depth">
-            Color depth
+            {t('machine.displayResizeModal.depthLabel')}
           </label>
           <input
             id="display-depth"
             className="form-control"
             type="number"
-            placeholder="(unchanged)"
+            placeholder={t('machine.displayResizeModal.depthPlaceholder')}
             value={depth}
             onChange={e => setDepth(e.target.value)}
             disabled={loading}
@@ -135,7 +139,7 @@ const DisplayResizeModal = ({ isOpen, onClose, currentServer, machineName, isRun
         </div>
         <div className="col-6 col-md-3">
           <label className="form-label" htmlFor="display-index">
-            Display #
+            {t('machine.displayResizeModal.displayIndexLabel')}
           </label>
           <input
             id="display-index"
@@ -149,9 +153,7 @@ const DisplayResizeModal = ({ isOpen, onClose, currentServer, machineName, isRun
           />
         </div>
       </div>
-      <p className="form-text text-muted mb-0 mt-2">
-        A hint via Guest Additions — the guest resizes when they honor it.
-      </p>
+      <p className="form-text text-muted mb-0 mt-2">{t('machine.displayResizeModal.hintNote')}</p>
     </FormModal>
   );
 };

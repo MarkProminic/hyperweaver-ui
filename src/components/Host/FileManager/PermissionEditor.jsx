@@ -1,17 +1,18 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
-const PERMISSION_CATEGORIES = [
-  { key: 'owner', label: 'Owner' },
-  { key: 'group', label: 'Group' },
-  { key: 'other', label: 'Other' },
+const getPermissionCategories = t => [
+  { key: 'owner', label: t('hostTools.PermissionEditor.ownerLabel') },
+  { key: 'group', label: t('hostTools.PermissionEditor.groupLabel') },
+  { key: 'other', label: t('hostTools.PermissionEditor.otherLabel') },
 ];
 
 const PERMISSION_TYPES = ['read', 'write', 'execute'];
 
-const PERMISSION_PRESETS = [
+const getPermissionPresets = t => [
   {
     mode: '644',
-    label: '644 (rw-r--r--)',
+    label: t('hostTools.PermissionEditor.preset644'),
     permissions: {
       owner: { read: true, write: true, execute: false },
       group: { read: true, write: false, execute: false },
@@ -20,7 +21,7 @@ const PERMISSION_PRESETS = [
   },
   {
     mode: '755',
-    label: '755 (rwxr-xr-x)',
+    label: t('hostTools.PermissionEditor.preset755'),
     permissions: {
       owner: { read: true, write: true, execute: true },
       group: { read: true, write: false, execute: true },
@@ -29,7 +30,7 @@ const PERMISSION_PRESETS = [
   },
   {
     mode: '600',
-    label: '600 (rw-------)',
+    label: t('hostTools.PermissionEditor.preset600'),
     permissions: {
       owner: { read: true, write: true, execute: false },
       group: { read: false, write: false, execute: false },
@@ -52,99 +53,108 @@ const PermissionEditor = ({
   onCustomModeChange,
   originalOctal,
   setPermissions,
-}) => (
-  <div className="col">
-    <h5 className="h6">Permissions</h5>
+}) => {
+  const { t } = useTranslation();
+  const PERMISSION_CATEGORIES = getPermissionCategories(t);
+  const PERMISSION_PRESETS = getPermissionPresets(t);
 
-    {/* Permission checkboxes */}
-    <div className="mb-3">
-      <div className="table-responsive">
-        <table className="table table-sm">
-          <thead>
-            <tr>
-              <th />
-              <th>Read</th>
-              <th>Write</th>
-              <th>Execute</th>
-            </tr>
-          </thead>
-          <tbody>
-            {PERMISSION_CATEGORIES.map(({ key, label }) => (
-              <tr key={key}>
-                <td>
-                  <strong>{label}</strong>
-                </td>
-                {PERMISSION_TYPES.map(perm => (
-                  <td key={perm}>
-                    <input
-                      type="checkbox"
-                      className="form-check-input"
-                      checked={permissions[key][perm]}
-                      onChange={e => onPermissionChange(key, perm, e.target.checked)}
-                    />
-                  </td>
-                ))}
+  return (
+    <div className="col">
+      <h5 className="h6">{t('hostTools.PermissionEditor.permissionsHeading')}</h5>
+
+      {/* Permission checkboxes */}
+      <div className="mb-3">
+        <div className="table-responsive">
+          <table className="table table-sm">
+            <thead>
+              <tr>
+                <th />
+                <th>{t('hostTools.PermissionEditor.readHeader')}</th>
+                <th>{t('hostTools.PermissionEditor.writeHeader')}</th>
+                <th>{t('hostTools.PermissionEditor.executeHeader')}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {PERMISSION_CATEGORIES.map(({ key, label }) => (
+                <tr key={key}>
+                  <td>
+                    <strong>{label}</strong>
+                  </td>
+                  {PERMISSION_TYPES.map(perm => (
+                    <td key={perm}>
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        checked={permissions[key][perm]}
+                        onChange={e => onPermissionChange(key, perm, e.target.checked)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
 
-    {/* Octal mode display/editor */}
-    <div className="mb-3">
-      <div className="form-check mb-2">
-        <input
-          id="file-props-use-custom-mode"
-          type="checkbox"
-          className="form-check-input"
-          checked={useCustomMode}
-          onChange={e => setUseCustomMode(e.target.checked)}
-        />
-        <label className="form-check-label" htmlFor="file-props-use-custom-mode">
-          Use custom octal mode
-        </label>
+      {/* Octal mode display/editor */}
+      <div className="mb-3">
+        <div className="form-check mb-2">
+          <input
+            id="file-props-use-custom-mode"
+            type="checkbox"
+            className="form-check-input"
+            checked={useCustomMode}
+            onChange={e => setUseCustomMode(e.target.checked)}
+          />
+          <label className="form-check-label" htmlFor="file-props-use-custom-mode">
+            {t('hostTools.PermissionEditor.useCustomOctalLabel')}
+          </label>
+        </div>
+        <div>
+          <input
+            id="file-props-octal"
+            className="form-control"
+            type="text"
+            value={useCustomMode ? customMode : currentOctal}
+            onChange={e => onCustomModeChange(e.target.value)}
+            placeholder={t('hostTools.PermissionEditor.octalPlaceholder')}
+            disabled={!useCustomMode}
+            pattern="[0-7]{3,4}"
+          />
+        </div>
+        <p className="form-text text-muted">
+          {t('hostTools.PermissionEditor.octalHelp', {
+            currentOctal,
+            originalOctal: originalOctal || 'Unknown',
+          })}
+        </p>
       </div>
-      <div>
-        <input
-          id="file-props-octal"
-          className="form-control"
-          type="text"
-          value={useCustomMode ? customMode : currentOctal}
-          onChange={e => onCustomModeChange(e.target.value)}
-          placeholder="644"
-          disabled={!useCustomMode}
-          pattern="[0-7]{3,4}"
-        />
-      </div>
-      <p className="form-text text-muted">
-        Current calculated: {currentOctal} | Original: {originalOctal || 'Unknown'}
-      </p>
-    </div>
 
-    {/* Common permission presets */}
-    <div className="mb-3">
-      <span className="form-label" aria-hidden="true">
-        Quick Presets
-      </span>
-      <div className="d-flex gap-2">
-        {PERMISSION_PRESETS.map(preset => (
-          <button
-            key={preset.mode}
-            type="button"
-            className="btn btn-sm"
-            onClick={() => {
-              setPermissions(preset.permissions);
-              setUseCustomMode(false);
-            }}
-          >
-            {preset.label}
-          </button>
-        ))}
+      {/* Common permission presets */}
+      <div className="mb-3">
+        <span className="form-label" aria-hidden="true">
+          {t('hostTools.PermissionEditor.quickPresetsLabel')}
+        </span>
+        <div className="d-flex gap-2">
+          {PERMISSION_PRESETS.map(preset => (
+            <button
+              key={preset.mode}
+              type="button"
+              className="btn btn-sm"
+              onClick={() => {
+                setPermissions(preset.permissions);
+                setUseCustomMode(false);
+              }}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 PermissionEditor.propTypes = {
   permissions: PropTypes.object.isRequired,

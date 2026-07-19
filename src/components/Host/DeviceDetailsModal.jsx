@@ -1,10 +1,13 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { ContentModal } from '../common';
 
 import { getCategoryTagClass } from './DeviceUtils';
 
 const DeviceDetailsModal = ({ selectedDevice, setSelectedDevice }) => {
+  const { t } = useTranslation();
+
   if (!selectedDevice) {
     return null;
   }
@@ -13,7 +16,7 @@ const DeviceDetailsModal = ({ selectedDevice, setSelectedDevice }) => {
     <ContentModal
       isOpen={!!selectedDevice}
       onClose={() => setSelectedDevice(null)}
-      title="Device Details"
+      title={t('host.deviceDetailsModal.title')}
       icon="fas fa-microchip"
     >
       <div className="row g-3">
@@ -23,49 +26,49 @@ const DeviceDetailsModal = ({ selectedDevice, setSelectedDevice }) => {
               <tbody>
                 <tr>
                   <td>
-                    <strong>Device Name</strong>
+                    <strong>{t('host.deviceDetailsModal.deviceName')}</strong>
                   </td>
-                  <td>{selectedDevice.device_name || 'Unknown'}</td>
+                  <td>{selectedDevice.device_name || t('host.deviceDetailsModal.unknown')}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Vendor</strong>
+                    <strong>{t('host.deviceDetailsModal.vendor')}</strong>
                   </td>
-                  <td>{selectedDevice.vendor_name || 'Unknown'}</td>
+                  <td>{selectedDevice.vendor_name || t('host.deviceDetailsModal.unknown')}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Vendor ID</strong>
+                    <strong>{t('host.deviceDetailsModal.vendorId')}</strong>
                   </td>
                   <td>
-                    <code>{selectedDevice.vendor_id || 'N/A'}</code>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Device ID</strong>
-                  </td>
-                  <td>
-                    <code>{selectedDevice.device_id || 'N/A'}</code>
+                    <code>{selectedDevice.vendor_id || t('host.deviceDetailsModal.na')}</code>
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>PCI Address</strong>
+                    <strong>{t('host.deviceDetailsModal.deviceId')}</strong>
                   </td>
                   <td>
-                    <code>{selectedDevice.pci_address || 'N/A'}</code>
+                    <code>{selectedDevice.device_id || t('host.deviceDetailsModal.na')}</code>
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Category</strong>
+                    <strong>{t('host.deviceDetailsModal.pciAddress')}</strong>
+                  </td>
+                  <td>
+                    <code>{selectedDevice.pci_address || t('host.deviceDetailsModal.na')}</code>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>{t('host.deviceDetailsModal.category')}</strong>
                   </td>
                   <td>
                     <span
                       className={`badge ${getCategoryTagClass(selectedDevice.device_category)}`}
                     >
-                      {selectedDevice.device_category || 'other'}
+                      {selectedDevice.device_category || t('host.deviceDetailsModal.other')}
                     </span>
                   </td>
                 </tr>
@@ -79,60 +82,64 @@ const DeviceDetailsModal = ({ selectedDevice, setSelectedDevice }) => {
               <tbody>
                 <tr>
                   <td>
-                    <strong>Driver Name</strong>
+                    <strong>{t('host.deviceDetailsModal.driverName')}</strong>
                   </td>
-                  <td>{selectedDevice.driver_name || 'None'}</td>
+                  <td>{selectedDevice.driver_name || t('host.deviceDetailsModal.none')}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Driver Instance</strong>
+                    <strong>{t('host.deviceDetailsModal.driverInstance')}</strong>
                   </td>
                   <td>
                     {selectedDevice.driver_instance !== undefined
                       ? selectedDevice.driver_instance
-                      : 'N/A'}
+                      : t('host.deviceDetailsModal.na')}
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Driver Attached</strong>
+                    <strong>{t('host.deviceDetailsModal.driverAttached')}</strong>
                   </td>
                   <td>
                     <span
                       className={`badge ${selectedDevice.driver_attached ? 'text-bg-success' : 'text-bg-warning'}`}
                     >
-                      {selectedDevice.driver_attached ? 'Yes' : 'No'}
+                      {selectedDevice.driver_attached
+                        ? t('host.deviceDetailsModal.yes')
+                        : t('host.deviceDetailsModal.no')}
                     </span>
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>PPT Capable</strong>
+                    <strong>{t('host.deviceDetailsModal.pptCapable')}</strong>
                   </td>
                   <td>
                     <span
                       className={`badge ${selectedDevice.ppt_capable ? 'text-bg-success' : 'text-bg-dark'}`}
                     >
-                      {selectedDevice.ppt_capable ? 'Yes' : 'No'}
+                      {selectedDevice.ppt_capable
+                        ? t('host.deviceDetailsModal.yes')
+                        : t('host.deviceDetailsModal.no')}
                     </span>
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>PPT Device Path</strong>
+                    <strong>{t('host.deviceDetailsModal.pptDevicePath')}</strong>
                   </td>
                   <td>
-                    <code>{selectedDevice.ppt_device_path || 'N/A'}</code>
+                    <code>{selectedDevice.ppt_device_path || t('host.deviceDetailsModal.na')}</code>
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Scan Timestamp</strong>
+                    <strong>{t('host.deviceDetailsModal.scanTimestamp')}</strong>
                   </td>
                   <td>
                     {selectedDevice.scan_timestamp
                       ? new Date(selectedDevice.scan_timestamp).toLocaleString()
-                      : 'Unknown'}
+                      : t('host.deviceDetailsModal.unknown')}
                   </td>
                 </tr>
               </tbody>
@@ -143,7 +150,7 @@ const DeviceDetailsModal = ({ selectedDevice, setSelectedDevice }) => {
 
       {selectedDevice.assigned_to_zones?.length > 0 && (
         <div className="mt-4">
-          <h5 className="fs-6 text-muted">Zone Assignments</h5>
+          <h5 className="fs-6 text-muted">{t('host.deviceDetailsModal.zoneAssignments')}</h5>
           <div className="d-flex flex-wrap gap-1">
             {selectedDevice.assigned_to_zones.map(zone => (
               <span
@@ -163,7 +170,7 @@ const DeviceDetailsModal = ({ selectedDevice, setSelectedDevice }) => {
           <div className="alert alert-info">
             <p>
               <i className="fas fa-ethernet me-2" />
-              This device is also found in network interfaces.
+              {t('host.deviceDetailsModal.alsoInNetworkInterfaces')}
             </p>
           </div>
         </div>

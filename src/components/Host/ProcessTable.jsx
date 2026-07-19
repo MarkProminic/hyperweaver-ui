@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const ProcessTable = ({
   processes,
@@ -9,6 +10,7 @@ const ProcessTable = ({
   onSendSignal,
   showDetailedView,
 }) => {
+  const { t } = useTranslation();
   const [sortField, setSortField] = useState('pid');
   const [sortDirection, setSortDirection] = useState('asc');
 
@@ -148,7 +150,7 @@ const ProcessTable = ({
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading processes...</p>
+        <p className="mt-2">{t('host.processTable.loadingProcesses')}</p>
       </div>
     );
   }
@@ -157,7 +159,7 @@ const ProcessTable = ({
     return (
       <div className="text-center p-4">
         <i className="fas fa-tasks fa-2x text-muted" />
-        <p className="mt-2 text-muted">No processes found</p>
+        <p className="mt-2 text-muted">{t('host.processTable.noProcessesFound')}</p>
       </div>
     );
   }
@@ -171,19 +173,19 @@ const ProcessTable = ({
           <tr>
             <th className="cursor-pointer" onClick={() => handleSort('pid')}>
               <span className="d-flex align-items-center">
-                PID
+                {t('host.processTable.pid')}
                 <span className="ms-1">{getSortIcon('pid')}</span>
               </span>
             </th>
             <th className="cursor-pointer" onClick={() => handleSort('username')}>
               <span className="d-flex align-items-center">
-                User
+                {t('host.processTable.user')}
                 <span className="ms-1">{getSortIcon('username')}</span>
               </span>
             </th>
             <th className="cursor-pointer" onClick={() => handleSort('zone')}>
               <span className="d-flex align-items-center">
-                Zone
+                {t('host.processTable.zone')}
                 <span className="ms-1">{getSortIcon('zone')}</span>
               </span>
             </th>
@@ -191,12 +193,13 @@ const ProcessTable = ({
               <>
                 <th className="cursor-pointer" onClick={() => handleSort('cpu_percent')}>
                   <span className="d-flex align-items-center">
-                    CPU %<span className="ms-1">{getSortIcon('cpu_percent')}</span>
+                    {t('host.processTable.cpuPercent')}
+                    <span className="ms-1">{getSortIcon('cpu_percent')}</span>
                   </span>
                 </th>
                 <th className="cursor-pointer" onClick={() => handleSort('rss')}>
                   <span className="d-flex align-items-center">
-                    Memory
+                    {t('host.processTable.memory')}
                     <span className="ms-1">{getSortIcon('rss')}</span>
                   </span>
                 </th>
@@ -204,11 +207,11 @@ const ProcessTable = ({
             )}
             <th className="cursor-pointer" onClick={() => handleSort('command')}>
               <span className="d-flex align-items-center">
-                Command
+                {t('host.processTable.command')}
                 <span className="ms-1">{getSortIcon('command')}</span>
               </span>
             </th>
-            <th width="200">Actions</th>
+            <th width="200">{t('host.processTable.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -216,7 +219,11 @@ const ProcessTable = ({
             <tr key={process.pid || index}>
               <td>
                 <span className="font-monospace fw-bold">{process.pid}</span>
-                {process.ppid && <div className="small text-muted">PPID: {process.ppid}</div>}
+                {process.ppid && (
+                  <div className="small text-muted">
+                    {t('host.processTable.ppid')}: {process.ppid}
+                  </div>
+                )}
               </td>
               <td>
                 <div className="d-flex align-items-center">
@@ -248,7 +255,7 @@ const ProcessTable = ({
                     className="btn btn-info btn-sm"
                     onClick={() => onViewDetails(process)}
                     disabled={loading}
-                    title="View Process Details"
+                    title={t('host.processTable.viewProcessDetails')}
                   >
                     <i className="fas fa-info-circle" />
                   </button>
@@ -259,7 +266,7 @@ const ProcessTable = ({
                     className="btn btn-warning btn-sm"
                     onClick={() => onSendSignal(process)}
                     disabled={loading}
-                    title="Send Signal"
+                    title={t('host.processTable.sendSignal')}
                   >
                     <i className="fas fa-bolt" />
                   </button>
@@ -270,7 +277,7 @@ const ProcessTable = ({
                     className="btn btn-danger btn-sm"
                     onClick={() => onKillProcess(process)}
                     disabled={loading}
-                    title="Kill Process"
+                    title={t('host.processTable.killProcess')}
                   >
                     <i className="fas fa-times" />
                   </button>

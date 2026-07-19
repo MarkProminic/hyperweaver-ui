@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { useSyslogData } from '../../../hooks/useSyslogData';
 import ConfirmModal from '../../common/ConfirmModal';
@@ -10,6 +11,7 @@ import RuleBuilderView from './RuleBuilderView';
 import { getServiceStatusColor, getServiceType } from './syslogUtils';
 
 const SyslogConfiguration = ({ server }) => {
+  const { t } = useTranslation();
   const data = useSyslogData(server);
 
   const {
@@ -32,7 +34,7 @@ const SyslogConfiguration = ({ server }) => {
         <div className="card-body">
           <div className="text-center">
             <span className="spinner-border" role="status" aria-hidden="true" />
-            <p className="mt-3">Loading syslog configuration...</p>
+            <p className="mt-3">{t('hostTime.syslogConfiguration.loading')}</p>
           </div>
         </div>
       </div>
@@ -57,13 +59,13 @@ const SyslogConfiguration = ({ server }) => {
           <div className="card-body">
             <h4 className="fs-6 fw-bold mb-3">
               <i className="fas fa-info-circle me-2" />
-              <span>Configuration Status</span>
+              <span>{t('hostTime.syslogConfiguration.statusHeading')}</span>
             </h4>
 
             <div className="row g-3">
               <div className="col">
                 <div className="mb-3">
-                  <p className="form-label">Service Type</p>
+                  <p className="form-label">{t('hostTime.syslogConfiguration.serviceTypeLabel')}</p>
                   <p>
                     <span className="badge text-bg-primary d-inline-flex align-items-center gap-1">
                       <i className={`fas ${getServiceType(config).icon}`} />
@@ -74,7 +76,9 @@ const SyslogConfiguration = ({ server }) => {
               </div>
               <div className="col">
                 <div className="mb-3">
-                  <p className="form-label">Service Status</p>
+                  <p className="form-label">
+                    {t('hostTime.syslogConfiguration.serviceStatusLabel')}
+                  </p>
                   <p>
                     <span
                       className={`badge ${getServiceStatusColor(config.service_status)} d-inline-flex align-items-center gap-1`}
@@ -82,14 +86,17 @@ const SyslogConfiguration = ({ server }) => {
                       <i
                         className={`fas ${config.service_status?.state === 'online' ? 'fa-check-circle' : 'fa-times-circle'}`}
                       />
-                      <span>{config.service_status?.state || 'Unknown'}</span>
+                      <span>
+                        {config.service_status?.state ||
+                          t('hostTime.syslogConfiguration.unknownStatus')}
+                      </span>
                     </span>
                   </p>
                 </div>
               </div>
               <div className="col">
                 <div className="mb-3">
-                  <p className="form-label">Configuration File</p>
+                  <p className="form-label">{t('hostTime.syslogConfiguration.configFileLabel')}</p>
                   <p>
                     <span className="badge text-bg-info">
                       {config.config_file || '/etc/syslog.conf'}
@@ -99,10 +106,12 @@ const SyslogConfiguration = ({ server }) => {
               </div>
               <div className="col">
                 <div className="mb-3">
-                  <p className="form-label">Active Rules</p>
+                  <p className="form-label">{t('hostTime.syslogConfiguration.activeRulesLabel')}</p>
                   <p>
                     <span className="badge text-bg-secondary">
-                      {config.parsed_rules?.length || 0} rules
+                      {t('hostTime.syslogConfiguration.rulesCount', {
+                        count: config.parsed_rules?.length || 0,
+                      })}
                     </span>
                   </p>
                 </div>
@@ -113,7 +122,7 @@ const SyslogConfiguration = ({ server }) => {
             <div className="d-flex justify-content-between align-items-center mt-4">
               <div className="d-flex align-items-center gap-2">
                 <p className="small text-muted mb-0">
-                  Switch between traditional syslog and modern rsyslog service
+                  {t('hostTime.syslogConfiguration.switchServiceText')}
                 </p>
               </div>
               <div className="d-flex align-items-center gap-2">
@@ -125,7 +134,7 @@ const SyslogConfiguration = ({ server }) => {
                     disabled={loading || getServiceType(config).name === 'syslog'}
                   >
                     <i className="fas fa-file-alt me-2" />
-                    <span>Traditional Syslog</span>
+                    <span>{t('hostTime.syslogConfiguration.traditionalSyslogButton')}</span>
                   </button>
                   <button
                     type="button"
@@ -134,7 +143,7 @@ const SyslogConfiguration = ({ server }) => {
                     disabled={loading || getServiceType(config).name === 'rsyslog'}
                   >
                     <i className="fas fa-cogs me-2" />
-                    <span>Modern Rsyslog</span>
+                    <span>{t('hostTime.syslogConfiguration.modernRsyslogButton')}</span>
                   </button>
                 </div>
               </div>
@@ -152,7 +161,7 @@ const SyslogConfiguration = ({ server }) => {
             onClick={() => setActiveView('current')}
           >
             <i className="fas fa-list me-2" />
-            <span>Current Rules</span>
+            <span>{t('hostTime.syslogConfiguration.tabCurrentRules')}</span>
           </button>
         </li>
         <li className="nav-item">
@@ -162,7 +171,7 @@ const SyslogConfiguration = ({ server }) => {
             onClick={() => setActiveView('editor')}
           >
             <i className="fas fa-edit me-2" />
-            <span>Config Editor</span>
+            <span>{t('hostTime.syslogConfiguration.tabConfigEditor')}</span>
           </button>
         </li>
         <li className="nav-item">
@@ -172,7 +181,7 @@ const SyslogConfiguration = ({ server }) => {
             onClick={() => setActiveView('builder')}
           >
             <i className="fas fa-plus me-2" />
-            <span>Rule Builder</span>
+            <span>{t('hostTime.syslogConfiguration.tabRuleBuilder')}</span>
           </button>
         </li>
       </ul>
@@ -209,9 +218,11 @@ const SyslogConfiguration = ({ server }) => {
         isOpen={pendingSwitchTarget !== null}
         onClose={cancelSwitchService}
         onConfirm={confirmSwitchService}
-        title="Switch Syslog Service"
-        message={`Are you sure you want to switch to ${pendingSwitchTarget || ''}? This will restart the logging service.`}
-        confirmText="Switch Service"
+        title={t('hostTime.syslogConfiguration.switchModalTitle')}
+        message={t('hostTime.syslogConfiguration.switchModalMessage', {
+          target: pendingSwitchTarget || '',
+        })}
+        confirmText={t('hostTime.syslogConfiguration.switchModalConfirm')}
         confirmVariant="is-warning"
         icon="fas fa-exchange-alt"
         loading={loading}

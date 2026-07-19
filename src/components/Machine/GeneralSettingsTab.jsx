@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { hasHypervisor } from '../../utils/capabilities';
 
@@ -22,14 +23,16 @@ import SecureBootPanel from './SecureBootPanel';
 
 /** " — default disk,dvd" suffix for the boot-order labels; '' when the
  *  defaults doc reports nothing. */
-const bootOrderDefaultSuffix = value => {
+const bootOrderDefaultSuffix = (value, t) => {
   if (value === undefined || value === null || value === '') {
     return '';
   }
   if (Array.isArray(value)) {
-    return value.length > 0 ? ` — default ${value.join(',')}` : '';
+    return value.length > 0
+      ? t('machineEdit.generalSettingsTab.bootOrderDefault', { value: value.join(',') })
+      : '';
   }
-  return ` — default ${value}`;
+  return t('machineEdit.generalSettingsTab.bootOrderDefault', { value });
 };
 
 const FieldControl = ({
@@ -42,6 +45,7 @@ const FieldControl = ({
   onToggleCustom,
   disabled,
 }) => {
+  const { t } = useTranslation();
   if (field.freeText && vocabulary && !isCustom) {
     return (
       <VocabularySelect
@@ -81,7 +85,7 @@ const FieldControl = ({
               className="btn btn-link btn-sm p-0"
               onClick={() => onToggleCustom(false)}
             >
-              back to the list
+              {t('machineEdit.pickOrType.backToList')}
             </button>
           </>
         )}
@@ -127,37 +131,40 @@ FieldControl.propTypes = {
 
 /** Memory as a −/+ stepper (G units; other strings pass through, buttons
  *  grey) — the create wizard's Resources interaction, parity on Edit. */
-const MemoryStepper = ({ field, value, onSet, blankLabel, disabled }) => (
-  <div className="input-group">
-    <button
-      type="button"
-      className="btn btn-outline-secondary"
-      aria-label="Less memory"
-      onClick={() => onSet(stepMemory(value, -1))}
-      disabled={disabled || !stepMemory(value, -1)}
-    >
-      −
-    </button>
-    <input
-      id={`machine-edit-${field.key}`}
-      className="form-control text-center"
-      type="text"
-      placeholder={field.placeholder || blankLabel}
-      value={value}
-      onChange={e => onSet(e.target.value)}
-      disabled={disabled}
-    />
-    <button
-      type="button"
-      className="btn btn-outline-secondary"
-      aria-label="More memory"
-      onClick={() => onSet(stepMemory(value, 1))}
-      disabled={disabled || !stepMemory(value, 1)}
-    >
-      +
-    </button>
-  </div>
-);
+const MemoryStepper = ({ field, value, onSet, blankLabel, disabled }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="input-group">
+      <button
+        type="button"
+        className="btn btn-outline-secondary"
+        aria-label={t('machineEdit.generalSettingsTab.lessMemory')}
+        onClick={() => onSet(stepMemory(value, -1))}
+        disabled={disabled || !stepMemory(value, -1)}
+      >
+        −
+      </button>
+      <input
+        id={`machine-edit-${field.key}`}
+        className="form-control text-center"
+        type="text"
+        placeholder={field.placeholder || blankLabel}
+        value={value}
+        onChange={e => onSet(e.target.value)}
+        disabled={disabled}
+      />
+      <button
+        type="button"
+        className="btn btn-outline-secondary"
+        aria-label={t('machineEdit.generalSettingsTab.moreMemory')}
+        onClick={() => onSet(stepMemory(value, 1))}
+        disabled={disabled || !stepMemory(value, 1)}
+      >
+        +
+      </button>
+    </div>
+  );
+};
 
 MemoryStepper.propTypes = {
   field: PropTypes.object.isRequired,
@@ -171,13 +178,14 @@ MemoryStepper.propTypes = {
  *  `[cpus=]n[,sockets=n][,cores=n][,threads=n]` shape is typable; the
  *  buttons grey out on anything but a plain count. */
 const VcpusStepper = ({ field, value, onSet, blankLabel, disabled }) => {
+  const { t } = useTranslation();
   const count = /^\d+$/u.test(value.trim()) ? Number(value.trim()) : null;
   return (
     <div className="input-group">
       <button
         type="button"
         className="btn btn-outline-secondary"
-        aria-label="Fewer vCPUs"
+        aria-label={t('machineEdit.generalSettingsTab.fewerVcpus')}
         onClick={() => onSet(String(count - 1))}
         disabled={disabled || count === null || count <= 1}
       >
@@ -188,7 +196,7 @@ const VcpusStepper = ({ field, value, onSet, blankLabel, disabled }) => {
         className="form-control text-center"
         type="text"
         placeholder={field.placeholder || blankLabel}
-        title="A count, or bhyve's extended shape: 4,sockets=2,cores=2"
+        title={t('machineEdit.generalSettingsTab.vcpusHint')}
         value={value}
         onChange={e => onSet(e.target.value)}
         disabled={disabled}
@@ -196,7 +204,7 @@ const VcpusStepper = ({ field, value, onSet, blankLabel, disabled }) => {
       <button
         type="button"
         className="btn btn-outline-secondary"
-        aria-label="More vCPUs"
+        aria-label={t('machineEdit.generalSettingsTab.moreVcpus')}
         onClick={() => onSet(String(count + 1))}
         disabled={disabled || count === null}
       >
@@ -243,6 +251,7 @@ const GeneralSettingsTab = ({
   isRunning,
   formDisabled,
 }) => {
+  const { t } = useTranslation();
   const isVbox = hasHypervisor(currentServer, 'virtualbox');
   // Which freeText fields are in Custom-value input mode.
   const [customFields, setCustomFields] = useState({});
@@ -327,7 +336,7 @@ const GeneralSettingsTab = ({
         })}
       <div className="col-12 col-md-4">
         <label className="form-label" htmlFor="machine-edit-autoboot">
-          Autoboot
+          {t('machineEdit.generalSettingsTab.autoboot')}
         </label>
         <select
           id="machine-edit-autoboot"
@@ -337,8 +346,8 @@ const GeneralSettingsTab = ({
           disabled={formDisabled}
         >
           <option value="">{agentDefaultLabel(defaultsDoc, 'autoboot')}</option>
-          <option value="true">on</option>
-          <option value="false">off</option>
+          <option value="true">{t('machineEdit.generalSettingsTab.on')}</option>
+          <option value="false">{t('machineEdit.generalSettingsTab.off')}</option>
         </select>
       </div>
       {seed.guestAgent !== null && (
@@ -354,17 +363,17 @@ const GeneralSettingsTab = ({
               disabled={formDisabled}
             />
             <label className="form-check-label" htmlFor="machine-edit-guest_agent">
-              QEMU Guest Agent
+              {t('machineEdit.generalSettingsTab.qemuGuestAgent')}
             </label>
           </div>
           <span className="form-text text-muted small">
-            On wires the guest-agent channel; off removes it.
+            {t('machineEdit.generalSettingsTab.guestAgentHint')}
           </span>
         </div>
       )}
       <div className="col-12 col-md-4">
         <label className="form-label" htmlFor="machine-edit-boot-priority">
-          Boot Priority (orchestration)
+          {t('machineEdit.generalSettingsTab.bootPriority')}
         </label>
         <input
           id="machine-edit-boot-priority"
@@ -378,33 +387,33 @@ const GeneralSettingsTab = ({
           disabled={formDisabled}
         />
         <span className="form-text text-muted small">
-          Applies immediately, even while running — no restart involved.
+          {t('machineEdit.generalSettingsTab.appliesImmediatelyNoRestart')}
         </span>
       </div>
       {!isVbox && (
         <>
           <div className="col-12 col-md-4">
             <label className="form-label" htmlFor="machine-edit-consoleport">
-              VNC Web Port (noVNC)
+              {t('machineEdit.generalSettingsTab.vncWebPort')}
             </label>
             <input
               id="machine-edit-consoleport"
               className="form-control"
               type="text"
               placeholder="dynamic"
-              title="Pin the noVNC web port (1025-65535); type dynamic to clear the pin back to the pool"
+              title={t('machineEdit.generalSettingsTab.vncWebPortHint', { keyword: 'dynamic' })}
               value={consolePort}
               onChange={e => setConsolePort(e.target.value)}
               disabled={formDisabled}
             />
             <span className="form-text text-muted small">
-              Applies immediately; takes effect on the next VNC session. Type <code>dynamic</code>{' '}
-              to clear a pin.
+              {t('machineEdit.generalSettingsTab.appliesNextVncSessionType')} <code>dynamic</code>{' '}
+              {t('machineEdit.generalSettingsTab.toClearPin')}
             </span>
           </div>
           <div className="col-12 col-md-4">
             <label className="form-label" htmlFor="machine-edit-consolehost">
-              VNC Bind Address
+              {t('machineEdit.generalSettingsTab.vncBindAddress')}
             </label>
             <input
               id="machine-edit-consolehost"
@@ -416,7 +425,7 @@ const GeneralSettingsTab = ({
               disabled={formDisabled}
             />
             <span className="form-text text-muted small">
-              Applies immediately; takes effect on the next VNC session.
+              {t('machineEdit.generalSettingsTab.appliesNextVncSession')}
             </span>
           </div>
         </>
@@ -424,11 +433,12 @@ const GeneralSettingsTab = ({
       {isVbox && (
         <div className="col-12">
           <span className="form-label d-block">
-            Boot Order (blank = default
+            {t('machineEdit.generalSettingsTab.bootOrderBlankDefault')}
             {bootOrderDefaultSuffix(
-              defaultsDoc?.settings?.boot_order ?? defaultsDoc?.zones?.boot_order
+              defaultsDoc?.settings?.boot_order ?? defaultsDoc?.zones?.boot_order,
+              t
             )}
-            ; requires restart)
+            {t('machineEdit.generalSettingsTab.requiresRestartSuffix')}
           </span>
           <BootOrderEditor
             bootOrder={bootOrder}
@@ -448,7 +458,9 @@ const GeneralSettingsTab = ({
           const showingDevices = explicit.length === 0 && bhyveBootDevices.length > 0;
           return (
             <div className="col-12">
-              <span className="form-label d-block">Boot Order (requires restart)</span>
+              <span className="form-label d-block">
+                {t('machineEdit.generalSettingsTab.bootOrderRequiresRestart')}
+              </span>
               <BootOrderEditor
                 bootOrder={showingDevices ? bhyveBootDevices : explicit}
                 setBootOrder={list => setValues(prev => ({ ...prev, bootorder: list.join(',') }))}
@@ -459,7 +471,7 @@ const GeneralSettingsTab = ({
               />
               <span className="form-text text-muted small">
                 {showingDevices
-                  ? "Showing the zone's devices in the firmware's default order — drag, remove, or add to set an explicit order."
+                  ? t('machineEdit.generalSettingsTab.showingZoneDevicesOrder')
                   : bootorderField.hint}
               </span>
             </div>
@@ -468,16 +480,17 @@ const GeneralSettingsTab = ({
       {!isVbox && (
         <div className="col-12">
           <span className="form-label d-block">
-            Cloud Init{' '}
+            {t('machineEdit.generalSettingsTab.cloudInit')}{' '}
             <span className="text-muted small fw-normal">
-              (current: {cloudInitCurrent || 'off'} — blank fields keep their current value;
-              requires restart)
+              {t('machineEdit.generalSettingsTab.cloudInitCurrent', {
+                current: cloudInitCurrent || 'off',
+              })}
             </span>
           </span>
           <div className="row g-2">
             <div className="col-12 col-md-4">
               <label className="form-label small mb-1" htmlFor="machine-edit-ci-enabled">
-                Enabled
+                {t('machineEdit.generalSettingsTab.enabled')}
               </label>
               {ciCustomUrl ? (
                 <>
@@ -486,7 +499,7 @@ const GeneralSettingsTab = ({
                     className="form-control"
                     type="text"
                     placeholder="https://…"
-                    title="A URL serves that cloud-init config to the guest"
+                    title={t('machineEdit.generalSettingsTab.cloudInitUrlHint')}
                     value={cloudInit.enabled ?? ''}
                     onChange={e => setCloudInit(prev => ({ ...prev, enabled: e.target.value }))}
                     disabled={formDisabled}
@@ -499,34 +512,37 @@ const GeneralSettingsTab = ({
                       setCloudInit(prev => ({ ...prev, enabled: '' }));
                     }}
                   >
-                    back to on/off
+                    {t('machineEdit.generalSettingsTab.backToOnOff')}
                   </button>
                 </>
               ) : (
                 <VocabularySelect
                   id="machine-edit-ci-enabled"
                   value={cloudInit.enabled ?? ''}
-                  entries={['on', 'off']}
+                  entries={[
+                    { value: 'on', label: t('machineEdit.generalSettingsTab.on') },
+                    { value: 'off', label: t('machineEdit.generalSettingsTab.off') },
+                  ]}
                   blankLabel={agentDefaultLabel(defaultsDoc, 'cloud_init')}
                   onChange={next => setCloudInit(prev => ({ ...prev, enabled: next }))}
                   onCustom={() => {
                     setCiCustomUrl(true);
                     setCloudInit(prev => ({ ...prev, enabled: '' }));
                   }}
-                  customLabel="Config URL…"
+                  customLabel={t('machineEdit.generalSettingsTab.configUrl')}
                   disabled={formDisabled}
                 />
               )}
             </div>
             <div className="col-12 col-md-4">
               <label className="form-label small mb-1" htmlFor="machine-edit-ci-domain">
-                DNS domain
+                {t('machineEdit.generalSettingsTab.dnsDomain')}
               </label>
               <input
                 id="machine-edit-ci-domain"
                 className="form-control"
                 type="text"
-                placeholder="keep current"
+                placeholder={t('machineEdit.generalSettingsTab.keepCurrent')}
                 value={cloudInit.dns_domain ?? ''}
                 onChange={e => setCloudInit(prev => ({ ...prev, dns_domain: e.target.value }))}
                 disabled={formDisabled}
@@ -534,7 +550,7 @@ const GeneralSettingsTab = ({
             </div>
             <div className="col-12 col-md-4">
               <label className="form-label small mb-1" htmlFor="machine-edit-ci-resolvers">
-                Resolvers
+                {t('machineEdit.generalSettingsTab.resolvers')}
               </label>
               <input
                 id="machine-edit-ci-resolvers"
@@ -548,14 +564,14 @@ const GeneralSettingsTab = ({
             </div>
             <div className="col-12 col-md-4">
               <label className="form-label small mb-1" htmlFor="machine-edit-ci-password">
-                Root password (hash or plain)
+                {t('machineEdit.generalSettingsTab.rootPassword')}
               </label>
               <input
                 id="machine-edit-ci-password"
                 className="form-control"
                 type="password"
                 autoComplete="new-password"
-                placeholder="keep current"
+                placeholder={t('machineEdit.generalSettingsTab.keepCurrent')}
                 value={cloudInit.password ?? ''}
                 onChange={e => setCloudInit(prev => ({ ...prev, password: e.target.value }))}
                 disabled={formDisabled}
@@ -563,7 +579,7 @@ const GeneralSettingsTab = ({
             </div>
             <div className="col-12 col-md-8">
               <label className="form-label small mb-1" htmlFor="machine-edit-ci-sshkey">
-                SSH public key
+                {t('machineEdit.generalSettingsTab.sshPublicKey')}
               </label>
               <input
                 id="machine-edit-ci-sshkey"

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { FormModal } from '../common';
@@ -13,6 +14,7 @@ const AvailableUpdatesTab = ({
   onShowInstallModal,
   diskSpaceWarning,
 }) => {
+  const { t } = useTranslation();
   const [showRawOutput, setShowRawOutput] = useState(false);
 
   const formatLastChecked = timestamp => {
@@ -27,7 +29,7 @@ const AvailableUpdatesTab = ({
       {/* Header with actions */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div className="d-flex align-items-center gap-2">
-          <h2 className="fs-5 fw-bold mb-0">System Updates</h2>
+          <h2 className="fs-5 fw-bold mb-0">{t('host.systemUpdates.title')}</h2>
         </div>
         <div className="d-flex align-items-center gap-2">
           <button
@@ -44,7 +46,7 @@ const AvailableUpdatesTab = ({
               />
             )}
             <i className="fas fa-sync-alt me-2" />
-            <span>Refresh Metadata</span>
+            <span>{t('host.systemUpdates.refreshMetadata')}</span>
           </button>
           <button
             type="button"
@@ -60,7 +62,7 @@ const AvailableUpdatesTab = ({
               />
             )}
             <i className="fas fa-search me-2" />
-            <span>Check Updates</span>
+            <span>{t('host.systemUpdates.checkUpdates')}</span>
           </button>
         </div>
       </div>
@@ -72,19 +74,21 @@ const AvailableUpdatesTab = ({
             <div className="row g-3">
               <div className="col">
                 <div className="mb-3">
-                  <div className="form-label">Updates Available</div>
+                  <div className="form-label">{t('host.systemUpdates.updatesAvailable')}</div>
                   <div>
                     <span
                       className={`badge fs-6 ${updateData.updates_available ? 'text-bg-warning' : 'text-bg-success'}`}
                     >
-                      {updateData.updates_available ? 'Yes' : 'No'}
+                      {updateData.updates_available
+                        ? t('host.systemUpdates.yes')
+                        : t('host.systemUpdates.no')}
                     </span>
                   </div>
                 </div>
               </div>
               <div className="col">
                 <div className="mb-3">
-                  <div className="form-label">Total Updates</div>
+                  <div className="form-label">{t('host.systemUpdates.totalUpdates')}</div>
                   <div>
                     <span className="badge fs-6 text-bg-info">{updateData.total_updates || 0}</span>
                   </div>
@@ -92,7 +96,7 @@ const AvailableUpdatesTab = ({
               </div>
               <div className="col">
                 <div className="mb-3">
-                  <div className="form-label">Last Checked</div>
+                  <div className="form-label">{t('host.systemUpdates.lastChecked')}</div>
                   <div>
                     <span className="text-muted">{formatLastChecked(updateData.last_checked)}</span>
                   </div>
@@ -105,14 +109,14 @@ const AvailableUpdatesTab = ({
               <div className="alert alert-warning">
                 <h4 className="fs-6 fw-bold">
                   <i className="fas fa-exclamation-triangle me-2" />
-                  Insufficient Disk Space
+                  {t('host.systemUpdates.insufficientSpace')}
                 </h4>
                 <p>
-                  <strong>Available:</strong> {diskSpaceWarning.available}
+                  <strong>{t('host.systemUpdates.available')}</strong> {diskSpaceWarning.available}
                   <br />
-                  <strong>Required:</strong> {diskSpaceWarning.required}
+                  <strong>{t('host.systemUpdates.required')}</strong> {diskSpaceWarning.required}
                 </p>
-                <p className="mt-2">Free up disk space before installing updates.</p>
+                <p className="mt-2">{t('host.systemUpdates.freeUpSpace')}</p>
               </div>
             )}
 
@@ -125,7 +129,9 @@ const AvailableUpdatesTab = ({
                   onClick={onShowInstallModal}
                 >
                   <i className="fas fa-download me-2" />
-                  <span>Install {updateData.total_updates} Updates</span>
+                  <span>
+                    {t('host.systemUpdates.installUpdates', { count: updateData.total_updates })}
+                  </span>
                 </button>
               </div>
             )}
@@ -133,12 +139,14 @@ const AvailableUpdatesTab = ({
             {/* Plan Summary */}
             {updateData.plan_summary && (
               <div className="mt-4">
-                <h4 className="fs-6 fw-bold">Update Plan Summary</h4>
+                <h4 className="fs-6 fw-bold">{t('host.systemUpdates.planSummary')}</h4>
                 <div className="row g-3">
                   <div className="col-lg-3">
                     <div className="card">
                       <div className="card-body text-center">
-                        <p className="text-uppercase small fw-semibold text-muted">Install</p>
+                        <p className="text-uppercase small fw-semibold text-muted">
+                          {t('host.systemUpdates.install')}
+                        </p>
                         <p className="fs-4 fw-bold">
                           {updateData.plan_summary.packages_to_install || 0}
                         </p>
@@ -148,7 +156,9 @@ const AvailableUpdatesTab = ({
                   <div className="col-lg-3">
                     <div className="card">
                       <div className="card-body text-center">
-                        <p className="text-uppercase small fw-semibold text-muted">Update</p>
+                        <p className="text-uppercase small fw-semibold text-muted">
+                          {t('host.systemUpdates.update')}
+                        </p>
                         <p className="fs-4 fw-bold">
                           {updateData.plan_summary.packages_to_update || 0}
                         </p>
@@ -158,7 +168,9 @@ const AvailableUpdatesTab = ({
                   <div className="col-lg-3">
                     <div className="card">
                       <div className="card-body text-center">
-                        <p className="text-uppercase small fw-semibold text-muted">Remove</p>
+                        <p className="text-uppercase small fw-semibold text-muted">
+                          {t('host.systemUpdates.remove')}
+                        </p>
                         <p className="fs-4 fw-bold">
                           {updateData.plan_summary.packages_to_remove || 0}
                         </p>
@@ -168,9 +180,12 @@ const AvailableUpdatesTab = ({
                   <div className="col-lg-3">
                     <div className="card">
                       <div className="card-body text-center">
-                        <p className="text-uppercase small fw-semibold text-muted">Download Size</p>
+                        <p className="text-uppercase small fw-semibold text-muted">
+                          {t('host.systemUpdates.downloadSize')}
+                        </p>
                         <p className="fs-6 fw-bold">
-                          {updateData.plan_summary.total_download_size || 'Unknown'}
+                          {updateData.plan_summary.total_download_size ||
+                            t('host.systemUpdates.unknown')}
                         </p>
                       </div>
                     </div>
@@ -188,7 +203,11 @@ const AvailableUpdatesTab = ({
                   onClick={() => setShowRawOutput(!showRawOutput)}
                 >
                   <i className={`fas fa-chevron-${showRawOutput ? 'up' : 'down'} me-2`} />
-                  <span>{showRawOutput ? 'Hide' : 'Show'} Raw Output</span>
+                  <span>
+                    {showRawOutput
+                      ? t('host.systemUpdates.hideRaw')
+                      : t('host.systemUpdates.showRaw')}
+                  </span>
                 </button>
 
                 {showRawOutput && (
@@ -215,80 +234,84 @@ AvailableUpdatesTab.propTypes = {
   diskSpaceWarning: PropTypes.object,
 };
 
-const UpdateHistoryTab = ({ historyLoading, updateHistory, onRefresh }) => (
-  <div>
-    <div className="d-flex justify-content-between align-items-center mb-4">
-      <div className="d-flex align-items-center gap-2">
-        <h2 className="fs-5 fw-bold mb-0">Update History</h2>
-      </div>
-      <div className="d-flex align-items-center gap-2">
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={onRefresh}
-          disabled={historyLoading}
-        >
-          {historyLoading && (
-            <span
-              className="spinner-border spinner-border-sm me-2"
-              role="status"
-              aria-hidden="true"
-            />
-          )}
-          <i className="fas fa-sync-alt me-2" />
-          <span>Refresh</span>
-        </button>
-      </div>
-    </div>
+const UpdateHistoryTab = ({ historyLoading, updateHistory, onRefresh }) => {
+  const { t } = useTranslation();
 
-    <div className="card">
-      <div className="card-body">
-        {historyLoading && (
-          <div className="text-center p-6">
-            <i className="fas fa-spinner fa-spin fa-2x" />
-            <p className="mt-2">Loading update history...</p>
-          </div>
-        )}
-        {!historyLoading && updateHistory.length === 0 && (
-          <div className="text-center p-6">
-            <i className="fas fa-history fa-2x text-muted" />
-            <p className="mt-2 text-muted">No update history available</p>
-          </div>
-        )}
-        {!historyLoading && updateHistory.length > 0 && (
-          <div className="table-responsive">
-            <table className="table table-striped">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Operation</th>
-                  <th>User</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {updateHistory.map(entry => (
-                  <tr key={`${entry.date}-${entry.operation}-${entry.user}`}>
-                    <td>{new Date(entry.date).toLocaleString()}</td>
-                    <td>{entry.operation}</td>
-                    <td>{entry.user}</td>
-                    <td>
-                      <span
-                        className={`badge ${entry.status === 'Succeeded' ? 'text-bg-success' : 'text-bg-danger'}`}
-                      >
-                        {entry.status}
-                      </span>
-                    </td>
+  return (
+    <div>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex align-items-center gap-2">
+          <h2 className="fs-5 fw-bold mb-0">{t('host.systemUpdates.historyTitle')}</h2>
+        </div>
+        <div className="d-flex align-items-center gap-2">
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={onRefresh}
+            disabled={historyLoading}
+          >
+            {historyLoading && (
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              />
+            )}
+            <i className="fas fa-sync-alt me-2" />
+            <span>{t('host.systemUpdates.refresh')}</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-body">
+          {historyLoading && (
+            <div className="text-center p-6">
+              <i className="fas fa-spinner fa-spin fa-2x" />
+              <p className="mt-2">{t('host.systemUpdates.loadingHistory')}</p>
+            </div>
+          )}
+          {!historyLoading && updateHistory.length === 0 && (
+            <div className="text-center p-6">
+              <i className="fas fa-history fa-2x text-muted" />
+              <p className="mt-2 text-muted">{t('host.systemUpdates.noHistory')}</p>
+            </div>
+          )}
+          {!historyLoading && updateHistory.length > 0 && (
+            <div className="table-responsive">
+              <table className="table table-striped">
+                <thead>
+                  <tr>
+                    <th>{t('host.systemUpdates.date')}</th>
+                    <th>{t('host.systemUpdates.operation')}</th>
+                    <th>{t('host.systemUpdates.user')}</th>
+                    <th>{t('host.systemUpdates.status')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {updateHistory.map(entry => (
+                    <tr key={`${entry.date}-${entry.operation}-${entry.user}`}>
+                      <td>{new Date(entry.date).toLocaleString()}</td>
+                      <td>{entry.operation}</td>
+                      <td>{entry.user}</td>
+                      <td>
+                        <span
+                          className={`badge ${entry.status === 'Succeeded' ? 'text-bg-success' : 'text-bg-danger'}`}
+                        >
+                          {entry.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 UpdateHistoryTab.propTypes = {
   historyLoading: PropTypes.bool,
@@ -297,6 +320,7 @@ UpdateHistoryTab.propTypes = {
 };
 
 const SystemUpdatesSection = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [checkingUpdates, setCheckingUpdates] = useState(false);
@@ -467,7 +491,7 @@ const SystemUpdatesSection = ({ server, onError }) => {
             }}
           >
             <i className="fas fa-download me-2" />
-            <span>Available Updates</span>
+            <span>{t('host.systemUpdates.availableUpdatesTab')}</span>
           </button>
         </li>
         <li className="nav-item">
@@ -486,7 +510,7 @@ const SystemUpdatesSection = ({ server, onError }) => {
             }}
           >
             <i className="fas fa-history me-2" />
-            <span>Update History</span>
+            <span>{t('host.systemUpdates.updateHistoryTab')}</span>
           </button>
         </li>
       </ul>
@@ -519,28 +543,32 @@ const SystemUpdatesSection = ({ server, onError }) => {
           isOpen={showInstallModal}
           onClose={() => setShowInstallModal(false)}
           onSubmit={installUpdates}
-          title="Confirm System Update"
+          title={t('host.systemUpdates.confirmTitle')}
           icon="fas fa-download"
-          submitText={installing ? 'Installing...' : 'Install Updates'}
+          submitText={
+            installing
+              ? t('host.systemUpdates.installing')
+              : t('host.systemUpdates.installUpdates', { count: updateData?.total_updates || 0 })
+          }
           submitVariant="is-warning"
           loading={installing}
         >
           <p>
             <strong>
-              You are about to install {updateData?.total_updates || 0} system updates.
+              {t('host.systemUpdates.confirmMessage', { count: updateData?.total_updates || 0 })}
             </strong>
           </p>
-          <p>This operation will:</p>
+          <p>{t('host.systemUpdates.operationWill')}</p>
           <ul>
-            <li>Create a new boot environment for safety</li>
-            <li>Install all available updates</li>
-            <li>Potentially require a system reboot</li>
-            <li>Take several minutes to complete</li>
+            <li>{t('host.systemUpdates.op1')}</li>
+            <li>{t('host.systemUpdates.op2')}</li>
+            <li>{t('host.systemUpdates.op3')}</li>
+            <li>{t('host.systemUpdates.op4')}</li>
           </ul>
           <div className="alert alert-warning">
             <p>
-              <strong>Warning:</strong> This is a system-level operation that may affect system
-              stability. Ensure you have adequate disk space and a stable connection.
+              <strong>{t('host.systemUpdates.warningLabel')}</strong>{' '}
+              {t('host.systemUpdates.warningMessage')}
             </p>
           </div>
         </FormModal>

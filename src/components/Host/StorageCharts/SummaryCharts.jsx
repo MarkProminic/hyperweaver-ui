@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import Chart from '../../Chart';
 
@@ -65,47 +66,51 @@ SummaryChart.propTypes = {
   summaryChartRefs: PropTypes.shape({ current: PropTypes.object }).isRequired,
 };
 
-const SummaryCharts = ({ chartData, expandChart, summaryChartRefs }) => (
-  <div className="mb-5">
-    <h5 className="fs-6 fw-bold mb-3">
-      <span className="d-inline-flex align-items-center gap-1">
-        <span className="me-1">
-          <i className="fas fa-layer-group" />
+const SummaryCharts = ({ chartData, expandChart, summaryChartRefs }) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="mb-5">
+      <h5 className="fs-6 fw-bold mb-3">
+        <span className="d-inline-flex align-items-center gap-1">
+          <span className="me-1">
+            <i className="fas fa-layer-group" />
+          </span>
+          <span>{t('hostCharts.summaryCharts.sectionTitle')}</span>
         </span>
-        <span>All Devices Summary</span>
-      </span>
-    </h5>
-    <div className="row">
-      <SummaryChart
-        chartId="summary-read"
-        title="Read Bandwidth (All Devices)"
-        chartData={chartData}
-        dataKey="readData"
-        hoverColor="#64b5f6"
-        expandChart={expandChart}
-        summaryChartRefs={summaryChartRefs}
-      />
-      <SummaryChart
-        chartId="summary-write"
-        title="Write Bandwidth (All Devices)"
-        chartData={chartData}
-        dataKey="writeData"
-        hoverColor="#ff9800"
-        expandChart={expandChart}
-        summaryChartRefs={summaryChartRefs}
-      />
-      <SummaryChart
-        chartId="summary-total"
-        title="Total Bandwidth (Combined)"
-        chartData={chartData}
-        dataKey="totalData"
-        hoverColor="#4caf50"
-        expandChart={expandChart}
-        summaryChartRefs={summaryChartRefs}
-      />
+      </h5>
+      <div className="row">
+        <SummaryChart
+          chartId="summary-read"
+          title={t('hostCharts.summaryCharts.readBandwidthTitle')}
+          chartData={chartData}
+          dataKey="readData"
+          hoverColor="#64b5f6"
+          expandChart={expandChart}
+          summaryChartRefs={summaryChartRefs}
+        />
+        <SummaryChart
+          chartId="summary-write"
+          title={t('hostCharts.summaryCharts.writeBandwidthTitle')}
+          chartData={chartData}
+          dataKey="writeData"
+          hoverColor="#ff9800"
+          expandChart={expandChart}
+          summaryChartRefs={summaryChartRefs}
+        />
+        <SummaryChart
+          chartId="summary-total"
+          title={t('hostCharts.summaryCharts.totalBandwidthTitle')}
+          chartData={chartData}
+          dataKey="totalData"
+          hoverColor="#4caf50"
+          expandChart={expandChart}
+          summaryChartRefs={summaryChartRefs}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 SummaryCharts.propTypes = {
   chartData: PropTypes.object.isRequired,

@@ -1,7 +1,9 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const RoleTable = ({ roles, loading, onDelete, onViewDetails }) => {
+  const { t } = useTranslation();
   const [actionLoading, setActionLoading] = useState({});
 
   const handleAction = async (role, action) => {
@@ -21,7 +23,7 @@ const RoleTable = ({ roles, loading, onDelete, onViewDetails }) => {
 
   const formatShell = shell => {
     if (!shell) {
-      return 'N/A';
+      return t('host.roleTable.notAvailable');
     }
     const parts = shell.split('/');
     return parts[parts.length - 1] || shell;
@@ -31,7 +33,7 @@ const RoleTable = ({ roles, loading, onDelete, onViewDetails }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading roles...</p>
+        <p className="mt-2">{t('host.roleTable.loadingRoles')}</p>
       </div>
     );
   }
@@ -40,7 +42,7 @@ const RoleTable = ({ roles, loading, onDelete, onViewDetails }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-user-shield fa-2x text-muted" />
-        <p className="mt-2 text-muted">No roles found</p>
+        <p className="mt-2 text-muted">{t('host.roleTable.noRolesFound')}</p>
       </div>
     );
   }
@@ -50,12 +52,12 @@ const RoleTable = ({ roles, loading, onDelete, onViewDetails }) => {
       <table className="table table-hover">
         <thead>
           <tr>
-            <th>Role Name</th>
-            <th>Comment</th>
-            <th>Shell</th>
-            <th>Authorizations</th>
-            <th>Profiles</th>
-            <th width="200">Actions</th>
+            <th>{t('host.roleTable.roleName')}</th>
+            <th>{t('host.roleTable.comment')}</th>
+            <th>{t('host.roleTable.shell')}</th>
+            <th>{t('host.roleTable.authorizations')}</th>
+            <th>{t('host.roleTable.profiles')}</th>
+            <th width="200">{t('host.roleTable.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -71,7 +73,7 @@ const RoleTable = ({ roles, loading, onDelete, onViewDetails }) => {
               </td>
               <td>
                 <span className="small" title={role.comment}>
-                  {role.comment || 'N/A'}
+                  {role.comment || t('host.roleTable.notAvailable')}
                 </span>
               </td>
               <td>
@@ -89,12 +91,12 @@ const RoleTable = ({ roles, loading, onDelete, onViewDetails }) => {
                     ))}
                     {role.authorizations.length > 2 && (
                       <span className="badge text-bg-secondary">
-                        +{role.authorizations.length - 2} more
+                        {t('host.roleTable.more', { count: role.authorizations.length - 2 })}
                       </span>
                     )}
                   </div>
                 ) : (
-                  <span className="text-muted fst-italic">None</span>
+                  <span className="text-muted fst-italic">{t('host.roleTable.none')}</span>
                 )}
               </td>
               <td>
@@ -107,12 +109,12 @@ const RoleTable = ({ roles, loading, onDelete, onViewDetails }) => {
                     ))}
                     {role.profiles.length > 2 && (
                       <span className="badge text-bg-secondary">
-                        +{role.profiles.length - 2} more
+                        {t('host.roleTable.more', { count: role.profiles.length - 2 })}
                       </span>
                     )}
                   </div>
                 ) : (
-                  <span className="text-muted fst-italic">None</span>
+                  <span className="text-muted fst-italic">{t('host.roleTable.none')}</span>
                 )}
               </td>
               <td>
@@ -123,7 +125,7 @@ const RoleTable = ({ roles, loading, onDelete, onViewDetails }) => {
                     className="btn btn-secondary btn-sm"
                     onClick={() => handleAction(role, 'viewDetails')}
                     disabled={loading}
-                    title="View Details"
+                    title={t('host.roleTable.viewDetails')}
                   >
                     <i className="fas fa-info-circle" />
                   </button>
@@ -134,7 +136,7 @@ const RoleTable = ({ roles, loading, onDelete, onViewDetails }) => {
                     className="btn btn-danger btn-sm"
                     onClick={() => handleAction(role, 'delete')}
                     disabled={loading || actionLoading[`${role.rolename}-delete`]}
-                    title="Delete Role"
+                    title={t('host.roleTable.deleteRole')}
                   >
                     {actionLoading[`${role.rolename}-delete`] && (
                       <span

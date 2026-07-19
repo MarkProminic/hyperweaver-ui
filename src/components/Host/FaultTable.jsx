@@ -1,11 +1,13 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ConfirmModal } from '../common';
 
 import { getSeverityTagClass } from './FaultUtils';
 
 const FaultTable = ({ faults, loading, onAction, onViewDetails }) => {
+  const { t } = useTranslation();
   const [actionLoading, setActionLoading] = useState({});
   const [pendingAction, setPendingAction] = useState(null);
 
@@ -60,21 +62,21 @@ const FaultTable = ({ faults, loading, onAction, onViewDetails }) => {
     [
       {
         key: 'acquit',
-        label: 'Acquit',
+        label: t('host.faultTable.acquit'),
         icon: 'fa-check',
         class: 'btn-success',
         requiresConfirm: true,
       },
       {
         key: 'repaired',
-        label: 'Mark Repaired',
+        label: t('host.faultTable.markRepaired'),
         icon: 'fa-wrench',
         class: 'btn-info',
         requiresConfirm: true,
       },
       {
         key: 'replaced',
-        label: 'Mark Replaced',
+        label: t('host.faultTable.markReplaced'),
         icon: 'fa-exchange-alt',
         class: 'btn-warning',
         requiresConfirm: true,
@@ -83,25 +85,25 @@ const FaultTable = ({ faults, loading, onAction, onViewDetails }) => {
   const getFaultClass = msgId => {
     // Extract readable fault class from message ID
     if (msgId.startsWith('ZFS-')) {
-      return 'ZFS';
+      return t('host.faultTable.classZfs');
     }
     if (msgId.startsWith('FMD-')) {
-      return 'FMD';
+      return t('host.faultTable.classFmd');
     }
     if (msgId.startsWith('CPU-')) {
-      return 'CPU';
+      return t('host.faultTable.classCpu');
     }
     if (msgId.startsWith('MEM-')) {
-      return 'Memory';
+      return t('host.faultTable.classMemory');
     }
-    return msgId.split('-')[0] || 'Unknown';
+    return msgId.split('-')[0] || t('host.faultTable.classUnknown');
   };
 
   if (loading && faults.length === 0) {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading faults...</p>
+        <p className="mt-2">{t('host.faultTable.loading')}</p>
       </div>
     );
   }
@@ -111,9 +113,9 @@ const FaultTable = ({ faults, loading, onAction, onViewDetails }) => {
       <div className="text-center p-4">
         <i className="fas fa-check-circle fa-2x text-success" />
         <p className="mt-2 text-success">
-          <strong>No system faults found</strong>
+          <strong>{t('host.faultTable.noData')}</strong>
         </p>
-        <p className="small text-muted">System is operating normally</p>
+        <p className="small text-muted">{t('host.faultTable.systemOk')}</p>
       </div>
     );
   }
@@ -124,12 +126,12 @@ const FaultTable = ({ faults, loading, onAction, onViewDetails }) => {
         <table className="table table-hover">
           <thead>
             <tr>
-              <th>Time</th>
-              <th>Severity</th>
-              <th>Class</th>
-              <th>Message ID</th>
-              <th>UUID</th>
-              <th width="280">Actions</th>
+              <th>{t('host.faultTable.time')}</th>
+              <th>{t('host.faultTable.severity')}</th>
+              <th>{t('host.faultTable.class')}</th>
+              <th>{t('host.faultTable.messageId')}</th>
+              <th>{t('host.faultTable.uuid')}</th>
+              <th width="280">{t('host.faultTable.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -139,7 +141,7 @@ const FaultTable = ({ faults, loading, onAction, onViewDetails }) => {
               return (
                 <tr key={fault.uuid || index}>
                   <td>
-                    <span className="small">{fault.time || 'N/A'}</span>
+                    <span className="small">{fault.time || t('host.faultTable.na')}</span>
                   </td>
                   <td>
                     <div className="d-flex align-items-center">
@@ -155,7 +157,7 @@ const FaultTable = ({ faults, loading, onAction, onViewDetails }) => {
                   </td>
                   <td>
                     <span className="font-monospace small" title={fault.uuid}>
-                      {fault.uuid ? `${fault.uuid.substring(0, 8)}...` : 'N/A'}
+                      {fault.uuid ? `${fault.uuid.substring(0, 8)}...` : t('host.faultTable.na')}
                     </span>
                   </td>
                   <td>
@@ -200,7 +202,7 @@ const FaultTable = ({ faults, loading, onAction, onViewDetails }) => {
                         className="btn btn-sm btn-secondary"
                         onClick={() => onViewDetails(fault)}
                         disabled={loading}
-                        title="View Details"
+                        title={t('host.faultTable.viewDetails')}
                       >
                         <i className="fas fa-info-circle" />
                       </button>
@@ -218,8 +220,10 @@ const FaultTable = ({ faults, loading, onAction, onViewDetails }) => {
           isOpen
           onClose={() => setPendingAction(null)}
           onConfirm={confirmPendingAction}
-          title={`${pendingAction.action.label} Fault`}
-          message={`Are you sure you want to ${pendingAction.action.label.toLowerCase()} this fault?`}
+          title={t('host.faultTable.confirmTitle', { action: pendingAction.action.label })}
+          message={t('host.faultTable.confirmMessage', {
+            action: pendingAction.action.label.toLowerCase(),
+          })}
           confirmText={pendingAction.action.label}
           confirmVariant="warning"
           icon="fas fa-exclamation-triangle"

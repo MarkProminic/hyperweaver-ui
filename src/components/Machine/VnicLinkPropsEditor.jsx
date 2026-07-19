@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { makeAgentRequest } from '../../api/serverUtils';
 
@@ -29,6 +30,7 @@ const displayValue = row => {
 
 /** protection is a comma-separated guard list — render it as real toggles. */
 const ProtectionRow = ({ row, value, onChange, disabled }) => {
+  const { t } = useTranslation();
   const active = String(value ?? row.value ?? '')
     .split(',')
     .map(entry => entry.trim())
@@ -43,7 +45,8 @@ const ProtectionRow = ({ row, value, onChange, disabled }) => {
   return (
     <div className="col-12">
       <span className="form-label small mb-1 d-block">
-        protection <span className="text-muted">— anti-spoof guards</span>
+        protection{' '}
+        <span className="text-muted">{t('machineEdit.vnicLinkPropsEditor.antiSpoofGuards')}</span>
       </span>
       <div className="d-flex flex-wrap gap-2">
         {guards.map(guard => (
@@ -63,9 +66,8 @@ const ProtectionRow = ({ row, value, onChange, disabled }) => {
         ))}
       </div>
       <span className="form-text text-muted small">
-        These are the guards, not permissions — UNCHECK a guard to allow that spoofing (e.g. clear{' '}
-        <code>mac-nospoof</code> + <code>ip-nospoof</code> for a CARP/VRRP firewall guest). All
-        clear = no anti-spoof enforcement.
+        {t('machineEdit.vnicLinkPropsEditor.protectionFooterIntro')} <code>mac-nospoof</code> +{' '}
+        <code>ip-nospoof</code> {t('machineEdit.vnicLinkPropsEditor.protectionFooterTail')}
       </span>
     </div>
   );
@@ -79,6 +81,7 @@ ProtectionRow.propTypes = {
 };
 
 const VnicLinkPropsEditor = ({ currentServer, vnic, disabled }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState(null);
   const [edits, setEdits] = useState({});
@@ -107,10 +110,14 @@ const VnicLinkPropsEditor = ({ currentServer, vnic, disabled }) => {
     } else {
       setRows([]);
       setError(
-        `GET network/vnics/${vnic}/properties failed (${result.status ?? '?'}): ${result.message}`
+        t('machineEdit.vnicLinkPropsEditor.loadFailed', {
+          vnic,
+          status: result.status ?? '?',
+          message: result.message,
+        })
       );
     }
-  }, [open, currentServer, vnic]);
+  }, [open, currentServer, vnic, t]);
 
   useEffect(() => {
     setEdits({});
@@ -123,7 +130,7 @@ const VnicLinkPropsEditor = ({ currentServer, vnic, disabled }) => {
       Object.entries(edits).filter(([, value]) => value !== undefined)
     );
     if (Object.keys(properties).length === 0) {
-      setError('Nothing changed — edit a property first.');
+      setError(t('machineEdit.vnicLinkPropsEditor.nothingChanged'));
       return;
     }
     setBusy(true);
@@ -143,8 +150,10 @@ const VnicLinkPropsEditor = ({ currentServer, vnic, disabled }) => {
       return;
     }
     setNotice(
-      `${result.data?.message || 'Link properties queued'}${
-        result.data?.task_id ? ` (task ${result.data.task_id})` : ''
+      `${result.data?.message || t('machineEdit.vnicLinkPropsEditor.linkPropertiesQueued')}${
+        result.data?.task_id
+          ? t('machineEdit.vnicLinkPropsEditor.taskSuffix', { taskId: result.data.task_id })
+          : ''
       }.`
     );
     setEdits({});
@@ -158,7 +167,7 @@ const VnicLinkPropsEditor = ({ currentServer, vnic, disabled }) => {
     <div className="hw-device-row hw-device-child hw-device-child-form">
       <details className="w-100" onToggle={e => setOpen(e.currentTarget.open)}>
         <summary className="small fw-semibold">
-          Link properties (dladm) — spoofing, bandwidth, MTU
+          {t('machineEdit.vnicLinkPropsEditor.summary')}
         </summary>
 
         {error && <div className="alert alert-danger py-1 px-2 small mt-2 mb-1">{error}</div>}
@@ -167,7 +176,7 @@ const VnicLinkPropsEditor = ({ currentServer, vnic, disabled }) => {
         {open && rows === null && !error && (
           <p className="text-muted small mt-2 mb-0">
             <i className="fas fa-spinner fa-pulse me-2" />
-            Reading the link…
+            {t('machineEdit.vnicLinkPropsEditor.readingLink')}
           </p>
         )}
 
@@ -236,7 +245,7 @@ const VnicLinkPropsEditor = ({ currentServer, vnic, disabled }) => {
                 onClick={save}
                 disabled={disabled || busy}
               >
-                Apply link properties
+                {t('machineEdit.vnicLinkPropsEditor.applyLinkProperties')}
               </button>
               <div className="form-check mb-0">
                 <input
@@ -248,16 +257,20 @@ const VnicLinkPropsEditor = ({ currentServer, vnic, disabled }) => {
                   disabled={disabled || busy}
                 />
                 <label className="form-check-label small" htmlFor={`vnic-${vnic}-temporary`}>
-                  Temporary (until the next host reboot)
+                  {t('machineEdit.vnicLinkPropsEditor.temporary')}
                 </label>
               </div>
-              <span className="text-muted small">Applies to the link now — not on Apply.</span>
+              <span className="text-muted small">
+                {t('machineEdit.vnicLinkPropsEditor.appliesNow')}
+              </span>
             </div>
           </>
         )}
 
         {rows !== null && rows.length === 0 && !error && (
-          <p className="text-muted small mt-2 mb-0">The link reports no properties.</p>
+          <p className="text-muted small mt-2 mb-0">
+            {t('machineEdit.vnicLinkPropsEditor.noProperties')}
+          </p>
         )}
       </details>
     </div>

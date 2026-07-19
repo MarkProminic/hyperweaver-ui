@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { Fragment } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const listOf = value => {
   if (Array.isArray(value)) {
@@ -77,25 +78,28 @@ export const markIconClass = isMarked => (isMarked ? 'fa-rotate-left' : 'fa-tras
 const kindIcon = kind => (kind === 'cdrom' ? 'fa-compact-disc' : 'fa-hdd');
 
 /** One attached medium as a read-only tree child row. */
-const AttachmentRow = ({ entry }) => (
-  <div className="hw-device-row hw-device-child">
-    <i className={`fas ${kindIcon(entry.kind)} text-muted`} />
-    <span className="hw-device-meta">
-      port {entry.port} · dev {entry.device}
-    </span>
-    <span className="hw-device-path" title={entry.path}>
-      {entry.path || 'empty drive'}
-    </span>
-    {entry.port === 0 && entry.kind === 'disk' && (
-      <span
-        className="badge text-bg-light ms-auto"
-        title="Port 0 is the boot medium — the agent refuses removing it"
-      >
-        boot
+const AttachmentRow = ({ entry }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="hw-device-row hw-device-child">
+      <i className={`fas ${kindIcon(entry.kind)} text-muted`} />
+      <span className="hw-device-meta">
+        {t('machineEdit.currentHardware.portDev', { port: entry.port, device: entry.device })}
       </span>
-    )}
-  </div>
-);
+      <span className="hw-device-path" title={entry.path}>
+        {entry.path || t('machineEdit.currentHardware.emptyDrive')}
+      </span>
+      {entry.port === 0 && entry.kind === 'disk' && (
+        <span
+          className="badge text-bg-light ms-auto"
+          title={t('machineEdit.currentHardware.bootMediumTitle')}
+        >
+          {t('machineEdit.currentHardware.boot')}
+        </span>
+      )}
+    </div>
+  );
+};
 
 AttachmentRow.propTypes = {
   entry: PropTypes.object.isRequired,
@@ -113,59 +117,65 @@ export const zoneNicSummary = nic =>
 
 /** The zone's device families as read-only tree rows — shared by the
  *  Overview panel and the Settings editors. */
-export const ZoneDeviceRows = ({ zone, showNics = true }) => (
-  <>
-    {zone.disks.length > 0 && (
-      <div className="hw-device-row hw-device-group">
-        <i className="fas fa-hard-drive text-muted" />
-        <span>Disks</span>
-      </div>
-    )}
-    {zone.disks.map(disk => (
-      <div className="hw-device-row hw-device-child" key={disk.name}>
-        <i className="fas fa-hdd text-muted" />
-        <span className="hw-device-meta">{disk.name}</span>
-        <span className="hw-device-path" title={disk.value}>
-          {disk.value}
-        </span>
-        {disk.boot && (
-          <span className="badge text-bg-light ms-auto" title="The zone's boot medium">
-            boot
+export const ZoneDeviceRows = ({ zone, showNics = true }) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      {zone.disks.length > 0 && (
+        <div className="hw-device-row hw-device-group">
+          <i className="fas fa-hard-drive text-muted" />
+          <span>{t('machineEdit.currentHardware.disks')}</span>
+        </div>
+      )}
+      {zone.disks.map(disk => (
+        <div className="hw-device-row hw-device-child" key={disk.name}>
+          <i className="fas fa-hdd text-muted" />
+          <span className="hw-device-meta">{disk.name}</span>
+          <span className="hw-device-path" title={disk.value}>
+            {disk.value}
           </span>
-        )}
-      </div>
-    ))}
-    {zone.cdroms.length > 0 && (
-      <div className="hw-device-row hw-device-group">
-        <i className="fas fa-compact-disc text-muted" />
-        <span>CD/DVD</span>
-      </div>
-    )}
-    {zone.cdroms.map(cdrom => (
-      <div className="hw-device-row hw-device-child" key={cdrom.name}>
-        <i className="fas fa-compact-disc text-muted" />
-        <span className="hw-device-meta">{cdrom.name}</span>
-        <span className="hw-device-path" title={cdrom.value}>
-          {cdrom.value}
-        </span>
-      </div>
-    ))}
-    {showNics && zone.nics.length > 0 && (
-      <div className="hw-device-row hw-device-group">
-        <i className="fas fa-network-wired text-muted" />
-        <span>Network</span>
-      </div>
-    )}
-    {showNics &&
-      zone.nics.map(nic => (
-        <div className="hw-device-row hw-device-child" key={nic.name}>
-          <i className="fas fa-ethernet text-muted" />
-          <span className="hw-device-meta">{nic.name}</span>
-          <span className="hw-device-path">{zoneNicSummary(nic)}</span>
+          {disk.boot && (
+            <span
+              className="badge text-bg-light ms-auto"
+              title={t('machineEdit.currentHardware.zoneBootMediumTitle')}
+            >
+              {t('machineEdit.currentHardware.boot')}
+            </span>
+          )}
         </div>
       ))}
-  </>
-);
+      {zone.cdroms.length > 0 && (
+        <div className="hw-device-row hw-device-group">
+          <i className="fas fa-compact-disc text-muted" />
+          <span>{t('machineEdit.currentHardware.cdDvd')}</span>
+        </div>
+      )}
+      {zone.cdroms.map(cdrom => (
+        <div className="hw-device-row hw-device-child" key={cdrom.name}>
+          <i className="fas fa-compact-disc text-muted" />
+          <span className="hw-device-meta">{cdrom.name}</span>
+          <span className="hw-device-path" title={cdrom.value}>
+            {cdrom.value}
+          </span>
+        </div>
+      ))}
+      {showNics && zone.nics.length > 0 && (
+        <div className="hw-device-row hw-device-group">
+          <i className="fas fa-network-wired text-muted" />
+          <span>{t('machineEdit.currentHardware.network')}</span>
+        </div>
+      )}
+      {showNics &&
+        zone.nics.map(nic => (
+          <div className="hw-device-row hw-device-child" key={nic.name}>
+            <i className="fas fa-ethernet text-muted" />
+            <span className="hw-device-meta">{nic.name}</span>
+            <span className="hw-device-path">{zoneNicSummary(nic)}</span>
+          </div>
+        ))}
+    </>
+  );
+};
 
 ZoneDeviceRows.propTypes = {
   zone: PropTypes.object.isRequired,
@@ -179,13 +189,14 @@ ZoneDeviceRows.propTypes = {
  * StorageDevicesEditor / NetworkAdaptersEditor.
  */
 export const HardwareDeviceTree = ({ currentHardware }) => {
+  const { t } = useTranslation();
   const { controllers, attachments, nics, zone } = currentHardware;
   if (zone) {
     return (
       <div className="hw-device-tree mb-0">
         <div className="hw-device-tree-head">
           <i className="fas fa-plug" />
-          <span>Devices</span>
+          <span>{t('machineEdit.currentHardware.devices')}</span>
         </div>
         <ZoneDeviceRows zone={zone} />
       </div>
@@ -198,7 +209,7 @@ export const HardwareDeviceTree = ({ currentHardware }) => {
     <div className="hw-device-tree mb-0">
       <div className="hw-device-tree-head">
         <i className="fas fa-plug" />
-        <span>Devices</span>
+        <span>{t('machineEdit.currentHardware.devices')}</span>
       </div>
       {controllers.map(controller => (
         <Fragment key={controller.name}>
@@ -220,20 +231,20 @@ export const HardwareDeviceTree = ({ currentHardware }) => {
       {nics.length > 0 && (
         <div className="hw-device-row hw-device-group">
           <i className="fas fa-network-wired text-muted" />
-          <span>Network Adapters</span>
+          <span>{t('machineEdit.currentHardware.networkAdapters')}</span>
         </div>
       )}
       {nics.map(nic => (
         <div className="hw-device-row hw-device-child" key={nic.adapter}>
           <i className="fas fa-ethernet text-muted" />
-          <span>Adapter {nic.adapter}</span>
+          <span>{t('machineEdit.currentHardware.adapter', { adapter: nic.adapter })}</span>
           <span className="hw-device-meta">{nicSummary(nic)}</span>
           {nic.adapter === 1 && (
             <span
               className="badge text-bg-light ms-auto"
-              title="Adapter 1 is the provisioning NAT on agent-created machines"
+              title={t('machineEdit.currentHardware.provisioningNatTitle')}
             >
-              provisioning NAT
+              {t('machineEdit.currentHardware.provisioningNat')}
             </span>
           )}
         </div>

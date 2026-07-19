@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getNetworkUsage, getZoneDiskIo, getZoneUsage } from '../../api/monitoringAPI';
 import Chart from '../Chart';
@@ -78,25 +79,38 @@ ChartCard.propTypes = {
 };
 
 /** A zvol's array + its latest IOPS — the numbers a throughput line hides. */
-const DeviceBadges = ({ entry }) => (
-  <>
-    <span className="badge text-bg-secondary" title="The array this volume lives on">
-      {entry.pool}
-    </span>
-    <span className="badge text-bg-light border" title="Latest read IOPS">
-      {Math.round(latest(entry.readIops))} r/s
-    </span>
-    <span className="badge text-bg-light border" title="Latest write IOPS">
-      {Math.round(latest(entry.writeIops))} w/s
-    </span>
-  </>
-);
+const DeviceBadges = ({ entry }) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      <span
+        className="badge text-bg-secondary"
+        title={t('machine.machineResourceCharts.arrayTooltip')}
+      >
+        {entry.pool}
+      </span>
+      <span
+        className="badge text-bg-light border"
+        title={t('machine.machineResourceCharts.readIopsTooltip')}
+      >
+        {Math.round(latest(entry.readIops))} r/s
+      </span>
+      <span
+        className="badge text-bg-light border"
+        title={t('machine.machineResourceCharts.writeIopsTooltip')}
+      >
+        {Math.round(latest(entry.writeIops))} w/s
+      </span>
+    </>
+  );
+};
 
 DeviceBadges.propTypes = {
   entry: PropTypes.object.isRequired,
 };
 
 const MachineResourceCharts = ({ currentServer, machineName, links }) => {
+  const { t } = useTranslation();
   const [zoneData, setZoneData] = useState(null);
   // {dataset: {pool, device, read, write, readIops, writeIops}}
   const [diskData, setDiskData] = useState({});
@@ -120,7 +134,7 @@ const MachineResourceCharts = ({ currentServer, machineName, links }) => {
       { zone: machineName, since: lastSeen.current.usage || sinceIso(), limit: 200 }
     );
     if (!result.success) {
-      return `CPU/memory failed (GET monitoring/zones/usage): ${result.message}`;
+      return t('machine.machineResourceCharts.cpuMemoryFailed', { message: result.message });
     }
     const rows = Array.isArray(result.data?.usage) ? result.data.usage : [];
     setZoneData(prev => {
@@ -138,7 +152,7 @@ const MachineResourceCharts = ({ currentServer, machineName, links }) => {
       return next;
     });
     return '';
-  }, [currentServer, machineName]);
+  }, [currentServer, machineName, t]);
 
   const loadDiskIo = useCallback(async () => {
     const result = await getZoneDiskIo(
@@ -148,7 +162,7 @@ const MachineResourceCharts = ({ currentServer, machineName, links }) => {
       { zone: machineName, since: lastSeen.current.diskio || sinceIso(), limit: 500 }
     );
     if (!result.success) {
-      return `Disk I/O failed (GET monitoring/zones/diskio): ${result.message}`;
+      return t('machine.machineResourceCharts.diskIoFailed', { message: result.message });
     }
     const rows = Array.isArray(result.data?.diskio) ? result.data.diskio : [];
     setDiskData(prev => {
@@ -177,7 +191,7 @@ const MachineResourceCharts = ({ currentServer, machineName, links }) => {
       return next;
     });
     return '';
-  }, [currentServer, machineName]);
+  }, [currentServer, machineName, t]);
 
   const loadNetwork = useCallback(async () => {
     const results = await Promise.all(
@@ -207,8 +221,10 @@ const MachineResourceCharts = ({ currentServer, machineName, links }) => {
       });
       return next;
     });
-    return failed ? `Network failed (GET monitoring/network/usage): ${failed.result.message}` : '';
-  }, [currentServer]);
+    return failed
+      ? t('machine.machineResourceCharts.networkFailed', { message: failed.result.message })
+      : '';
+  }, [currentServer, t]);
 
   const load = useCallback(async () => {
     const errors = await Promise.all([loadUsage(), loadDiskIo(), loadNetwork()]);
@@ -239,13 +255,19 @@ const MachineResourceCharts = ({ currentServer, machineName, links }) => {
   // Hoisted: multiline JSX inside a prop trips jsx-wrap-multilines, and the
   // parens it wants are the ones prettier strips (circular fix).
   const cpuBadges = hasUsage ? (
-    <span className="badge text-bg-light border" title="Latest">
-      {latest(zoneData.cpu).toFixed(1)}% of host
+    <span
+      className="badge text-bg-light border"
+      title={t('machine.machineResourceCharts.latestTooltip')}
+    >
+      {t('machine.machineResourceCharts.pctOfHost', { value: latest(zoneData.cpu).toFixed(1) })}
     </span>
   ) : null;
 
   const memoryBadges = hasUsage ? (
-    <span className="badge text-bg-light border" title="Latest resident">
+    <span
+      className="badge text-bg-light border"
+      title={t('machine.machineResourceCharts.latestResidentTooltip')}
+    >
       {latest(zoneData.rss).toFixed(2)} GB
     </span>
   ) : null;
@@ -262,7 +284,7 @@ const MachineResourceCharts = ({ currentServer, machineName, links }) => {
         <div className="col-12">
           <p className="text-muted small mb-0">
             <i className="fas fa-spinner fa-pulse me-2" />
-            Waiting for the first resource samples…
+            {t('machine.machineResourceCharts.waitingForSamples')}
           </p>
         </div>
       )}
@@ -270,20 +292,34 @@ const MachineResourceCharts = ({ currentServer, machineName, links }) => {
       {hasUsage && (
         <ChartCard
           icon="fa-microchip"
-          title="CPU"
+          title={t('machine.machineResourceCharts.cpuTitle')}
           badges={cpuBadges}
-          options={chartOptions('%', [{ name: 'CPU', data: zoneData.cpu, color: '#4caf50' }])}
+          options={chartOptions('%', [
+            {
+              name: t('machine.machineResourceCharts.cpuSeries'),
+              data: zoneData.cpu,
+              color: '#4caf50',
+            },
+          ])}
         />
       )}
 
       {hasUsage && (
         <ChartCard
           icon="fa-memory"
-          title="Memory"
+          title={t('machine.machineResourceCharts.memoryTitle')}
           badges={memoryBadges}
           options={chartOptions('GB', [
-            { name: 'Resident', data: zoneData.rss, color: '#64b5f6' },
-            { name: 'Swap', data: zoneData.swap, color: '#ff9800' },
+            {
+              name: t('machine.machineResourceCharts.residentSeries'),
+              data: zoneData.rss,
+              color: '#64b5f6',
+            },
+            {
+              name: t('machine.machineResourceCharts.swapSeries'),
+              data: zoneData.swap,
+              color: '#ff9800',
+            },
           ])}
         />
       )}
@@ -292,12 +328,20 @@ const MachineResourceCharts = ({ currentServer, machineName, links }) => {
         <ChartCard
           key={entry.dataset}
           icon="fa-hdd"
-          title={`Disk — ${entry.device}`}
+          title={t('machine.machineResourceCharts.diskTitle', { device: entry.device })}
           subtitle={entry.dataset}
           badges={<DeviceBadges entry={entry} />}
           options={chartOptions('MB/s', [
-            { name: 'Read', data: entry.read, color: '#64b5f6' },
-            { name: 'Write', data: entry.write, color: '#ff9800' },
+            {
+              name: t('machine.machineResourceCharts.readSeries'),
+              data: entry.read,
+              color: '#64b5f6',
+            },
+            {
+              name: t('machine.machineResourceCharts.writeSeries'),
+              data: entry.write,
+              color: '#ff9800',
+            },
           ])}
         />
       ))}
@@ -311,10 +355,18 @@ const MachineResourceCharts = ({ currentServer, machineName, links }) => {
           <Fragment key={link}>
             <ChartCard
               icon="fa-ethernet"
-              title={`Network — ${link}`}
+              title={t('machine.machineResourceCharts.networkTitle', { link })}
               options={chartOptions('Mbps', [
-                { name: 'RX', data: entry.rx, color: '#64b5f6' },
-                { name: 'TX', data: entry.tx, color: '#ff9800' },
+                {
+                  name: t('machine.machineResourceCharts.rxSeries'),
+                  data: entry.rx,
+                  color: '#64b5f6',
+                },
+                {
+                  name: t('machine.machineResourceCharts.txSeries'),
+                  data: entry.tx,
+                  color: '#ff9800',
+                },
               ])}
             />
           </Fragment>

@@ -1,7 +1,9 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const GroupTable = ({ groups, loading, onDelete, onViewDetails }) => {
+  const { t } = useTranslation();
   const [actionLoading, setActionLoading] = useState({});
 
   const handleAction = async (group, action) => {
@@ -21,16 +23,16 @@ const GroupTable = ({ groups, loading, onDelete, onViewDetails }) => {
 
   const getGroupType = group => {
     if (group.gid < 100) {
-      return { type: 'System', class: 'text-bg-info' };
+      return { type: t('host.groupTable.typeSystem'), class: 'text-bg-info' };
     }
-    return { type: 'Regular', class: 'text-bg-success' };
+    return { type: t('host.groupTable.typeRegular'), class: 'text-bg-success' };
   };
 
   if (loading && groups.length === 0) {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading groups...</p>
+        <p className="mt-2">{t('host.groupTable.loading')}</p>
       </div>
     );
   }
@@ -39,7 +41,7 @@ const GroupTable = ({ groups, loading, onDelete, onViewDetails }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-users fa-2x text-muted" />
-        <p className="mt-2 text-muted">No groups found</p>
+        <p className="mt-2 text-muted">{t('host.groupTable.noData')}</p>
       </div>
     );
   }
@@ -49,11 +51,11 @@ const GroupTable = ({ groups, loading, onDelete, onViewDetails }) => {
       <table className="table table-hover">
         <thead>
           <tr>
-            <th>Group Name</th>
-            <th>GID</th>
-            <th>Members</th>
-            <th>Type</th>
-            <th width="200">Actions</th>
+            <th>{t('host.groupTable.groupName')}</th>
+            <th>{t('host.groupTable.gid')}</th>
+            <th>{t('host.groupTable.members')}</th>
+            <th>{t('host.groupTable.type')}</th>
+            <th width="200">{t('host.groupTable.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -83,12 +85,12 @@ const GroupTable = ({ groups, loading, onDelete, onViewDetails }) => {
                       ))}
                       {group.members.length > 3 && (
                         <span className="badge text-bg-secondary">
-                          +{group.members.length - 3} more
+                          {t('host.groupTable.moreMembers', { count: group.members.length - 3 })}
                         </span>
                       )}
                     </div>
                   ) : (
-                    <span className="text-muted fst-italic">No members</span>
+                    <span className="text-muted fst-italic">{t('host.groupTable.noMembers')}</span>
                   )}
                 </td>
                 <td>
@@ -102,7 +104,7 @@ const GroupTable = ({ groups, loading, onDelete, onViewDetails }) => {
                       className="btn btn-secondary btn-sm"
                       onClick={() => handleAction(group, 'viewDetails')}
                       disabled={loading}
-                      title="View Details"
+                      title={t('host.groupTable.viewDetails')}
                     >
                       <i className="fas fa-info-circle" />
                     </button>
@@ -114,7 +116,7 @@ const GroupTable = ({ groups, loading, onDelete, onViewDetails }) => {
                         className="btn btn-danger btn-sm"
                         onClick={() => handleAction(group, 'delete')}
                         disabled={loading || actionLoading[`${group.groupname}-delete`]}
-                        title="Delete Group"
+                        title={t('host.groupTable.deleteGroup')}
                       >
                         {actionLoading[`${group.groupname}-delete`] && (
                           <span

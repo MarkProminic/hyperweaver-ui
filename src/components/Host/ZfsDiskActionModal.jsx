@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   offlineZfsPoolDevice,
@@ -26,6 +27,7 @@ const diskTypeIcon = type => (type === 'SSD' || type === 'NVMe' ? 'fa-microchip'
 
 /** Clickable free-disk cards, grouped by type — the replace target picker. */
 const FreeDiskPicker = ({ disks, selected, onSelect, disabled }) => {
+  const { t } = useTranslation();
   const groups = ['HDD', 'SSD', 'NVMe'];
   const grouped = groups
     .map(type => ({ type, disks: disks.filter(disk => (disk.disk_type || 'HDD') === type) }))
@@ -58,8 +60,11 @@ const FreeDiskPicker = ({ disks, selected, onSelect, disabled }) => {
                         {shortDevice(disk.device_name)}
                       </strong>
                       {disk.faulty && (
-                        <span className="badge text-bg-danger" title="fmd reports this disk faulty">
-                          faulty
+                        <span
+                          className="badge text-bg-danger"
+                          title={t('host.freeDiskPicker.faultyTitle')}
+                        >
+                          {t('host.freeDiskPicker.faultyBadge')}
                         </span>
                       )}
                       {isSelected && <i className="fas fa-circle-check text-primary ms-auto" />}
@@ -108,66 +113,75 @@ InfoLine.propTypes = {
 };
 
 /** The disk's identity block — status-layer facts plus the inventory match. */
-const DiskInfoCard = ({ device, inventoryDisk }) => (
-  <div className="border rounded p-2 mb-3">
-    <div className="d-flex align-items-center gap-2 mb-2">
-      <i className={`fas ${diskTypeIcon(inventoryDisk?.disk_type)} fa-lg text-muted`} />
-      <code>{device.name}</code>
-      <span className={`badge ${healthBadgeClass(device.state)}`}>{device.state}</span>
-      {device.note && <span className="badge text-bg-warning">{device.note}</span>}
-      {inventoryDisk?.faulty && (
-        <span className="badge text-bg-danger" title="fmd reports this disk faulty">
-          FAULTY
-        </span>
-      )}
-    </div>
-    <InfoLine label="Errors">
-      read {device.read} · write {device.write} · cksum {device.cksum}
-    </InfoLine>
-    {inventoryDisk && (
-      <>
-        <InfoLine label="Model">
-          {`${inventoryDisk.manufacturer || ''} ${inventoryDisk.model || ''}`.trim() || '—'}
-        </InfoLine>
-        <InfoLine label="Serial">
-          <code className="small">{inventoryDisk.serial_number || '—'}</code>
-        </InfoLine>
-        <InfoLine label="Capacity">
-          {inventoryDisk.capacity || humanSize(inventoryDisk.capacity_bytes)}
-        </InfoLine>
-        <InfoLine label="Type">
-          {[
-            inventoryDisk.disk_type,
-            inventoryDisk.interface_type,
-            inventoryDisk.firmware,
-            inventoryDisk.removable ? 'removable' : null,
-          ]
-            .filter(Boolean)
-            .join(' · ') || '—'}
-        </InfoLine>
-        {inventoryDisk.chassis !== null &&
-          inventoryDisk.chassis !== undefined &&
-          inventoryDisk.bay !== null &&
-          inventoryDisk.bay !== undefined && (
-            <InfoLine label="Location">
-              chassis {inventoryDisk.chassis} · bay {inventoryDisk.bay}
+const DiskInfoCard = ({ device, inventoryDisk }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="border rounded p-2 mb-3">
+      <div className="d-flex align-items-center gap-2 mb-2">
+        <i className={`fas ${diskTypeIcon(inventoryDisk?.disk_type)} fa-lg text-muted`} />
+        <code>{device.name}</code>
+        <span className={`badge ${healthBadgeClass(device.state)}`}>{device.state}</span>
+        {device.note && <span className="badge text-bg-warning">{device.note}</span>}
+        {inventoryDisk?.faulty && (
+          <span className="badge text-bg-danger" title={t('host.diskActionModal.faultyTitle')}>
+            {t('host.diskActionModal.faultyBadge')}
+          </span>
+        )}
+      </div>
+      <InfoLine label={t('host.diskActionModal.errorsLabel')}>
+        {t('host.diskActionModal.readWriteCksum', {
+          read: device.read,
+          write: device.write,
+          cksum: device.cksum,
+        })}
+      </InfoLine>
+      {inventoryDisk && (
+        <>
+          <InfoLine label={t('host.diskActionModal.modelLabel')}>
+            {`${inventoryDisk.manufacturer || ''} ${inventoryDisk.model || ''}`.trim() || '—'}
+          </InfoLine>
+          <InfoLine label={t('host.diskActionModal.serialLabel')}>
+            <code className="small">{inventoryDisk.serial_number || '—'}</code>
+          </InfoLine>
+          <InfoLine label={t('host.diskActionModal.capacityLabel')}>
+            {inventoryDisk.capacity || humanSize(inventoryDisk.capacity_bytes)}
+          </InfoLine>
+          <InfoLine label={t('host.diskActionModal.typeLabel')}>
+            {[
+              inventoryDisk.disk_type,
+              inventoryDisk.interface_type,
+              inventoryDisk.firmware,
+              inventoryDisk.removable ? 'removable' : null,
+            ]
+              .filter(Boolean)
+              .join(' · ') || '—'}
+          </InfoLine>
+          {inventoryDisk.chassis !== null &&
+            inventoryDisk.chassis !== undefined &&
+            inventoryDisk.bay !== null &&
+            inventoryDisk.bay !== undefined && (
+              <InfoLine label={t('host.diskActionModal.locationLabel')}>
+                {t('host.diskActionModal.locationValue', {
+                  chassis: inventoryDisk.chassis,
+                  bay: inventoryDisk.bay,
+                })}
+              </InfoLine>
+            )}
+          {inventoryDisk.device_path && (
+            <InfoLine label={t('host.diskActionModal.pathLabel')}>
+              <code className="small">{inventoryDisk.device_path}</code>
             </InfoLine>
           )}
-        {inventoryDisk.device_path && (
-          <InfoLine label="Path">
-            <code className="small">{inventoryDisk.device_path}</code>
-          </InfoLine>
-        )}
-      </>
-    )}
-    {!inventoryDisk && (
-      <p className="form-text text-muted mb-0 mt-1">
-        No inventory record for this device — model/serial arrive once the monitoring disk scan
-        covers it.
-      </p>
-    )}
-  </div>
-);
+        </>
+      )}
+      {!inventoryDisk && (
+        <p className="form-text text-muted mb-0 mt-1">
+          {t('host.diskActionModal.noInventoryText')}
+        </p>
+      )}
+    </div>
+  );
+};
 
 DiskInfoCard.propTypes = {
   device: PropTypes.object.isRequired,
@@ -211,6 +225,7 @@ const DiskActionModal = ({
   onRescan,
   onQueued,
 }) => {
+  const { t } = useTranslation();
   const [mode, setMode] = useState(null); // null | replace | online | offline | remove
   const [replacement, setReplacement] = useState('');
   const [manualReplacement, setManualReplacement] = useState('');
@@ -235,7 +250,7 @@ const DiskActionModal = ({
   const run = async () => {
     const target = replacement || manualReplacement.trim();
     if (mode === 'replace' && !target) {
-      setError('Pick the replacement disk.');
+      setError(t('host.diskActionModal.errorPickReplacement'));
       return;
     }
     const request = buildDiskRequest({ mode, server, pool, device, target, flag });
@@ -250,28 +265,33 @@ const DiskActionModal = ({
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `${mode} queued for ${device.name} on ${pool}.`));
+    onQueued(
+      queuedMessage(
+        result,
+        t('host.diskActionModal.queuedMessage', { mode, device: device.name, pool })
+      )
+    );
     onClose();
   };
 
   const flagLabel = {
-    replace: 'Force (override device refusals)',
-    online: 'Expand the device to use all available space',
-    offline: 'Temporary (comes back online on reboot)',
+    replace: t('host.diskActionModal.forceReplace'),
+    online: t('host.diskActionModal.expandDevice'),
+    offline: t('host.diskActionModal.temporaryOffline'),
   }[mode];
 
   const confirmLabel = {
-    replace: 'Replace this disk',
-    online: 'Bring online',
-    offline: 'Take offline',
-    remove: 'Remove from pool',
+    replace: t('host.diskActionModal.confirmReplace'),
+    online: t('host.diskActionModal.confirmOnline'),
+    offline: t('host.diskActionModal.confirmOffline'),
+    remove: t('host.diskActionModal.confirmRemove'),
   }[mode];
 
   return (
     <ContentModal
       isOpen={isOpen}
       onClose={onClose}
-      title={`${pool} · disk`}
+      title={t('host.diskActionModal.title', { pool })}
       icon="fas fa-hard-drive"
     >
       <DiskInfoCard device={device} inventoryDisk={inventoryDisk} />
@@ -286,7 +306,7 @@ const DiskActionModal = ({
           disabled={loading}
         >
           <i className="fas fa-right-left me-1" />
-          Replace
+          {t('host.diskActionModal.replace')}
         </button>
         <button
           type="button"
@@ -295,7 +315,7 @@ const DiskActionModal = ({
           disabled={loading}
         >
           <i className="fas fa-circle-check me-1" />
-          Online
+          {t('host.diskActionModal.online')}
         </button>
         <button
           type="button"
@@ -304,7 +324,7 @@ const DiskActionModal = ({
           disabled={loading}
         >
           <i className="fas fa-circle-minus me-1" />
-          Offline
+          {t('host.diskActionModal.offline')}
         </button>
         <button
           type="button"
@@ -313,14 +333,14 @@ const DiskActionModal = ({
           disabled={loading}
         >
           <i className="fas fa-minus me-1" />
-          Remove
+          {t('host.diskActionModal.remove')}
         </button>
       </div>
 
       {mode === 'replace' && (
         <div className="mb-3">
           <span className="form-label d-block">
-            Pick the replacement disk <span className="text-danger">*</span>
+            {t('host.diskActionModal.pickReplacementLabel')} <span className="text-danger">*</span>
           </span>
           {freeDisks.length > 0 ? (
             <FreeDiskPicker
@@ -332,10 +352,7 @@ const DiskActionModal = ({
           ) : (
             <>
               <div className="alert alert-warning py-2 d-flex align-items-center gap-2 flex-wrap">
-                <span>
-                  The disk inventory reports no free disks — rescan it (required once after an agent
-                  deploy), then pick from the cards.
-                </span>
+                <span>{t('host.diskActionModal.noDiskInventoryAlert')}</span>
                 {onRescan && (
                   <button
                     type="button"
@@ -344,18 +361,18 @@ const DiskActionModal = ({
                     disabled={rescanning || loading}
                   >
                     <i className={`fas fa-radar me-2 ${rescanning ? 'fa-spin' : ''}`} />
-                    Rescan
+                    {t('host.zfsPoolsPanel.rescan')}
                   </button>
                 )}
               </div>
               <label className="form-label small" htmlFor="disk-action-manual-replacement">
-                Last resort — type the replacement device
+                {t('host.diskActionModal.lastResortLabel')}
               </label>
               <input
                 id="disk-action-manual-replacement"
                 className="form-control font-monospace"
                 type="text"
-                placeholder="e.g. c1t2d0"
+                placeholder={t('host.diskActionModal.replacementPlaceholder')}
                 value={manualReplacement}
                 onChange={e => setManualReplacement(e.target.value)}
                 disabled={loading}
@@ -366,15 +383,10 @@ const DiskActionModal = ({
       )}
 
       {mode === 'offline' && (
-        <div className="alert alert-warning py-2">
-          The pool keeps running degraded on the rest of this vdev while the disk is offline.
-        </div>
+        <div className="alert alert-warning py-2">{t('host.diskActionModal.offlineWarning')}</div>
       )}
       {mode === 'remove' && (
-        <div className="alert alert-danger py-2">
-          Removes this device from the pool — only valid where the pool layout allows it; the
-          agent&apos;s error answers otherwise.
-        </div>
+        <div className="alert alert-danger py-2">{t('host.diskActionModal.removeWarning')}</div>
       )}
 
       {mode && flagLabel && (

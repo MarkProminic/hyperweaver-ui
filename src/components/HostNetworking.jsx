@@ -1,5 +1,6 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import BandwidthCharts from './Host/BandwidthCharts';
 import BandwidthTable from './Host/BandwidthTable';
@@ -14,6 +15,7 @@ import RoutingTable from './Host/RoutingTable';
 import { useHostNetworkingData } from './Host/useHostNetworkingData';
 
 const HostNetworking = () => {
+  const { t } = useTranslation();
   console.log('🐛 DEBUG: HostNetworking component starting render');
 
   // ALWAYS call hooks first, before any conditional logic or early returns
@@ -82,27 +84,24 @@ const HostNetworking = () => {
       <div className="hw-page-content-scrollable">
         <Helmet>
           <meta charSet="utf-8" />
-          <title>Network Monitoring - Hyperweaver</title>
+          <title>{t('pages.hostNetworking.titlePage')}</title>
           <link rel="canonical" href={window.location.origin} />
         </Helmet>
         <div className="container-fluid p-0">
           <div className="card">
             <div className="titlebar card-header active d-flex justify-content-between align-items-center mb-0 p-3">
               <div className="d-flex align-items-center gap-2">
-                <strong>Network Monitoring</strong>
+                <strong>{t('pages.hostNetworking.heading')}</strong>
               </div>
             </div>
             <div className="px-4">
               <div className="alert alert-info">
-                <h2 className="fs-4 fw-bold">No Servers</h2>
-                <p>
-                  You haven&apos;t added any Servers yet. Add a server to start monitoring network
-                  interfaces.
-                </p>
+                <h2 className="fs-4 fw-bold">{t('pages.hostNetworking.noServersHeading')}</h2>
+                <p>{t('pages.hostNetworking.noServersBody')}</p>
                 <div className="mt-4">
                   <a href="/ui/settings/hyperweaver?tab=servers" className="btn btn-primary">
                     <i className="fas fa-plus me-2" />
-                    <span>Add Server</span>
+                    <span>{t('pages.hostNetworking.addServer')}</span>
                   </a>
                 </div>
               </div>
@@ -117,7 +116,7 @@ const HostNetworking = () => {
     <div className="hw-page-content-scrollable">
       <Helmet>
         <meta charSet="utf-8" />
-        <title>Network Monitoring - Hyperweaver</title>
+        <title>{t('pages.hostNetworking.titlePage')}</title>
         <link rel="canonical" href={window.location.origin} />
       </Helmet>
       <div className="container-fluid p-0">
@@ -155,7 +154,7 @@ const HostNetworking = () => {
                 <div className="d-flex align-items-center gap-2">
                   <h2 className="fs-5 fw-bold mb-0">
                     <i className="fas fa-project-diagram me-2" />
-                    <span>Network Topology</span>
+                    <span>{t('pages.hostNetworking.topologyHeading')}</span>
                   </h2>
                 </div>
                 <div className="d-flex align-items-center gap-2">
@@ -167,7 +166,11 @@ const HostNetworking = () => {
                     <i
                       className={`fas fa-chevron-${sectionsCollapsed.topology ? 'down' : 'up'} me-2`}
                     />
-                    <span>{sectionsCollapsed.topology ? 'Show' : 'Hide'}</span>
+                    <span>
+                      {sectionsCollapsed.topology
+                        ? t('pages.hostNetworking.show')
+                        : t('pages.hostNetworking.hide')}
+                    </span>
                   </button>
                 </div>
               </div>

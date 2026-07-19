@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../contexts/ServerContext';
 import { hasFeature } from '../../../utils/capabilities';
@@ -9,6 +10,7 @@ import SystemUpdatesSection from '../SystemUpdatesSection';
 import PackageSection from './Section';
 
 const PackageManagement = ({ server }) => {
+  const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState('packages');
   const [error, setError] = useState('');
 
@@ -17,7 +19,7 @@ const PackageManagement = ({ server }) => {
   if (!server || !makeAgentRequest) {
     return (
       <div className="alert alert-info">
-        <p>Please select a server to manage packages and repositories.</p>
+        <p>{t('host.packageManagement.pleaseSelectServer')}</p>
       </div>
     );
   }
@@ -25,11 +27,17 @@ const PackageManagement = ({ server }) => {
   // Repositories rides its own token — /system/repositories is a separate
   // surface from /system/packages on the agents.
   const sections = [
-    { key: 'packages', label: 'Packages', icon: 'fa-cube' },
+    { key: 'packages', label: t('host.packageManagement.packages'), icon: 'fa-cube' },
     ...(hasFeature(server, 'repositories')
-      ? [{ key: 'repositories', label: 'Repositories', icon: 'fa-database' }]
+      ? [
+          {
+            key: 'repositories',
+            label: t('host.packageManagement.repositories'),
+            icon: 'fa-database',
+          },
+        ]
       : []),
-    { key: 'updates', label: 'Updates', icon: 'fa-download' },
+    { key: 'updates', label: t('host.packageManagement.updates'), icon: 'fa-download' },
   ];
 
   return (

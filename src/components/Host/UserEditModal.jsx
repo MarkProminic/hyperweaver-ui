@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import FormModal from '../common/FormModal';
 
 const UserEditModal = ({ server, user, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [availableGroups, setAvailableGroups] = useState([]);
   const [formData, setFormData] = useState({
@@ -157,7 +159,7 @@ const UserEditModal = ({ server, user, onClose, onSuccess, onError }) => {
 
       // Only proceed if we have changes to make
       if (Object.keys(payload).length === 0) {
-        onError('No changes detected');
+        onError(t('host.userEditModal.noChangesDetected'));
         return;
       }
 
@@ -177,10 +179,10 @@ const UserEditModal = ({ server, user, onClose, onSuccess, onError }) => {
         }
         onSuccess();
       } else {
-        onError(result.message || 'Failed to update user');
+        onError(result.message || t('host.userEditModal.failedToUpdateUser'));
       }
     } catch (err) {
-      onError(`Error updating user: ${err.message}`);
+      onError(t('host.userEditModal.errorUpdatingUser', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -193,17 +195,17 @@ const UserEditModal = ({ server, user, onClose, onSuccess, onError }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Edit User: ${user.username}`}
+      title={t('host.userEditModal.editUserTitle', { username: user.username })}
       icon="fas fa-user-edit"
-      submitText="Update User"
+      submitText={t('host.userEditModal.updateUser')}
       submitIcon="fas fa-save"
       loading={loading}
       showCancelButton
-      aria-label={`Edit user ${user.username}`}
+      aria-label={t('host.userEditModal.editUserAriaLabel', { username: user.username })}
     >
       <div className="mb-3">
         <label className="form-label" htmlFor="user-edit-username">
-          Username
+          {t('host.userEditModal.username')}
         </label>
         <input
           id="user-edit-username"
@@ -213,12 +215,12 @@ const UserEditModal = ({ server, user, onClose, onSuccess, onError }) => {
           disabled
           readOnly
         />
-        <p className="form-text text-muted">Username cannot be changed</p>
+        <p className="form-text text-muted">{t('host.userEditModal.usernameCannotBeChanged')}</p>
       </div>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="user-edit-comment">
-          Comment
+          {t('host.userEditModal.comment')}
         </label>
         <input
           id="user-edit-comment"
@@ -227,13 +229,13 @@ const UserEditModal = ({ server, user, onClose, onSuccess, onError }) => {
           value={formData.new_comment}
           onChange={e => handleInputChange('new_comment', e.target.value)}
           disabled={loading}
-          placeholder="User description or full name"
+          placeholder={t('host.userEditModal.userDescriptionOrFullName')}
         />
       </div>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="user-edit-shell">
-          Shell
+          {t('host.userEditModal.shell')}
         </label>
         <select
           id="user-edit-shell"
@@ -252,11 +254,11 @@ const UserEditModal = ({ server, user, onClose, onSuccess, onError }) => {
 
       <hr />
 
-      <h5 className="fs-6 fw-bold">RBAC Configuration</h5>
+      <h5 className="fs-6 fw-bold">{t('host.userEditModal.rbacConfiguration')}</h5>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="user-edit-groups">
-          Secondary Groups
+          {t('host.userEditModal.secondaryGroups')}
         </label>
         <input
           id="user-edit-groups"
@@ -265,16 +267,18 @@ const UserEditModal = ({ server, user, onClose, onSuccess, onError }) => {
           value={formData.new_groups.join(', ')}
           onChange={e => handleArrayInputChange('new_groups', e.target.value)}
           disabled={loading}
-          placeholder="staff, admin, developers (comma-separated)"
+          placeholder={t('host.userEditModal.groupsPlaceholder')}
         />
         <p className="form-text text-muted">
-          Available groups: {availableGroups.map(g => g.groupname).join(', ')}
+          {t('host.userEditModal.availableGroups', {
+            groups: availableGroups.map(g => g.groupname).join(', '),
+          })}
         </p>
       </div>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="user-edit-authorizations">
-          Authorizations
+          {t('host.userEditModal.authorizations')}
         </label>
         <textarea
           id="user-edit-authorizations"
@@ -283,13 +287,13 @@ const UserEditModal = ({ server, user, onClose, onSuccess, onError }) => {
           value={formData.new_authorizations.join(', ')}
           onChange={e => handleArrayInputChange('new_authorizations', e.target.value)}
           disabled={loading}
-          placeholder="solaris.admin.usermgr.*, solaris.network.* (comma-separated)"
+          placeholder={t('host.userEditModal.authorizationsPlaceholder')}
         />
       </div>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="user-edit-profiles">
-          Profiles
+          {t('host.userEditModal.profiles')}
         </label>
         <input
           id="user-edit-profiles"
@@ -298,14 +302,14 @@ const UserEditModal = ({ server, user, onClose, onSuccess, onError }) => {
           value={formData.new_profiles.join(', ')}
           onChange={e => handleArrayInputChange('new_profiles', e.target.value)}
           disabled={loading}
-          placeholder="System Administrator, Network Management (comma-separated)"
+          placeholder={t('host.userEditModal.profilesPlaceholder')}
         />
       </div>
 
       <div className="alert alert-info">
         <p className="mb-0">
-          <strong>Note:</strong> Only fields that have been changed will be updated. User ID (UID)
-          and primary group (GID) cannot be modified.
+          <strong>{t('host.userEditModal.noteLabel')}</strong>{' '}
+          {t('host.userEditModal.editNoteText')}
         </p>
       </div>
     </FormModal>

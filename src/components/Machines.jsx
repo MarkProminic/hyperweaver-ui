@@ -1,6 +1,7 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import PropTypes from 'prop-types';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -84,23 +85,25 @@ const HeaderActions = ({
   importAvailable,
   onNew,
   onImport,
-}) =>
-  !selectedMachine ? (
+}) => {
+  const { t } = useTranslation();
+  return !selectedMachine ? (
     <div className="d-flex gap-2">
       {importAvailable && (
         <button type="button" className="btn btn-sm btn-outline-primary" onClick={onImport}>
           <i className="fas fa-file-import me-2" />
-          Import
+          {t('pages.machines.import')}
         </button>
       )}
       {wizardAvailable && (
         <button type="button" className="btn btn-sm btn-primary" onClick={onNew}>
           <i className="fas fa-plus me-2" />
-          New {singular}
+          {t('pages.machines.newResource', { resource: singular })}
         </button>
       )}
     </div>
   ) : null;
+};
 
 HeaderActions.propTypes = {
   selectedMachine: PropTypes.string,
@@ -163,114 +166,117 @@ const MachinePageModals = ({
   onWizardCompleted,
   onNotice,
   loadMachines,
-}) => (
-  <>
-    {gates.wizardAvailable && (
-      <MachineCreateModal
-        isOpen={open.wizard}
-        onClose={closeModal('wizard')}
-        currentServer={currentServer}
-        onCompleted={onWizardCompleted}
-      />
-    )}
+}) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      {gates.wizardAvailable && (
+        <MachineCreateModal
+          isOpen={open.wizard}
+          onClose={closeModal('wizard')}
+          currentServer={currentServer}
+          onCompleted={onWizardCompleted}
+        />
+      )}
 
-    {gates.cloneAvailable && selectedMachine && (
-      <CloneMachineModal
-        isOpen={open.clone}
-        onClose={closeModal('clone')}
-        currentServer={currentServer}
-        machineName={selectedMachine}
-        isRunning={isRunning}
-        onCloned={({ taskId, message, warnings }) => {
-          const parts = [message];
-          if (taskId) {
-            parts.push(`(task ${taskId})`);
-          }
-          if (warnings.length > 0) {
-            parts.push(`— ${warnings.map(warning => warning.message).join('; ')}`);
-          }
-          onNotice({ text: parts.join(' '), warning: warnings.length > 0 });
-          // The clone's row appears when its task completes — never select
-          // a machine that does not exist yet.
-          loadMachines();
-        }}
-      />
-    )}
+      {gates.cloneAvailable && selectedMachine && (
+        <CloneMachineModal
+          isOpen={open.clone}
+          onClose={closeModal('clone')}
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          isRunning={isRunning}
+          onCloned={({ taskId, message, warnings }) => {
+            const parts = [message];
+            if (taskId) {
+              parts.push(t('pages.machines.taskSuffix', { taskId }));
+            }
+            if (warnings.length > 0) {
+              parts.push(`— ${warnings.map(warning => warning.message).join('; ')}`);
+            }
+            onNotice({ text: parts.join(' '), warning: warnings.length > 0 });
+            // The clone's row appears when its task completes — never select
+            // a machine that does not exist yet.
+            loadMachines();
+          }}
+        />
+      )}
 
-    {gates.unattendedAvailable && selectedMachine && (
-      <UnattendedInstallModal
-        isOpen={open.install}
-        onClose={closeModal('install')}
-        currentServer={currentServer}
-        machineName={selectedMachine}
-        isRunning={isRunning}
-        onDone={notice => {
-          onNotice(notice);
-          loadMachines();
-        }}
-      />
-    )}
+      {gates.unattendedAvailable && selectedMachine && (
+        <UnattendedInstallModal
+          isOpen={open.install}
+          onClose={closeModal('install')}
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          isRunning={isRunning}
+          onDone={notice => {
+            onNotice(notice);
+            loadMachines();
+          }}
+        />
+      )}
 
-    {gates.unattendedAvailable && (
-      <ImportMachineModal
-        isOpen={open.imp}
-        onClose={closeModal('imp')}
-        currentServer={currentServer}
-        onDone={notice => {
-          onNotice(notice);
-          loadMachines();
-        }}
-      />
-    )}
+      {gates.unattendedAvailable && (
+        <ImportMachineModal
+          isOpen={open.imp}
+          onClose={closeModal('imp')}
+          currentServer={currentServer}
+          onDone={notice => {
+            onNotice(notice);
+            loadMachines();
+          }}
+        />
+      )}
 
-    {gates.unattendedAvailable && selectedMachine && (
-      <MoveMachineModal
-        isOpen={open.move}
-        onClose={closeModal('move')}
-        currentServer={currentServer}
-        machineName={selectedMachine}
-        isRunning={isRunning}
-        onDone={notice => {
-          onNotice(notice);
-          loadMachines();
-        }}
-      />
-    )}
+      {gates.unattendedAvailable && selectedMachine && (
+        <MoveMachineModal
+          isOpen={open.move}
+          onClose={closeModal('move')}
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          isRunning={isRunning}
+          onDone={notice => {
+            onNotice(notice);
+            loadMachines();
+          }}
+        />
+      )}
 
-    {gates.templatesAvailable && selectedMachine && (
-      <ConvertToTemplateModal
-        isOpen={open.toTemplate}
-        onClose={closeModal('toTemplate')}
-        currentServer={currentServer}
-        machineName={selectedMachine}
-        isRunning={isRunning}
-        onDone={onNotice}
-      />
-    )}
+      {gates.templatesAvailable && selectedMachine && (
+        <ConvertToTemplateModal
+          isOpen={open.toTemplate}
+          onClose={closeModal('toTemplate')}
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          isRunning={isRunning}
+          onDone={onNotice}
+        />
+      )}
 
-    {gates.guestExecAvailable && selectedMachine && (
-      <GuestExecModal
-        isOpen={open.exec}
-        onClose={closeModal('exec')}
-        currentServer={currentServer}
-        machineName={selectedMachine}
-        isRunning={isRunning}
-        flavor={gates.guestExecFlavor}
-      />
-    )}
+      {gates.guestExecAvailable && selectedMachine && (
+        <GuestExecModal
+          isOpen={open.exec}
+          onClose={closeModal('exec')}
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          isRunning={isRunning}
+          flavor={gates.guestExecFlavor}
+        />
+      )}
 
-    {gates.guestControlAvailable && selectedMachine && (
-      <DisplayResizeModal
-        isOpen={open.display}
-        onClose={closeModal('display')}
-        currentServer={currentServer}
-        machineName={selectedMachine}
-        isRunning={isRunning}
-        onDone={onNotice}
-      />
-    )}
-  </>
-);
+      {gates.guestControlAvailable && selectedMachine && (
+        <DisplayResizeModal
+          isOpen={open.display}
+          onClose={closeModal('display')}
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          isRunning={isRunning}
+          onDone={onNotice}
+        />
+      )}
+    </>
+  );
+};
 
 MachinePageModals.propTypes = {
   gates: PropTypes.object.isRequired,
@@ -285,6 +291,7 @@ MachinePageModals.propTypes = {
 };
 
 const Machines = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedMachine, setSelectedMachine] = useState(null);
@@ -377,10 +384,10 @@ const Machines = () => {
   const handleWizardCompleted = ({ message, taskId, requiresDownload }) => {
     const parts = [message];
     if (taskId) {
-      parts.push(`(task ${taskId})`);
+      parts.push(t('pages.machines.taskSuffix', { taskId }));
     }
     if (requiresDownload) {
-      parts.push('— the base box downloads first');
+      parts.push(t('pages.machines.baseBoxDownloadNotice'));
     }
     setProvisioningNotice({ text: parts.join(' '), warning: requiresDownload });
     // The machine row only exists once the finalize child completes — stay
@@ -521,7 +528,7 @@ const Machines = () => {
         setSearchParams({});
       } else {
         console.warn(`⚠️ URL PARAM: Machine '${machineParam}' not found in current list`);
-        setError(`Machine '${machineParam}' not found on the current server.`);
+        setError(t('pages.machines.machineNotFound', { machineParam }));
       }
     }
   }, [
@@ -539,6 +546,7 @@ const Machines = () => {
     unattendedAvailable,
     guestControlAvailable,
     guestExecAvailable,
+    t,
   ]);
 
   // Sync local selectedMachine with the global machine selection
@@ -622,20 +630,17 @@ const Machines = () => {
           <div className="card">
             <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-0 p-3">
               <div className="d-flex justify-content-between align-items-center">
-                <strong>{singular} Management</strong>
+                <strong>{t('pages.machines.managementHeading', { resource: singular })}</strong>
               </div>
             </div>
             <div className="px-4">
               <div className="alert alert-info">
-                <h2 className="fs-4 fw-bold">No Servers</h2>
-                <p>
-                  You haven&apos;t added any Servers yet. Add a server to start managing{' '}
-                  {plural.toLowerCase()}.
-                </p>
+                <h2 className="fs-4 fw-bold">{t('pages.machines.noServersHeading')}</h2>
+                <p>{t('pages.machines.noServersBody', { resource: plural.toLowerCase() })}</p>
                 <div className="mt-4">
                   <a href="/ui/settings/hyperweaver?tab=servers" className="btn btn-primary">
                     <i className="fas fa-plus me-2" />
-                    Add Server
+                    {t('pages.machines.addServer')}
                   </a>
                 </div>
               </div>
@@ -660,14 +665,14 @@ const Machines = () => {
           <div className="card">
             <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-0 p-3">
               <div className="d-flex justify-content-between align-items-center">
-                <strong>{singular} Management</strong>
+                <strong>{t('pages.machines.managementHeading', { resource: singular })}</strong>
               </div>
             </div>
             <div className="px-4">
               <div className="alert alert-info">
                 <p className="mb-0">
-                  {singular} management is not available on this host yet — the agent does not
-                  advertise the <code>machines</code> capability.
+                  {t('pages.machines.noMachinesCapabilityPre', { resource: singular })}{' '}
+                  <code>machines</code> {t('pages.machines.noMachinesCapabilityPost')}
                 </p>
               </div>
             </div>
@@ -728,22 +733,22 @@ const Machines = () => {
         <div className="card">
           <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-0 p-3">
             <div className="d-flex justify-content-between align-items-center">
-              <strong>{singular} Management</strong>
+              <strong>{t('pages.machines.managementHeading', { resource: singular })}</strong>
             </div>
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
               {/* Fleet counts belong to the LIST — the detail view drops them. */}
               {!selectedMachine && (
                 <div className="d-flex gap-2">
                   <span className="d-inline-flex">
-                    <span className="badge text-bg-secondary">Total</span>
+                    <span className="badge text-bg-secondary">{t('pages.machines.total')}</span>
                     <span className="badge text-bg-info">{machines.length}</span>
                   </span>
                   <span className="d-inline-flex">
-                    <span className="badge text-bg-secondary">Running</span>
+                    <span className="badge text-bg-secondary">{t('pages.machines.running')}</span>
                     <span className="badge text-bg-success">{runningMachines.length}</span>
                   </span>
                   <span className="d-inline-flex">
-                    <span className="badge text-bg-secondary">Stopped</span>
+                    <span className="badge text-bg-secondary">{t('pages.machines.stopped')}</span>
                     <span className="badge text-bg-danger">
                       {machines.length - runningMachines.length}
                     </span>
@@ -796,12 +801,11 @@ const Machines = () => {
                                   <div className="card-body">
                                     <h4 className="fs-6 fw-bold mb-3">
                                       <i className="fas fa-terminal me-2" />
-                                      Console
+                                      {t('pages.machines.consoleHeading')}
                                     </h4>
                                     <div className="alert alert-info mb-0">
                                       <p className="mb-0">
-                                        No console is available on this host yet — the agent
-                                        advertises neither a VNC console nor zlogin.
+                                        {t('pages.machines.noConsoleAvailable')}
                                       </p>
                                     </div>
                                   </div>
@@ -909,9 +913,9 @@ const Machines = () => {
                       </div>
                     ) : (
                       <div className="alert alert-info">
-                        <p>{singular} details will appear here when available.</p>
+                        <p>{t('pages.machines.detailsUnavailable', { resource: singular })}</p>
                         <p className="small text-muted">
-                          Note: {singular} detail fetching depends on Server API support.
+                          {t('pages.machines.detailsUnavailableNote', { resource: singular })}
                         </p>
                       </div>
                     )}

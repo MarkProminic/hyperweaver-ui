@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../contexts/ServerContext';
 
@@ -9,6 +10,7 @@ import PackageFilters from './Filters';
 import PackageTable from './Table';
 
 const PackageSection = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
@@ -279,11 +281,8 @@ const PackageSection = ({ server, onError }) => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">Package Management</h2>
-        <p>
-          Manage packages on <strong>{server.hostname}</strong>. Search for available packages,
-          install, uninstall, and view package information.
-        </p>
+        <h2 className="fs-5 fw-bold">{t('host.packageSection.packageManagement')}</h2>
+        <p>{t('host.packageSection.managePackagesOn', { hostname: server.hostname })}</p>
       </div>
 
       {/* Package Filters */}
@@ -304,8 +303,8 @@ const PackageSection = ({ server, onError }) => {
             <div className="d-flex align-items-center gap-2">
               <h3 className="fs-6 fw-bold mb-0">
                 {isSearchMode
-                  ? `Search Results (${displayPackages.length})`
-                  : `Packages (${displayPackages.length})`}
+                  ? t('host.packageSection.searchResults', { count: displayPackages.length })
+                  : t('host.packageSection.packages', { count: displayPackages.length })}
                 {loading && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin" />

@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import ArcCharts from './StorageCharts/ArcCharts';
 import DeviceCharts from './StorageCharts/DeviceCharts';
@@ -25,6 +26,8 @@ const StorageCharts = ({
   seriesVisibility,
   setSeriesVisibility,
 }) => {
+  const { t } = useTranslation();
+
   if (
     Object.keys(chartData).length === 0 &&
     Object.keys(poolChartData).length === 0 &&
@@ -43,7 +46,7 @@ const StorageCharts = ({
                 <span className="me-1">
                   <i className="fas fa-chart-area" />
                 </span>
-                <span>Real-Time Storage Performance Charts</span>
+                <span>{t('host.storageCharts.title')}</span>
               </span>
             </h4>
           </div>
@@ -55,12 +58,12 @@ const StorageCharts = ({
                   value={chartSortBy}
                   onChange={e => setChartSortBy(e.target.value)}
                   disabled={loading}
-                  title="Sort individual charts by"
+                  title={t('host.storageCharts.sortTitle')}
                 >
-                  <option value="bandwidth">Most Bandwidth</option>
-                  <option value="name">Device Name</option>
-                  <option value="read">Read Bandwidth</option>
-                  <option value="write">Write Bandwidth</option>
+                  <option value="bandwidth">{t('host.storageCharts.sortByBandwidth')}</option>
+                  <option value="name">{t('host.storageCharts.sortByName')}</option>
+                  <option value="read">{t('host.storageCharts.sortByRead')}</option>
+                  <option value="write">{t('host.storageCharts.sortByWrite')}</option>
                 </select>
               </div>
               <div>
@@ -73,12 +76,12 @@ const StorageCharts = ({
                         read: !prev.read,
                       }))
                     }
-                    title="Toggle Read bandwidth visibility on all charts"
+                    title={t('host.storageCharts.toggleRead')}
                   >
                     <span className="me-1">
                       <i className={`fas ${seriesVisibility.read ? 'fa-eye' : 'fa-eye-slash'}`} />
                     </span>
-                    <span>Read</span>
+                    <span>{t('host.storageCharts.read')}</span>
                   </button>
                   <button
                     className={`btn btn-sm ${seriesVisibility.write ? 'btn-warning' : 'btn-dark'}`}
@@ -88,12 +91,12 @@ const StorageCharts = ({
                         write: !prev.write,
                       }))
                     }
-                    title="Toggle Write bandwidth visibility on all charts"
+                    title={t('host.storageCharts.toggleWrite')}
                   >
                     <span className="me-1">
                       <i className={`fas ${seriesVisibility.write ? 'fa-eye' : 'fa-eye-slash'}`} />
                     </span>
-                    <span>Write</span>
+                    <span>{t('host.storageCharts.write')}</span>
                   </button>
                   <button
                     className={`btn btn-sm ${seriesVisibility.total ? 'btn-success' : 'btn-dark'}`}
@@ -103,12 +106,12 @@ const StorageCharts = ({
                         total: !prev.total,
                       }))
                     }
-                    title="Toggle Total bandwidth visibility on all charts"
+                    title={t('host.storageCharts.toggleTotal')}
                   >
                     <span className="me-1">
                       <i className={`fas ${seriesVisibility.total ? 'fa-eye' : 'fa-eye-slash'}`} />
                     </span>
-                    <span>Total</span>
+                    <span>{t('host.storageCharts.total')}</span>
                   </button>
                 </div>
               </div>
@@ -116,7 +119,11 @@ const StorageCharts = ({
                 <button
                   className="btn btn-sm btn-link"
                   onClick={() => toggleSection('charts')}
-                  title={sectionsCollapsed.charts ? 'Expand section' : 'Collapse section'}
+                  title={
+                    sectionsCollapsed.charts
+                      ? t('host.storageCharts.expand')
+                      : t('host.storageCharts.collapse')
+                  }
                 >
                   <span className="me-1">
                     <i
@@ -157,10 +164,7 @@ const StorageCharts = ({
 
             {diskIOStats.length === 0 && arcStats.length === 0 && (
               <div className="alert alert-info">
-                <p>
-                  No performance data available for charting. Charts will appear when real-time data
-                  is collected.
-                </p>
+                <p>{t('host.storageCharts.noData')}</p>
               </div>
             )}
           </div>

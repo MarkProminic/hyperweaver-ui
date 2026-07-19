@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import Chart from '../Chart';
 import { ContentModal } from '../common';
@@ -6,6 +7,7 @@ import { ContentModal } from '../common';
 import { getChartTitle, getExpandedChartOptions } from './ExpandedChartOptions';
 
 const ExpandedChartModal = ({ chartId, type, close, chartData, poolChartData, arcChartData }) => {
+  const { t } = useTranslation();
   if (!chartId) {
     return null;
   }
@@ -14,11 +16,11 @@ const ExpandedChartModal = ({ chartId, type, close, chartData, poolChartData, ar
     <ContentModal
       isOpen={!!chartId}
       onClose={close}
-      title={getChartTitle(chartId, type)}
+      title={getChartTitle(chartId, type, t)}
       icon="fas fa-chart-line"
     >
       <Chart
-        options={getExpandedChartOptions(chartId, type, chartData, poolChartData, arcChartData)}
+        options={getExpandedChartOptions(chartId, type, chartData, poolChartData, arcChartData, t)}
       />
     </ContentModal>
   );

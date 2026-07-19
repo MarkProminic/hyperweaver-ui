@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../contexts/ServerContext';
 import { copyText } from '../utils/clipboard';
@@ -6,6 +7,7 @@ import { copyText } from '../utils/clipboard';
 import { ConfirmModal, ContentModal } from './common';
 
 const ApiKeysTab = () => {
+  const { t } = useTranslation();
   const { getApiKeys, generateApiKey, deleteApiKey, bootstrapApiKey } = useServers();
   const [apiKeys, setApiKeys] = useState([]);
   const [newKeyName, setNewKeyName] = useState('');
@@ -41,9 +43,7 @@ const ApiKeysTab = () => {
     const result = await generateApiKey(newKeyName, newKeyDescription);
     if (result.success) {
       setGeneratedKey(result.data.api_key);
-      setMessage(
-        'API Key generated successfully. Please copy it now, you will not be able to see it again.'
-      );
+      setMessage(t('accounts.apiKeysTab.keyGeneratedMessage'));
       setNewKeyName('');
       setNewKeyDescription('');
       loadApiKeys();
@@ -62,7 +62,7 @@ const ApiKeysTab = () => {
     const result = await bootstrapApiKey();
     if (result.success) {
       setGeneratedKey(result.data.api_key);
-      setMessage('Bootstrap API Key generated successfully. Please copy it now.');
+      setMessage(t('accounts.apiKeysTab.bootstrapKeyGeneratedMessage'));
       loadApiKeys();
     } else {
       setError(result.message);
@@ -77,7 +77,7 @@ const ApiKeysTab = () => {
 
     const result = await deleteApiKey(deleteKeyId);
     if (result.success) {
-      setMessage('API Key deleted successfully.');
+      setMessage(t('accounts.apiKeysTab.keyDeletedMessage'));
       loadApiKeys();
     } else {
       setError(result.message);
@@ -92,9 +92,9 @@ const ApiKeysTab = () => {
         isOpen={deleteKeyId !== null}
         onClose={() => setDeleteKeyId(null)}
         onConfirm={handleDeleteKey}
-        title="Delete API Key"
-        message="Are you sure you want to delete this API key? This action cannot be undone."
-        confirmText="Delete"
+        title={t('accounts.apiKeysTab.deleteKeyTitle')}
+        message={t('accounts.apiKeysTab.deleteKeyMessage')}
+        confirmText={t('accounts.apiKeysTab.deleteKeyButton')}
         confirmVariant="is-danger"
         icon="fas fa-trash"
         loading={loading}
@@ -104,18 +104,18 @@ const ApiKeysTab = () => {
       <ContentModal
         isOpen={!!generatedKey}
         onClose={() => setGeneratedKey(null)}
-        title="API Key Generated"
+        title={t('accounts.apiKeysTab.keyGeneratedTitle')}
         icon="fas fa-key"
       >
         <div className="alert alert-warning">
           <p>
-            <strong>Important:</strong> Please copy this API key now. You will not be able to see it
-            again after closing this dialog.
+            <strong>{t('accounts.apiKeysTab.importantLabel')}:</strong>{' '}
+            {t('accounts.apiKeysTab.copyKeyWarning')}
           </p>
         </div>
         <div className="mb-3">
           <label htmlFor="generated-api-key" className="form-label">
-            Your API Key:
+            {t('accounts.apiKeysTab.yourApiKeyLabel')}
           </label>
           <textarea
             id="generated-api-key"
@@ -134,24 +134,24 @@ const ApiKeysTab = () => {
               const copied = await copyText(generatedKey);
               setMessage(
                 copied
-                  ? 'API key copied to clipboard!'
-                  : 'Copy failed — select the key text above and copy it manually.'
+                  ? t('accounts.apiKeysTab.copiedMessage')
+                  : t('accounts.apiKeysTab.copyFailedMessage')
               );
             }}
           >
             <i className="fas fa-copy me-2" />
-            Copy to Clipboard
+            {t('accounts.apiKeysTab.copyToClipboardButton')}
           </button>
         </div>
       </ContentModal>
 
       <div className="card">
         <div className="card-body">
-          <h4 className="fs-4 fw-bold">Generate New API Key</h4>
+          <h4 className="fs-4 fw-bold">{t('accounts.apiKeysTab.generateNewKeyTitle')}</h4>
           <form onSubmit={handleGenerateKey}>
             <div className="mb-3">
               <label htmlFor="api-key-name" className="form-label">
-                Name
+                {t('accounts.apiKeysTab.labelName')}
               </label>
               <input
                 id="api-key-name"
@@ -159,13 +159,13 @@ const ApiKeysTab = () => {
                 type="text"
                 value={newKeyName}
                 onChange={e => setNewKeyName(e.target.value)}
-                placeholder="e.g., My-App"
+                placeholder={t('accounts.apiKeysTab.namePlaceholder')}
                 required
               />
             </div>
             <div className="mb-3">
               <label htmlFor="api-key-description" className="form-label">
-                Description
+                {t('accounts.apiKeysTab.labelDescription')}
               </label>
               <input
                 id="api-key-description"
@@ -173,12 +173,14 @@ const ApiKeysTab = () => {
                 type="text"
                 value={newKeyDescription}
                 onChange={e => setNewKeyDescription(e.target.value)}
-                placeholder="e.g., API access for my application"
+                placeholder={t('accounts.apiKeysTab.descriptionPlaceholder')}
               />
             </div>
             <div className="d-flex gap-2">
               <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Generating...' : 'Generate Key'}
+                {loading
+                  ? t('accounts.apiKeysTab.generatingButton')
+                  : t('accounts.apiKeysTab.generateKeyButton')}
               </button>
               <button
                 type="button"
@@ -186,7 +188,7 @@ const ApiKeysTab = () => {
                 onClick={handleBootstrapKey}
                 disabled={loading}
               >
-                Generate Bootstrap Key
+                {t('accounts.apiKeysTab.generateBootstrapKeyButton')}
               </button>
             </div>
           </form>
@@ -195,18 +197,18 @@ const ApiKeysTab = () => {
 
       <div className="card">
         <div className="card-body">
-          <h4 className="fs-4 fw-bold">Existing API Keys</h4>
-          {loading && <p>Loading keys...</p>}
+          <h4 className="fs-4 fw-bold">{t('accounts.apiKeysTab.existingKeysTitle')}</h4>
+          {loading && <p>{t('accounts.apiKeysTab.loadingKeys')}</p>}
           <div className="table-responsive">
             <table className="table table-striped">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Description</th>
-                  <th>Active</th>
-                  <th>Last Used</th>
-                  <th>Created At</th>
-                  <th>Actions</th>
+                  <th>{t('accounts.apiKeysTab.columnName')}</th>
+                  <th>{t('accounts.apiKeysTab.columnDescription')}</th>
+                  <th>{t('accounts.apiKeysTab.columnActive')}</th>
+                  <th>{t('accounts.apiKeysTab.columnLastUsed')}</th>
+                  <th>{t('accounts.apiKeysTab.columnCreatedAt')}</th>
+                  <th>{t('accounts.apiKeysTab.columnActions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -218,14 +220,18 @@ const ApiKeysTab = () => {
                       <span
                         className={`badge ${key.is_active ? 'text-bg-success' : 'text-bg-danger'}`}
                       >
-                        {key.is_active ? 'Yes' : 'No'}
+                        {key.is_active
+                          ? t('accounts.apiKeysTab.statusYes')
+                          : t('accounts.apiKeysTab.statusNo')}
                       </span>
                     </td>
-                    <td>{key.last_used ? new Date(key.last_used).toLocaleString() : 'Never'}</td>
+                    <td>
+                      {key.last_used
+                        ? new Date(key.last_used).toLocaleString()
+                        : t('accounts.apiKeysTab.never')}
+                    </td>
                     <td>{new Date(key.created_at).toLocaleString()}</td>
                     <td>
-                      {/* No View action: only bcrypt hashes are stored — a key is
-                          visible exactly once, at generation. */}
                       <button
                         type="button"
                         className="btn btn-danger btn-sm"
@@ -233,7 +239,7 @@ const ApiKeysTab = () => {
                         disabled={loading}
                       >
                         <i className="fas fa-trash me-2" />
-                        Delete
+                        {t('accounts.apiKeysTab.deleteKeyTableButton')}
                       </button>
                     </td>
                   </tr>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Dropdown from 'react-bootstrap/Dropdown';
+import { useTranslation } from 'react-i18next';
 
 import { getApplications, launchMachineApplication, shutdownGuest } from '../api/machineAPI';
 import { getProvisionStatus } from '../api/provisioningAPI';
@@ -45,6 +46,7 @@ const HOST_CONTROL_ROUTES = [
 ];
 
 const Navbar = () => {
+  const { t } = useTranslation();
   const {
     isModal,
     currentMode,
@@ -180,7 +182,9 @@ const Navbar = () => {
 
     return (
       <Dropdown align="end">
-        <Dropdown.Toggle variant="outline-secondary">{machineNoun} Controls</Dropdown.Toggle>
+        <Dropdown.Toggle variant="outline-secondary">
+          {t('navbar.navbar.machineControlsButton', { noun: machineNoun })}
+        </Dropdown.Toggle>
         <Dropdown.Menu>
           {isShareableRoute(location.pathname) && currentServer && (
             <>
@@ -188,10 +192,10 @@ const Navbar = () => {
                 as="button"
                 type="button"
                 onClick={handleShareCurrentPage}
-                title="Copy shareable link to clipboard"
+                title={t('navbar.navbar.shareLinktitle')}
               >
                 <i className="fas fa-share-alt text-info me-2" />
-                Share Link
+                {t('navbar.navbar.shareLink')}
               </Dropdown.Item>
               <Dropdown.Divider />
             </>
@@ -209,7 +213,7 @@ const Navbar = () => {
                 }}
               >
                 <i className="fas fa-stop text-danger me-2" />
-                Shutdown
+                {t('navbar.navbar.shutdown')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
@@ -221,7 +225,7 @@ const Navbar = () => {
                 }}
               >
                 <i className="fas fa-play text-success me-2" />
-                Power On
+                {t('navbar.navbar.powerOn')}
               </Dropdown.Item>
             </>
           )}
@@ -238,12 +242,12 @@ const Navbar = () => {
                 }}
               >
                 <i className="fas fa-redo text-warning me-2" />
-                Restart
+                {t('navbar.navbar.restart')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
                 type="button"
-                title="Hard reboot — like pressing the reset button; only valid while running"
+                title={t('navbar.navbar.resetTitle')}
                 onClick={() => {
                   handleModalClick();
                   setCurrentAction('reset');
@@ -251,12 +255,12 @@ const Navbar = () => {
                 }}
               >
                 <i className="fas fa-bolt text-danger me-2" />
-                Reset
+                {t('navbar.navbar.reset')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
                 type="button"
-                title="Inject a non-maskable interrupt into the running machine — forces a guest crash dump / breaks into the kernel debugger; only valid while running"
+                title={t('navbar.navbar.injectNmiTitle')}
                 onClick={() => {
                   handleModalClick();
                   setCurrentAction('nmi');
@@ -264,7 +268,7 @@ const Navbar = () => {
                 }}
               >
                 <i className="fas fa-bug text-danger me-2" />
-                Inject NMI
+                {t('navbar.navbar.injectNmi')}
               </Dropdown.Item>
             </>
           )}
@@ -273,7 +277,7 @@ const Navbar = () => {
             <Dropdown.Item
               as="button"
               type="button"
-              title="Freeze the machine in RAM; only valid while running"
+              title={t('navbar.navbar.pauseTitle')}
               onClick={() => {
                 handleModalClick();
                 setCurrentAction('pause');
@@ -281,7 +285,7 @@ const Navbar = () => {
               }}
             >
               <i className="fas fa-pause-circle text-warning me-2" />
-              Pause
+              {t('navbar.navbar.pause')}
             </Dropdown.Item>
           )}
 
@@ -290,7 +294,7 @@ const Navbar = () => {
               <Dropdown.Item
                 as="button"
                 type="button"
-                title="Suspend to disk; Start or Resume continues where it left off"
+                title={t('navbar.navbar.suspendTitle')}
                 onClick={() => {
                   handleModalClick();
                   setCurrentAction('suspend');
@@ -298,12 +302,12 @@ const Navbar = () => {
                 }}
               >
                 <i className="fas fa-pause text-warning me-2" />
-                Suspend
+                {t('navbar.navbar.suspend')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
                 type="button"
-                title="Resume a paused or suspended machine"
+                title={t('navbar.navbar.resumeTitle')}
                 onClick={() => {
                   handleModalClick();
                   setCurrentAction('resume');
@@ -311,7 +315,7 @@ const Navbar = () => {
                 }}
               >
                 <i className="fas fa-play-circle text-success me-2" />
-                Resume
+                {t('navbar.navbar.resume')}
               </Dropdown.Item>
             </>
           )}
@@ -321,20 +325,20 @@ const Navbar = () => {
               <Dropdown.Item
                 as="button"
                 type="button"
-                title="Clean in-guest shutdown via the guest agent"
+                title={t('navbar.navbar.guestShutdownTitle')}
                 onClick={() => setGuestPower('powerdown')}
               >
                 <i className="fas fa-power-off text-danger me-2" />
-                Guest Shutdown
+                {t('navbar.navbar.guestShutdown')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
                 type="button"
-                title="Clean in-guest reboot via the guest agent"
+                title={t('navbar.navbar.guestRebootTitle')}
                 onClick={() => setGuestPower('reboot')}
               >
                 <i className="fas fa-rotate text-warning me-2" />
-                Guest Reboot
+                {t('navbar.navbar.guestReboot')}
               </Dropdown.Item>
             </>
           )}
@@ -342,14 +346,16 @@ const Navbar = () => {
           {applications.length > 0 && (
             <>
               <Dropdown.Divider />
-              <Dropdown.Header>Open in application</Dropdown.Header>
+              <Dropdown.Header>{t('navbar.navbar.openInApplication')}</Dropdown.Header>
               {applications.map(app => (
                 <Dropdown.Item
                   as="button"
                   type="button"
                   key={app.name}
                   disabled={!app.exists}
-                  title={app.exists ? app.path : `${app.path} — not found on the agent host`}
+                  title={
+                    app.exists ? app.path : t('navbar.navbar.appNotFoundTitle', { path: app.path })
+                  }
                   onClick={() => handleLaunchApplication(app.name)}
                 >
                   <i className="fas fa-arrow-up-right-from-square text-info me-2" />
@@ -368,7 +374,7 @@ const Navbar = () => {
               onClick={() => navigate('/ui/machines?tab=snapshots&take=1')}
             >
               <i className="fas fa-camera me-2" />
-              Snapshot
+              {t('navbar.navbar.snapshot')}
             </Dropdown.Item>
           )}
           {hasFeature(currentServer, 'machine-create') && canCreateMachines(userRole) && (
@@ -378,18 +384,18 @@ const Navbar = () => {
               onClick={() => navigate('/ui/machines?clone=1')}
             >
               <i className="fas fa-clone me-2" />
-              Clone
+              {t('navbar.navbar.clone')}
             </Dropdown.Item>
           )}
           {hasFeature(currentServer, 'templates') && canCreateMachines(userRole) && (
             <Dropdown.Item
               as="button"
               type="button"
-              title="Export this machine into a local .box template — publish it from the host's Templates page"
+              title={t('navbar.navbar.convertToTemplateTitle')}
               onClick={() => navigate('/ui/machines?totemplate=1')}
             >
               <i className="fas fa-box-archive me-2" />
-              Convert to Template…
+              {t('navbar.navbar.convertToTemplate')}
             </Dropdown.Item>
           )}
           {hasHypervisor(currentServer, 'virtualbox') && canCreateMachines(userRole) && (
@@ -397,20 +403,20 @@ const Navbar = () => {
               <Dropdown.Item
                 as="button"
                 type="button"
-                title="Unattended OS install from an ISO — the machine must be powered off"
+                title={t('navbar.navbar.installOsTitle')}
                 onClick={() => navigate('/ui/machines?install=1')}
               >
                 <i className="fas fa-compact-disc me-2" />
-                Install OS…
+                {t('navbar.navbar.installOs')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
                 type="button"
-                title="Relocate the machine's files to another directory — powered off only"
+                title={t('navbar.navbar.moveTitle')}
                 onClick={() => navigate('/ui/machines?move=1')}
               >
                 <i className="fas fa-truck-arrow-right me-2" />
-                Move…
+                {t('navbar.navbar.move')}
               </Dropdown.Item>
             </>
           )}
@@ -418,22 +424,22 @@ const Navbar = () => {
             <Dropdown.Item
               as="button"
               type="button"
-              title="Run a command inside the guest via Guest Additions or the guest agent"
+              title={t('navbar.navbar.runInGuestTitle')}
               onClick={() => navigate('/ui/machines?exec=1')}
             >
               <i className="fas fa-terminal me-2" />
-              Run in Guest…
+              {t('navbar.navbar.runInGuest')}
             </Dropdown.Item>
           )}
           {hasHypervisor(currentServer, 'virtualbox') && canStartStopMachines(userRole) && (
             <Dropdown.Item
               as="button"
               type="button"
-              title="Send a live display-resize hint to the running guest"
+              title={t('navbar.navbar.setDisplaySizeTitle')}
               onClick={() => navigate('/ui/machines?display=1')}
             >
               <i className="fas fa-display me-2" />
-              Set Display Size…
+              {t('navbar.navbar.setDisplaySize')}
             </Dropdown.Item>
           )}
 
@@ -445,38 +451,38 @@ const Navbar = () => {
               <Dropdown.Item
                 as="button"
                 type="button"
-                title="FULL pipeline: re-render the document, boot if stopped, wait for SSH, sync folders, run playbooks (run-directives honored)"
+                title={t('navbar.navbar.provisionTitle')}
                 onClick={() => navigate('/ui/machines?tab=provisioning&run=provision')}
               >
                 <i className="fas fa-cogs me-2" />
-                Provision
+                {t('navbar.navbar.provision')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
                 type="button"
-                title="Sync the provisioning folders to the guest — nothing runs"
+                title={t('navbar.navbar.syncFilesTitle')}
                 onClick={() => navigate('/ui/machines?tab=provisioning&run=sync')}
               >
                 <i className="fas fa-rotate me-2" />
-                Sync Files
+                {t('navbar.navbar.syncFiles')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
                 type="button"
-                title="Pull the folders flagged 'sync back' from the guest to the host (guest→host)"
+                title={t('navbar.navbar.syncBackTitle')}
                 onClick={() => navigate('/ui/machines?tab=provisioning&run=syncback')}
               >
                 <i className="fas fa-rotate-left me-2" />
-                Sync Back
+                {t('navbar.navbar.syncBack')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
                 type="button"
-                title="Playbooks ONLY, on an already-running SSH-reachable machine — no render, no boot, no sync"
+                title={t('navbar.navbar.runProvisionersTitle')}
                 onClick={() => navigate('/ui/machines?tab=provisioning&run=run-provisioners')}
               >
                 <i className="fas fa-list-check me-2" />
-                Run Provisioners
+                {t('navbar.navbar.runProvisioners')}
               </Dropdown.Item>
             </>
           )}
@@ -493,7 +499,7 @@ const Navbar = () => {
                 }}
               >
                 <i className="fas fa-skull text-danger me-2" />
-                Force Kill
+                {t('navbar.navbar.forceKill')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
@@ -505,7 +511,7 @@ const Navbar = () => {
                 }}
               >
                 <i className="fas fa-trash text-danger me-2" />
-                Destroy
+                {t('navbar.navbar.destroy')}
               </Dropdown.Item>
             </>
           )}
@@ -514,7 +520,7 @@ const Navbar = () => {
             <>
               <Dropdown.Divider />
               <div className="text-muted text-center p-2 small">
-                Advanced controls require admin privileges
+                {t('navbar.navbar.advancedControlsPrivilege')}
               </div>
             </>
           )}
@@ -528,7 +534,9 @@ const Navbar = () => {
 
     return (
       <Dropdown align="end">
-        <Dropdown.Toggle variant="outline-secondary">Host Actions</Dropdown.Toggle>
+        <Dropdown.Toggle variant="outline-secondary">
+          {t('navbar.navbar.hostActions')}
+        </Dropdown.Toggle>
         <Dropdown.Menu>
           {isShareableRoute(location.pathname) && currentServer && (
             <>
@@ -536,10 +544,10 @@ const Navbar = () => {
                 as="button"
                 type="button"
                 onClick={handleShareCurrentPage}
-                title="Copy shareable link to clipboard"
+                title={t('navbar.navbar.shareLinktitle')}
               >
                 <i className="fas fa-share-alt text-info me-2" />
-                Share Link
+                {t('navbar.navbar.shareLink')}
               </Dropdown.Item>
               <Dropdown.Divider />
             </>
@@ -547,11 +555,11 @@ const Navbar = () => {
 
           <Dropdown.Item as="button" type="button" onClick={() => navigate('/ui/hosts')}>
             <i className="fas fa-eye text-info me-2" />
-            View Host Details
+            {t('navbar.navbar.viewHostDetails')}
           </Dropdown.Item>
           <Dropdown.Item as="button" type="button" onClick={() => navigate('/ui/host-manage')}>
             <i className="fas fa-cogs text-info me-2" />
-            Manage Host
+            {t('navbar.navbar.manageHost')}
           </Dropdown.Item>
 
           {hasFeature(currentServer, 'machine-create') &&
@@ -563,7 +571,7 @@ const Navbar = () => {
                 onClick={() => navigate('/ui/machines?create=1')}
               >
                 <i className="fas fa-plus text-success me-2" />
-                New {machineNoun}
+                {t('navbar.navbar.newMachineButton', { noun: machineNoun })}
               </Dropdown.Item>
             )}
 
@@ -580,7 +588,7 @@ const Navbar = () => {
                 }}
               >
                 <i className="fas fa-redo text-warning me-2" />
-                Restart Host
+                {t('navbar.navbar.restartHost')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
@@ -592,7 +600,7 @@ const Navbar = () => {
                 }}
               >
                 <i className="fas fa-power-off text-danger me-2" />
-                Power Off Host
+                {t('navbar.navbar.powerOffHost')}
               </Dropdown.Item>
             </>
           )}
@@ -600,14 +608,14 @@ const Navbar = () => {
           {canStartStopMachines(userRole) && (
             <>
               <Dropdown.Divider />
-              <Dropdown.Header>Bulk machine actions</Dropdown.Header>
+              <Dropdown.Header>{t('navbar.navbar.bulkMachineActions')}</Dropdown.Header>
               <Dropdown.Item
                 as="button"
                 type="button"
                 onClick={() => setBulk({ action: 'start', servers: [currentServer] })}
               >
                 <i className="fas fa-play text-success me-2" />
-                Start machines…
+                {t('navbar.navbar.startMachines')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
@@ -615,7 +623,7 @@ const Navbar = () => {
                 onClick={() => setBulk({ action: 'stop', servers: [currentServer] })}
               >
                 <i className="fas fa-stop text-danger me-2" />
-                Shutdown machines…
+                {t('navbar.navbar.shutdownMachines')}
               </Dropdown.Item>
               {canRestartMachines(userRole) && (
                 <Dropdown.Item
@@ -624,7 +632,7 @@ const Navbar = () => {
                   onClick={() => setBulk({ action: 'restart', servers: [currentServer] })}
                 >
                   <i className="fas fa-redo text-warning me-2" />
-                  Restart machines…
+                  {t('navbar.navbar.restartMachines')}
                 </Dropdown.Item>
               )}
             </>
@@ -634,9 +642,9 @@ const Navbar = () => {
             <>
               <Dropdown.Divider />
               <div className="text-muted text-center p-2 small">
-                Host controls require admin privileges
+                {t('navbar.navbar.hostControlsPrivilege')}
                 <br />
-                Users have read-only access to host information
+                {t('navbar.navbar.readOnlyAccessNote')}
               </div>
             </>
           )}
@@ -650,18 +658,20 @@ const Navbar = () => {
 
     return (
       <Dropdown align="end">
-        <Dropdown.Toggle variant="outline-secondary">Bulk Actions</Dropdown.Toggle>
+        <Dropdown.Toggle variant="outline-secondary">
+          {t('navbar.navbar.bulkActions')}
+        </Dropdown.Toggle>
         <Dropdown.Menu>
           {canStartStopMachines(userRole) ? (
             <>
-              <Dropdown.Header>Across all hosts</Dropdown.Header>
+              <Dropdown.Header>{t('navbar.navbar.acrossAllHosts')}</Dropdown.Header>
               <Dropdown.Item
                 as="button"
                 type="button"
                 onClick={() => setBulk({ action: 'start', servers: allServers })}
               >
                 <i className="fas fa-play text-success me-2" />
-                Start machines…
+                {t('navbar.navbar.startMachines')}
               </Dropdown.Item>
               <Dropdown.Item
                 as="button"
@@ -669,7 +679,7 @@ const Navbar = () => {
                 onClick={() => setBulk({ action: 'stop', servers: allServers })}
               >
                 <i className="fas fa-stop text-danger me-2" />
-                Shutdown machines…
+                {t('navbar.navbar.shutdownMachines')}
               </Dropdown.Item>
               {canRestartMachines(userRole) && (
                 <Dropdown.Item
@@ -678,13 +688,13 @@ const Navbar = () => {
                   onClick={() => setBulk({ action: 'restart', servers: allServers })}
                 >
                   <i className="fas fa-redo text-warning me-2" />
-                  Restart machines…
+                  {t('navbar.navbar.restartMachines')}
                 </Dropdown.Item>
               )}
             </>
           ) : (
             <div className="text-muted text-center p-2 small">
-              Bulk actions require admin privileges
+              {t('navbar.navbar.bulkActionsPrivilege')}
             </div>
           )}
         </Dropdown.Menu>
@@ -728,9 +738,12 @@ const Navbar = () => {
               ? handleHostAction(currentAction)
               : handleMachineAction(currentAction)
           }
-          title={`Confirm ${currentMode === 'machine' ? machineNoun.toLowerCase() : currentMode} ${currentAction}`}
+          title={t('navbar.navbar.confirmTitle', {
+            mode: currentMode === 'machine' ? machineNoun.toLowerCase() : currentMode,
+            action: currentAction,
+          })}
           icon={getActionIcon(currentAction)}
-          submitText={loading ? 'Processing...' : currentAction}
+          submitText={loading ? t('navbar.navbar.processingSubmit') : currentAction}
           submitVariant={getActionVariant(currentAction)}
           loading={loading}
         >
@@ -738,15 +751,16 @@ const Navbar = () => {
             <div>
               <div className="alert alert-warning">
                 <p>
-                  <strong>Target:</strong> {currentServer.hostname}
+                  <strong>{t('navbar.navbar.hostTarget')}:</strong> {currentServer.hostname}
                 </p>
                 <p>
-                  This action will {currentAction === 'restart' ? 'restart' : 'shutdown'} the entire
-                  host system.
+                  {t('navbar.navbar.hostActionMessage', {
+                    action: currentAction === 'restart' ? 'restart' : 'shutdown',
+                  })}
                 </p>
                 <p>
-                  <strong>Warning:</strong> This will interrupt all system services and user
-                  sessions.
+                  <strong>{t('navbar.navbar.warningLabel')}:</strong>{' '}
+                  {t('navbar.navbar.hostActionWarning')}
                 </p>
               </div>
 
@@ -768,20 +782,19 @@ const Navbar = () => {
           {currentMode === 'machine' && currentMachine && currentAction !== 'destroy' && (
             <div className="alert alert-info">
               <p>
-                <strong>Target:</strong> {currentMachine}
+                <strong>{t('navbar.navbar.machineTarget')}:</strong> {currentMachine}
               </p>
-              <p>This action will be performed on the selected {machineNoun.toLowerCase()}.</p>
+              <p>{t('navbar.navbar.machineActionMessage', { noun: machineNoun.toLowerCase() })}</p>
             </div>
           )}
           {currentMode === 'machine' && currentMachine && currentAction === 'destroy' && (
             <div>
               <div className="alert alert-danger">
                 <p>
-                  <strong>Target:</strong> {currentMachine}
+                  <strong>{t('navbar.navbar.machineDestroyTarget')}:</strong> {currentMachine}
                 </p>
                 <p className="mb-0">
-                  This permanently deletes the {machineNoun.toLowerCase()}. A running{' '}
-                  {machineNoun.toLowerCase()} is stopped first.
+                  {t('navbar.navbar.machineDestroyMessage', { noun: machineNoun.toLowerCase() })}
                 </p>
               </div>
               <div className="form-check mb-2">
@@ -793,13 +806,11 @@ const Navbar = () => {
                   onChange={e => setDestroyOptions({ cleanupDisks: e.target.checked })}
                 />
                 <label className="form-check-label" htmlFor="destroy-cleanup-disks">
-                  Also delete its disks (media the agent created for this{' '}
-                  {machineNoun.toLowerCase()})
+                  {t('navbar.navbar.destroyCleanupDisks', { noun: machineNoun.toLowerCase() })}
                 </label>
               </div>
               <p className="text-muted small mb-0">
-                Disk images and ISOs stored outside the {machineNoun.toLowerCase()}&apos;s working
-                directory (user-attached media) are always preserved, whatever you choose here.
+                {t('navbar.navbar.destroyDisksInfo', { noun: machineNoun.toLowerCase() })}
               </p>
             </div>
           )}
@@ -827,15 +838,23 @@ const Navbar = () => {
             setGuestPowerError('');
           }}
           onConfirm={runGuestPower}
-          title={`Guest ${guestPower === 'reboot' ? 'Reboot' : 'Shutdown'} — ${currentMachine}`}
+          title={t('navbar.navbar.guestShutdownModalTitle', {
+            action: guestPower === 'reboot' ? 'Reboot' : 'Shutdown',
+            machine: currentMachine,
+          })}
           message={
             guestPowerError
-              ? `Failed: ${guestPowerError}`
-              : `Send a clean in-guest ${
-                  guestPower === 'reboot' ? 'reboot' : 'shutdown'
-                } to ${currentMachine} via the guest agent? Silence after delivery is the normal success.`
+              ? t('navbar.navbar.guestPowerError', { error: guestPowerError })
+              : t('navbar.navbar.guestShutdownQuestion', {
+                  action: guestPower === 'reboot' ? 'reboot' : 'shutdown',
+                  machine: currentMachine,
+                })
           }
-          confirmText={guestPowerError ? 'Retry' : 'Send'}
+          confirmText={
+            guestPowerError
+              ? t('navbar.navbar.guestShutdownRetry')
+              : t('navbar.navbar.guestShutdownSend')
+          }
           loading={guestPowerBusy}
         />
       )}
@@ -852,8 +871,7 @@ const Navbar = () => {
 
       {recoveryFailed && (
         <div className="alert alert-warning alert-dismissible m-2">
-          Host restart is taking longer than expected. Please refresh the page manually to check if
-          the server is back online.
+          {t('navbar.navbar.hostRestartWarning')}
           <button
             type="button"
             className="btn-close"

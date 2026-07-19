@@ -1,5 +1,6 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../contexts/ServerContext.jsx';
 import { hasFeature, hasMachines } from '../utils/capabilities';
@@ -25,6 +26,7 @@ import { useHostData } from './Host/useHostData.js';
  * No server selection sidebar - uses global currentServer from ServerContext.
  */
 const Hosts = () => {
+  const { t } = useTranslation();
   const { currentServer, servers, startMachine, stopMachine, restartMachine } = useServers();
 
   const {
@@ -175,20 +177,17 @@ const Hosts = () => {
           <div className="card">
             <div className="card-header d-flex justify-content-between align-items-center">
               <div>
-                <strong>Host Overview</strong>
+                <strong>{t('tasks.hosts.hostOverview')}</strong>
               </div>
             </div>
             <div className="card-body">
               <div className="alert alert-info">
-                <h2 className="fs-4 fw-bold">No Servers</h2>
-                <p>
-                  You haven&apos;t added any Servers yet. Add a server to start managing hosts and
-                  machines.
-                </p>
+                <h2 className="fs-4 fw-bold">{t('tasks.hosts.noServers')}</h2>
+                <p>{t('tasks.hosts.noServersMessage')}</p>
                 <div className="mt-4">
                   <a href="/ui/settings/hyperweaver?tab=servers" className="btn btn-primary">
                     <i className="fas fa-plus me-2" />
-                    Add Server
+                    {t('tasks.hosts.addServer')}
                   </a>
                 </div>
               </div>
@@ -212,15 +211,13 @@ const Hosts = () => {
           <div className="card">
             <div className="card-header d-flex justify-content-between align-items-center">
               <div>
-                <strong>Host Overview</strong>
+                <strong>{t('tasks.hosts.hostOverview')}</strong>
               </div>
             </div>
             <div className="card-body">
               <div className="alert alert-warning">
-                <h2 className="fs-4 fw-bold">No Host Selected</h2>
-                <p>
-                  Please select a host from the dropdown in the navigation bar to view its overview.
-                </p>
+                <h2 className="fs-4 fw-bold">{t('tasks.hosts.noHostSelected')}</h2>
+                <p>{t('tasks.hosts.noHostSelectedMessage')}</p>
               </div>
             </div>
           </div>
@@ -300,7 +297,7 @@ const Hosts = () => {
                   <div className="card-body">
                     <h5 className="h5 mb-4 d-flex align-items-center gap-2">
                       <i className="fas fa-chart-area" />
-                      <span>Performance Monitoring</span>
+                      <span>{t('tasks.hosts.performanceMonitoring')}</span>
                     </h5>
 
                     <div className="row g-3">

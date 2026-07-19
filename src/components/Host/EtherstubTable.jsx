@@ -1,7 +1,9 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const EtherstubTable = ({ etherstubs, loading, onDelete, onViewDetails }) => {
+  const { t } = useTranslation();
   const [deleteLoading, setDeleteLoading] = useState({});
 
   const handleDelete = async etherstub => {
@@ -19,7 +21,7 @@ const EtherstubTable = ({ etherstubs, loading, onDelete, onViewDetails }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading etherstubs...</p>
+        <p className="mt-2">{t('host.etherstubTable.loading')}</p>
       </div>
     );
   }
@@ -28,7 +30,7 @@ const EtherstubTable = ({ etherstubs, loading, onDelete, onViewDetails }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-ethernet fa-2x text-muted" />
-        <p className="mt-2 text-muted">No etherstubs found</p>
+        <p className="mt-2 text-muted">{t('host.etherstubTable.noData')}</p>
       </div>
     );
   }
@@ -38,12 +40,12 @@ const EtherstubTable = ({ etherstubs, loading, onDelete, onViewDetails }) => {
       <table className="table table-striped table-hover">
         <thead>
           <tr>
-            <th>Etherstub Name</th>
-            <th>Class</th>
-            <th>State</th>
-            <th>Over</th>
-            <th>VNICs</th>
-            <th width="120">Actions</th>
+            <th>{t('host.etherstubTable.name')}</th>
+            <th>{t('host.etherstubTable.class')}</th>
+            <th>{t('host.etherstubTable.state')}</th>
+            <th>{t('host.etherstubTable.over')}</th>
+            <th>{t('host.etherstubTable.vnics')}</th>
+            <th width="120">{t('host.etherstubTable.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -57,7 +59,9 @@ const EtherstubTable = ({ etherstubs, loading, onDelete, onViewDetails }) => {
                   <strong className="font-monospace">{etherstubName}</strong>
                 </td>
                 <td>
-                  <span className="badge text-bg-info">{etherstub.class || 'etherstub'}</span>
+                  <span className="badge text-bg-info">
+                    {etherstub.class || t('host.etherstubTable.defaultClass')}
+                  </span>
                 </td>
                 <td>
                   <span className="badge text-bg-success">{etherstub.state || 'up'}</span>
@@ -67,7 +71,9 @@ const EtherstubTable = ({ etherstubs, loading, onDelete, onViewDetails }) => {
                 </td>
                 <td>
                   <span className="small">
-                    {etherstub.vnics ? `${etherstub.vnics.length} VNICs` : '0 VNICs'}
+                    {etherstub.vnics
+                      ? t('host.etherstubTable.vnicCount', { count: etherstub.vnics.length })
+                      : t('host.etherstubTable.vnicCount', { count: 0 })}
                   </span>
                 </td>
                 <td>
@@ -78,7 +84,7 @@ const EtherstubTable = ({ etherstubs, loading, onDelete, onViewDetails }) => {
                       className="btn btn-secondary btn-sm"
                       onClick={() => onViewDetails(etherstub)}
                       disabled={loading || isDeleting}
-                      title="View Details"
+                      title={t('host.etherstubTable.viewDetails')}
                     >
                       <i className="fas fa-info-circle" />
                     </button>
@@ -89,7 +95,7 @@ const EtherstubTable = ({ etherstubs, loading, onDelete, onViewDetails }) => {
                       className="btn btn-danger btn-sm"
                       onClick={() => handleDelete(etherstub)}
                       disabled={loading || isDeleting}
-                      title="Delete Etherstub"
+                      title={t('host.etherstubTable.deleteEtherstub')}
                     >
                       {isDeleting && (
                         <span

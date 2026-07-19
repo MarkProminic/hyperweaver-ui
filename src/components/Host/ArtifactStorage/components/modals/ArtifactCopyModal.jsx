@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../../../contexts/ServerContext';
 import FormModal from '../../../../common/FormModal';
 
 const ArtifactCopyModal = ({ server, artifact, storagePaths, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [destinationStoragePathId, setDestinationStoragePathId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +22,7 @@ const ArtifactCopyModal = ({ server, artifact, storagePaths, onClose, onSuccess,
     setError('');
 
     if (!destinationStoragePathId) {
-      setError('Please select a destination storage location.');
+      setError(t('artifacts.artifactCopyModal.selectDestinationError'));
       return;
     }
 
@@ -55,9 +57,9 @@ const ArtifactCopyModal = ({ server, artifact, storagePaths, onClose, onSuccess,
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Copy Artifact"
+      title={t('artifacts.artifactCopyModal.title')}
       icon="fas fa-copy"
-      submitText="Copy Artifact"
+      submitText={t('artifacts.artifactCopyModal.submitButton')}
       submitVariant="is-primary"
       loading={loading}
       showCancelButton
@@ -71,7 +73,7 @@ const ArtifactCopyModal = ({ server, artifact, storagePaths, onClose, onSuccess,
 
       <div className="mb-3">
         <label htmlFor="copy-artifact-name" className="form-label">
-          Artifact
+          {t('artifacts.artifactCopyModal.artifactLabel')}
         </label>
         <input
           id="copy-artifact-name"
@@ -84,7 +86,7 @@ const ArtifactCopyModal = ({ server, artifact, storagePaths, onClose, onSuccess,
 
       <div className="mb-3">
         <label htmlFor="copy-current-location" className="form-label">
-          Current Storage Location
+          {t('artifacts.artifactCopyModal.currentLocationLabel')}
         </label>
         <input
           id="copy-current-location"
@@ -97,7 +99,7 @@ const ArtifactCopyModal = ({ server, artifact, storagePaths, onClose, onSuccess,
 
       <div className="mb-3">
         <label htmlFor="copy-destination-location" className="form-label">
-          Destination Storage Location
+          {t('artifacts.artifactCopyModal.destinationLocationLabel')}
         </label>
         <select
           id="copy-destination-location"
@@ -106,7 +108,7 @@ const ArtifactCopyModal = ({ server, artifact, storagePaths, onClose, onSuccess,
           onChange={e => setDestinationStoragePathId(e.target.value)}
           disabled={loading}
         >
-          <option value="">Select a destination</option>
+          <option value="">{t('artifacts.artifactCopyModal.selectDestination')}</option>
           {availableStoragePaths.map(path => (
             <option key={path.id} value={path.id}>
               {path.name} ({path.path})

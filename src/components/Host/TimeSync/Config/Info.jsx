@@ -1,6 +1,9 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const ConfigInfo = ({ configInfo }) => {
+  const { t } = useTranslation();
+
   if (!configInfo) {
     return null;
   }
@@ -18,31 +21,33 @@ const ConfigInfo = ({ configInfo }) => {
   return (
     <div className="card mb-4">
       <div className="card-body">
-        <h3 className="fs-6 fw-bold">Configuration File Information</h3>
+        <h3 className="fs-6 fw-bold">{t('hostTime.timeSyncConfigInfo.heading')}</h3>
         <div className="table-responsive">
           <table className="table">
             <tbody>
               <tr>
                 <td>
-                  <strong>Service Type</strong>
+                  <strong>{t('hostTime.timeSyncConfigInfo.serviceType')}</strong>
                 </td>
                 <td className="font-monospace">{getServiceType(configInfo.service)}</td>
               </tr>
               <tr>
                 <td>
-                  <strong>Configuration File</strong>
+                  <strong>{t('hostTime.timeSyncConfigInfo.configurationFile')}</strong>
                 </td>
                 <td className="font-monospace">{configInfo.config_file}</td>
               </tr>
               <tr>
                 <td>
-                  <strong>File Exists</strong>
+                  <strong>{t('hostTime.timeSyncConfigInfo.fileExists')}</strong>
                 </td>
                 <td>
                   <span
                     className={`badge ${configInfo.config_exists ? 'text-bg-success' : 'text-bg-warning'}`}
                   >
-                    {configInfo.config_exists ? 'Yes' : 'No'}
+                    {configInfo.config_exists
+                      ? t('hostTime.timeSyncConfigInfo.yes')
+                      : t('hostTime.timeSyncConfigInfo.no')}
                   </span>
                 </td>
               </tr>

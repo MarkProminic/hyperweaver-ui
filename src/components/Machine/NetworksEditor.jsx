@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { VocabularySelect } from './HardwareEditor';
 import PickOrType from './PickOrType';
@@ -43,6 +44,7 @@ const NetworksEditor = ({
   nicEnums = null,
   loading,
 }) => {
+  const { t } = useTranslation();
   const ipOptions = Array.isArray(ipSuggestions?.suggestions) ? ipSuggestions.suggestions : [];
   const setNetwork = (index, patch) => {
     onNetworksChange(
@@ -71,9 +73,7 @@ const NetworksEditor = ({
         </datalist>
       )}
       {networks.length === 0 && (
-        <p className="text-muted small mb-0">
-          No networks defined — the provisioner template&apos;s defaults apply.
-        </p>
+        <p className="text-muted small mb-0">{t('machineEdit.networksEditor.noNetworksDefined')}</p>
       )}
       {networks.map((network, index) => {
         const rowKey = `network-${index}`;
@@ -82,14 +82,13 @@ const NetworksEditor = ({
           <div className="border rounded p-2" key={rowKey}>
             {index === 0 && (
               <p className="form-text text-muted mt-0 mb-2">
-                The first network becomes the {`machine's`} real network after provisioning —
-                usually your bridged external.
+                {t('machineEdit.networksEditor.firstNetworkHint')}
               </p>
             )}
             <div className="row g-2 align-items-end">
               <div className="col-6 col-md-2">
                 <label className="form-label small mb-1" htmlFor={`${rowKey}-type`}>
-                  Type
+                  {t('machineEdit.networksEditor.type')}
                 </label>
                 <input
                   id={`${rowKey}-type`}
@@ -107,7 +106,7 @@ const NetworksEditor = ({
               </div>
               <div className="col-6 col-md-3">
                 <label className="form-label small mb-1" htmlFor={`${rowKey}-bridge`}>
-                  Bridge / Uplink
+                  {t('machineEdit.networksEditor.bridgeUplink')}
                 </label>
                 {bridgeChoices.length > 0 ? (
                   <PickOrType
@@ -115,7 +114,7 @@ const NetworksEditor = ({
                     value={network.bridge ?? ''}
                     onChange={next => setNetwork(index, { bridge: next })}
                     options={bridgeChoices}
-                    blankLabel="Select an uplink…"
+                    blankLabel={t('machineEdit.networksEditor.selectUplink')}
                     placeholder="link name"
                     small
                     disabled={loading}
@@ -135,14 +134,13 @@ const NetworksEditor = ({
                 ) && (
                   <span className="form-text text-warning small">
                     <i className="fas fa-triangle-exclamation me-1" />
-                    This is the PROVISIONING etherstub — the agent&apos;s transport network, not a
-                    real uplink for guest traffic.
+                    {t('machineEdit.networksEditor.provisioningEtherstubWarning')}
                   </span>
                 )}
               </div>
               <div className="col-6 col-md-2">
                 <label className="form-label small mb-1" htmlFor={`${rowKey}-mac`}>
-                  MAC
+                  {t('machineEdit.networksEditor.mac')}
                 </label>
                 <input
                   id={`${rowKey}-mac`}
@@ -166,7 +164,7 @@ const NetworksEditor = ({
                     disabled={loading}
                   />
                   <label className="form-check-label small" htmlFor={`${rowKey}-dhcp`}>
-                    DHCP
+                    {t('machineEdit.networksEditor.dhcp')}
                   </label>
                 </div>
               </div>
@@ -188,7 +186,7 @@ const NetworksEditor = ({
               {ADDRESS_FIELDS.map(field => (
                 <div className="col-6 col-md-2" key={field.key}>
                   <label className="form-label small mb-1" htmlFor={`${rowKey}-${field.key}`}>
-                    {field.label}
+                    {t(`machineEdit.networksEditor.addressField.${field.key}`)}
                   </label>
                   <input
                     id={`${rowKey}-${field.key}`}
@@ -213,7 +211,7 @@ const NetworksEditor = ({
               {[0, 1].map(dnsIndex => (
                 <div className="col-6 col-md-2" key={`dns-${dnsIndex}`}>
                   <label className="form-label small mb-1" htmlFor={`${rowKey}-dns-${dnsIndex}`}>
-                    DNS {dnsIndex + 1}
+                    {t('machineEdit.networksEditor.dns', { index: dnsIndex + 1 })}
                   </label>
                   <input
                     id={`${rowKey}-dns-${dnsIndex}`}
@@ -228,14 +226,14 @@ const NetworksEditor = ({
               ))}
               <div className="col-6 col-md-2">
                 <label className="form-label small mb-1" htmlFor={`${rowKey}-route`}>
-                  Route
+                  {t('machineEdit.networksEditor.route')}
                 </label>
                 <input
                   id={`${rowKey}-route`}
                   className="form-control form-control-sm font-monospace"
                   type="text"
-                  placeholder="default"
-                  title="OPTIONAL. Blank = the default route. A scoped CIDR (e.g. 10.190.190.0/24) confines this NIC's route so it never takes the guest's default."
+                  placeholder={t('machineEdit.networksEditor.default')}
+                  title={t('machineEdit.networksEditor.routeHint')}
                   value={network.route ?? ''}
                   onChange={e => setNetwork(index, { route: e.target.value })}
                   disabled={loading}
@@ -243,20 +241,22 @@ const NetworksEditor = ({
               </div>
             </div>
             <details className="mt-1">
-              <summary className="small text-muted">Adapter tuning</summary>
+              <summary className="small text-muted">
+                {t('machineEdit.networksEditor.adapterTuning')}
+              </summary>
               <div className="row g-2 align-items-end mt-0">
                 <div className="col-6 col-md-2">
                   <label className="form-label small mb-1" htmlFor={`${rowKey}-cable`}>
-                    Cable
+                    {t('machineEdit.networksEditor.cable')}
                   </label>
                   <VocabularySelect
                     id={`${rowKey}-cable`}
                     value={network.cable_connected ?? ''}
                     entries={[
-                      { value: 'on', label: 'connected' },
-                      { value: 'off', label: 'disconnected' },
+                      { value: 'on', label: t('machineEdit.networksEditor.connected') },
+                      { value: 'off', label: t('machineEdit.networksEditor.disconnected') },
                     ]}
-                    blankLabel="n/a"
+                    blankLabel={t('machineEdit.common.na')}
                     small
                     onChange={next => setNetwork(index, { cable_connected: next })}
                     disabled={loading}
@@ -267,14 +267,14 @@ const NetworksEditor = ({
                   return (
                     <div className="col-6 col-md-2" key={field.key}>
                       <label className="form-label small mb-1" htmlFor={`${rowKey}-${field.key}`}>
-                        {field.label}
+                        {t(`machineEdit.networksEditor.tuningField.${field.key}`)}
                       </label>
                       {vocabulary ? (
                         <VocabularySelect
                           id={`${rowKey}-${field.key}`}
                           value={network[field.key] ?? ''}
                           entries={vocabulary}
-                          blankLabel="n/a"
+                          blankLabel={t('machineEdit.common.na')}
                           small
                           onChange={next => setNetwork(index, { [field.key]: next })}
                           disabled={loading}
@@ -284,7 +284,7 @@ const NetworksEditor = ({
                           id={`${rowKey}-${field.key}`}
                           className="form-control form-control-sm"
                           type={field.type || 'text'}
-                          placeholder="n/a"
+                          placeholder={t('machineEdit.common.na')}
                           value={network[field.key] ?? ''}
                           onChange={e => setNetwork(index, { [field.key]: e.target.value })}
                           disabled={loading}
@@ -308,7 +308,7 @@ const NetworksEditor = ({
           disabled={loading}
         >
           <i className="fas fa-plus me-2" />
-          Add Network
+          {t('machineEdit.networksEditor.addNetwork')}
         </button>
       </div>
     </div>

@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const StoragePathTable = ({ storagePaths, loading, onEdit, onDelete, onToggle, onNameClick }) => {
+  const { t } = useTranslation();
   const formatSize = bytes => {
     if (!bytes) {
       return '0 B';
@@ -69,7 +71,7 @@ const StoragePathTable = ({ storagePaths, loading, onEdit, onDelete, onToggle, o
 
     return (
       <div className="mb-3">
-        <span className="form-label small">Disk Usage</span>
+        <span className="form-label small">{t('artifacts.storagePathTable.diskUsageLabel')}</span>
         <div
           className="progress"
           style={{ height: '0.5rem' }}
@@ -91,7 +93,7 @@ const StoragePathTable = ({ storagePaths, loading, onEdit, onDelete, onToggle, o
         <span>
           <i className="fas fa-spinner fa-spin fa-2x" />
         </span>
-        <p className="mt-2">Loading storage paths...</p>
+        <p className="mt-2">{t('artifacts.storagePathTable.loadingText')}</p>
       </div>
     );
   }
@@ -102,8 +104,10 @@ const StoragePathTable = ({ storagePaths, loading, onEdit, onDelete, onToggle, o
         <span className="text-muted">
           <i className="fas fa-folder fa-2x" />
         </span>
-        <p className="mt-2 text-muted">No storage paths configured</p>
-        <p className="text-muted small">Create a storage path to begin managing artifacts</p>
+        <p className="mt-2 text-muted">{t('artifacts.storagePathTable.noStoragePathsFound')}</p>
+        <p className="text-muted small">
+          {t('artifacts.storagePathTable.noStoragePathsDescription')}
+        </p>
       </div>
     );
   }
@@ -113,15 +117,15 @@ const StoragePathTable = ({ storagePaths, loading, onEdit, onDelete, onToggle, o
       <table className="table table-hover">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Path</th>
-            <th>Type</th>
-            <th>Status</th>
-            <th>Files</th>
-            <th>Size</th>
-            <th>Last Scan</th>
-            <th>Usage</th>
-            <th width="200">Actions</th>
+            <th>{t('artifacts.storagePathTable.nameHeader')}</th>
+            <th>{t('artifacts.storagePathTable.pathHeader')}</th>
+            <th>{t('artifacts.storagePathTable.typeHeader')}</th>
+            <th>{t('artifacts.storagePathTable.statusHeader')}</th>
+            <th>{t('artifacts.storagePathTable.filesHeader')}</th>
+            <th>{t('artifacts.storagePathTable.sizeHeader')}</th>
+            <th>{t('artifacts.storagePathTable.lastScanHeader')}</th>
+            <th>{t('artifacts.storagePathTable.usageHeader')}</th>
+            <th width="200">{t('artifacts.storagePathTable.actionsHeader')}</th>
           </tr>
         </thead>
         <tbody>
@@ -135,7 +139,10 @@ const StoragePathTable = ({ storagePaths, loading, onEdit, onDelete, onToggle, o
                       type="button"
                       className="fw-bold cursor-pointer text-primary btn btn-link p-0"
                       onClick={() => onNameClick(storagePath)}
-                      title={`View artifacts in ${storagePath.name} (${storagePath.file_count || 0} files)`}
+                      title={t('artifacts.storagePathTable.viewArtifactsTooltip', {
+                        name: storagePath.name,
+                        count: storagePath.file_count || 0,
+                      })}
                       style={{
                         cursor: 'pointer',
                         border: 'none',
@@ -170,7 +177,9 @@ const StoragePathTable = ({ storagePaths, loading, onEdit, onDelete, onToggle, o
                 {storagePath.disk_usage ? (
                   <div style={{ minWidth: '120px' }}>{getDiskUsageBar(storagePath.disk_usage)}</div>
                 ) : (
-                  <span className="text-muted small">N/A</span>
+                  <span className="text-muted small">
+                    {t('artifacts.storagePathTable.notAvailable')}
+                  </span>
                 )}
               </td>
               <td>
@@ -179,7 +188,7 @@ const StoragePathTable = ({ storagePaths, loading, onEdit, onDelete, onToggle, o
                     className="btn btn-sm"
                     onClick={() => onEdit(storagePath)}
                     disabled={loading}
-                    title="Edit storage path"
+                    title={t('artifacts.storagePathTable.editTooltip')}
                   >
                     <span>
                       <i className="fas fa-edit" />
@@ -190,7 +199,11 @@ const StoragePathTable = ({ storagePaths, loading, onEdit, onDelete, onToggle, o
                     className={`btn btn-sm ${storagePath.enabled ? 'btn-warning' : 'btn-success'}`}
                     onClick={() => onToggle(storagePath)}
                     disabled={loading}
-                    title={storagePath.enabled ? 'Disable storage path' : 'Enable storage path'}
+                    title={
+                      storagePath.enabled
+                        ? t('artifacts.storagePathTable.disableTooltip')
+                        : t('artifacts.storagePathTable.enableTooltip')
+                    }
                   >
                     <span>
                       <i className={`fas ${storagePath.enabled ? 'fa-pause' : 'fa-play'}`} />
@@ -201,7 +214,7 @@ const StoragePathTable = ({ storagePaths, loading, onEdit, onDelete, onToggle, o
                     className="btn btn-danger btn-sm"
                     onClick={() => onDelete(storagePath)}
                     disabled={loading}
-                    title="Delete storage path"
+                    title={t('artifacts.storagePathTable.deleteTooltip')}
                   >
                     <span>
                       <i className="fas fa-trash" />

@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { useMode } from '../contexts/ModeContext';
 
 import DashEntry from './DashEntry';
@@ -15,6 +17,7 @@ import SidebarTree from './SidebarTree';
  */
 const Sidebar = () => {
   const { isDirect } = useMode();
+  const { t } = useTranslation();
 
   return (
     <aside className="flex-grow-1 w-100">
@@ -23,7 +26,11 @@ const Sidebar = () => {
           active selector lives on `.hw-tree .hw-tree-row.active`). */}
       {isDirect && (
         <div className="hw-tree">
-          <DashEntry title={'Dashboard'} link={'/ui/dashboard'} icon={'fas fa-solid fa-gauge'} />
+          <DashEntry
+            title={t('chrome.sidebar.dashboard')}
+            link={'/ui/dashboard'}
+            icon={'fas fa-solid fa-gauge'}
+          />
         </div>
       )}
 

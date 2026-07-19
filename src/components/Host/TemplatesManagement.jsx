@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getAllMachines, getTask } from '../../api/machineAPI';
 import {
@@ -34,6 +35,7 @@ const formatSize = bytes => {
 };
 
 const TemplatesManagement = ({ server }) => {
+  const { t } = useTranslation();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
@@ -443,7 +445,7 @@ const TemplatesManagement = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-cloud-arrow-down me-2" />
-            Pull Template
+            {t('host.templatesManagement.pullTemplate')}
           </button>
           <button
             type="button"
@@ -453,10 +455,10 @@ const TemplatesManagement = ({ server }) => {
               setShowExport(true);
             }}
             disabled={loading}
-            title="Export a stopped machine into a local .box"
+            title={t('host.templatesManagement.exportMachineTooltip')}
           >
             <i className="fas fa-file-export me-2" />
-            Export Machine
+            {t('host.templatesManagement.exportMachine')}
           </button>
           <button
             type="button"
@@ -470,10 +472,10 @@ const TemplatesManagement = ({ server }) => {
               setShowPublish(true);
             }}
             disabled={loading}
-            title="Export a machine and publish it to a registry"
+            title={t('host.templatesManagement.publishTooltip')}
           >
             <i className="fas fa-cloud-arrow-up me-2" />
-            Publish
+            {t('host.templatesManagement.publish')}
           </button>
           <button
             type="button"
@@ -482,10 +484,12 @@ const TemplatesManagement = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-sync-alt me-2" />
-            Refresh
+            {t('host.templatesManagement.refresh')}
           </button>
         </div>
-        <span className="badge text-bg-secondary">{templates.length} templates</span>
+        <span className="badge text-bg-secondary">
+          {t('host.templatesManagement.templatesCount', { count: templates.length })}
+        </span>
       </div>
 
       {/* Where boxes COME FROM (Mark's nit: no visible way to set BoxVault/
@@ -495,7 +499,7 @@ const TemplatesManagement = ({ server }) => {
       <div className="card mb-3">
         <div className="card-body py-2">
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
-            <span className="fw-semibold">Box Registries</span>
+            <span className="fw-semibold">{t('host.templatesManagement.boxRegistries')}</span>
             <button
               type="button"
               className="btn btn-sm btn-primary"
@@ -507,12 +511,12 @@ const TemplatesManagement = ({ server }) => {
               disabled={loading}
             >
               <i className="fas fa-plus me-1" />
-              Add Registry
+              {t('host.templatesManagement.addRegistry')}
             </button>
           </div>
           {sources.length === 0 && (
             <span className="text-muted small">
-              none configured — the image dropdowns stay empty
+              {t('host.templatesManagement.noRegistriesConfigured')}
             </span>
           )}
           <div className="d-flex flex-column gap-1">
@@ -520,16 +524,22 @@ const TemplatesManagement = ({ server }) => {
               <div className="d-flex align-items-center gap-2 flex-wrap" key={source.name}>
                 <code className="small">{source.name}</code>
                 <span className="text-muted small">{source.url}</span>
-                {source.default && <span className="badge text-bg-success">default</span>}
+                {source.default && (
+                  <span className="badge text-bg-success">
+                    {t('host.templatesManagement.default')}
+                  </span>
+                )}
                 {source.enabled === false && (
-                  <span className="badge text-bg-secondary">disabled</span>
+                  <span className="badge text-bg-secondary">
+                    {t('host.templatesManagement.disabled')}
+                  </span>
                 )}
                 <span className="ms-auto d-inline-flex gap-1">
                   {!source.default && (
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-success py-0"
-                      title="Make this the default registry"
+                      title={t('host.templatesManagement.makeDefaultRegistry')}
                       onClick={() => handleSetDefault(source)}
                       disabled={loading}
                     >
@@ -539,7 +549,11 @@ const TemplatesManagement = ({ server }) => {
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-secondary py-0"
-                    title={source.enabled === false ? 'Enable' : 'Disable'}
+                    title={
+                      source.enabled === false
+                        ? t('host.templatesManagement.enable')
+                        : t('host.templatesManagement.disable')
+                    }
                     onClick={() => handleToggleSource(source)}
                     disabled={loading}
                   >
@@ -550,7 +564,7 @@ const TemplatesManagement = ({ server }) => {
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-warning py-0"
-                    title="Edit"
+                    title={t('host.templatesManagement.edit')}
                     onClick={() => {
                       setEditingSourceName(source.name);
                       setSourceForm({
@@ -569,7 +583,7 @@ const TemplatesManagement = ({ server }) => {
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-danger py-0"
-                    title="Remove this registry"
+                    title={t('host.templatesManagement.removeRegistry')}
                     onClick={() => setDeleteSource(source)}
                     disabled={loading}
                   >
@@ -588,12 +602,11 @@ const TemplatesManagement = ({ server }) => {
       </div>
 
       {msg && <div className={`alert alert-${msgVariant} py-2`}>{msg}</div>}
-      {loading && templates.length === 0 && <p className="text-muted">Loading…</p>}
+      {loading && templates.length === 0 && (
+        <p className="text-muted">{t('host.templatesManagement.loading')}</p>
+      )}
       {!loading && templates.length === 0 && (
-        <div className="alert alert-info">
-          No templates in the local registry yet — pull one, or let machine creation chain the
-          download automatically.
-        </div>
+        <div className="alert alert-info">{t('host.templatesManagement.noTemplatesYet')}</div>
       )}
 
       {templates.length > 0 && (
@@ -601,13 +614,13 @@ const TemplatesManagement = ({ server }) => {
           <table className="table table-striped table-sm">
             <thead>
               <tr>
-                <th>Box</th>
-                <th>Version</th>
-                <th>Architecture</th>
-                <th>Provider</th>
-                <th>Size</th>
-                <th>Downloaded</th>
-                <th>Actions</th>
+                <th>{t('host.templatesManagement.box')}</th>
+                <th>{t('host.templatesManagement.version')}</th>
+                <th>{t('host.templatesManagement.architecture')}</th>
+                <th>{t('host.templatesManagement.provider')}</th>
+                <th>{t('host.templatesManagement.size')}</th>
+                <th>{t('host.templatesManagement.downloaded')}</th>
+                <th>{t('host.templatesManagement.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -634,7 +647,7 @@ const TemplatesManagement = ({ server }) => {
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-secondary py-0"
-                        title="Move to a different storage root"
+                        title={t('host.templatesManagement.moveToStorageRoot')}
                         onClick={() => {
                           setMoveTarget(template);
                           setMovePath('');
@@ -646,7 +659,7 @@ const TemplatesManagement = ({ server }) => {
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-danger py-0"
-                        title="Delete this template"
+                        title={t('host.templatesManagement.deleteTemplate')}
                         onClick={() => setDeleteTarget(template)}
                         disabled={loading || !template.id}
                       >
@@ -665,16 +678,16 @@ const TemplatesManagement = ({ server }) => {
         isOpen={showPull}
         onClose={() => setShowPull(false)}
         onSubmit={handlePull}
-        title="Pull Template"
+        title={t('host.templatesManagement.pullTemplate')}
         icon="fas fa-cloud-arrow-down"
-        submitText="Queue Download"
+        submitText={t('host.templatesManagement.queueDownload')}
         loading={loading}
         showCancelButton
       >
         <div className="row g-3">
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="template-pull-source">
-              Registry
+              {t('host.templatesManagement.registry')}
             </label>
             <select
               id="template-pull-source"
@@ -683,7 +696,11 @@ const TemplatesManagement = ({ server }) => {
               onChange={e => setRemoteSourceName(e.target.value)}
               disabled={sources.length === 0}
             >
-              {sources.length === 0 && <option value="">(no registries configured)</option>}
+              {sources.length === 0 && (
+                <option value="">
+                  {t('host.templatesManagement.noRegistriesConfiguredOption')}
+                </option>
+              )}
               {sources.map(source => (
                 <option key={source.name} value={source.name}>
                   {source.name}
@@ -694,7 +711,9 @@ const TemplatesManagement = ({ server }) => {
           </div>
           <div className="col-12">
             <label className="form-label" htmlFor="template-pull-catalog">
-              Available templates on {remoteSourceName || 'the registry'}
+              {t('host.templatesManagement.availableTemplates', {
+                source: remoteSourceName || t('host.templatesManagement.theRegistry'),
+              })}
             </label>
             <select
               id="template-pull-catalog"
@@ -705,8 +724,8 @@ const TemplatesManagement = ({ server }) => {
             >
               <option value="">
                 {remoteBoxes.length > 0
-                  ? 'Select a template…'
-                  : '(catalog empty or unreachable — type the fields below)'}
+                  ? t('host.templatesManagement.selectTemplate')
+                  : t('host.templatesManagement.catalogEmptyOrUnreachable')}
               </option>
               {remoteBoxes.map(entry => (
                 <option key={entry.value} value={entry.value}>
@@ -717,33 +736,33 @@ const TemplatesManagement = ({ server }) => {
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="template-pull-org">
-              Organization
+              {t('host.templatesManagement.organization')}
             </label>
             <input
               id="template-pull-org"
               className="form-control"
               type="text"
-              placeholder="STARTcloud"
+              placeholder={t('host.templatesManagement.organizationPlaceholder')}
               value={organization}
               onChange={e => setOrganization(e.target.value)}
             />
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="template-pull-box">
-              Box Name
+              {t('host.templatesManagement.boxName')}
             </label>
             <input
               id="template-pull-box"
               className="form-control"
               type="text"
-              placeholder="debian13-server"
+              placeholder={t('host.templatesManagement.boxNamePlaceholder')}
               value={boxName}
               onChange={e => setBoxName(e.target.value)}
             />
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="template-pull-version">
-              Version (specific — &quot;latest&quot; is not downloadable)
+              {t('host.templatesManagement.versionSpecific')}
             </label>
             {pickedEntry && pickedEntry.versions.length > 0 ? (
               <select
@@ -770,7 +789,7 @@ const TemplatesManagement = ({ server }) => {
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="template-pull-arch">
-              Architecture (blank = default)
+              {t('host.templatesManagement.architectureOptional')}
             </label>
             {pickedEntry && pickedEntry.architectures.length > 0 ? (
               <select
@@ -779,7 +798,7 @@ const TemplatesManagement = ({ server }) => {
                 value={architecture}
                 onChange={e => setArchitecture(e.target.value)}
               >
-                <option value="">(default)</option>
+                <option value="">{t('host.templatesManagement.defaultOption')}</option>
                 {pickedEntry.architectures.map(arch => (
                   <option key={arch} value={arch}>
                     {arch}
@@ -791,7 +810,7 @@ const TemplatesManagement = ({ server }) => {
                 id="template-pull-arch"
                 className="form-control"
                 type="text"
-                placeholder="amd64"
+                placeholder={t('host.templatesManagement.amd64Placeholder')}
                 value={architecture}
                 onChange={e => setArchitecture(e.target.value)}
               />
@@ -805,9 +824,11 @@ const TemplatesManagement = ({ server }) => {
           isOpen
           onClose={() => setDeleteTarget(null)}
           onConfirm={handleDelete}
-          title="Delete Template"
-          message={`Delete ${deleteTarget.organization}/${deleteTarget.box_name} ${deleteTarget.version}? The disk image and registry row are removed — machines already built from it are unaffected.`}
-          confirmText="Delete"
+          title={t('host.templatesManagement.deleteTemplate')}
+          message={t('host.templatesManagement.deleteTemplateConfirm', {
+            template: `${deleteTarget.organization}/${deleteTarget.box_name} ${deleteTarget.version}`,
+          })}
+          confirmText={t('host.templatesManagement.delete')}
           loading={loading}
         />
       )}
@@ -817,21 +838,23 @@ const TemplatesManagement = ({ server }) => {
           isOpen
           onClose={() => setMoveTarget(null)}
           onSubmit={handleMove}
-          title={`Move Template: ${moveTarget.organization}/${moveTarget.box_name} ${moveTarget.version}`}
+          title={t('host.templatesManagement.moveTemplate', {
+            template: `${moveTarget.organization}/${moveTarget.box_name} ${moveTarget.version}`,
+          })}
           icon="fas fa-folder-tree"
-          submitText="Queue Move"
+          submitText={t('host.templatesManagement.queueMove')}
           loading={loading}
           showCancelButton
         >
           <label className="form-label" htmlFor="template-move-path">
-            New storage ROOT (agent-host path — the org/box/version layout is recreated beneath it)
+            {t('host.templatesManagement.newStorageRoot')}
           </label>
           <PathInput
             id="template-move-path"
             value={movePath}
             onChange={setMovePath}
             server={server}
-            pickTitle="Pick the new storage root"
+            pickTitle={t('host.templatesManagement.pickNewStorageRoot')}
           />
         </FormModal>
       )}
@@ -840,15 +863,15 @@ const TemplatesManagement = ({ server }) => {
         isOpen={showExport}
         onClose={() => setShowExport(false)}
         onSubmit={handleExport}
-        title="Export Machine to Box"
+        title={t('host.templatesManagement.exportMachineToBox')}
         icon="fas fa-file-export"
-        submitText="Queue Export"
+        submitText={t('host.templatesManagement.queueExport')}
         loading={loading}
         showCancelButton
       >
         <div className="mb-3">
           <label className="form-label" htmlFor="template-export-machine">
-            Machine (must be stopped)
+            {t('host.templatesManagement.machineMustBeStopped')}
           </label>
           <select
             id="template-export-machine"
@@ -857,7 +880,7 @@ const TemplatesManagement = ({ server }) => {
             onChange={e => setExportForm({ ...exportForm, machine: e.target.value })}
             required
           >
-            <option value="">Select…</option>
+            <option value="">{t('host.templatesManagement.select')}</option>
             {machineRows.map(row => (
               <option
                 key={row.name}
@@ -865,14 +888,16 @@ const TemplatesManagement = ({ server }) => {
                 disabled={(row.status || '').toLowerCase() === 'running'}
               >
                 {row.name}
-                {(row.status || '').toLowerCase() === 'running' ? ' (running — stop first)' : ''}
+                {(row.status || '').toLowerCase() === 'running'
+                  ? ` (${t('host.templatesManagement.runningStopFirst')})`
+                  : ''}
               </option>
             ))}
           </select>
         </div>
         <div className="mb-2">
           <label className="form-label" htmlFor="template-export-filename">
-            Filename (optional)
+            {t('host.templatesManagement.filenameOptional')}
           </label>
           <input
             id="template-export-filename"
@@ -883,7 +908,7 @@ const TemplatesManagement = ({ server }) => {
           />
         </div>
         <p className="form-text text-muted mb-0">
-          The resulting .box path and its sha256 land in the task output.
+          {t('host.templatesManagement.resultingBoxPathLandInTaskOutput')}
         </p>
       </FormModal>
 
@@ -891,16 +916,16 @@ const TemplatesManagement = ({ server }) => {
         isOpen={showPublish}
         onClose={() => setShowPublish(false)}
         onSubmit={handlePublish}
-        title="Publish Machine to Registry"
+        title={t('host.templatesManagement.publishMachineToRegistry')}
         icon="fas fa-cloud-arrow-up"
-        submitText="Queue Publish"
+        submitText={t('host.templatesManagement.queuePublish')}
         loading={loading}
         showCancelButton
       >
         <div className="row g-3">
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="template-publish-machine">
-              Machine (must be stopped)
+              {t('host.templatesManagement.machineMustBeStopped')}
             </label>
             <select
               id="template-publish-machine"
@@ -924,7 +949,7 @@ const TemplatesManagement = ({ server }) => {
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="template-publish-source">
-              Registry Source (credentials come from its config)
+              {t('host.templatesManagement.registrySourceLabel')}
             </label>
             <select
               id="template-publish-source"
@@ -944,7 +969,7 @@ const TemplatesManagement = ({ server }) => {
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="template-publish-org">
-              Organization
+              {t('host.templatesManagement.organization')}
             </label>
             <input
               id="template-publish-org"
@@ -957,7 +982,7 @@ const TemplatesManagement = ({ server }) => {
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="template-publish-box">
-              Box Name
+              {t('host.templatesManagement.boxName')}
             </label>
             <input
               id="template-publish-box"
@@ -970,7 +995,7 @@ const TemplatesManagement = ({ server }) => {
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="template-publish-version">
-              Version
+              {t('host.templatesManagement.version')}
             </label>
             <input
               id="template-publish-version"
@@ -983,20 +1008,20 @@ const TemplatesManagement = ({ server }) => {
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="template-publish-arch">
-              Architecture (optional)
+              {t('host.templatesManagement.architectureOptional')}
             </label>
             <input
               id="template-publish-arch"
               className="form-control"
               type="text"
-              placeholder="amd64"
+              placeholder={t('host.templatesManagement.amd64Placeholder')}
               value={publishForm.architecture}
               onChange={e => setPublishForm({ ...publishForm, architecture: e.target.value })}
             />
           </div>
           <div className="col-12">
             <label className="form-label" htmlFor="template-publish-description">
-              Description (optional)
+              {t('host.templatesManagement.descriptionOptional')}
             </label>
             <input
               id="template-publish-description"
@@ -1013,21 +1038,29 @@ const TemplatesManagement = ({ server }) => {
         isOpen={showAddSource}
         onClose={() => setShowAddSource(false)}
         onSubmit={handleSaveSource}
-        title={editingSourceName ? `Edit Registry: ${editingSourceName}` : 'Add Box Registry'}
+        title={
+          editingSourceName
+            ? t('host.templatesManagement.editRegistry', { name: editingSourceName })
+            : t('host.templatesManagement.addBoxRegistry')
+        }
         icon="fas fa-cloud"
-        submitText={editingSourceName ? 'Save' : 'Add Registry'}
+        submitText={
+          editingSourceName
+            ? t('host.templatesManagement.save')
+            : t('host.templatesManagement.addRegistry')
+        }
         loading={loading}
         showCancelButton
       >
         <div className="row g-3">
           <div className="col-12 col-md-4">
             <label className="form-label" htmlFor="source-name">
-              Name
+              {t('host.templatesManagement.name')}
             </label>
             <input
               id="source-name"
               className="form-control"
-              placeholder="boxvault"
+              placeholder={t('host.templatesManagement.boxvaultPlaceholder')}
               value={sourceForm.name}
               onChange={e => setSourceForm({ ...sourceForm, name: e.target.value })}
               required
@@ -1035,12 +1068,12 @@ const TemplatesManagement = ({ server }) => {
           </div>
           <div className="col-12 col-md-8">
             <label className="form-label" htmlFor="source-url">
-              URL (BoxVault / Vagrant-registry protocol — HashiCorp Cloud works too)
+              {t('host.templatesManagement.urlBoxVaultLabel')}
             </label>
             <input
               id="source-url"
               className="form-control"
-              placeholder="https://boxvault.example.com"
+              placeholder={t('host.templatesManagement.urlPlaceholder')}
               value={sourceForm.url}
               onChange={e => setSourceForm({ ...sourceForm, url: e.target.value })}
               required
@@ -1057,13 +1090,13 @@ const TemplatesManagement = ({ server }) => {
                 onChange={e => setSourceForm({ ...sourceForm, isDefault: e.target.checked })}
               />
               <label className="form-check-label" htmlFor="source-default">
-                Make this the DEFAULT registry (feeds the create wizard&apos;s box list)
+                {t('host.templatesManagement.makeDefaultRegistryFeedsWizard')}
               </label>
             </div>
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="source-token">
-              Registry API key
+              {t('host.templatesManagement.registryApiKey')}
             </label>
             <input
               id="source-token"
@@ -1072,15 +1105,16 @@ const TemplatesManagement = ({ server }) => {
               onChange={e => setSourceForm({ ...sourceForm, auth_token: e.target.value })}
             />
             <span className="form-text text-muted">
-              A BoxVault service-account token (minted in BoxVault, org-scoped, optional
-              never-expire), sent as Bearer on every registry call. Optional — public registries
-              need none; private boxes need it.
-              {editingSourceName ? ' Blank keeps the existing key.' : ''}
+              {t('host.templatesManagement.apiKeyHelp', {
+                blankKeepsExisting: editingSourceName
+                  ? t('host.templatesManagement.blankKeepsExisting')
+                  : '',
+              })}
             </span>
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="source-cafile">
-              CA file (agent-host path — for self-signed registries; TLS verification stays ON)
+              {t('host.templatesManagement.caFileLabel')}
             </label>
             <PathInput
               id="source-cafile"
@@ -1088,7 +1122,7 @@ const TemplatesManagement = ({ server }) => {
               onChange={next => setSourceForm(prev => ({ ...prev, ca_file: next }))}
               server={server}
               mode="file"
-              pickTitle="Pick the CA file"
+              pickTitle={t('host.templatesManagement.pickCaFile')}
             />
           </div>
         </div>
@@ -1099,9 +1133,11 @@ const TemplatesManagement = ({ server }) => {
           isOpen
           onClose={() => setDeleteSource(null)}
           onConfirm={handleRemoveSource}
-          title="Remove Registry"
-          message={`Remove registry "${deleteSource.name}" from the agent's sources? Templates already downloaded from it stay usable; its catalog just stops feeding the pickers.`}
-          confirmText="Remove"
+          title={t('host.templatesManagement.removeRegistry')}
+          message={t('host.templatesManagement.removeRegistryConfirm', {
+            name: deleteSource.name,
+          })}
+          confirmText={t('host.templatesManagement.remove')}
           loading={loading}
         />
       )}

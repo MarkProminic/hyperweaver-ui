@@ -1,6 +1,7 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import axios from 'axios';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
  * @returns {JSX.Element} Organizations component
  */
 const Organizations = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -17,14 +19,14 @@ const Organizations = () => {
   /**
    * Load all organizations from the API
    */
-  const loadOrganizations = async () => {
+  const loadOrganizations = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get('/api/organizations');
       if (response.data.success) {
         setOrganizations(response.data.organizations);
       } else {
-        setMsg('Failed to load organizations');
+        setMsg(t('auth.organizations.loadFailed'));
       }
     } catch (loadErr) {
       console.error('Error loading organizations:', loadErr);
@@ -32,14 +34,14 @@ const Organizations = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   /**
    * Load all organizations on component mount
    */
   useEffect(() => {
     loadOrganizations();
-  }, []);
+  }, [loadOrganizations]);
 
   /**
    * Format date for display
@@ -48,7 +50,7 @@ const Organizations = () => {
    */
   const formatDate = dateString => {
     if (!dateString) {
-      return 'Never';
+      return t('auth.organizations.never');
     }
     return new Date(dateString).toLocaleDateString();
   };
@@ -68,7 +70,7 @@ const Organizations = () => {
       return (
         <div className="has-text-centered p-4">
           <div className="button is-loading is-large is-ghost" />
-          <p className="mt-2">Loading organizations...</p>
+          <p className="mt-2">{t('auth.organizations.loading')}</p>
         </div>
       );
     }
@@ -76,10 +78,8 @@ const Organizations = () => {
     if (organizations.length === 0) {
       return (
         <div className="has-text-centered p-4">
-          <p className="has-text-grey">No organizations found.</p>
-          <p className="has-text-grey is-size-7">
-            Organizations are created when users register or are invited.
-          </p>
+          <p className="has-text-grey">{t('auth.organizations.notFound')}</p>
+          <p className="has-text-grey is-size-7">{t('auth.organizations.createdWhen')}</p>
         </div>
       );
     }
@@ -89,13 +89,13 @@ const Organizations = () => {
         <table className="table is-fullwidth is-hoverable">
           <thead>
             <tr>
-              <th>Organization Name</th>
-              <th>Description</th>
-              <th>Created</th>
-              <th>Total Users</th>
-              <th>Active Users</th>
-              <th>Admin Users</th>
-              <th>Status</th>
+              <th>{t('auth.organizations.nameHeader')}</th>
+              <th>{t('auth.organizations.descriptionHeader')}</th>
+              <th>{t('auth.organizations.createdHeader')}</th>
+              <th>{t('auth.organizations.totalUsersHeader')}</th>
+              <th>{t('auth.organizations.activeUsersHeader')}</th>
+              <th>{t('auth.organizations.adminUsersHeader')}</th>
+              <th>{t('auth.organizations.statusHeader')}</th>
             </tr>
           </thead>
           <tbody>
@@ -106,7 +106,9 @@ const Organizations = () => {
                 </td>
                 <td>
                   {org.description || (
-                    <span className="has-text-grey is-italic">No description</span>
+                    <span className="has-text-grey is-italic">
+                      {t('auth.organizations.noDescription')}
+                    </span>
                   )}
                 </td>
                 <td>{formatDate(org.created_at)}</td>
@@ -121,7 +123,9 @@ const Organizations = () => {
                 </td>
                 <td>
                   <span className={`tag ${org.is_active ? 'is-success' : 'is-danger'}`}>
-                    {org.is_active ? 'Active' : 'Inactive'}
+                    {org.is_active
+                      ? t('auth.organizations.active')
+                      : t('auth.organizations.inactive')}
                   </span>
                 </td>
               </tr>
@@ -140,9 +144,9 @@ const Organizations = () => {
           <div className="box">
             <div className="notification is-danger">
               <p>
-                <strong>Access Denied</strong>
+                <strong>{t('auth.organizations.accessDenied')}</strong>
               </p>
-              <p>Only super administrators can view organization management.</p>
+              <p>{t('auth.organizations.onlySuperAdmin')}</p>
             </div>
           </div>
         </div>
@@ -161,10 +165,12 @@ const Organizations = () => {
         <div className="box p-0 is-radiusless">
           <div className="titlebar box active level is-mobile mb-0 p-3">
             <div className="level-left">
-              <strong>Organization Management</strong>
+              <strong>{t('auth.organizations.pageTitle')}</strong>
             </div>
             <div className="level-right">
-              <span className="tag is-info">{organizations.length} Organizations</span>
+              <span className="tag is-info">
+                {t('auth.organizations.orgCount', { count: organizations.length })}
+              </span>
             </div>
           </div>
 
@@ -177,68 +183,61 @@ const Organizations = () => {
 
             {/* Organizations Table */}
             <div className="box">
-              <h2 className="title is-5">All Organizations</h2>
+              <h2 className="title is-5">{t('auth.organizations.allOrgsTitle')}</h2>
               {renderTableContent()}
             </div>
 
             {/* Help Section */}
             <div className="box">
-              <h2 className="title is-6">Organization Management Guide</h2>
+              <h2 className="title is-6">{t('auth.organizations.guideTitle')}</h2>
               <div className="content is-size-7">
                 <div className="columns">
                   <div className="column">
                     <p>
-                      <strong>Organization Lifecycle:</strong>
+                      <strong>{t('auth.organizations.lifecycleTitle')}</strong>
                     </p>
                     <ul>
                       <li>
-                        <strong>Creation:</strong> Organizations are created when the first user
-                        registers with a new organization name
+                        <strong>{t('auth.organizations.lifecycleCreation')}</strong>
                       </li>
                       <li>
-                        <strong>Growth:</strong> Additional users join via invitations sent by
-                        organization admins
+                        <strong>{t('auth.organizations.lifecycleGrowth')}</strong>
                       </li>
                       <li>
-                        <strong>Management:</strong> Organization admins can invite users and manage
-                        their organization members
+                        <strong>{t('auth.organizations.lifecycleManagement')}</strong>
                       </li>
                       <li>
-                        <strong>Deletion:</strong> Organizations are automatically deleted when the
-                        last user leaves or is deleted
+                        <strong>{t('auth.organizations.lifecycleDeletion')}</strong>
                       </li>
                     </ul>
                   </div>
                   <div className="column">
                     <p>
-                      <strong>User Roles within Organizations:</strong>
+                      <strong>{t('auth.organizations.rolesTitle')}</strong>
                     </p>
                     <ul>
                       <li>
-                        <strong>User:</strong> Basic member with access to organization resources
+                        <strong>{t('auth.organizations.roleUser')}</strong>
                       </li>
                       <li>
-                        <strong>Admin:</strong> Can manage organization users and send invitations
+                        <strong>{t('auth.organizations.roleAdmin')}</strong>
                       </li>
                       <li>
-                        <strong>Super Admin:</strong> System-level access, not bound to
-                        organizations
+                        <strong>{t('auth.organizations.roleSuperAdmin')}</strong>
                       </li>
                     </ul>
                     <p className="mt-3">
-                      <strong>Statistics:</strong>
+                      <strong>{t('auth.organizations.statsTitle')}</strong>
                     </p>
                     <ul>
                       <li>
-                        <strong>Total Users:</strong> All users ever associated with the
-                        organization
+                        <strong>{t('auth.organizations.statsTotalUsers')}</strong>
                       </li>
                       <li>
-                        <strong>Active Users:</strong> Currently active users in the organization
+                        <strong>{t('auth.organizations.statsActiveUsers')}</strong>
                       </li>
                       <li>
-                        <strong>Admin Users:</strong> Users with admin privileges in the
-                        organization
+                        <strong>{t('auth.organizations.statsAdminUsers')}</strong>
                       </li>
                     </ul>
                   </div>

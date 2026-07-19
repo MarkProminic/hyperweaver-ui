@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { useRef, useState } from 'react';
 import { Dropdown } from 'react-bootstrap';
+import { useTranslation } from 'react-i18next';
 
 import { useMode } from '../contexts/ModeContext';
 import { hasConsole, hasFeature } from '../utils/capabilities';
@@ -29,102 +30,107 @@ import RdpSessionHost from './RdpSessionHost';
  * VRDE guidance honored: no file-transfer toggle, unicode keyboard
  * untouched (VRDE accepts scancodes only).
  */
-const RdpSettingsDropdown = ({ settings, onChange, onApply, applyDisabled }) => (
-  <Dropdown autoClose="outside" align="end">
-    <Dropdown.Toggle variant="secondary" size="sm" title="Console settings">
-      <i className="fas fa-sliders" />
-    </Dropdown.Toggle>
-    <Dropdown.Menu className="p-3 hw-rdp-settings-menu">
-      <label className="form-label small mb-1" htmlFor="rdp-color-depth">
-        Color quality
-      </label>
-      <select
-        id="rdp-color-depth"
-        className="form-select form-select-sm mb-2"
-        value={settings.colorDepth}
-        onChange={event => onChange({ colorDepth: Number(event.target.value) })}
-      >
-        <option value={16}>16-bit — bandwidth saver (default)</option>
-        <option value={32}>32-bit — true color</option>
-        <option value={24}>24-bit</option>
-        <option value={15}>15-bit — minimum</option>
-      </select>
-      <div className="form-check form-switch mb-1">
-        <input
-          className="form-check-input"
-          type="checkbox"
-          id="rdp-lossy"
-          checked={settings.lossy}
-          onChange={event => onChange({ lossy: event.target.checked })}
-        />
-        <label className="form-check-label small" htmlFor="rdp-lossy">
-          Lossy compression (less bandwidth)
+const RdpSettingsDropdown = ({ settings, onChange, onApply, applyDisabled }) => {
+  const { t } = useTranslation();
+  return (
+    <Dropdown autoClose="outside" align="end">
+      <Dropdown.Toggle variant="secondary" size="sm" title={t('console.rdpSettingsDropdown.title')}>
+        <i className="fas fa-sliders" />
+      </Dropdown.Toggle>
+      <Dropdown.Menu className="p-3 hw-rdp-settings-menu">
+        <label className="form-label small mb-1" htmlFor="rdp-color-depth">
+          {t('console.rdpSettingsDropdown.colorQuality')}
         </label>
-      </div>
-      <div className="form-check form-switch mb-1">
-        <input
-          className="form-check-input"
-          type="checkbox"
-          id="rdp-audio"
-          checked={settings.audio}
-          onChange={event => onChange({ audio: event.target.checked })}
-        />
-        <label className="form-check-label small" htmlFor="rdp-audio">
-          Sound
+        <select
+          id="rdp-color-depth"
+          className="form-select form-select-sm mb-2"
+          value={settings.colorDepth}
+          onChange={event => onChange({ colorDepth: Number(event.target.value) })}
+        >
+          <option value={16}>{t('console.rdpSettingsDropdown.colorDepth16')}</option>
+          <option value={32}>{t('console.rdpSettingsDropdown.colorDepth32')}</option>
+          <option value={24}>{t('console.rdpSettingsDropdown.colorDepth24')}</option>
+          <option value={15}>{t('console.rdpSettingsDropdown.colorDepth15')}</option>
+        </select>
+        <div className="form-check form-switch mb-1">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            id="rdp-lossy"
+            checked={settings.lossy}
+            onChange={event => onChange({ lossy: event.target.checked })}
+          />
+          <label className="form-check-label small" htmlFor="rdp-lossy">
+            {t('console.rdpSettingsDropdown.lossyCompression')}
+          </label>
+        </div>
+        <div className="form-check form-switch mb-1">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            id="rdp-audio"
+            checked={settings.audio}
+            onChange={event => onChange({ audio: event.target.checked })}
+          />
+          <label className="form-check-label small" htmlFor="rdp-audio">
+            {t('console.rdpSettingsDropdown.sound')}
+          </label>
+        </div>
+        <div className="small text-muted mb-2">
+          {t('console.rdpSettingsDropdown.applyAtNextConnect')}
+        </div>
+        <label className="form-label small mb-1" htmlFor="rdp-scale">
+          {t('console.rdpSettingsDropdown.scale')}
         </label>
-      </div>
-      <div className="small text-muted mb-2">
-        Color, compression, sound and resolution apply at the next connect.
-      </div>
-      <label className="form-label small mb-1" htmlFor="rdp-scale">
-        Scale
-      </label>
-      <select
-        id="rdp-scale"
-        className="form-select form-select-sm mb-2"
-        value={settings.scale}
-        onChange={event => onChange({ scale: event.target.value })}
-      >
-        <option value="fit">Fit the pane (default)</option>
-        <option value="real">1:1 pixels</option>
-        <option value="full">Fill</option>
-      </select>
-      <label className="form-label small mb-1" htmlFor="rdp-resize-mode">
-        Resolution
-      </label>
-      <select
-        id="rdp-resize-mode"
-        className="form-select form-select-sm mb-2"
-        value={settings.resizeMode}
-        onChange={event => onChange({ resizeMode: event.target.value })}
-      >
-        <option value="follow-guest">Follow the guest (default)</option>
-        <option value="fit-client">Pin to the pane size</option>
-      </select>
-      <div className="form-check form-switch mb-3">
-        <input
-          className="form-check-input"
-          type="checkbox"
-          id="rdp-clipboard"
-          checked={settings.clipboard}
-          onChange={event => onChange({ clipboard: event.target.checked })}
-        />
-        <label className="form-check-label small" htmlFor="rdp-clipboard">
-          Clipboard sharing
+        <select
+          id="rdp-scale"
+          className="form-select form-select-sm mb-2"
+          value={settings.scale}
+          onChange={event => onChange({ scale: event.target.value })}
+        >
+          <option value="fit">{t('console.rdpSettingsDropdown.scaleFit')}</option>
+          <option value="real">{t('console.rdpSettingsDropdown.scaleReal')}</option>
+          <option value="full">{t('console.rdpSettingsDropdown.scaleFull')}</option>
+        </select>
+        <label className="form-label small mb-1" htmlFor="rdp-resize-mode">
+          {t('console.rdpSettingsDropdown.resolution')}
         </label>
-      </div>
-      <button
-        type="button"
-        className="btn btn-sm btn-primary w-100"
-        onClick={onApply}
-        disabled={applyDisabled}
-      >
-        <i className="fas fa-redo me-2" />
-        <span>Apply &amp; reconnect</span>
-      </button>
-    </Dropdown.Menu>
-  </Dropdown>
-);
+        <select
+          id="rdp-resize-mode"
+          className="form-select form-select-sm mb-2"
+          value={settings.resizeMode}
+          onChange={event => onChange({ resizeMode: event.target.value })}
+        >
+          <option value="follow-guest">
+            {t('console.rdpSettingsDropdown.resolutionFollowGuest')}
+          </option>
+          <option value="fit-client">{t('console.rdpSettingsDropdown.resolutionFitClient')}</option>
+        </select>
+        <div className="form-check form-switch mb-3">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            id="rdp-clipboard"
+            checked={settings.clipboard}
+            onChange={event => onChange({ clipboard: event.target.checked })}
+          />
+          <label className="form-check-label small" htmlFor="rdp-clipboard">
+            {t('console.rdpSettingsDropdown.clipboardSharing')}
+          </label>
+        </div>
+        <button
+          type="button"
+          className="btn btn-sm btn-primary w-100"
+          onClick={onApply}
+          disabled={applyDisabled}
+        >
+          <i className="fas fa-redo me-2" />
+          <span>{t('console.rdpSettingsDropdown.applyAndReconnect')}</span>
+        </button>
+      </Dropdown.Menu>
+    </Dropdown>
+  );
+};
 
 RdpSettingsDropdown.propTypes = {
   settings: PropTypes.shape({
@@ -158,6 +164,7 @@ const RdpConsoleDisplay = ({
   hasZlogin,
   hasSsh,
 }) => {
+  const { t } = useTranslation();
   const uiRef = useRef(null);
   const { isDirect } = useMode();
   // console = the hypervisor's VRDE display (the VRDP button); guest = the
@@ -212,12 +219,15 @@ const RdpConsoleDisplay = ({
       <div className="bg-dark text-white p-3 d-flex justify-content-between align-items-center flex-shrink-0">
         <div>
           <h6 className="fs-6 fw-bold text-white mb-1">
-            {isGuest ? 'RDP' : 'VRDP'} — {selectedMachine}
+            {isGuest
+              ? t('console.rdpConsoleDisplay.rdpLabel')
+              : t('console.rdpConsoleDisplay.vrdpLabel')}{' '}
+            — {selectedMachine}
           </h6>
           <p className="small text-white-50 mb-0">
             {isGuest
-              ? "Browser RDP — the guest's own desktop"
-              : 'Browser VRDP console (VRDE over the agent)'}
+              ? t('console.rdpConsoleDisplay.guestDescription')
+              : t('console.rdpConsoleDisplay.hypervisorDescription')}
           </p>
         </div>
         <div className="d-flex gap-1 m-0 flex-wrap">
@@ -248,8 +258,8 @@ const RdpConsoleDisplay = ({
             disabled={phase !== 'connected' || !rdpSettings.clipboard}
             title={
               rdpSettings.clipboard
-                ? 'Send your clipboard to the guest'
-                : 'Clipboard sharing is off (console settings)'
+                ? t('console.rdpConsoleDisplay.sendClipboard')
+                : t('console.rdpConsoleDisplay.clipboardOff')
             }
           >
             <i className="fas fa-paste" />
@@ -259,7 +269,7 @@ const RdpConsoleDisplay = ({
             className="btn btn-sm btn-warning"
             onClick={() => uiRef.current?.ctrlAltDel()}
             disabled={phase !== 'connected'}
-            title="Send Ctrl+Alt+Del to the guest"
+            title={t('console.rdpConsoleDisplay.sendCtrlAltDel')}
           >
             <i className="fas fa-keyboard" />
           </button>
@@ -275,7 +285,7 @@ const RdpConsoleDisplay = ({
                 'width=1280,height=800,scrollbars=no,resizable=yes'
               )
             }
-            title="Open in a new full-window tab (its own RDP session)"
+            title={t('console.rdpConsoleDisplay.openInNewTab')}
           >
             <i className="fas fa-expand" />
           </button>
@@ -285,7 +295,7 @@ const RdpConsoleDisplay = ({
                 type="button"
                 className="btn btn-sm btn-warning"
                 onClick={() => setActiveConsoleType('vnc')}
-                title="Switch to VNC Console"
+                title={t('console.rdpConsoleDisplay.switchToVnc')}
               >
                 <i className="fas fa-desktop" />
               </button>
@@ -306,7 +316,7 @@ const RdpConsoleDisplay = ({
                   })
                 }
                 disabled={loadingVnc}
-                title="Start VNC Console"
+                title={t('console.rdpConsoleDisplay.startVnc')}
               >
                 <i className={`fas ${loadingVnc ? 'fa-spinner fa-pulse' : 'fa-desktop'}`} />
               </button>
@@ -317,7 +327,7 @@ const RdpConsoleDisplay = ({
                 type="button"
                 className="btn btn-sm btn-warning"
                 onClick={() => setActiveConsoleType('zlogin')}
-                title="Switch to zlogin Console"
+                title={t('console.rdpConsoleDisplay.switchToZlogin')}
               >
                 <i className="fas fa-terminal" />
               </button>
@@ -337,7 +347,7 @@ const RdpConsoleDisplay = ({
                   })
                 }
                 disabled={loading}
-                title="Start zlogin Console"
+                title={t('console.rdpConsoleDisplay.startZlogin')}
               >
                 <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'}`} />
               </button>
@@ -348,7 +358,7 @@ const RdpConsoleDisplay = ({
                 type="button"
                 className="btn btn-sm btn-success"
                 onClick={() => setActiveConsoleType('ssh')}
-                title="Switch to SSH Console"
+                title={t('console.rdpConsoleDisplay.switchToSsh')}
               >
                 <i className="fas fa-terminal" />
               </button>
@@ -367,7 +377,7 @@ const RdpConsoleDisplay = ({
                   })
                 }
                 disabled={loading}
-                title="Start an SSH shell inside the guest"
+                title={t('console.rdpConsoleDisplay.startSsh')}
               >
                 <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'}`} />
               </button>
@@ -381,7 +391,7 @@ const RdpConsoleDisplay = ({
                   launchRdp({ currentServer, selectedMachine, isDirect, setLoading, setError })
                 }
                 disabled={loading}
-                title="Open a native VRDP session (VRDE console or the guest’s own RDP)"
+                title={t('console.rdpConsoleDisplay.openNativeVrdp')}
               >
                 <i className="fas fa-display" />
               </button>
@@ -400,8 +410,8 @@ const RdpConsoleDisplay = ({
                 disabled={!isDirect}
                 title={
                   isDirect
-                    ? "Open the machine's working directory in the host's file manager"
-                    : 'Available in Direct (desktop) mode only'
+                    ? t('console.rdpConsoleDisplay.openWorkingDirectory')
+                    : t('console.rdpConsoleDisplay.directModeOnly')
                 }
               >
                 <i className="fas fa-folder-open" />
@@ -418,7 +428,7 @@ const RdpConsoleDisplay = ({
                     setError,
                   })
                 }
-                title="Open your sftp client (WinSCP/FileZilla/Finder) at this machine"
+                title={t('console.rdpConsoleDisplay.openSftpClient')}
               >
                 <i className="fas fa-file-arrow-down" />
               </button>
@@ -428,10 +438,10 @@ const RdpConsoleDisplay = ({
             type="button"
             className="btn btn-sm btn-danger"
             onClick={handleStop}
-            title="Close the RDP console"
+            title={t('console.rdpConsoleDisplay.closeConsole')}
           >
             <i className="fas fa-stop me-2" />
-            <span>Stop RDP</span>
+            <span>{t('console.rdpConsoleDisplay.stopRdp')}</span>
           </button>
         </div>
       </div>

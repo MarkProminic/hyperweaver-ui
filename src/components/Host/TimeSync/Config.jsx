@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../contexts/ServerContext';
 import NTPConfirmActionModal from '../NTPConfirmActionModal';
@@ -11,6 +12,7 @@ import ServerManagement from './Config/ServerManagement';
 import ConfigTemplates from './Config/Templates';
 
 const TimeSyncConfig = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [configInfo, setConfigInfo] = useState(null);
   const [statusInfo, setStatusInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -262,27 +264,27 @@ const TimeSyncConfig = ({ server, onError }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading time synchronization configuration...</p>
+        <p className="mt-2">{t('hostTime.timeSyncConfig.loading')}</p>
       </div>
     );
   }
 
   const getServiceDescription = () => {
     if (configInfo?.service === 'ntp') {
-      return ' Using traditional NTP service.';
+      return t('hostTime.timeSyncConfig.usingNtpService');
     }
     if (configInfo?.service === 'chrony') {
-      return ' Using Chrony time synchronization.';
+      return t('hostTime.timeSyncConfig.usingChronyService');
     }
-    return ' Service type will be detected automatically.';
+    return t('hostTime.timeSyncConfig.autoDetectService');
   };
 
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">NTP Configuration Management</h2>
+        <h2 className="fs-5 fw-bold">{t('hostTime.timeSyncConfig.heading')}</h2>
         <p>
-          Configure time synchronization settings on <strong>{server.hostname}</strong>.
+          {t('hostTime.timeSyncConfig.description', { hostname: server.hostname })}
           {getServiceDescription()}
         </p>
       </div>

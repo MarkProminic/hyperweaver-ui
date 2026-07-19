@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const BootEnvironmentTable = ({
   bootEnvironments,
@@ -9,6 +10,7 @@ const BootEnvironmentTable = ({
   onUnmount,
   onDelete,
 }) => {
+  const { t } = useTranslation();
   const [actionLoading, setActionLoading] = useState({});
 
   const handleAction = async (be, action) => {
@@ -59,11 +61,21 @@ const BootEnvironmentTable = ({
   const getPolicyTag = policy => {
     switch (policy?.toLowerCase()) {
       case 'static':
-        return <span className="badge text-bg-info">Static</span>;
+        return (
+          <span className="badge text-bg-info">{t('host.bootEnvironmentTable.policyStatic')}</span>
+        );
       case 'dynamic':
-        return <span className="badge text-bg-warning">Dynamic</span>;
+        return (
+          <span className="badge text-bg-warning">
+            {t('host.bootEnvironmentTable.policyDynamic')}
+          </span>
+        );
       default:
-        return <span className="badge text-bg-secondary">{policy || 'Unknown'}</span>;
+        return (
+          <span className="badge text-bg-secondary">
+            {policy || t('host.bootEnvironmentTable.unknown')}
+          </span>
+        );
     }
   };
 
@@ -74,7 +86,7 @@ const BootEnvironmentTable = ({
     if (!be.is_active_on_reboot) {
       actions.push({
         key: 'activate',
-        label: 'Activate',
+        label: t('host.bootEnvironmentTable.labelActivate'),
         icon: 'fa-power-off',
         class: 'btn-success',
       });
@@ -84,14 +96,14 @@ const BootEnvironmentTable = ({
     if (be.mountpoint === '-' || !be.mountpoint) {
       actions.push({
         key: 'mount',
-        label: 'Mount',
+        label: t('host.bootEnvironmentTable.labelMount'),
         icon: 'fa-folder-open',
         class: 'btn-info',
       });
     } else {
       actions.push({
         key: 'unmount',
-        label: 'Unmount',
+        label: t('host.bootEnvironmentTable.labelUnmount'),
         icon: 'fa-folder',
         class: 'btn-warning',
       });
@@ -101,7 +113,7 @@ const BootEnvironmentTable = ({
     if (!be.is_active_now && !be.is_active_on_reboot) {
       actions.push({
         key: 'delete',
-        label: 'Delete',
+        label: t('host.bootEnvironmentTable.labelDelete'),
         icon: 'fa-trash',
         class: 'btn-danger',
       });
@@ -135,7 +147,7 @@ const BootEnvironmentTable = ({
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading boot environments...</p>
+        <p className="mt-2">{t('host.bootEnvironmentTable.loading')}</p>
       </div>
     );
   }
@@ -144,7 +156,7 @@ const BootEnvironmentTable = ({
     return (
       <div className="text-center p-4">
         <i className="fas fa-layer-group fa-2x text-muted" />
-        <p className="mt-2 text-muted">No boot environments found</p>
+        <p className="mt-2 text-muted">{t('host.bootEnvironmentTable.empty')}</p>
       </div>
     );
   }
@@ -154,13 +166,13 @@ const BootEnvironmentTable = ({
       <table className="table table-striped table-hover table-sm">
         <thead>
           <tr>
-            <th>Boot Environment</th>
-            <th>Active Status</th>
-            <th>Mountpoint</th>
-            <th>Space Used</th>
-            <th>Policy</th>
-            <th>Created</th>
-            <th width="200">Actions</th>
+            <th>{t('host.bootEnvironmentTable.bootEnv')}</th>
+            <th>{t('host.bootEnvironmentTable.activeStatus')}</th>
+            <th>{t('host.bootEnvironmentTable.mountpoint')}</th>
+            <th>{t('host.bootEnvironmentTable.spaceUsed')}</th>
+            <th>{t('host.bootEnvironmentTable.policy')}</th>
+            <th>{t('host.bootEnvironmentTable.created')}</th>
+            <th width="200">{t('host.bootEnvironmentTable.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -175,7 +187,9 @@ const BootEnvironmentTable = ({
                     <span className="ms-2">
                       <strong className="font-monospace">{be.name}</strong>
                       {be.is_temporary && (
-                        <span className="badge text-bg-warning ms-2">Temporary</span>
+                        <span className="badge text-bg-warning ms-2">
+                          {t('host.bootEnvironmentTable.temporary')}
+                        </span>
                       )}
                     </span>
                   </div>
@@ -184,20 +198,32 @@ const BootEnvironmentTable = ({
                   <div className="d-flex align-items-center">
                     {getActiveStatusBadge(be)}
                     <span className="ms-2 small">
-                      {be.is_active_now && be.is_active_on_reboot && 'Active + Reboot'}
-                      {be.is_active_now && !be.is_active_on_reboot && 'Active Now'}
-                      {!be.is_active_now && be.is_active_on_reboot && 'Active on Reboot'}
-                      {!be.is_active_now && !be.is_active_on_reboot && 'Inactive'}
+                      {be.is_active_now &&
+                        be.is_active_on_reboot &&
+                        t('host.bootEnvironmentTable.activeReboot')}
+                      {be.is_active_now &&
+                        !be.is_active_on_reboot &&
+                        t('host.bootEnvironmentTable.activeNow')}
+                      {!be.is_active_now &&
+                        be.is_active_on_reboot &&
+                        t('host.bootEnvironmentTable.activeOnReboot')}
+                      {!be.is_active_now &&
+                        !be.is_active_on_reboot &&
+                        t('host.bootEnvironmentTable.inactive')}
                     </span>
                   </div>
                 </td>
                 <td>
                   <span className="font-monospace small">
-                    {be.mountpoint === '-' ? 'Not Mounted' : be.mountpoint}
+                    {be.mountpoint === '-'
+                      ? t('host.bootEnvironmentTable.notMounted')
+                      : be.mountpoint}
                   </span>
                 </td>
                 <td>
-                  <span className="small">{be.space || 'N/A'}</span>
+                  <span className="small">
+                    {be.space || t('host.bootEnvironmentTable.notAvailable')}
+                  </span>
                 </td>
                 <td>{getPolicyTag(be.policy)}</td>
                 <td>

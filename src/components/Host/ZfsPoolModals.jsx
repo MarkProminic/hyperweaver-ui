@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   addZfsPoolVdevs,
@@ -21,14 +22,42 @@ import ZfsPropertiesEditor, { propertyEdits } from './ZfsPropertiesEditor';
 import { healthBadgeClass, parsePropertyLines, queuedMessage, vdevKey } from './zfsUtils';
 
 const VDEV_TYPES = [
-  { value: '', label: 'stripe', note: 'no redundancy — data stripes across these disks' },
-  { value: 'mirror', label: 'mirror', note: 'survives all but one disk in the group' },
-  { value: 'raidz', label: 'raidz1', note: 'survives 1 disk failure in the group' },
-  { value: 'raidz2', label: 'raidz2', note: 'survives 2 disk failures in the group' },
-  { value: 'raidz3', label: 'raidz3', note: 'survives 3 disk failures in the group' },
-  { value: 'spare', label: 'spare', note: 'hot spares — take over when a disk fails' },
-  { value: 'log', label: 'log', note: 'dedicated ZIL (sync-write log) device' },
-  { value: 'cache', label: 'cache', note: 'L2ARC read cache' },
+  {
+    value: '',
+    label: 'host.vdevBuilder.vdevTypeStripe',
+    note: 'host.vdevBuilder.vdevNoteStripe',
+  },
+  {
+    value: 'mirror',
+    label: 'host.vdevBuilder.vdevTypeMirror',
+    note: 'host.vdevBuilder.vdevNoteMirror',
+  },
+  {
+    value: 'raidz',
+    label: 'host.vdevBuilder.vdevTypeRaidz1',
+    note: 'host.vdevBuilder.vdevNoteRaidz1',
+  },
+  {
+    value: 'raidz2',
+    label: 'host.vdevBuilder.vdevTypeRaidz2',
+    note: 'host.vdevBuilder.vdevNoteRaidz2',
+  },
+  {
+    value: 'raidz3',
+    label: 'host.vdevBuilder.vdevTypeRaidz3',
+    note: 'host.vdevBuilder.vdevNoteRaidz3',
+  },
+  {
+    value: 'spare',
+    label: 'host.vdevBuilder.vdevTypeSpare',
+    note: 'host.vdevBuilder.vdevNoteSpare',
+  },
+  { value: 'log', label: 'host.vdevBuilder.vdevTypeLog', note: 'host.vdevBuilder.vdevNoteLog' },
+  {
+    value: 'cache',
+    label: 'host.vdevBuilder.vdevTypeCache',
+    note: 'host.vdevBuilder.vdevNoteCache',
+  },
 ];
 
 /** Vdev rows → the wire's mixed array: plain devices as strings, typed groups as {type, devices}. */
@@ -57,6 +86,7 @@ const VdevBuilder = ({
   disabled,
   idPrefix,
 }) => {
+  const { t } = useTranslation();
   const [dragChip, setDragChip] = useState(null); // {device, fromKey}
   const [pending, setPending] = useState({}); // per-bucket typed text
 
@@ -116,8 +146,8 @@ const VdevBuilder = ({
         <div className="alert alert-warning py-2 d-flex align-items-center gap-2 flex-wrap mb-0">
           <span>
             {shelfError
-              ? 'The disk inventory calls are FAILING — this is an agent problem, not missing disks:'
-              : 'The disk inventory reports no free disks — rescan it (required once after an agent deploy). Typed device names below are the last resort.'}
+              ? t('host.vdevBuilder.inventoryErrorAlert')
+              : t('host.vdevBuilder.noFreeDiskAlert')}
           </span>
           {shelfError && <code className="small d-block w-100">{shelfError}</code>}
           {onRescan && (
@@ -128,7 +158,7 @@ const VdevBuilder = ({
               disabled={rescanning || disabled}
             >
               <i className={`fas fa-radar me-2 ${rescanning ? 'fa-spin' : ''}`} />
-              Rescan
+              {t('host.zfsPoolsPanel.rescan')}
             </button>
           )}
         </div>
@@ -137,7 +167,7 @@ const VdevBuilder = ({
         <div
           className="border rounded p-2"
           role="group"
-          aria-label="Available disks"
+          aria-label={t('host.vdevBuilder.availableDisksAriaLabel')}
           onDragOver={e => e.preventDefault()}
           onDrop={() => {
             returnChip();
@@ -146,10 +176,10 @@ const VdevBuilder = ({
         >
           <div className="small fw-semibold mb-1">
             <i className="fas fa-server me-2 text-muted" />
-            Available disks — drag into a vdev
+            {t('host.vdevBuilder.availableDisksLabel')}
           </div>
           {shelfDisks.length === 0 && (
-            <span className="text-muted small">Every free disk is placed.</span>
+            <span className="text-muted small">{t('host.vdevBuilder.allPlaced')}</span>
           )}
           {['HDD', 'SSD', 'NVMe', 'Other'].map(groupType => {
             const groupDisks = shelfDisks.filter(disk => {
@@ -204,7 +234,7 @@ const VdevBuilder = ({
               <div
                 className="border rounded p-2 h-100"
                 role="group"
-                aria-label={`${meta.label} vdev devices`}
+                aria-label={t('host.vdevBuilder.vdevDevicesLabel', { label: t(meta.label) })}
                 onDragOver={e => e.preventDefault()}
                 onDrop={() => {
                   dropChip(row.key);
@@ -217,34 +247,34 @@ const VdevBuilder = ({
                     value={row.type}
                     onChange={e => patchRow(row.key, { type: e.target.value })}
                     disabled={disabled}
-                    aria-label="Vdev type"
+                    aria-label={t('host.vdevBuilder.diskDeviceLabel')}
                   >
                     {VDEV_TYPES.map(entry => (
                       <option key={entry.value} value={entry.value}>
-                        {entry.label}
+                        {t(entry.label)}
                       </option>
                     ))}
                   </select>
                   <span className="badge text-bg-secondary">
-                    {row.devices.length} disk{row.devices.length === 1 ? '' : 's'}
+                    {t('host.vdevBuilder.diskCountBadge', { count: row.devices.length })}
                   </span>
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-danger py-0 ms-auto"
                     onClick={() => onChange(rows.filter(entry => entry.key !== row.key))}
                     disabled={disabled}
-                    title="Remove this vdev"
+                    title={t('host.vdevBuilder.removeVdevTitle')}
                   >
                     <i className="fas fa-times" />
                   </button>
                 </div>
-                <p className="form-text text-muted mt-0 mb-2 small">{meta.note}</p>
+                <p className="form-text text-muted mt-0 mb-2 small">{t(meta.note)}</p>
                 <div className="d-flex flex-wrap gap-1 mb-2" role="list">
                   {row.devices.length === 0 && (
                     <span className="text-muted small">
                       {shelf.length > 0
-                        ? 'Drag disks here from the shelf.'
-                        : 'Type a device below (last resort).'}
+                        ? t('host.vdevBuilder.dragDisksHere')
+                        : t('host.vdevBuilder.typeDeviceBelow')}
                     </span>
                   )}
                   {row.devices.map(device => (
@@ -266,7 +296,7 @@ const VdevBuilder = ({
                       <button
                         type="button"
                         className="btn btn-link p-0 text-danger"
-                        aria-label={`Remove ${device}`}
+                        aria-label={t('host.vdevBuilder.removeDeviceLabel', { device })}
                         onClick={() =>
                           patchRow(row.key, {
                             devices: row.devices.filter(entry => entry !== device),
@@ -284,8 +314,8 @@ const VdevBuilder = ({
                     <input
                       className="form-control font-monospace"
                       type="text"
-                      placeholder="device — e.g. c1t0d0"
-                      aria-label="Add device to this vdev"
+                      placeholder={t('host.vdevBuilder.devicePlaceholder')}
+                      aria-label={t('host.vdevBuilder.addDeviceLabel')}
                       value={pending[row.key] || ''}
                       onChange={e => setPending(prev => ({ ...prev, [row.key]: e.target.value }))}
                       onKeyDown={e => {
@@ -322,7 +352,7 @@ const VdevBuilder = ({
           disabled={disabled}
         >
           <i className="fas fa-plus me-2" />
-          Add vdev
+          {t('host.vdevBuilder.addVdevButton')}
         </button>
       </div>
     </div>
@@ -385,6 +415,7 @@ const useFreeDiskShelf = (isOpen, server) => {
 };
 
 export const CreatePoolModal = ({ isOpen, onClose, server, onQueued }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [vdevRows, setVdevRows] = useState([]);
   const { shelf, rescanning, rescan, error: shelfError } = useFreeDiskShelf(isOpen, server);
@@ -408,7 +439,7 @@ export const CreatePoolModal = ({ isOpen, onClose, server, onQueued }) => {
   const handleSubmit = async () => {
     const vdevs = buildVdevs(vdevRows);
     if (!name.trim() || vdevs.length === 0) {
-      setError('A pool name and at least one vdev with devices are required.');
+      setError(t('host.createPoolModal.errorRequired'));
       return;
     }
     const properties = parsePropertyLines(propLines);
@@ -426,7 +457,7 @@ export const CreatePoolModal = ({ isOpen, onClose, server, onQueued }) => {
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Pool creation queued for ${name.trim()}.`));
+    onQueued(queuedMessage(result, t('host.createPoolModal.queuedMessage', { name: name.trim() })));
     onClose();
   };
 
@@ -435,9 +466,9 @@ export const CreatePoolModal = ({ isOpen, onClose, server, onQueued }) => {
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create ZFS pool"
+      title={t('host.createPoolModal.title')}
       icon="fas fa-database"
-      submitText="Create"
+      submitText={t('host.createPoolModal.submit')}
       submitIcon="fas fa-plus"
       loading={loading}
       showCancelButton
@@ -446,7 +477,7 @@ export const CreatePoolModal = ({ isOpen, onClose, server, onQueued }) => {
       <div className="row g-3">
         <div className="col-12 col-md-6">
           <label className="form-label" htmlFor="zpool-create-name">
-            Pool name <span className="text-danger">*</span>
+            {t('host.createPoolModal.poolNameLabel')} <span className="text-danger">*</span>
           </label>
           <input
             id="zpool-create-name"
@@ -459,13 +490,13 @@ export const CreatePoolModal = ({ isOpen, onClose, server, onQueued }) => {
         </div>
         <div className="col-12 col-md-6">
           <label className="form-label" htmlFor="zpool-create-mountpoint">
-            Mount point
+            {t('host.createPoolModal.mountPointLabel')}
           </label>
           <input
             id="zpool-create-mountpoint"
             className="form-control font-monospace"
             type="text"
-            placeholder="(default — /{pool name})"
+            placeholder={t('host.createPoolModal.mountPointPlaceholder')}
             value={mountPoint}
             onChange={e => setMountPoint(e.target.value)}
             disabled={loading}
@@ -473,7 +504,7 @@ export const CreatePoolModal = ({ isOpen, onClose, server, onQueued }) => {
         </div>
         <div className="col-12">
           <span className="form-label d-block">
-            Vdevs <span className="text-danger">*</span>
+            {t('host.createPoolModal.vdevsLabel')} <span className="text-danger">*</span>
           </span>
           <VdevBuilder
             rows={vdevRows}
@@ -488,13 +519,13 @@ export const CreatePoolModal = ({ isOpen, onClose, server, onQueued }) => {
         </div>
         <div className="col-12">
           <label className="form-label" htmlFor="zpool-create-props">
-            Pool properties (key=value, one per line)
+            {t('host.createPoolModal.propertiesLabel')}
           </label>
           <textarea
             id="zpool-create-props"
             className="form-control font-monospace"
             rows={2}
-            placeholder={'e.g.\nashift=12\nautoexpand=on'}
+            placeholder={t('host.createPoolModal.propertiesPlaceholder')}
             value={propLines}
             onChange={e => setPropLines(e.target.value)}
             disabled={loading}
@@ -511,7 +542,7 @@ export const CreatePoolModal = ({ isOpen, onClose, server, onQueued }) => {
               disabled={loading}
             />
             <label className="form-check-label" htmlFor="zpool-create-force">
-              Force (override in-use / mismatched-size device refusals)
+              {t('host.createPoolModal.forceLabelCreate')}
             </label>
           </div>
         </div>
@@ -528,6 +559,7 @@ CreatePoolModal.propTypes = {
 };
 
 export const ImportPoolModal = ({ isOpen, onClose, server, onQueued }) => {
+  const { t } = useTranslation();
   const [importable, setImportable] = useState(null); // null = loading
   const [poolName, setPoolName] = useState('');
   const [newName, setNewName] = useState('');
@@ -549,16 +581,16 @@ export const ImportPoolModal = ({ isOpen, onClose, server, onQueued }) => {
         setImportable(result.data || {});
       } else {
         setImportable({});
-        setError(`Failed to list importable pools: ${result.message}`);
+        setError(t('host.importPoolModal.errorListFailed', { message: result.message }));
       }
     });
-  }, [isOpen, server]);
+  }, [isOpen, server, t]);
 
   const names = Array.isArray(importable?.pools) ? importable.pools : [];
 
   const handleSubmit = async () => {
     if (!poolName.trim()) {
-      setError('Pick or type the pool to import.');
+      setError(t('host.importPoolModal.errorPickPool'));
       return;
     }
     setLoading(true);
@@ -573,7 +605,9 @@ export const ImportPoolModal = ({ isOpen, onClose, server, onQueued }) => {
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Import queued for ${poolName.trim()}.`));
+    onQueued(
+      queuedMessage(result, t('host.importPoolModal.queuedMessage', { name: poolName.trim() }))
+    );
     onClose();
   };
 
@@ -582,9 +616,9 @@ export const ImportPoolModal = ({ isOpen, onClose, server, onQueued }) => {
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Import ZFS pool"
+      title={t('host.importPoolModal.title')}
       icon="fas fa-file-import"
-      submitText="Import"
+      submitText={t('host.importPoolModal.submit')}
       submitIcon="fas fa-file-import"
       loading={loading}
       showCancelButton
@@ -593,14 +627,14 @@ export const ImportPoolModal = ({ isOpen, onClose, server, onQueued }) => {
       {importable === null && (
         <p className="text-muted">
           <i className="fas fa-spinner fa-pulse me-2" />
-          Scanning for importable pools…
+          {t('host.importPoolModal.scanningLabel')}
         </p>
       )}
       {importable !== null && (
         <div className="row g-3">
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="zpool-import-name">
-              Pool <span className="text-danger">*</span>
+              {t('host.importPoolModal.poolLabel')} <span className="text-danger">*</span>
             </label>
             {names.length > 0 ? (
               <select
@@ -610,7 +644,7 @@ export const ImportPoolModal = ({ isOpen, onClose, server, onQueued }) => {
                 onChange={e => setPoolName(e.target.value)}
                 disabled={loading}
               >
-                <option value="">Select a pool…</option>
+                <option value="">{t('host.importPoolModal.selectPoolPlaceholder')}</option>
                 {names.map(entry => (
                   <option key={entry} value={entry}>
                     {entry}
@@ -622,7 +656,7 @@ export const ImportPoolModal = ({ isOpen, onClose, server, onQueued }) => {
                 id="zpool-import-name"
                 className="form-control"
                 type="text"
-                placeholder="pool name or numeric id"
+                placeholder={t('host.importPoolModal.poolNamePlaceholder')}
                 value={poolName}
                 onChange={e => setPoolName(e.target.value)}
                 disabled={loading}
@@ -632,13 +666,13 @@ export const ImportPoolModal = ({ isOpen, onClose, server, onQueued }) => {
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="zpool-import-newname">
-              Import as (rename)
+              {t('host.importPoolModal.renameLabel')}
             </label>
             <input
               id="zpool-import-newname"
               className="form-control"
               type="text"
-              placeholder="(keep its name)"
+              placeholder={t('host.importPoolModal.renamePlaceholder')}
               value={newName}
               onChange={e => setNewName(e.target.value)}
               disabled={loading}
@@ -655,14 +689,14 @@ export const ImportPoolModal = ({ isOpen, onClose, server, onQueued }) => {
                 disabled={loading}
               />
               <label className="form-check-label" htmlFor="zpool-import-force">
-                Force (import even if the pool looks active on another system)
+                {t('host.importPoolModal.forceLabelImport')}
               </label>
             </div>
           </div>
           {importable.output && (
             <div className="col-12">
               <details>
-                <summary className="small">Raw scan output</summary>
+                <summary className="small">{t('host.importPoolModal.rawOutputLabel')}</summary>
                 <pre className="small border rounded p-2 mb-0">{importable.output}</pre>
               </details>
             </div>
@@ -681,6 +715,7 @@ ImportPoolModal.propTypes = {
 };
 
 export const PoolStatusModal = ({ isOpen, onClose, server, pool, health }) => {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
@@ -706,14 +741,14 @@ export const PoolStatusModal = ({ isOpen, onClose, server, pool, health }) => {
     <ContentModal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Pool status — ${pool || ''}`}
+      title={t('host.poolStatusModal.title', { pool: pool || '' })}
       icon="fas fa-heart-pulse"
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
       {!error && data === null && (
         <p className="text-muted mb-0">
           <i className="fas fa-spinner fa-pulse me-2" />
-          Loading…
+          {t('host.poolStatusModal.loading')}
         </p>
       )}
       {data && (
@@ -732,18 +767,18 @@ export const PoolStatusModal = ({ isOpen, onClose, server, pool, health }) => {
               <table className="table table-sm small align-middle mb-2">
                 <thead>
                   <tr>
-                    <th scope="col">Device</th>
-                    <th scope="col">State</th>
+                    <th scope="col">{t('host.poolStatusModal.deviceHeader')}</th>
+                    <th scope="col">{t('host.poolStatusModal.stateHeader')}</th>
                     <th scope="col" className="text-end">
-                      Read
+                      {t('host.poolStatusModal.readHeader')}
                     </th>
                     <th scope="col" className="text-end">
-                      Write
+                      {t('host.poolStatusModal.writeHeader')}
                     </th>
                     <th scope="col" className="text-end">
-                      Cksum
+                      {t('host.poolStatusModal.checksumHeader')}
                     </th>
-                    <th scope="col">Note</th>
+                    <th scope="col">{t('host.poolStatusModal.noteHeader')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -794,7 +829,9 @@ export const PoolStatusModal = ({ isOpen, onClose, server, pool, health }) => {
             </div>
           )}
           <details>
-            <summary className="small text-muted">Raw zpool status</summary>
+            <summary className="small text-muted">
+              {t('host.poolStatusModal.rawStatusLabel')}
+            </summary>
             <pre className="small border rounded p-2 mt-1 mb-0">{data.status}</pre>
           </details>
         </>
@@ -812,6 +849,7 @@ PoolStatusModal.propTypes = {
 };
 
 export const PoolPropertiesModal = ({ isOpen, onClose, server, pool, onQueued }) => {
+  const { t } = useTranslation();
   const [properties, setProperties] = useState(null);
   const [edits, setEdits] = useState({});
   const [loading, setLoading] = useState(false);
@@ -828,15 +866,21 @@ export const PoolPropertiesModal = ({ isOpen, onClose, server, pool, onQueued })
       if (result.success) {
         setProperties(result.data?.properties || {});
       } else {
-        setError(`GET storage/pools/${pool} failed (${result.status ?? '?'}): ${result.message}`);
+        setError(
+          t('host.poolPropertiesModal.errorFetchFailed', {
+            pool,
+            status: result.status ?? '?',
+            message: result.message,
+          })
+        );
       }
     });
-  }, [isOpen, server, pool]);
+  }, [isOpen, server, pool, t]);
 
   const handleSubmit = async () => {
     const props = propertyEdits(properties || {}, edits);
     if (Object.keys(props).length === 0) {
-      setError('Nothing changed — edit a value first.');
+      setError(t('host.poolPropertiesModal.errorNothingChanged'));
       return;
     }
     setLoading(true);
@@ -853,7 +897,7 @@ export const PoolPropertiesModal = ({ isOpen, onClose, server, pool, onQueued })
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Property update queued for ${pool}.`));
+    onQueued(queuedMessage(result, t('host.poolPropertiesModal.queuedMessage', { pool })));
     onClose();
   };
 
@@ -862,22 +906,19 @@ export const PoolPropertiesModal = ({ isOpen, onClose, server, pool, onQueued })
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Pool properties — ${pool || ''}`}
+      title={t('host.poolPropertiesModal.title', { pool: pool || '' })}
       icon="fas fa-sliders"
-      submitText="Apply changed properties"
+      submitText={t('host.poolPropertiesModal.submit')}
       submitIcon="fas fa-check"
       loading={loading}
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
-      <p className="form-text mt-0">
-        Edit a value and Apply — only changed properties ride the update. Read-only properties
-        (source <code>-</code>) display as-is.
-      </p>
+      <p className="form-text mt-0">{t('host.poolPropertiesModal.helpText', { dash: '-' })}</p>
       {properties === null && !error && (
         <p className="text-muted mb-0">
           <i className="fas fa-spinner fa-pulse me-2" />
-          Loading…
+          {t('host.poolPropertiesModal.loadingLabel')}
         </p>
       )}
       {properties !== null && (
@@ -904,6 +945,7 @@ PoolPropertiesModal.propTypes = {
  *  Per-device operations (remove/replace/online/offline) live on the
  *  topology's disk chips, not here. */
 export const AddVdevsModal = ({ isOpen, onClose, server, pool, onQueued }) => {
+  const { t } = useTranslation();
   const [vdevRows, setVdevRows] = useState([]);
   const { shelf, rescanning, rescan, error: shelfError } = useFreeDiskShelf(isOpen, server);
   const [force, setForce] = useState(false);
@@ -921,7 +963,7 @@ export const AddVdevsModal = ({ isOpen, onClose, server, pool, onQueued }) => {
   const handleSubmit = async () => {
     const vdevs = buildVdevs(vdevRows);
     if (vdevs.length === 0) {
-      setError('Put at least one disk into a vdev.');
+      setError(t('host.addVdevsModal.errorNoDisks'));
       return;
     }
     setLoading(true);
@@ -935,7 +977,7 @@ export const AddVdevsModal = ({ isOpen, onClose, server, pool, onQueued }) => {
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Add vdevs queued on ${pool}.`));
+    onQueued(queuedMessage(result, t('host.addVdevsModal.queuedMessage', { pool })));
     onClose();
   };
 
@@ -944,9 +986,9 @@ export const AddVdevsModal = ({ isOpen, onClose, server, pool, onQueued }) => {
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Add vdevs — ${pool || ''}`}
+      title={t('host.addVdevsModal.title', { pool: pool || '' })}
       icon="fas fa-plus"
-      submitText="Add vdevs"
+      submitText={t('host.addVdevsModal.submit')}
       submitIcon="fas fa-plus"
       loading={loading}
       showCancelButton
@@ -972,7 +1014,7 @@ export const AddVdevsModal = ({ isOpen, onClose, server, pool, onQueued }) => {
           disabled={loading}
         />
         <label className="form-check-label" htmlFor="zpool-addvdev-force">
-          Force (override device refusals)
+          {t('host.addVdevsModal.forceLabelDevice')}
         </label>
       </div>
     </FormModal>
@@ -988,6 +1030,7 @@ AddVdevsModal.propTypes = {
 };
 
 export const DestroyPoolModal = ({ isOpen, onClose, server, pool, onQueued }) => {
+  const { t } = useTranslation();
   const [confirmName, setConfirmName] = useState('');
   const [force, setForce] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1010,7 +1053,7 @@ export const DestroyPoolModal = ({ isOpen, onClose, server, pool, onQueued }) =>
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Destruction queued for pool ${pool}.`));
+    onQueued(queuedMessage(result, t('host.destroyPoolModal.queuedMessage', { pool })));
     onClose();
   };
 
@@ -1019,9 +1062,9 @@ export const DestroyPoolModal = ({ isOpen, onClose, server, pool, onQueued }) =>
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Destroy pool — ${pool || ''}`}
+      title={t('host.destroyPoolModal.title', { pool: pool || '' })}
       icon="fas fa-trash"
-      submitText="Destroy pool"
+      submitText={t('host.destroyPoolModal.submit')}
       submitVariant="danger"
       submitIcon="fas fa-trash"
       loading={loading}
@@ -1029,12 +1072,9 @@ export const DestroyPoolModal = ({ isOpen, onClose, server, pool, onQueued }) =>
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
-      <div className="alert alert-danger">
-        This permanently destroys the pool <strong>{pool}</strong> and EVERY dataset, volume, and
-        snapshot on it. There is no undo.
-      </div>
+      <div className="alert alert-danger">{t('host.destroyPoolModal.warningText', { pool })}</div>
       <label className="form-label" htmlFor="zpool-destroy-confirm">
-        Type the pool name to confirm
+        {t('host.destroyPoolModal.confirmLabel')}
       </label>
       <input
         id="zpool-destroy-confirm"
@@ -1054,7 +1094,7 @@ export const DestroyPoolModal = ({ isOpen, onClose, server, pool, onQueued }) =>
           disabled={loading}
         />
         <label className="form-check-label" htmlFor="zpool-destroy-force">
-          Force (unmount busy datasets first)
+          {t('host.destroyPoolModal.forceLabelDestroy')}
         </label>
       </div>
     </FormModal>

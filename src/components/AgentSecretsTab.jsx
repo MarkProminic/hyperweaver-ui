@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getSecrets, updateSecrets } from '../api/provisioningAPI';
 import { useServers } from '../contexts/ServerContext';
@@ -14,64 +15,73 @@ import { useServers } from '../contexts/ServerContext';
  */
 
 // The six category shapes, verbatim from the wire contract. `multiline`
-// renders a textarea (SSH private keys).
-const CATEGORIES = [
+// renders a textarea (SSH private keys). Labels are resolved through `t` so
+// the shapes stay reusable outside the component while remaining translated.
+const buildCategories = t => [
   {
     key: 'hcl_download_portal_api_keys',
-    label: 'HCL Download Portal API Keys',
+    label: t('agentSettings.agentSecretsTab.hclCategoryLabel'),
     icon: 'fas fa-key',
     fields: [
-      { key: 'name', label: 'Name' },
-      { key: 'key', label: 'Key' },
+      { key: 'name', label: t('agentSettings.agentSecretsTab.nameFieldLabel') },
+      { key: 'key', label: t('agentSettings.agentSecretsTab.keyFieldLabel') },
     ],
   },
   {
     key: 'git_api_keys',
-    label: 'Git API Keys',
+    label: t('agentSettings.agentSecretsTab.gitCategoryLabel'),
     icon: 'fab fa-git-alt',
     fields: [
-      { key: 'name', label: 'Name' },
-      { key: 'key', label: 'Key' },
+      { key: 'name', label: t('agentSettings.agentSecretsTab.nameFieldLabel') },
+      { key: 'key', label: t('agentSettings.agentSecretsTab.keyFieldLabel') },
     ],
   },
   {
     key: 'vagrant_atlas_token',
-    label: 'Vagrant Atlas Tokens',
+    label: t('agentSettings.agentSecretsTab.vagrantCategoryLabel'),
     icon: 'fas fa-box',
     fields: [
-      { key: 'name', label: 'Name' },
-      { key: 'key', label: 'Token' },
+      { key: 'name', label: t('agentSettings.agentSecretsTab.nameFieldLabel') },
+      { key: 'key', label: t('agentSettings.agentSecretsTab.tokenFieldLabel') },
     ],
   },
   {
     key: 'custom_resource_url',
-    label: 'Custom Resource URLs',
+    label: t('agentSettings.agentSecretsTab.customResourceCategoryLabel'),
     icon: 'fas fa-link',
     fields: [
-      { key: 'name', label: 'Name' },
-      { key: 'url', label: 'URL' },
-      { key: 'useAuth', label: 'HTTP Basic Auth', type: 'checkbox' },
-      { key: 'user', label: 'User' },
-      { key: 'pass', label: 'Password' },
+      { key: 'name', label: t('agentSettings.agentSecretsTab.nameFieldLabel') },
+      { key: 'url', label: t('agentSettings.agentSecretsTab.urlFieldLabel') },
+      {
+        key: 'useAuth',
+        label: t('agentSettings.agentSecretsTab.httpBasicAuthFieldLabel'),
+        type: 'checkbox',
+      },
+      { key: 'user', label: t('agentSettings.agentSecretsTab.userFieldLabel') },
+      { key: 'pass', label: t('agentSettings.agentSecretsTab.passwordFieldLabel') },
     ],
   },
   {
     key: 'docker_hub',
-    label: 'Docker Hub',
+    label: t('agentSettings.agentSecretsTab.dockerHubCategoryLabel'),
     icon: 'fab fa-docker',
     fields: [
-      { key: 'name', label: 'Name' },
-      { key: 'docker_hub_user', label: 'User' },
-      { key: 'docker_hub_token', label: 'Token' },
+      { key: 'name', label: t('agentSettings.agentSecretsTab.nameFieldLabel') },
+      { key: 'docker_hub_user', label: t('agentSettings.agentSecretsTab.userFieldLabel') },
+      { key: 'docker_hub_token', label: t('agentSettings.agentSecretsTab.tokenFieldLabel') },
     ],
   },
   {
     key: 'ssh_keys',
-    label: 'SSH Keys',
+    label: t('agentSettings.agentSecretsTab.sshKeysCategoryLabel'),
     icon: 'fas fa-terminal',
     fields: [
-      { key: 'name', label: 'Name' },
-      { key: 'key', label: 'Private Key', multiline: true },
+      { key: 'name', label: t('agentSettings.agentSecretsTab.nameFieldLabel') },
+      {
+        key: 'key',
+        label: t('agentSettings.agentSecretsTab.privateKeyFieldLabel'),
+        multiline: true,
+      },
     ],
   },
 ];
@@ -137,7 +147,9 @@ EntryField.propTypes = {
 };
 
 const AgentSecretsTab = () => {
+  const { t } = useTranslation();
   const { currentServer } = useServers();
+  const CATEGORIES = useMemo(() => buildCategories(t), [t]);
   const [document, setDocument] = useState(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
@@ -162,10 +174,13 @@ const AgentSecretsTab = () => {
       setDocument(result.data);
       setMsg('');
     } else {
-      report(`Failed to load secrets: ${result.message}`, 'danger');
+      report(
+        t('agentSettings.agentSecretsTab.failedLoadSecrets', { message: result.message }),
+        'danger'
+      );
     }
     setLoading(false);
-  }, [currentServer]);
+  }, [currentServer, t]);
 
   useEffect(() => {
     loadSecrets();
@@ -190,16 +205,25 @@ const AgentSecretsTab = () => {
     setLoading(false);
     if (result.success) {
       setEntries(category.key, entries);
-      report(`${category.label} saved.`, 'success');
+      report(
+        t('agentSettings.agentSecretsTab.categorySaved', { category: category.label }),
+        'success'
+      );
     } else {
-      report(`Failed to save ${category.label}: ${result.message}`, 'danger');
+      report(
+        t('agentSettings.agentSecretsTab.failedSaveCategory', {
+          category: category.label,
+          message: result.message,
+        }),
+        'danger'
+      );
     }
   };
 
   if (!currentServer) {
     return (
       <div className="alert alert-warning">
-        Please select a host from the navbar to manage its secrets.
+        {t('agentSettings.agentSecretsTab.selectHostWarning')}
       </div>
     );
   }
@@ -209,11 +233,11 @@ const AgentSecretsTab = () => {
       <div className="alert alert-info py-2 d-flex justify-content-between align-items-start gap-3">
         <span>
           <i className="fas fa-info-circle me-2" />
-          Secrets are injected into generated Hosts.yml files as <code>SECRETS_*</code> template
-          variables and stored plain on the agent host. Entry names must match{' '}
-          <code>[a-zA-Z0-9_-]+</code>; rows without a name are dropped on save. HCL portal keys
-          ROTATE server-side on every download — reload before editing that category, and never
-          paste a stale copy over a rotated value.
+          {t('agentSettings.agentSecretsTab.infoPart1')}
+          <code>SECRETS_*</code>
+          {t('agentSettings.agentSecretsTab.infoPart2')}
+          <code>[a-zA-Z0-9_-]+</code>
+          {t('agentSettings.agentSecretsTab.infoPart3')}
         </span>
         <button
           type="button"
@@ -222,11 +246,13 @@ const AgentSecretsTab = () => {
           disabled={loading}
         >
           <i className="fas fa-sync-alt me-2" />
-          Reload
+          {t('agentSettings.agentSecretsTab.reloadButton')}
         </button>
       </div>
       {msg && <div className={`alert alert-${msgVariant} py-2`}>{msg}</div>}
-      {loading && !document && <p className="text-muted">Loading…</p>}
+      {loading && !document && (
+        <p className="text-muted">{t('agentSettings.agentSecretsTab.loadingText')}</p>
+      )}
 
       {document &&
         CATEGORIES.map(category => {
@@ -248,7 +274,7 @@ const AgentSecretsTab = () => {
                       disabled={loading}
                     >
                       <i className="fas fa-plus me-2" />
-                      Add
+                      {t('agentSettings.agentSecretsTab.addButton')}
                     </button>
                     <button
                       type="button"
@@ -257,12 +283,16 @@ const AgentSecretsTab = () => {
                       disabled={loading}
                     >
                       <i className="fas fa-save me-2" />
-                      Save
+                      {t('agentSettings.agentSecretsTab.saveButton')}
                     </button>
                   </div>
                 </div>
 
-                {entries.length === 0 && <p className="text-muted small mb-0">No entries.</p>}
+                {entries.length === 0 && (
+                  <p className="text-muted small mb-0">
+                    {t('agentSettings.agentSecretsTab.noEntries')}
+                  </p>
+                )}
                 {entries.map((entry, index) => (
                   <div
                     className="row g-2 align-items-end border-bottom py-2"
@@ -292,7 +322,9 @@ const AgentSecretsTab = () => {
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-danger"
-                        aria-label={`Remove ${category.label} entry`}
+                        aria-label={t('agentSettings.agentSecretsTab.removeEntryAriaLabel', {
+                          category: category.label,
+                        })}
                         onClick={() =>
                           setEntries(
                             category.key,

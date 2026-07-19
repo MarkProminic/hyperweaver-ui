@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { makeAgentRequest } from '../../api/serverUtils';
 import { hasFeature } from '../../utils/capabilities';
@@ -19,6 +20,7 @@ const parentOf = path => {
 };
 
 export const PathPickerModal = ({ isOpen, onClose, server, onPick, title, mode, initialPath }) => {
+  const { t } = useTranslation();
   const [path, setPath] = useState('/');
   const [typed, setTyped] = useState('/');
   const [entries, setEntries] = useState([]);
@@ -81,7 +83,7 @@ export const PathPickerModal = ({ isOpen, onClose, server, onPick, title, mode, 
   const handlePick = () => {
     if (mode === 'file') {
       if (!selectedFile) {
-        setError('Select a file from the list.');
+        setError(t('common.pathPickerModal.selectFile'));
         return;
       }
       onPick(selectedFile);
@@ -98,7 +100,11 @@ export const PathPickerModal = ({ isOpen, onClose, server, onPick, title, mode, 
       onSubmit={handlePick}
       title={title}
       icon="fas fa-folder-open"
-      submitText={mode === 'file' ? 'Pick File' : 'Pick This Folder'}
+      submitText={
+        mode === 'file'
+          ? t('common.pathPickerModal.pickFile')
+          : t('common.pathPickerModal.pickFolder')
+      }
       loading={loading}
       showCancelButton
     >
@@ -107,7 +113,7 @@ export const PathPickerModal = ({ isOpen, onClose, server, onPick, title, mode, 
         <button
           type="button"
           className="btn btn-outline-secondary"
-          title="Up one level"
+          title={t('common.pathPickerModal.upOneLevel')}
           onClick={() => browse(parentOf(path))}
           disabled={loading || path === '/'}
         >
@@ -115,7 +121,7 @@ export const PathPickerModal = ({ isOpen, onClose, server, onPick, title, mode, 
         </button>
         <input
           className="form-control font-monospace"
-          aria-label="Path"
+          aria-label={t('common.pathPickerModal.path')}
           value={typed}
           onChange={e => setTyped(e.target.value)}
           onKeyDown={e => {
@@ -132,12 +138,12 @@ export const PathPickerModal = ({ isOpen, onClose, server, onPick, title, mode, 
           onClick={() => browse(typed.trim() || '/')}
           disabled={loading}
         >
-          Go
+          {t('common.pathPickerModal.go')}
         </button>
       </div>
       <div className="border rounded" style={{ maxHeight: '50vh', overflowY: 'auto' }}>
         {entries.length === 0 && !loading && (
-          <p className="text-muted small m-2 mb-2">(empty directory)</p>
+          <p className="text-muted small m-2 mb-2">{t('common.pathPickerModal.emptyDirectory')}</p>
         )}
         {entries.map(entry => {
           const clickable = entry.isDirectory || mode === 'file';
@@ -168,11 +174,12 @@ export const PathPickerModal = ({ isOpen, onClose, server, onPick, title, mode, 
       <p className="form-text text-muted mb-0 mt-2">
         {mode === 'file' ? (
           <>
-            Selected: <code>{selectedFile || '(none)'}</code>
+            {t('common.pathPickerModal.selected')}:{' '}
+            <code>{selectedFile || t('common.pathPickerModal.none')}</code>
           </>
         ) : (
           <>
-            Picking: <code>{path}</code>
+            {t('common.pathPickerModal.picking')}: <code>{path}</code>
           </>
         )}
       </p>
@@ -206,6 +213,7 @@ export const PathInput = ({
   pickTitle,
   list,
 }) => {
+  const { t } = useTranslation();
   const [pickerOpen, setPickerOpen] = useState(false);
   const browsable = !!server && hasFeature(server, 'file-browser');
   return (
@@ -225,7 +233,11 @@ export const PathInput = ({
           <button
             type="button"
             className="btn btn-outline-secondary"
-            title={mode === 'file' ? 'Browse the agent host for a file' : 'Browse the agent host'}
+            title={
+              mode === 'file'
+                ? t('common.pathInput.browseFile')
+                : t('common.pathInput.browseFolder')
+            }
             onClick={() => setPickerOpen(true)}
             disabled={disabled}
           >
@@ -240,7 +252,10 @@ export const PathInput = ({
           server={server}
           mode={mode}
           initialPath={value}
-          title={pickTitle || (mode === 'file' ? 'Pick a file' : 'Pick a folder')}
+          title={
+            pickTitle ||
+            (mode === 'file' ? t('common.pathInput.pickFile') : t('common.pathInput.pickFolder'))
+          }
           onPick={onChange}
         />
       )}

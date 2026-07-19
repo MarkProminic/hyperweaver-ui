@@ -1,17 +1,19 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
-const getNodeTypeLabel = nodeType => {
+const getNodeTypeLabel = (nodeType, t) => {
   const labels = {
-    physicalNic: 'Physical NICs',
-    aggregate: 'Aggregates',
-    etherstub: 'Etherstubs',
-    vnic: 'VNICs',
-    zone: 'Zones',
+    physicalNic: t('hostTools.NetworkTopologyControls.physicalNicLabel'),
+    aggregate: t('hostTools.NetworkTopologyControls.aggregateLabel'),
+    etherstub: t('hostTools.NetworkTopologyControls.etherstubLabel'),
+    vnic: t('hostTools.NetworkTopologyControls.vnicLabel'),
+    zone: t('hostTools.NetworkTopologyControls.zoneLabel'),
   };
   return labels[nodeType] || nodeType;
 };
 
 const NetworkTopologyControls = props => {
+  const { t } = useTranslation();
   const {
     filters,
     onFilterChange,
@@ -53,7 +55,7 @@ const NetworkTopologyControls = props => {
           {/* Edge Type Toggle */}
           <div className="d-flex align-items-center gap-2">
             <label className="form-label mb-1" htmlFor="edge-type-select">
-              Edge Type:
+              {t('hostTools.NetworkTopologyControls.edgeTypeLabel')}
             </label>
             <select
               id="edge-type-select"
@@ -62,16 +64,28 @@ const NetworkTopologyControls = props => {
               onChange={e => handleEdgeTypeChange(e.target.value)}
               title="Select edge visualization type"
             >
-              <optgroup label="Custom Edges">
-                <option value="floating">Floating Edges</option>
-                <option value="bandwidth">Enhanced Bandwidth</option>
-                <option value="bidirectional">Bidirectional</option>
+              <optgroup label={t('hostTools.NetworkTopologyControls.customEdgesGroup')}>
+                <option value="floating">
+                  {t('hostTools.NetworkTopologyControls.floatingEdgesOption')}
+                </option>
+                <option value="bandwidth">
+                  {t('hostTools.NetworkTopologyControls.enhancedBandwidthOption')}
+                </option>
+                <option value="bidirectional">
+                  {t('hostTools.NetworkTopologyControls.bidirectionalOption')}
+                </option>
               </optgroup>
-              <optgroup label="React Flow Built-in">
-                <option value="default">Bezier (Default)</option>
-                <option value="straight">Straight Lines</option>
-                <option value="step">Step Lines</option>
-                <option value="smoothstep">Smooth Step</option>
+              <optgroup label={t('hostTools.NetworkTopologyControls.builtInGroup')}>
+                <option value="default">
+                  {t('hostTools.NetworkTopologyControls.bezierOption')}
+                </option>
+                <option value="straight">
+                  {t('hostTools.NetworkTopologyControls.straightOption')}
+                </option>
+                <option value="step">{t('hostTools.NetworkTopologyControls.stepOption')}</option>
+                <option value="smoothstep">
+                  {t('hostTools.NetworkTopologyControls.smoothStepOption')}
+                </option>
               </optgroup>
             </select>
           </div>
@@ -83,10 +97,10 @@ const NetworkTopologyControls = props => {
             type="button"
             className={`btn btn-sm ${showFilters ? 'btn-primary' : 'btn-light'}`}
             onClick={onToggleFilters}
-            title="Toggle filters"
+            title={t('hostTools.NetworkTopologyControls.filterToggleTitle')}
           >
             <i className="fas fa-filter me-2" />
-            <span>Filters</span>
+            <span>{t('hostTools.NetworkTopologyControls.filtersButton')}</span>
           </button>
         </div>
       </div>
@@ -97,7 +111,9 @@ const NetworkTopologyControls = props => {
           <div className={`card-body ${horizontal ? 'row g-3' : ''}`}>
             {/* Node Type Filters */}
             <div className={horizontal ? 'col' : 'mb-4'}>
-              <h6 className="fs-6 fw-bold mb-2">Node Types</h6>
+              <h6 className="fs-6 fw-bold mb-2">
+                {t('hostTools.NetworkTopologyControls.nodeTypesHeading')}
+              </h6>
               <div className="d-flex flex-wrap gap-2">
                 {Object.entries(filters.nodeTypes).map(([nodeType, enabled]) => (
                   <div key={nodeType} className="form-check">
@@ -109,7 +125,7 @@ const NetworkTopologyControls = props => {
                       onChange={() => handleNodeTypeChange(nodeType)}
                     />
                     <label className="form-check-label" htmlFor={`nodetype-${nodeType}`}>
-                      {getNodeTypeLabel(nodeType)}
+                      {getNodeTypeLabel(nodeType, t)}
                     </label>
                   </div>
                 ))}
@@ -119,7 +135,9 @@ const NetworkTopologyControls = props => {
             {/* VLAN Filters */}
             {availableVlans.length > 0 && (
               <div className={horizontal ? 'col' : 'mb-4'}>
-                <h6 className="fs-6 fw-bold mb-2">VLANs</h6>
+                <h6 className="fs-6 fw-bold mb-2">
+                  {t('hostTools.NetworkTopologyControls.vlansHeading')}
+                </h6>
                 <div className="d-flex flex-wrap gap-2">
                   {availableVlans.map(vlan => (
                     <div key={vlan} className="form-check">
@@ -137,7 +155,7 @@ const NetworkTopologyControls = props => {
                         }}
                       />
                       <label className="form-check-label" htmlFor={`vlan-${vlan}`}>
-                        VLAN {vlan}
+                        {t('hostTools.NetworkTopologyControls.vlanLabel', { vlan })}
                       </label>
                     </div>
                   ))}
@@ -148,7 +166,9 @@ const NetworkTopologyControls = props => {
             {/* Zone Filters */}
             {availableZones.length > 0 && (
               <div className={horizontal ? 'col' : 'mb-4'}>
-                <h6 className="fs-6 fw-bold mb-2">Zones</h6>
+                <h6 className="fs-6 fw-bold mb-2">
+                  {t('hostTools.NetworkTopologyControls.zonesHeading')}
+                </h6>
                 <div className="d-flex flex-wrap gap-2">
                   {availableZones.map(zone => (
                     <div key={zone} className="form-check">
@@ -176,7 +196,9 @@ const NetworkTopologyControls = props => {
 
             {/* Misc Options */}
             <div className={horizontal ? 'col' : ''}>
-              <h6 className="fs-6 fw-bold mb-2">Options</h6>
+              <h6 className="fs-6 fw-bold mb-2">
+                {t('hostTools.NetworkTopologyControls.optionsHeading')}
+              </h6>
               <div className="form-check mb-3">
                 <input
                   type="checkbox"
@@ -186,7 +208,7 @@ const NetworkTopologyControls = props => {
                   onChange={e => onFilterChange({ showIdleLinks: e.target.checked })}
                 />
                 <label className="form-check-label" htmlFor="show-idle-links">
-                  Show idle links
+                  {t('hostTools.NetworkTopologyControls.showIdleLinksLabel')}
                 </label>
               </div>
               <div className="form-check">
@@ -198,7 +220,7 @@ const NetworkTopologyControls = props => {
                   onChange={e => onFilterChange({ showUnattachedNodes: e.target.checked })}
                 />
                 <label className="form-check-label" htmlFor="show-unattached-nodes">
-                  Show unattached nodes
+                  {t('hostTools.NetworkTopologyControls.showUnattachedNodesLabel')}
                 </label>
               </div>
             </div>

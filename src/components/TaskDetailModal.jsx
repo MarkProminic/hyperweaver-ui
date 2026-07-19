@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cancelTask } from '../api/machineAPI';
 import { getAgentBasePath, fetchWsTicket } from '../api/serverUtils';
@@ -115,23 +116,29 @@ const renderAnsi = data => {
   return spans.length > 0 ? spans : ' ';
 };
 
-const renderPriorityBadge = priority => {
+const renderPriorityBadge = (priority, t) => {
   if (priority >= 100) {
-    return <span className="badge text-bg-danger">CRITICAL</span>;
+    return (
+      <span className="badge text-bg-danger">{t('tasks.taskDetailModal.priorityCritical')}</span>
+    );
   }
   if (priority >= 80) {
-    return <span className="badge text-bg-warning">HIGH</span>;
+    return <span className="badge text-bg-warning">{t('tasks.taskDetailModal.priorityHigh')}</span>;
   }
   if (priority >= 60) {
-    return <span className="badge text-bg-info">MEDIUM</span>;
+    return <span className="badge text-bg-info">{t('tasks.taskDetailModal.priorityMedium')}</span>;
   }
   if (priority >= 50) {
-    return <span className="badge text-bg-primary">SERVICE</span>;
+    return (
+      <span className="badge text-bg-primary">{t('tasks.taskDetailModal.priorityService')}</span>
+    );
   }
   if (priority >= 40) {
-    return <span className="badge text-bg-light">LOW</span>;
+    return <span className="badge text-bg-light">{t('tasks.taskDetailModal.priorityLow')}</span>;
   }
-  return <span className="badge text-bg-light">BACKGROUND</span>;
+  return (
+    <span className="badge text-bg-light">{t('tasks.taskDetailModal.priorityBackground')}</span>
+  );
 };
 
 const renderStatusBadge = status => {
@@ -182,6 +189,7 @@ SubtaskRow.propTypes = {
 const ACTIVE_STATUSES = ['pending', 'running'];
 
 const TaskDetailModal = ({ task, onClose }) => {
+  const { t } = useTranslation();
   const { currentServer, makeAgentRequest } = useServers();
   const [output, setOutput] = useState([]);
   const [subtasks, setSubtasks] = useState([]);
@@ -369,7 +377,7 @@ const TaskDetailModal = ({ task, onClose }) => {
       <ContentModal
         isOpen
         onClose={onClose}
-        title={`Task: ${taskOperationLabel(row.operation)}`}
+        title={`${t('tasks.taskDetailModal.taskTitle')}: ${taskOperationLabel(row.operation)}`}
         icon="fas fa-tasks"
       >
         {ACTIVE_STATUSES.includes(row.status) && (
@@ -381,7 +389,11 @@ const TaskDetailModal = ({ task, onClose }) => {
               disabled={cancelling}
             >
               <i className={`fas ${cancelling ? 'fa-spinner fa-pulse' : 'fa-ban'} me-2`} />
-              <span>{cancelling ? 'Cancelling...' : 'Cancel Task'}</span>
+              <span>
+                {cancelling
+                  ? t('tasks.taskDetailModal.cancelling')
+                  : t('tasks.taskDetailModal.cancelTask')}
+              </span>
             </button>
           </div>
         )}
@@ -390,23 +402,43 @@ const TaskDetailModal = ({ task, onClose }) => {
         {/* Task Info */}
         <div className="card">
           <div className="card-body">
-            <h6 className="fs-6 fw-bold">Details</h6>
-            <InfoRow label="ID">{row.id}</InfoRow>
-            <InfoRow label="Operation">{taskOperationLabel(row.operation)}</InfoRow>
-            <InfoRow label="Target">{row.machine_name}</InfoRow>
-            <InfoRow label="Status">{renderStatusBadge(row.status)}</InfoRow>
-            <InfoRow label="Priority">{renderPriorityBadge(row.priority)}</InfoRow>
-            <InfoRow label="Created By">{row.created_by || '-'}</InfoRow>
-            <InfoRow label="Created">{formatDate(row.created_at)}</InfoRow>
-            <InfoRow label="Started">{formatDate(row.started_at)}</InfoRow>
-            <InfoRow label="Completed">{formatDate(row.completed_at)}</InfoRow>
+            <h6 className="fs-6 fw-bold">{t('tasks.taskDetailModal.details')}</h6>
+            <InfoRow label={t('tasks.taskDetailModal.labelId')}>{row.id}</InfoRow>
+            <InfoRow label={t('tasks.taskDetailModal.labelOperation')}>
+              {taskOperationLabel(row.operation)}
+            </InfoRow>
+            <InfoRow label={t('tasks.taskDetailModal.labelTarget')}>{row.machine_name}</InfoRow>
+            <InfoRow label={t('tasks.taskDetailModal.labelStatus')}>
+              {renderStatusBadge(row.status)}
+            </InfoRow>
+            <InfoRow label={t('tasks.taskDetailModal.labelPriority')}>
+              {renderPriorityBadge(row.priority, t)}
+            </InfoRow>
+            <InfoRow label={t('tasks.taskDetailModal.labelCreatedBy')}>
+              {row.created_by || '-'}
+            </InfoRow>
+            <InfoRow label={t('tasks.taskDetailModal.labelCreated')}>
+              {formatDate(row.created_at)}
+            </InfoRow>
+            <InfoRow label={t('tasks.taskDetailModal.labelStarted')}>
+              {formatDate(row.started_at)}
+            </InfoRow>
+            <InfoRow label={t('tasks.taskDetailModal.labelCompleted')}>
+              {formatDate(row.completed_at)}
+            </InfoRow>
             {row.error_message && (
-              <InfoRow label="Error">
+              <InfoRow label={t('tasks.taskDetailModal.labelError')}>
                 <span className="text-danger">{row.error_message}</span>
               </InfoRow>
             )}
-            {row.depends_on && <InfoRow label="Depends On">{row.depends_on}</InfoRow>}
-            {row.parent_task_id && <InfoRow label="Parent Task">{row.parent_task_id}</InfoRow>}
+            {row.depends_on && (
+              <InfoRow label={t('tasks.taskDetailModal.labelDependsOn')}>{row.depends_on}</InfoRow>
+            )}
+            {row.parent_task_id && (
+              <InfoRow label={t('tasks.taskDetailModal.labelParentTask')}>
+                {row.parent_task_id}
+              </InfoRow>
+            )}
           </div>
         </div>
 
@@ -427,7 +459,7 @@ const TaskDetailModal = ({ task, onClose }) => {
           return (
             <div className="card">
               <div className="card-body">
-                <h6 className="fs-6 fw-bold">Progress</h6>
+                <h6 className="fs-6 fw-bold">{t('tasks.taskDetailModal.progress')}</h6>
                 <div
                   className="progress"
                   role="progressbar"
@@ -457,7 +489,7 @@ const TaskDetailModal = ({ task, onClose }) => {
                       progressInfo.ansible_percent !== null && (
                         <span className="text-muted">
                           {' '}
-                          — {progressInfo.ansible_percent}% in the guest
+                          — {progressInfo.ansible_percent}% {t('tasks.taskDetailModal.inGuest')}
                         </span>
                       )}
                   </p>
@@ -474,7 +506,7 @@ const TaskDetailModal = ({ task, onClose }) => {
         {parsedMetadata && (
           <div className="card">
             <div className="card-body">
-              <h6 className="fs-6 fw-bold">Metadata</h6>
+              <h6 className="fs-6 fw-bold">{t('tasks.taskDetailModal.metadata')}</h6>
               <pre className="small" style={{ maxHeight: '200px', overflow: 'auto' }}>
                 {typeof parsedMetadata === 'string'
                   ? parsedMetadata
@@ -489,7 +521,7 @@ const TaskDetailModal = ({ task, onClose }) => {
           <div className="card-body">
             <div className="d-flex align-items-center mb-2">
               <h6 className="fs-6 fw-bold mb-0">
-                Output
+                {t('tasks.taskDetailModal.output')}
                 {ACTIVE_STATUSES.includes(row.status) && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin small" />
@@ -501,10 +533,10 @@ const TaskDetailModal = ({ task, onClose }) => {
                   type="button"
                   className="btn btn-sm btn-outline-secondary ms-auto"
                   onClick={handleCopyOutput}
-                  title="Copy console output to clipboard"
+                  title={t('tasks.taskDetailModal.copyOutput')}
                 >
                   <i className={copied ? 'fas fa-check' : 'fas fa-copy'} />{' '}
-                  {copied ? 'Copied' : 'Copy'}
+                  {copied ? t('tasks.taskDetailModal.copied') : t('tasks.taskDetailModal.copy')}
                 </button>
               )}
             </div>
@@ -520,7 +552,9 @@ const TaskDetailModal = ({ task, onClose }) => {
                 fontSize: '12px',
               }}
             >
-              {output.length === 0 && <span className="text-muted">No output available</span>}
+              {output.length === 0 && (
+                <span className="text-muted">{t('tasks.taskDetailModal.noOutput')}</span>
+              )}
               {output.map(entry => (
                 <div
                   key={entry._ui_id}
@@ -538,14 +572,16 @@ const TaskDetailModal = ({ task, onClose }) => {
         {subtasks.length > 0 && (
           <div className="card">
             <div className="card-body">
-              <h6 className="fs-6 fw-bold">Subtasks ({subtasks.length})</h6>
+              <h6 className="fs-6 fw-bold">
+                {t('tasks.taskDetailModal.subtasks', { count: subtasks.length })}
+              </h6>
               <table className="table table-striped table-sm">
                 <thead>
                   <tr>
-                    <th>Operation</th>
-                    <th>Target</th>
-                    <th>Status</th>
-                    <th>Progress</th>
+                    <th>{t('tasks.taskDetailModal.columnOperation')}</th>
+                    <th>{t('tasks.taskDetailModal.columnTarget')}</th>
+                    <th>{t('tasks.taskDetailModal.columnStatus')}</th>
+                    <th>{t('tasks.taskDetailModal.columnProgress')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -564,13 +600,16 @@ const TaskDetailModal = ({ task, onClose }) => {
           isOpen
           onClose={() => setConfirmCancel(false)}
           onConfirm={handleCancel}
-          title="Cancel Task"
+          title={t('tasks.taskDetailModal.confirmCancelTitle')}
           message={
             subtasks.length > 0
-              ? `Cancel this ${row.status} task? Its whole chain (${subtasks.length} subtasks) cancels with it.`
-              : `Cancel this ${row.status} task?`
+              ? t('tasks.taskDetailModal.confirmCancelWithSubtasks', {
+                  status: row.status,
+                  count: subtasks.length,
+                })
+              : t('tasks.taskDetailModal.confirmCancel', { status: row.status })
           }
-          confirmText="Cancel Task"
+          confirmText={t('tasks.taskDetailModal.cancelTask')}
           loading={cancelling}
         />
       )}

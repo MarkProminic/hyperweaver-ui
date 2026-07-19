@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { makeAgentRequest } from '../../api/serverUtils';
 
@@ -9,6 +10,7 @@ import { makeAgentRequest } from '../../api/serverUtils';
 const SCREENSHOT_INTERVAL_MS = 300000;
 
 const MachineScreenshot = ({ currentServer, machineName, isRunning, frameless = false }) => {
+  const { t } = useTranslation();
   const [url, setUrl] = useState(null);
   const urlRef = useRef(null);
 
@@ -63,7 +65,7 @@ const MachineScreenshot = ({ currentServer, machineName, isRunning, frameless = 
     return (
       <img
         src={url}
-        alt={`${machineName} console screenshot`}
+        alt={t('machine.machineScreenshot.consoleScreenshotAlt', { machineName })}
         className="img-fluid"
         style={{ flex: '1 1 auto', minHeight: 0, maxWidth: '100%', objectFit: 'contain' }}
       />
@@ -76,20 +78,20 @@ const MachineScreenshot = ({ currentServer, machineName, isRunning, frameless = 
         <div className="d-flex justify-content-between align-items-center mb-2">
           <h4 className="fs-6 fw-bold mb-0">
             <i className="fas fa-desktop me-2" />
-            Screen
+            {t('machine.machineScreenshot.screen')}
           </h4>
           <button
             type="button"
             className="btn btn-sm btn-outline-secondary"
             onClick={capture}
-            title="Refresh screenshot"
+            title={t('machine.machineScreenshot.refreshTooltip')}
           >
             <i className="fas fa-sync-alt" />
           </button>
         </div>
         <img
           src={url}
-          alt={`${machineName} console screenshot`}
+          alt={t('machine.machineScreenshot.consoleScreenshotAlt', { machineName })}
           className="img-fluid border rounded"
         />
       </div>

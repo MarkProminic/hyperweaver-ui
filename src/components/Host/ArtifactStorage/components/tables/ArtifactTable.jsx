@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ArtifactDownloadRow from './ArtifactDownloadRow';
 import ArtifactRow from './ArtifactRow';
@@ -17,6 +18,7 @@ const ArtifactTable = ({
   onSort,
   onCancelDownload,
 }) => {
+  const { t } = useTranslation();
   const [selectedArtifacts, setSelectedArtifacts] = useState(new Set());
   const [sortBy, setSortBy] = useState('filename');
   const [sortOrder, setSortOrder] = useState('asc');
@@ -92,17 +94,21 @@ const ArtifactTable = ({
           disabled={!hasPrev || loading}
           onClick={() => onPaginationChange(Math.max(0, pagination.offset - pagination.limit))}
         >
-          Previous
+          {t('artifacts.artifactTable.previousButton')}
         </button>
         <span>
-          Page {currentPage} of {totalPages} ({pagination.total} total)
+          {t('artifacts.artifactTable.paginationText', {
+            currentPage,
+            totalPages,
+            total: pagination.total,
+          })}
         </span>
         <button
           className="btn btn-outline-primary"
           disabled={!hasNext || loading}
           onClick={() => onPaginationChange(pagination.offset + pagination.limit)}
         >
-          Next
+          {t('artifacts.artifactTable.nextButton')}
         </button>
       </nav>
     );
@@ -114,7 +120,7 @@ const ArtifactTable = ({
         <span>
           <i className="fas fa-spinner fa-spin fa-2x" />
         </span>
-        <p className="mt-2">Loading artifacts...</p>
+        <p className="mt-2">{t('artifacts.artifactTable.loadingText')}</p>
       </div>
     );
   }
@@ -125,8 +131,8 @@ const ArtifactTable = ({
         <span className="text-muted">
           <i className="fas fa-compact-disc fa-2x" />
         </span>
-        <p className="mt-2 text-muted">No artifacts found</p>
-        <p className="text-muted small">Upload files or download from URLs to get started</p>
+        <p className="mt-2 text-muted">{t('artifacts.artifactTable.noArtifactsFound')}</p>
+        <p className="text-muted small">{t('artifacts.artifactTable.noArtifactsDescription')}</p>
       </div>
     );
   }
@@ -139,7 +145,7 @@ const ArtifactTable = ({
           <div className="d-flex justify-content-between align-items-center">
             <div>
               <span>
-                <strong>{selectedArtifacts.size}</strong> artifacts selected
+                {t('artifacts.artifactTable.artifactsSelected', { count: selectedArtifacts.size })}
               </span>
             </div>
             <div>
@@ -152,7 +158,7 @@ const ArtifactTable = ({
                   <span className="me-1">
                     <i className="fas fa-trash" />
                   </span>
-                  <span>Delete Selected</span>
+                  <span>{t('artifacts.artifactTable.deleteSelectedButton')}</span>
                 </button>
               </div>
             </div>
@@ -175,44 +181,44 @@ const ArtifactTable = ({
                     onChange={handleSelectAll}
                   />
                   <label className="form-check-label visually-hidden" htmlFor="artifact-select-all">
-                    Select all artifacts
+                    {t('artifacts.artifactTable.selectAllLabel')}
                   </label>
                 </div>
               </th>
               <th
                 className="cursor-pointer"
                 onClick={() => handleSort('filename')}
-                title="Click to sort by filename"
+                title={t('artifacts.artifactTable.sortByFilenameTooltip')}
               >
                 <span className="d-inline-flex align-items-center">
-                  <span>Filename</span>
+                  <span>{t('artifacts.artifactTable.filenameHeader')}</span>
                   <span className="ms-1">{getSortIcon('filename')}</span>
                 </span>
               </th>
-              <th>Type</th>
+              <th>{t('artifacts.artifactTable.typeHeader')}</th>
               <th
                 className="cursor-pointer"
                 onClick={() => handleSort('size')}
-                title="Click to sort by size"
+                title={t('artifacts.artifactTable.sortBySizeTooltip')}
               >
                 <span className="d-inline-flex align-items-center">
-                  <span>Size</span>
+                  <span>{t('artifacts.artifactTable.sizeHeader')}</span>
                   <span className="ms-1">{getSortIcon('size')}</span>
                 </span>
               </th>
-              <th>Checksum</th>
-              <th>Storage Location</th>
+              <th>{t('artifacts.artifactTable.checksumHeader')}</th>
+              <th>{t('artifacts.artifactTable.storageLocationHeader')}</th>
               <th
                 className="cursor-pointer"
                 onClick={() => handleSort('discovered_at')}
-                title="Click to sort by date"
+                title={t('artifacts.artifactTable.sortByDateTooltip')}
               >
                 <span className="d-inline-flex align-items-center">
-                  <span>Added</span>
+                  <span>{t('artifacts.artifactTable.addedHeader')}</span>
                   <span className="ms-1">{getSortIcon('discovered_at')}</span>
                 </span>
               </th>
-              <th width="150">Actions</th>
+              <th width="150">{t('artifacts.artifactTable.actionsHeader')}</th>
             </tr>
           </thead>
           <tbody>

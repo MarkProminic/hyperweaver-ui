@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { FormModal } from '../common';
 
@@ -17,6 +18,7 @@ const getSubmitVariant = buttonClass => {
 };
 
 const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => {
+  const { t } = useTranslation();
   const [options, setOptions] = useState({
     temporary: false,
     force: true,
@@ -51,44 +53,54 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
     switch (action) {
       case 'activate':
         return {
-          title: 'Activate Boot Environment',
+          title: t('host.confirmActionModal.titleActivate'),
           icon: 'fa-power-off',
           buttonClass: 'btn-success',
-          description: `Activate boot environment "${bootEnvironment.name}" for next reboot.`,
-          warning: 'The system will boot from this environment on next restart.',
+          description: t('host.confirmActionModal.descriptionActivate', {
+            name: bootEnvironment.name,
+          }),
+          warning: t('host.confirmActionModal.warningActivate'),
         };
       case 'mount':
         return {
-          title: 'Mount Boot Environment',
+          title: t('host.confirmActionModal.titleMount'),
           icon: 'fa-folder-open',
           buttonClass: 'btn-info',
-          description: `Mount boot environment "${bootEnvironment.name}" to access its filesystem.`,
-          warning:
-            'This will make the boot environment filesystem accessible for inspection or modification.',
+          description: t('host.confirmActionModal.descriptionMount', {
+            name: bootEnvironment.name,
+          }),
+          warning: t('host.confirmActionModal.warningMount'),
         };
       case 'unmount':
         return {
-          title: 'Unmount Boot Environment',
+          title: t('host.confirmActionModal.titleUnmount'),
           icon: 'fa-folder',
           buttonClass: 'btn-warning',
-          description: `Unmount boot environment "${bootEnvironment.name}".`,
-          warning: 'This will disconnect the boot environment filesystem.',
+          description: t('host.confirmActionModal.descriptionUnmount', {
+            name: bootEnvironment.name,
+          }),
+          warning: t('host.confirmActionModal.warningUnmount'),
         };
       case 'delete':
         return {
-          title: 'Delete Boot Environment',
+          title: t('host.confirmActionModal.titleDelete'),
           icon: 'fa-trash',
           buttonClass: 'btn-danger',
-          description: `Permanently delete boot environment "${bootEnvironment.name}".`,
-          warning: 'This action cannot be undone. All data in this boot environment will be lost.',
+          description: t('host.confirmActionModal.descriptionDelete', {
+            name: bootEnvironment.name,
+          }),
+          warning: t('host.confirmActionModal.warningDelete'),
         };
       default:
         return {
-          title: 'Boot Environment Action',
+          title: t('host.confirmActionModal.titleDefault'),
           icon: 'fa-layer-group',
           buttonClass: 'btn-info',
-          description: `Perform ${action} on boot environment "${bootEnvironment.name}".`,
-          warning: 'Please confirm this action.',
+          description: t('host.confirmActionModal.descriptionDefault', {
+            action,
+            name: bootEnvironment.name,
+          }),
+          warning: t('host.confirmActionModal.warningDefault'),
         };
     }
   };
@@ -102,57 +114,65 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
       onSubmit={handleSubmit}
       title={actionDetails.title}
       icon={`fas ${actionDetails.icon}`}
-      submitText={loading ? 'Processing...' : actionDetails.title}
+      submitText={loading ? t('host.confirmActionModal.processingText') : actionDetails.title}
       submitVariant={getSubmitVariant(actionDetails.buttonClass)}
       loading={loading}
     >
       {/* Boot Environment Information */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Boot Environment Information</h3>
+          <h3 className="fs-6 fw-bold">{t('host.confirmActionModal.infoCardTitle')}</h3>
           <div className="table-responsive">
             <table className="table">
               <tbody>
                 <tr>
                   <td>
-                    <strong>Name</strong>
+                    <strong>{t('host.confirmActionModal.nameLabel')}</strong>
                   </td>
                   <td className="font-monospace">{bootEnvironment.name}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Active Status</strong>
+                    <strong>{t('host.confirmActionModal.activeStatusLabel')}</strong>
                   </td>
                   <td>
                     {bootEnvironment.is_active_now && bootEnvironment.is_active_on_reboot && (
-                      <span className="badge text-bg-success">Active Now + Reboot</span>
+                      <span className="badge text-bg-success">
+                        {t('host.confirmActionModal.statusActiveNowReboot')}
+                      </span>
                     )}
                     {bootEnvironment.is_active_now && !bootEnvironment.is_active_on_reboot && (
-                      <span className="badge text-bg-success">Active Now</span>
+                      <span className="badge text-bg-success">
+                        {t('host.confirmActionModal.statusActiveNow')}
+                      </span>
                     )}
                     {!bootEnvironment.is_active_now && bootEnvironment.is_active_on_reboot && (
-                      <span className="badge text-bg-info">Active on Reboot</span>
+                      <span className="badge text-bg-info">
+                        {t('host.confirmActionModal.statusActiveOnReboot')}
+                      </span>
                     )}
                     {!bootEnvironment.is_active_now && !bootEnvironment.is_active_on_reboot && (
-                      <span className="badge text-bg-secondary">Inactive</span>
+                      <span className="badge text-bg-secondary">
+                        {t('host.confirmActionModal.statusInactive')}
+                      </span>
                     )}
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Mountpoint</strong>
+                    <strong>{t('host.confirmActionModal.mountpointLabel')}</strong>
                   </td>
                   <td className="font-monospace">
                     {bootEnvironment.mountpoint === '-'
-                      ? 'Not Mounted'
+                      ? t('host.confirmActionModal.notMounted')
                       : bootEnvironment.mountpoint}
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Space Used</strong>
+                    <strong>{t('host.confirmActionModal.spaceUsedLabel')}</strong>
                   </td>
-                  <td>{bootEnvironment.space || 'N/A'}</td>
+                  <td>{bootEnvironment.space || t('host.confirmActionModal.notAvailable')}</td>
                 </tr>
               </tbody>
             </table>
@@ -163,7 +183,7 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
       {/* Action Description */}
       <div className={`alert ${action === 'delete' ? 'alert-danger' : 'alert-info'}`}>
         <p>
-          <strong>Action:</strong> {actionDetails.description}
+          <strong>{t('host.confirmActionModal.actionLabel')}</strong> {actionDetails.description}
         </p>
         <p className="mt-2">{actionDetails.warning}</p>
       </div>
@@ -172,7 +192,7 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
       {action === 'activate' && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Activation Options</h3>
+            <h3 className="fs-6 fw-bold">{t('host.confirmActionModal.activationOptionsTitle')}</h3>
 
             <div className="mb-3">
               <div className="form-check">
@@ -184,11 +204,12 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
                   onChange={e => handleOptionChange('temporary', e.target.checked)}
                 />
                 <label className="form-check-label" htmlFor="option-temporary">
-                  <strong>Temporary Activation</strong> - Only activate for one boot cycle
+                  <strong>{t('host.confirmActionModal.temporaryActivationTitle')}</strong> -{' '}
+                  {t('host.confirmActionModal.temporaryActivationDesc')}
                 </label>
               </div>
               <p className="form-text text-muted">
-                If checked, the system will revert to the previous BE after the next reboot.
+                {t('host.confirmActionModal.temporaryActivationHint')}
               </p>
             </div>
           </div>
@@ -198,11 +219,11 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
       {action === 'mount' && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Mount Options</h3>
+            <h3 className="fs-6 fw-bold">{t('host.confirmActionModal.mountOptionsTitle')}</h3>
 
             <div className="mb-3">
               <label className="form-label" htmlFor="mountpoint-input">
-                Mountpoint
+                {t('host.confirmActionModal.mountpointLabel')}
               </label>
               <input
                 id="mountpoint-input"
@@ -212,13 +233,13 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
                 onChange={e => handleOptionChange('mountpoint', e.target.value)}
               />
               <p className="form-text text-muted">
-                Directory where the boot environment will be mounted
+                {t('host.confirmActionModal.mountpointInputHint')}
               </p>
             </div>
 
             <div className="mb-3">
               <label className="form-label" htmlFor="shared-mode-select">
-                Shared Mode
+                {t('host.confirmActionModal.sharedModeLabel')}
               </label>
               <select
                 id="shared-mode-select"
@@ -226,10 +247,12 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
                 value={options.sharedMode}
                 onChange={e => handleOptionChange('sharedMode', e.target.value)}
               >
-                <option value="ro">Read-Only</option>
-                <option value="rw">Read-Write</option>
+                <option value="ro">{t('host.confirmActionModal.readOnlyOption')}</option>
+                <option value="rw">{t('host.confirmActionModal.readWriteOption')}</option>
               </select>
-              <p className="form-text text-muted">Mount access mode</p>
+              <p className="form-text text-muted">
+                {t('host.confirmActionModal.mountAccessModeHint')}
+              </p>
             </div>
           </div>
         </div>
@@ -238,7 +261,7 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
       {action === 'unmount' && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Unmount Options</h3>
+            <h3 className="fs-6 fw-bold">{t('host.confirmActionModal.unmountOptionsTitle')}</h3>
 
             <div className="mb-3">
               <div className="form-check">
@@ -250,11 +273,12 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
                   onChange={e => handleOptionChange('force', e.target.checked)}
                 />
                 <label className="form-check-label" htmlFor="option-force-unmount">
-                  <strong>Force Unmount</strong> - Force unmount even if busy
+                  <strong>{t('host.confirmActionModal.forceUnmountTitle')}</strong> -{' '}
+                  {t('host.confirmActionModal.forceUnmountDesc')}
                 </label>
               </div>
               <p className="form-text text-muted">
-                Use this if the normal unmount fails due to busy files.
+                {t('host.confirmActionModal.forceUnmountHint')}
               </p>
             </div>
           </div>
@@ -264,7 +288,7 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
       {action === 'delete' && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Delete Options</h3>
+            <h3 className="fs-6 fw-bold">{t('host.confirmActionModal.deleteOptionsTitle')}</h3>
 
             <div className="mb-3">
               <div className="form-check">
@@ -276,8 +300,8 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
                   onChange={e => handleOptionChange('force', e.target.checked)}
                 />
                 <label className="form-check-label" htmlFor="option-force-delete">
-                  <strong>Force Delete</strong> - Required for non-interactive deletion
-                  (recommended)
+                  <strong>{t('host.confirmActionModal.forceDeleteTitle')}</strong> -{' '}
+                  {t('host.confirmActionModal.forceDeleteDesc')}
                 </label>
               </div>
             </div>
@@ -292,7 +316,8 @@ const ConfirmActionModal = ({ bootEnvironment, action, onClose, onConfirm }) => 
                   onChange={e => handleOptionChange('snapshots', e.target.checked)}
                 />
                 <label className="form-check-label" htmlFor="option-snapshots">
-                  <strong>Delete Snapshots</strong> - Also delete all associated snapshots
+                  <strong>{t('host.confirmActionModal.deleteSnapshotsTitle')}</strong> -{' '}
+                  {t('host.confirmActionModal.deleteSnapshotsDesc')}
                 </label>
               </div>
             </div>

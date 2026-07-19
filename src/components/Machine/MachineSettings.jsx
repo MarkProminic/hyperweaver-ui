@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getMachineDefaults, getMachineOsTypes } from '../../api/machineAPI';
 import {
@@ -575,29 +576,35 @@ const sectionForTab = tab => SECTION_TABS.find(section => section.id === tab) ||
 
 // Apply-outcome message pieces. Agent messages end with their own period —
 // never double it.
-const warningsSuffix = data => {
+const warningsSuffix = (data, t) => {
   const list = Array.isArray(data.resource_warnings) ? data.resource_warnings : [];
   if (list.length === 0) {
     return '';
   }
-  return ` — warnings: ${list.map(warning => warning?.message || String(warning)).join('; ')}`;
+  return t('machineEdit.machineSettings.warningsSuffix', {
+    list: list.map(warning => warning?.message || String(warning)).join('; '),
+  });
 };
 
-const messageBase = (data, machineName) =>
-  (data.message || `Changes applied to ${machineName}`).replace(/\.+$/u, '');
+const messageBase = (data, machineName, t) =>
+  (data.message || t('machineEdit.machineSettings.changesAppliedTo', { machineName })).replace(
+    /\.+$/u,
+    ''
+  );
 
 // Running machine: the agent ACCRUES infrastructure changes instead of
 // applying (pending_changes) — they ride the next power cycle.
-const pendingNotice = (data, base) => {
+const pendingNotice = (data, base, t) => {
   const count = Object.keys(data.pending_changes || {}).length;
   return {
-    text: `${base} — ${count} change group${count === 1 ? '' : 's'} wait for the next power cycle.`,
+    text: t('machineEdit.machineSettings.pendingNoticeText', { base, count }),
     warning: true,
   };
 };
 
 /** The agent's accrued power-cycle set: badge, values, cancel, apply-now. */
 const PendingChangesPanel = ({ pendingChanges, isRunning, loading, onApplyNow, onCancel }) => {
+  const { t } = useTranslation();
   const keys = Object.keys(pendingChanges || {});
   if (keys.length === 0) {
     return null;
@@ -607,8 +614,11 @@ const PendingChangesPanel = ({ pendingChanges, isRunning, loading, onApplyNow, o
       <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span>
           <i className="fas fa-hourglass-half me-2" />
-          <strong>{keys.length}</strong> change group
-          {keys.length === 1 ? '' : 's'} waiting for the next power cycle: {keys.join(', ')}
+          <strong>{keys.length}</strong>{' '}
+          {t('machineEdit.machineSettings.pendingChangeGroups', {
+            count: keys.length,
+            list: keys.join(', '),
+          })}
         </span>
         <div className="d-flex gap-2">
           {!isRunning && (
@@ -617,9 +627,9 @@ const PendingChangesPanel = ({ pendingChanges, isRunning, loading, onApplyNow, o
               className="btn btn-sm btn-warning"
               onClick={onApplyNow}
               disabled={loading}
-              title="Apply the pending set now — the machine is powered off"
+              title={t('machineEdit.machineSettings.applyPendingNowTitle')}
             >
-              Apply now
+              {t('machineEdit.machineSettings.applyNow')}
             </button>
           )}
           <button
@@ -627,14 +637,14 @@ const PendingChangesPanel = ({ pendingChanges, isRunning, loading, onApplyNow, o
             className="btn btn-sm btn-outline-secondary"
             onClick={onCancel}
             disabled={loading}
-            title="Discard every pending change"
+            title={t('machineEdit.machineSettings.discardPendingTitle')}
           >
-            Cancel pending
+            {t('machineEdit.machineSettings.cancelPending')}
           </button>
         </div>
       </div>
       <details className="mt-1">
-        <summary className="small">Show pending values</summary>
+        <summary className="small">{t('machineEdit.machineSettings.showPendingValues')}</summary>
         <pre className="small mb-0">{JSON.stringify(pendingChanges, null, 2)}</pre>
       </details>
     </div>
@@ -659,6 +669,7 @@ const MachineSettings = ({
   isRunning,
   onDone,
 }) => {
+  const { t } = useTranslation();
   const { makeAgentRequest, startMachine, stopMachine } = useServers();
   const [tab, setTab] = useState('general');
   const [values, setValues] = useState({});
@@ -876,7 +887,7 @@ const MachineSettings = ({
     setError('');
     try {
       if (restart) {
-        setStep(`Stopping ${machineName}…`);
+        setStep(t('machineEdit.machineSettings.stoppingMachine', { machineName }));
         const stopResult = await stopMachine(
           currentServer.hostname,
           currentServer.port,
@@ -884,15 +895,17 @@ const MachineSettings = ({
           machineName
         );
         if (!stopResult.success) {
-          throw new Error(`Stop failed — nothing was applied: ${stopResult.message}`);
+          throw new Error(
+            t('machineEdit.machineSettings.stopFailedError', { message: stopResult.message })
+          );
         }
         const stopped = await waitForStopped();
         if (!stopped) {
-          throw new Error(`${machineName} did not stop in time — nothing was applied.`);
+          throw new Error(t('machineEdit.machineSettings.stopTimeoutError', { machineName }));
         }
       }
 
-      setStep('Applying changes…');
+      setStep(t('machineEdit.machineSettings.applyingChanges'));
       const result = await modifyInfrastructure(
         currentServer.hostname,
         currentServer.port,
@@ -903,7 +916,9 @@ const MachineSettings = ({
       if (!result.success) {
         setErrorDetails(validationDetails(result));
         throw new Error(
-          validationDetails(result).length > 0 ? 'Insufficient resources' : result.message
+          validationDetails(result).length > 0
+            ? t('machineEdit.machineSettings.insufficientResources')
+            : result.message
         );
       }
       setErrorDetails([]);
@@ -911,24 +926,26 @@ const MachineSettings = ({
 
       let task = null;
       if (data.task_id) {
-        setStep('Waiting for the modification task…');
+        setStep(t('machineEdit.machineSettings.waitingForModificationTask'));
         task = await waitForTask(data.task_id, queuedWhileRunning ? 10 : 30);
         if (task?.status === 'failed') {
-          throw new Error(task.error_message || 'The modification task failed.');
+          throw new Error(
+            task.error_message || t('machineEdit.machineSettings.modificationTaskFailed')
+          );
         }
       }
 
-      const warnings = warningsSuffix(data);
-      const base = messageBase(data, machineName);
+      const warnings = warningsSuffix(data, t);
+      const base = messageBase(data, machineName, t);
 
       if (data.status === 'pending_power_cycle') {
-        onDone(pendingNotice(data, base));
+        onDone(pendingNotice(data, base, t));
         resetForm();
         return;
       }
 
       if (restart) {
-        setStep(`Starting ${machineName}…`);
+        setStep(t('machineEdit.machineSettings.startingMachine', { machineName }));
         const startResult = await startMachine(
           currentServer.hostname,
           currentServer.port,
@@ -936,15 +953,17 @@ const MachineSettings = ({
           machineName
         );
         if (!startResult.success) {
-          throw new Error(`Changes were applied, but the start failed: ${startResult.message}`);
+          throw new Error(
+            t('machineEdit.machineSettings.startFailedError', { message: startResult.message })
+          );
         }
         onDone({
-          text: `Changes applied to ${machineName} — it is starting.${warnings}`,
+          text: `${t('machineEdit.machineSettings.changesAppliedStarting', { machineName })}${warnings}`,
           warning: warnings !== '',
         });
       } else if (queuedWhileRunning) {
         onDone({
-          text: `Changes accepted for ${machineName} — they apply on the next power cycle.${warnings}`,
+          text: `${t('machineEdit.machineSettings.changesAcceptedQueued', { machineName })}${warnings}`,
           warning: true,
         });
       } else if (immediate) {
@@ -957,9 +976,12 @@ const MachineSettings = ({
         // off, the task ran immediately) — the agent's queued-task wording
         // ("must be powered off…") would be stale. requires_restart still
         // beats flow-based wording for the take-effect note.
-        const applied = task?.status === 'completed' ? `Changes applied to ${machineName}` : base;
+        const applied =
+          task?.status === 'completed'
+            ? t('machineEdit.machineSettings.changesAppliedTo', { machineName })
+            : base;
         const restartNote =
-          data.requires_restart === false ? '' : ' — they take effect when it starts';
+          data.requires_restart === false ? '' : t('machineEdit.machineSettings.takeEffectOnStart');
         onDone({
           text: `${applied}${restartNote}.${warnings}`,
           warning: warnings !== '',
@@ -1000,7 +1022,7 @@ const MachineSettings = ({
       try {
         vboxPassthrough = JSON.parse(vboxJson);
       } catch {
-        setError('The VBox passthrough section is not valid JSON.');
+        setError(t('machineEdit.machineSettings.vboxJsonInvalid'));
         return;
       }
     }
@@ -1010,7 +1032,7 @@ const MachineSettings = ({
     // bhyve CPU topology — '' = unchanged; complex needs all three fields.
     if (cpuMode === 'complex') {
       if (!cpuTopo.sockets || !cpuTopo.cores || !cpuTopo.threads) {
-        setError('Complex CPU topology needs sockets, cores, and threads.');
+        setError(t('machineEdit.machineSettings.complexCpuTopologyRequired'));
         return;
       }
       changes.cpu_configuration = 'complex';
@@ -1071,7 +1093,7 @@ const MachineSettings = ({
       changes.vbox = { ...(changes.vbox || {}), ...vboxPassthrough };
     }
     if (Object.keys(changes).length === 0) {
-      setError('Nothing changed.');
+      setError(t('machineEdit.machineSettings.nothingChanged'));
       return;
     }
     setError('');
@@ -1124,7 +1146,10 @@ const MachineSettings = ({
     );
     setLoading(false);
     if (result.success) {
-      onDone({ text: `Pending changes for ${machineName} cleared.`, warning: false });
+      onDone({
+        text: t('machineEdit.machineSettings.pendingChangesCleared', { machineName }),
+        warning: false,
+      });
     } else {
       setError(result.message);
     }
@@ -1148,13 +1173,15 @@ const MachineSettings = ({
       const task = await waitForTask(data.task_id, 30);
       if (task?.status === 'failed') {
         setLoading(false);
-        setError(task.error_message || 'Applying the pending changes failed.');
+        setError(task.error_message || t('machineEdit.machineSettings.applyPendingFailed'));
         return;
       }
     }
     setLoading(false);
     onDone({
-      text: `${(data.message || `Pending changes applied to ${machineName}`).replace(/\.+$/u, '')}.`,
+      text: `${(
+        data.message || t('machineEdit.machineSettings.pendingChangesApplied', { machineName })
+      ).replace(/\.+$/u, '')}.`,
       warning: false,
     });
   };
@@ -1258,21 +1285,23 @@ const MachineSettings = ({
               onClick={() => setTab(entry.id)}
               disabled={formDisabled}
             >
-              {entry.label}
+              {t(`machineEdit.machineSettings.tab.${entry.id}`)}
             </button>
           </li>
         ))}
       </ul>
 
-      <p className="form-text text-muted">
-        Fields show the {`machine's`} current values where the agent reports them; edits are cached
-        across all tabs until you Apply, and only values you CHANGED are sent. Blank = the shown
-        default stays in effect.
-      </p>
+      <p className="form-text text-muted">{t('machineEdit.machineSettings.fieldsHint')}</p>
 
       {tab === 'general' && (
         <GeneralSettingsTab
-          fields={FIELDS.filter(field => !field.bhyveOnly || hasHypervisor(currentServer, 'bhyve'))}
+          fields={FIELDS.filter(
+            field => !field.bhyveOnly || hasHypervisor(currentServer, 'bhyve')
+          ).map(field => ({
+            ...field,
+            label: t(`machineEdit.machineSettings.field.${field.key}`),
+            ...(field.hint && { hint: t(`machineEdit.machineSettings.fieldHint.${field.key}`) }),
+          }))}
           knobValues={knobValues}
           defaultsDoc={agentDefaults}
           osTypes={osTypes}
@@ -1306,20 +1335,31 @@ const MachineSettings = ({
         hasHypervisor(currentServer, 'bhyve') &&
         (() => {
           const currentTopo = seed.cpuTopology;
+          const currentTopoLabel = () => {
+            if (currentTopo) {
+              return t('machineEdit.machineSettings.cpuTopoComplex', {
+                sockets: currentTopo.sockets,
+                cores: currentTopo.cores,
+                threads: currentTopo.threads,
+              });
+            }
+            return seed.values.vcpus
+              ? t('machineEdit.machineSettings.cpuTopoSimpleWithVcpus', {
+                  vcpus: seed.values.vcpus,
+                })
+              : t('machineEdit.machineSettings.cpuTopoSimple');
+          };
           return (
             <div className="mt-3">
-              <h6 className="fw-bold">CPU Topology</h6>
+              <h6 className="fw-bold">{t('machineEdit.machineSettings.cpuTopology')}</h6>
               <p className="form-text text-muted mt-0 mb-2">
-                Current:{' '}
-                {currentTopo
-                  ? `complex — sockets=${currentTopo.sockets}, cores=${currentTopo.cores}, threads=${currentTopo.threads}`
-                  : `simple — plain vCPU count${seed.values.vcpus ? ` (${seed.values.vcpus})` : ''}`}
-                . Applies with the other infrastructure changes on the next power cycle.
+                {t('machineEdit.machineSettings.cpuTopoCurrentPrefix')} {currentTopoLabel()}
+                {t('machineEdit.machineSettings.cpuTopoApplyNote')}
               </p>
               <div className="row g-3">
                 <div className="col-12 col-md-4">
                   <label className="form-label" htmlFor="machine-cpu-mode">
-                    Mode
+                    {t('machineEdit.machineSettings.mode')}
                   </label>
                   <select
                     id="machine-cpu-mode"
@@ -1340,9 +1380,9 @@ const MachineSettings = ({
                     }}
                     disabled={formDisabled}
                   >
-                    <option value="">unchanged</option>
-                    <option value="simple">simple — vcpus is the count</option>
-                    <option value="complex">complex — sockets / cores / threads</option>
+                    <option value="">{t('machineEdit.machineSettings.unchanged')}</option>
+                    <option value="simple">{t('machineEdit.machineSettings.simpleVcpus')}</option>
+                    <option value="complex">{t('machineEdit.machineSettings.complexTopo')}</option>
                   </select>
                 </div>
                 {cpuMode === 'complex' && (
@@ -1361,9 +1401,7 @@ const MachineSettings = ({
       {tab === 'credentials' && (
         <div className="row g-3">
           <p className="form-text text-muted mt-0 mb-0">
-            The SSH console, SFTP, and the provisioning pipeline log into the guest with these.
-            Applies immediately, even while running. Only fields you edit are saved — clearing an
-            edited field DELETES that credential; untouched fields keep their stored value.
+            {t('machineEdit.machineSettings.credentialsHint')}
           </p>
           {CRED_FIELDS.map(field => {
             let control;
@@ -1375,8 +1413,8 @@ const MachineSettings = ({
                   onChange={next => setCred(field.key, next)}
                   server={currentServer}
                   mode="file"
-                  pickTitle="Pick the private key file"
-                  placeholder="unchanged"
+                  pickTitle={t('machineEdit.machineSettings.pickPrivateKeyFile')}
+                  placeholder={t('machineEdit.machineSettings.unchangedPlaceholder')}
                   disabled={formDisabled}
                 />
               );
@@ -1388,7 +1426,7 @@ const MachineSettings = ({
                     className="form-control"
                     type={revealPass ? 'text' : 'password'}
                     autoComplete="new-password"
-                    placeholder="unchanged"
+                    placeholder={t('machineEdit.machineSettings.unchangedPlaceholder')}
                     value={creds[field.key] ?? ''}
                     onChange={e => setCred(field.key, e.target.value)}
                     disabled={formDisabled}
@@ -1397,7 +1435,11 @@ const MachineSettings = ({
                     type="button"
                     className="btn btn-outline-secondary"
                     onClick={() => setRevealPass(reveal => !reveal)}
-                    title={revealPass ? 'Hide the password' : 'Show the password'}
+                    title={
+                      revealPass
+                        ? t('machineEdit.machineSettings.hidePassword')
+                        : t('machineEdit.machineSettings.showPassword')
+                    }
                     disabled={formDisabled}
                   >
                     <i className={`fas ${revealPass ? 'fa-eye-slash' : 'fa-eye'}`} />
@@ -1410,7 +1452,7 @@ const MachineSettings = ({
                   id={`machine-cred-${field.key}`}
                   className="form-control"
                   type="text"
-                  placeholder="unchanged"
+                  placeholder={t('machineEdit.machineSettings.unchangedPlaceholder')}
                   value={creds[field.key] ?? ''}
                   onChange={e => setCred(field.key, e.target.value)}
                   disabled={formDisabled}
@@ -1420,7 +1462,7 @@ const MachineSettings = ({
             return (
               <div className="col-12 col-md-4" key={field.key}>
                 <label className="form-label" htmlFor={`machine-cred-${field.key}`}>
-                  {field.label}
+                  {t(`machineEdit.machineSettings.credField.${field.key}`)}
                 </label>
                 {control}
               </div>
@@ -1469,7 +1511,7 @@ const MachineSettings = ({
           />
           {activeSection.id === 'platform' && (
             <>
-              <h6 className="fw-bold mt-3">Autostart</h6>
+              <h6 className="fw-bold mt-3">{t('machineEdit.hardwareSections.autostart')}</h6>
               <HardwareSectionForm
                 section={autostartSection}
                 values={hardware.autostart || {}}
@@ -1484,13 +1526,13 @@ const MachineSettings = ({
 
       {tab === 'ports' && (
         <>
-          <h6 className="fw-bold">Serial Ports (COM)</h6>
+          <h6 className="fw-bold">{t('machineEdit.machineSettings.serialPorts')}</h6>
           <SerialPortsEditor
             rows={serialRows}
             onRowsChange={setSerialRows}
             disabled={formDisabled}
           />
-          <h6 className="fw-bold mt-3">Parallel Ports (LPT)</h6>
+          <h6 className="fw-bold mt-3">{t('machineEdit.machineSettings.parallelPorts')}</h6>
           <ParallelPortsEditor
             rows={parallelRows}
             onRowsChange={setParallelRows}
@@ -1562,10 +1604,10 @@ const MachineSettings = ({
       {tab === 'advanced' && (
         <>
           <label className="form-label" htmlFor="machine-edit-vbox-json">
-            Hypervisor passthrough (<code>vbox</code>) — raw JSON, e.g.{' '}
-            <code>{'{"directives": [{"directive": "--vram", "value": "64"}]}'}</code>, passed to
-            modifyvm verbatim. For exotics the first-class tabs do not carry (teleporter, cpuid-set,
-            tracing, guest-debug, pci-attach).
+            {t('machineEdit.machineSettings.hypervisorPassthroughPrefix')} <code>vbox</code>
+            {t('machineEdit.machineSettings.hypervisorPassthroughMiddle')}{' '}
+            <code>{'{"directives": [{"directive": "--vram", "value": "64"}]}'}</code>
+            {t('machineEdit.machineSettings.hypervisorPassthroughTail')}
           </label>
           <textarea
             id="machine-edit-vbox-json"
@@ -1586,7 +1628,12 @@ const MachineSettings = ({
         disk={manageDisk}
         isRunning={isRunning}
         pools={pools}
-        onResized={() => onDone({ text: `Disk resized on ${machineName}.`, warning: false })}
+        onResized={() =>
+          onDone({
+            text: t('machineEdit.machineSettings.diskResized', { machineName }),
+            warning: false,
+          })
+        }
       />
 
       <div className="d-flex gap-2 mt-3 border-top pt-3">
@@ -1597,7 +1644,7 @@ const MachineSettings = ({
           disabled={formDisabled}
         >
           <i className="fas fa-check me-2" />
-          Apply
+          {t('machineEdit.machineSettings.apply')}
         </button>
         <button
           type="button"
@@ -1605,13 +1652,15 @@ const MachineSettings = ({
           onClick={resetForm}
           disabled={formDisabled}
         >
-          Reset
+          {t('machineEdit.machineSettings.reset')}
         </button>
       </div>
 
       {rawDetails && (
         <details className="mt-3">
-          <summary className="fs-6 fw-bold">Raw Data (Debug)</summary>
+          <summary className="fs-6 fw-bold">
+            {t('machineEdit.machineSettings.rawDataDebug')}
+          </summary>
           <div className="card">
             <div className="card-body">
               <pre className="small">{JSON.stringify(rawDetails, null, 2)}</pre>

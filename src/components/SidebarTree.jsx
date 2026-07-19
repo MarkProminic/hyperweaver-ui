@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useContext, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -71,6 +72,7 @@ MachineNode.propTypes = {
 // Machine expansion is capability-gated (hasMachines): agents that don't offer machine
 // management yet render as a plain host row — no caret, no machine fetch.
 const HostNode = ({ server, autoExpanded = false }) => {
+  const { t } = useTranslation();
   const { currentServer, currentMachine, selectServer, makeAgentRequest } = useServers();
   const { sidebarMinimized } = useContext(UserSettings);
   const navigate = useNavigate();
@@ -148,8 +150,16 @@ const HostNode = ({ server, autoExpanded = false }) => {
             type="button"
             className="btn px-1"
             onClick={() => setExpanded(prev => !prev)}
-            title={expanded ? 'Collapse' : 'Expand'}
-            aria-label={expanded ? 'Collapse host' : 'Expand host'}
+            title={
+              expanded
+                ? t('chrome.sidebarTree.collapseButton')
+                : t('chrome.sidebarTree.expandButton')
+            }
+            aria-label={
+              expanded
+                ? t('chrome.sidebarTree.collapseHostAriaLabel')
+                : t('chrome.sidebarTree.expandHostAriaLabel')
+            }
           >
             <i className={`fas fa-angle-${expanded ? 'down' : 'right'}`} />
           </button>
@@ -175,17 +185,19 @@ const HostNode = ({ server, autoExpanded = false }) => {
           {machines === null && !loadError && (
             <div className="hw-tree-row hw-tree-machine text-muted small py-1">
               <i className="fas fa-spinner fa-spin me-2" />
-              Loading…
+              {t('chrome.sidebarTree.loadingMachines')}
             </div>
           )}
           {loadError && machines === null && (
             <div className="hw-tree-row hw-tree-machine text-danger small py-1">
               <i className="fas fa-circle-xmark fa-xs me-2" />
-              Unreachable
+              {t('chrome.sidebarTree.unreachable')}
             </div>
           )}
           {machines && machines.all.length === 0 && (
-            <div className="hw-tree-row hw-tree-machine text-muted small py-1">No machines</div>
+            <div className="hw-tree-row hw-tree-machine text-muted small py-1">
+              {t('chrome.sidebarTree.noMachines')}
+            </div>
           )}
           {machines &&
             machines.all.map(name => (
@@ -216,6 +228,7 @@ HostNode.propTypes = {
 // The aggregate root (Aggregated only) — its Overview IS the Dashboard (contract §2).
 // Admins get an Add-Host affordance that routes to the existing servers/add flow.
 const DatacenterNode = ({ label, canAddHost }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { sidebarMinimized } = useContext(UserSettings);
@@ -261,8 +274,8 @@ const DatacenterNode = ({ label, canAddHost }) => {
         <button
           type="button"
           className="btn px-1"
-          title="Add a host"
-          aria-label="Add a host"
+          title={t('chrome.sidebarTree.addHostButton')}
+          aria-label={t('chrome.sidebarTree.addHostButton')}
           onClick={() => navigate('/ui/settings/hyperweaver?tab=servers')}
         >
           <i className="fas fa-plus" />
@@ -278,6 +291,7 @@ DatacenterNode.propTypes = {
 };
 
 const SidebarTree = () => {
+  const { t } = useTranslation();
   const { isDirect } = useMode();
   const { servers, currentServer } = useServers();
   const { datacenterLabel, user } = useAuth();
@@ -299,7 +313,10 @@ const SidebarTree = () => {
   // Aggregated: Datacenter root (= Dashboard) → hosts → machines.
   return (
     <div className="hw-tree">
-      <DatacenterNode label={datacenterLabel || 'Datacenter'} canAddHost={canAddHost} />
+      <DatacenterNode
+        label={datacenterLabel || t('chrome.sidebarTree.datacenterDefault')}
+        canAddHost={canAddHost}
+      />
       {servers.map(server => (
         <HostNode key={server.id ?? server.hostname} server={server} />
       ))}

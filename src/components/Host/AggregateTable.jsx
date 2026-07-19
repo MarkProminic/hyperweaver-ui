@@ -1,7 +1,9 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const AggregateTable = ({ aggregates, loading, onDelete, onViewDetails }) => {
+  const { t } = useTranslation();
   const [deleteLoading, setDeleteLoading] = useState({});
 
   const handleDelete = async aggregate => {
@@ -77,7 +79,7 @@ const AggregateTable = ({ aggregates, loading, onDelete, onViewDetails }) => {
     }
 
     if (links.length === 0) {
-      return 'None';
+      return t('host.aggregateTable.none');
     }
     if (links.length <= 2) {
       return links.join(', ');
@@ -98,7 +100,7 @@ const AggregateTable = ({ aggregates, loading, onDelete, onViewDetails }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading link aggregates...</p>
+        <p className="mt-2">{t('host.aggregateTable.loading')}</p>
       </div>
     );
   }
@@ -107,7 +109,7 @@ const AggregateTable = ({ aggregates, loading, onDelete, onViewDetails }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-link fa-2x text-muted" />
-        <p className="mt-2 text-muted">No link aggregates found</p>
+        <p className="mt-2 text-muted">{t('host.aggregateTable.empty')}</p>
       </div>
     );
   }
@@ -117,13 +119,13 @@ const AggregateTable = ({ aggregates, loading, onDelete, onViewDetails }) => {
       <table className="table table-striped table-hover table-sm">
         <thead>
           <tr>
-            <th>Aggregate</th>
-            <th>Policy</th>
-            <th>Member Links</th>
-            <th>State</th>
-            <th>LACP Mode</th>
-            <th>Timer</th>
-            <th width="120">Actions</th>
+            <th>{t('host.aggregateTable.aggregate')}</th>
+            <th>{t('host.aggregateTable.policy')}</th>
+            <th>{t('host.aggregateTable.memberLinks')}</th>
+            <th>{t('host.aggregateTable.state')}</th>
+            <th>{t('host.aggregateTable.lacpMode')}</th>
+            <th>{t('host.aggregateTable.timer')}</th>
+            <th width="120">{t('host.aggregateTable.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -152,8 +154,9 @@ const AggregateTable = ({ aggregates, loading, onDelete, onViewDetails }) => {
                   </span>
                   {getLinksArray(memberLinks).length > 0 && (
                     <div className="small text-muted">
-                      {getLinksArray(memberLinks).length} link
-                      {getLinksArray(memberLinks).length !== 1 ? 's' : ''}
+                      {t('host.aggregateTable.linkCount', {
+                        count: getLinksArray(memberLinks).length,
+                      })}
                     </div>
                   )}
                 </td>
@@ -170,7 +173,7 @@ const AggregateTable = ({ aggregates, loading, onDelete, onViewDetails }) => {
                       className="btn btn-sm btn-secondary"
                       onClick={() => onViewDetails(aggregate)}
                       disabled={loading || isDeleting}
-                      title="View Details"
+                      title={t('host.aggregateTable.viewDetails')}
                     >
                       <i className="fas fa-info-circle" />
                     </button>
@@ -181,7 +184,7 @@ const AggregateTable = ({ aggregates, loading, onDelete, onViewDetails }) => {
                       className="btn btn-sm btn-danger"
                       onClick={() => handleDelete(aggregate)}
                       disabled={loading || isDeleting}
-                      title="Delete Aggregate"
+                      title={t('host.aggregateTable.deleteAggregate')}
                     >
                       {isDeleting && (
                         <span

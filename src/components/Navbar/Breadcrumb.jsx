@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,6 +15,7 @@ import { useAgentHostname } from '../../hooks/useAgentHostname';
  * - Direct: no Datacenter crumb (single-host, no aggregate root) — starts at the host.
  */
 const Breadcrumb = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isDirect } = useMode();
   const { currentServer, currentMachine } = useServers();
@@ -24,7 +26,7 @@ const Breadcrumb = () => {
   if (!isDirect) {
     crumbs.push({
       icon: 'fas fa-sitemap',
-      label: datacenterLabel || 'Datacenter',
+      label: datacenterLabel || t('navbar.breadcrumb.datacenter'),
       to: '/ui/dashboard',
     });
   }

@@ -1,8 +1,10 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { computeSliderBackground, formatGbValue, safeBytesToGb, safeParseFloat } from './arcUtils';
 
 const MemoryParametersSection = ({ formData, currentConfig, loading, handleFormChange }) => {
+  const { t } = useTranslation();
   const constraints = currentConfig?.system_constraints;
 
   // ARC Max slider bounds (computed once, used in slider attrs + help text + gradient)
@@ -33,7 +35,7 @@ const MemoryParametersSection = ({ formData, currentConfig, loading, handleFormC
     <>
       <h5 className="fs-6 fw-bold mb-3 text-primary">
         <i className="fas fa-memory me-2" />
-        <span>Memory Parameters</span>
+        <span>{t('hostCharts.memoryParametersSection.sectionTitle')}</span>
       </h5>
 
       {/* ARC Max / ARC Min */}
@@ -41,7 +43,7 @@ const MemoryParametersSection = ({ formData, currentConfig, loading, handleFormC
         <div className="col-12 col-lg-6">
           <div className="mb-4">
             <label className="form-label">
-              Maximum ARC Size:{' '}
+              {t('hostCharts.memoryParametersSection.maximumArcSizeLabel')}:{' '}
               {formatGbValue(formData.arc_max_gb)
                 ? `${formatGbValue(formData.arc_max_gb)} GB`
                 : 'Auto'}
@@ -78,10 +80,10 @@ const MemoryParametersSection = ({ formData, currentConfig, loading, handleFormC
                 className="btn btn-sm btn-secondary"
                 onClick={() => handleFormChange('arc_max_gb', '')}
                 disabled={loading}
-                title="Reset to auto-calculation"
+                title={t('hostCharts.memoryParametersSection.resetToAutoTitle')}
               >
                 <i className="fas fa-undo me-2" />
-                <span>Auto</span>
+                <span>{t('hostCharts.memoryParametersSection.autoLabel')}</span>
               </button>
             </div>
           </div>
@@ -90,7 +92,7 @@ const MemoryParametersSection = ({ formData, currentConfig, loading, handleFormC
         <div className="col-12 col-lg-6">
           <div className="mb-4">
             <label className="form-label">
-              Minimum ARC Size:{' '}
+              {t('hostCharts.memoryParametersSection.minimumArcSizeLabel')}:{' '}
               {formatGbValue(formData.arc_min_gb)
                 ? `${formatGbValue(formData.arc_min_gb)} GB`
                 : 'Auto'}
@@ -127,10 +129,10 @@ const MemoryParametersSection = ({ formData, currentConfig, loading, handleFormC
                 className="btn btn-sm btn-secondary"
                 onClick={() => handleFormChange('arc_min_gb', '')}
                 disabled={loading}
-                title="Reset to auto-calculation"
+                title={t('hostCharts.memoryParametersSection.resetToAutoTitle')}
               >
                 <i className="fas fa-undo me-2" />
-                <span>Auto</span>
+                <span>{t('hostCharts.memoryParametersSection.autoLabel')}</span>
               </button>
             </div>
           </div>
@@ -142,8 +144,13 @@ const MemoryParametersSection = ({ formData, currentConfig, loading, handleFormC
         <div className="col-12 col-lg-6">
           <div className="mb-4">
             <label className="form-label">
-              ARC Max Percent: {formData.arc_max_percent ? `${formData.arc_max_percent}%` : 'Auto'}
-              <span className="badge text-bg-success ms-2">Dynamic</span>
+              {t('hostCharts.memoryParametersSection.arcMaxPercentLabel')}:{' '}
+              {formData.arc_max_percent
+                ? `${formData.arc_max_percent}%`
+                : t('hostCharts.memoryParametersSection.autoValue')}
+              <span className="badge text-bg-success ms-2">
+                {t('hostCharts.memoryParametersSection.dynamicBadge')}
+              </span>
             </label>
             <div className="mt-4 mb-4">
               <input
@@ -172,10 +179,10 @@ const MemoryParametersSection = ({ formData, currentConfig, loading, handleFormC
                 className="btn btn-sm btn-secondary"
                 onClick={() => handleFormChange('arc_max_percent', '')}
                 disabled={loading}
-                title="Reset to auto-calculation"
+                title={t('hostCharts.memoryParametersSection.resetToAutoTitle')}
               >
                 <i className="fas fa-undo me-2" />
-                <span>Auto</span>
+                <span>{t('hostCharts.memoryParametersSection.autoLabel')}</span>
               </button>
             </div>
           </div>
@@ -184,9 +191,13 @@ const MemoryParametersSection = ({ formData, currentConfig, loading, handleFormC
         <div className="col-12 col-lg-6">
           <div className="mb-4">
             <label className="form-label">
-              User Reserve Hint:{' '}
-              {formData.user_reserve_hint_pct ? `${formData.user_reserve_hint_pct}%` : 'None'}
-              <span className="badge text-bg-success ms-2">Dynamic</span>
+              {t('hostCharts.memoryParametersSection.userReserveHintLabel')}:{' '}
+              {formData.user_reserve_hint_pct
+                ? `${formData.user_reserve_hint_pct}%`
+                : t('hostCharts.memoryParametersSection.noneValue')}
+              <span className="badge text-bg-success ms-2">
+                {t('hostCharts.memoryParametersSection.dynamicBadge')}
+              </span>
             </label>
             <div className="mt-4 mb-4">
               <input
@@ -220,10 +231,10 @@ const MemoryParametersSection = ({ formData, currentConfig, loading, handleFormC
                 className="btn btn-sm btn-secondary"
                 onClick={() => handleFormChange('user_reserve_hint_pct', '')}
                 disabled={loading}
-                title="Reset to no reservation"
+                title={t('hostCharts.memoryParametersSection.resetToNoneTitle')}
               >
                 <i className="fas fa-undo me-2" />
-                <span>None</span>
+                <span>{t('hostCharts.memoryParametersSection.noneLabel')}</span>
               </button>
             </div>
           </div>

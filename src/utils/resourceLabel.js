@@ -1,3 +1,5 @@
+import i18n from '../i18n';
+
 /**
  * Capability-driven resource label — "Zones" vs "Machines" (contract C7 / roadmap item 1).
  *
@@ -26,9 +28,10 @@ export const resourceLabel = (servers, { plural = true } = {}) => {
   // else — virtualbox, a mix, or an unknown/legacy agent with no capability — is "Machines".
   const allBhyve =
     hypervisors.length > 0 && hypervisors.every(hypervisor => hypervisor === 'bhyve');
-  const noun = allBhyve ? 'Zone' : 'Machine';
-
-  return plural ? `${noun}s` : noun;
+  if (allBhyve) {
+    return plural ? i18n.t('common.nounZones') : i18n.t('common.nounZone');
+  }
+  return plural ? i18n.t('common.nounMachines') : i18n.t('common.nounMachine');
 };
 
 // NOTE: the former machinesPath() dual-path helper is deliberately GONE — the UI calls

@@ -2,6 +2,7 @@ import { connectionInfo, sessionStats } from '@devolutions/iron-remote-desktop-r
 import PropTypes from 'prop-types';
 import { useEffect, useRef, useState } from 'react';
 import { Dropdown } from 'react-bootstrap';
+import { useTranslation } from 'react-i18next';
 
 import { makeAgentRequest } from '../api/serverUtils';
 
@@ -24,18 +25,8 @@ const HISTORY_LENGTH = Math.floor((HISTORY_SECONDS * 1000) / SAMPLE_EVERY_MS);
 
 const LEVELS = ['Excellent', 'Good', 'Fair', 'Poor'];
 
-const VERDICTS = [
-  { label: 'Your connection is excellent', hint: 'Expect top performance.', color: '#2fb344' },
-  { label: 'Your connection is good', hint: 'Minor latency possible.', color: '#8cc152' },
-  { label: 'Your connection is fair', hint: 'Expect visible lag.', color: '#f0ad4e' },
-  { label: 'Your connection is poor', hint: 'Expect disruptions.', color: '#d9534f' },
-];
-
-const STALLED_VERDICT = {
-  label: 'Your session looks stalled',
-  hint: 'Input is going up but no display updates are coming back.',
-  color: '#d9534f',
-};
+const VERDICT_COLORS = ['#2fb344', '#8cc152', '#f0ad4e', '#d9534f'];
+const STALLED_COLOR = '#d9534f';
 
 const STALL_AFTER_SECONDS = 5;
 
@@ -73,8 +64,16 @@ const formatDuration = ms => {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 };
 
+const LEVEL_KEYS = {
+  Excellent: 'console.historySparkline.excellent',
+  Good: 'console.historySparkline.good',
+  Fair: 'console.historySparkline.fair',
+  Poor: 'console.historySparkline.poor',
+};
+
 /** The 15-minute quality sparkline: one point per 5s sample, four level rows. */
 const HistorySparkline = ({ history }) => {
+  const { t } = useTranslation();
   const width = 220;
   const height = 60;
   const top = 6;
@@ -94,14 +93,14 @@ const HistorySparkline = ({ history }) => {
         style={{ fontSize: '0.6rem' }}
       >
         {LEVELS.map(level => (
-          <span key={level}>{level}</span>
+          <span key={level}>{t(LEVEL_KEYS[level])}</span>
         ))}
       </div>
       <svg
         width={width}
         height={height}
         role="img"
-        aria-label="Connection quality over the last 15 minutes"
+        aria-label={t('console.historySparkline.qualityAriaLabel')}
       >
         {LEVELS.map((level, index) => (
           <line
@@ -146,6 +145,34 @@ const RdpConnectionPanel = ({
   settings,
   guestFacts = null,
 }) => {
+  const { t } = useTranslation();
+  const verdicts = [
+    {
+      label: t('console.rdpConnectionPanel.verdictExcellentLabel'),
+      hint: t('console.rdpConnectionPanel.verdictExcellentHint'),
+      color: VERDICT_COLORS[0],
+    },
+    {
+      label: t('console.rdpConnectionPanel.verdictGoodLabel'),
+      hint: t('console.rdpConnectionPanel.verdictGoodHint'),
+      color: VERDICT_COLORS[1],
+    },
+    {
+      label: t('console.rdpConnectionPanel.verdictFairLabel'),
+      hint: t('console.rdpConnectionPanel.verdictFairHint'),
+      color: VERDICT_COLORS[2],
+    },
+    {
+      label: t('console.rdpConnectionPanel.verdictPoorLabel'),
+      hint: t('console.rdpConnectionPanel.verdictPoorHint'),
+      color: VERDICT_COLORS[3],
+    },
+  ];
+  const stalledVerdict = {
+    label: t('console.rdpConnectionPanel.verdictStalledLabel'),
+    hint: t('console.rdpConnectionPanel.verdictStalledHint'),
+    color: STALLED_COLOR,
+  };
   const [rates, setRates] = useState({ down: null, up: null, updates: null });
   const [latency, setLatency] = useState(null);
   const [duration, setDuration] = useState(0);
@@ -251,13 +278,13 @@ const RdpConnectionPanel = ({
   }, [connected, currentServer]);
 
   const stalled = connected && stallRef.current.stalled;
-  const verdict = stalled ? STALLED_VERDICT : VERDICTS[scoreSample(latency)];
+  const verdict = stalled ? stalledVerdict : verdicts[scoreSample(latency)];
 
   const transport = 'WSS → IronRDP → TLS → RDP';
 
   const outputPathValue = (
-    <span title="Display updates always ride fast-path encoding — on every server, VRDE included.">
-      Fast-path
+    <span title={t('console.rdpConnectionPanel.fastPathHint')}>
+      {t('console.rdpConnectionPanel.fastPath')}
     </span>
   );
 
@@ -265,11 +292,13 @@ const RdpConnectionPanel = ({
     <span
       title={
         negotiated.inputMode === 'slow-path'
-          ? "Slow-path is VRDE's only input mode — a few dozen bytes per keystroke, zero performance impact."
-          : 'Native fast-path input encoding (real RDP server).'
+          ? t('console.rdpConnectionPanel.slowPathHint')
+          : t('console.rdpConnectionPanel.fastPathInputHint')
       }
     >
-      {negotiated.inputMode === 'slow-path' ? 'Slow-path (VRDE)' : 'Fast-path'}
+      {negotiated.inputMode === 'slow-path'
+        ? t('console.rdpConnectionPanel.slowPathVrde')
+        : t('console.rdpConnectionPanel.fastPath')}
     </span>
   ) : null;
 
@@ -300,65 +329,107 @@ const RdpConnectionPanel = ({
 
   return (
     <Dropdown autoClose="outside" align="end">
-      <Dropdown.Toggle variant="secondary" size="sm" title="Connection details">
+      <Dropdown.Toggle
+        variant="secondary"
+        size="sm"
+        title={t('console.rdpConnectionPanel.connectionDetails')}
+      >
         <i className="fas fa-wave-square" />
       </Dropdown.Toggle>
       <Dropdown.Menu className="p-3 hw-rdp-connection-menu">
         <div className="d-flex align-items-center gap-2 mb-1">
           <i className="fas fa-circle" style={{ color: verdict.color, fontSize: '0.6rem' }} />
-          <strong className="small">{connected ? verdict.label : 'Not connected'}</strong>
+          <strong className="small">
+            {connected ? verdict.label : t('console.rdpConnectionPanel.notConnected')}
+          </strong>
         </div>
         <div className="text-muted mb-2" style={{ fontSize: '0.7rem' }}>
-          {connected ? verdict.hint : 'Connection details appear once the session is live.'}
+          {connected ? verdict.hint : t('console.rdpConnectionPanel.detailsAppearOnceLive')}
         </div>
 
         <div className="border-top pt-2 mb-2">
-          <div className="text-muted small fw-bold mb-1">Network</div>
-          <DetailRow label="Latency" value={latency === null ? '—' : `${latency} ms`} />
-          <DetailRow label="Down" value={formatRate(rates.down)} />
-          <DetailRow label="Up" value={formatRate(rates.up)} />
+          <div className="text-muted small fw-bold mb-1">
+            {t('console.rdpConnectionPanel.network')}
+          </div>
           <DetailRow
-            label="Updates/s"
+            label={t('console.rdpConnectionPanel.latency')}
+            value={latency === null ? '—' : `${latency} ms`}
+          />
+          <DetailRow label={t('console.rdpConnectionPanel.down')} value={formatRate(rates.down)} />
+          <DetailRow label={t('console.rdpConnectionPanel.up')} value={formatRate(rates.up)} />
+          <DetailRow
+            label={t('console.rdpConnectionPanel.updatesPerSecond')}
             value={rates.updates === null ? '—' : rates.updates.toFixed(0)}
           />
-          <DetailRow label="Transport" value={transport} />
+          <DetailRow label={t('console.rdpConnectionPanel.transport')} value={transport} />
         </div>
 
         <div className="border-top pt-2 mb-2">
-          <div className="text-muted small fw-bold mb-1">Session</div>
-          <DetailRow label="Machine" value={machineName || '—'} />
-          <DetailRow label="Duration" value={formatDuration(duration)} />
+          <div className="text-muted small fw-bold mb-1">
+            {t('console.rdpConnectionPanel.session')}
+          </div>
+          <DetailRow label={t('console.rdpConnectionPanel.machine')} value={machineName || '—'} />
           <DetailRow
-            label="Color depth"
+            label={t('console.rdpConnectionPanel.duration')}
+            value={formatDuration(duration)}
+          />
+          <DetailRow
+            label={t('console.rdpConnectionPanel.colorDepth')}
             value={`${negotiated?.colorDepth ?? settings.colorDepth}-bit`}
           />
           <DetailRow
-            label="Compression"
-            value={negotiated?.compression ?? (settings.lossy ? 'Lossy' : 'Lossless')}
+            label={t('console.rdpConnectionPanel.compression')}
+            value={
+              negotiated?.compression ??
+              (settings.lossy
+                ? t('console.rdpConnectionPanel.lossy')
+                : t('console.rdpConnectionPanel.lossless'))
+            }
           />
-          <DetailRow label="Sound" value={settings.audio ? 'On' : 'Off'} />
-          {negotiated && <DetailRow label="Output path" value={outputPathValue} />}
-          {inputPathValue && <DetailRow label="Input path" value={inputPathValue} />}
+          <DetailRow
+            label={t('console.rdpConnectionPanel.sound')}
+            value={
+              settings.audio
+                ? t('console.rdpConnectionPanel.on')
+                : t('console.rdpConnectionPanel.off')
+            }
+          />
+          {negotiated && (
+            <DetailRow label={t('console.rdpConnectionPanel.outputPath')} value={outputPathValue} />
+          )}
+          {inputPathValue && (
+            <DetailRow label={t('console.rdpConnectionPanel.inputPath')} value={inputPathValue} />
+          )}
           {negotiated?.resizeMode && (
-            <DetailRow label="Resize mode" value={negotiated.resizeMode} />
+            <DetailRow
+              label={t('console.rdpConnectionPanel.resizeMode')}
+              value={negotiated.resizeMode}
+            />
           )}
           {guestFacts?.video_mode && (
-            <DetailRow label="Guest display" value={guestFacts.video_mode} />
+            <DetailRow
+              label={t('console.rdpConnectionPanel.guestDisplay')}
+              value={guestFacts.video_mode}
+            />
           )}
           {typeof guestFacts?.additions_run_level === 'number' && (
             <DetailRow
-              label="Guest Additions"
+              label={t('console.rdpConnectionPanel.guestAdditions')}
               value={
                 guestFacts.additions_run_level > 0
-                  ? `run level ${guestFacts.additions_run_level}`
-                  : 'not detected'
+                  ? t('console.rdpConnectionPanel.runLevel', {
+                      level: guestFacts.additions_run_level,
+                    })
+                  : t('console.rdpConnectionPanel.notDetected')
               }
             />
           )}
         </div>
 
         <div className="border-top pt-2 mb-2">
-          <div className="text-muted small fw-bold mb-1">History (15 min)</div>
+          <div className="text-muted small fw-bold mb-1">
+            {t('console.rdpConnectionPanel.history15Min')}
+          </div>
           <HistorySparkline history={history} />
         </div>
 
@@ -369,7 +440,7 @@ const RdpConnectionPanel = ({
           disabled={!connected}
         >
           <i className="fas fa-copy me-2" />
-          <span>Copy report</span>
+          <span>{t('console.rdpConnectionPanel.copyReport')}</span>
         </button>
       </Dropdown.Menu>
     </Dropdown>

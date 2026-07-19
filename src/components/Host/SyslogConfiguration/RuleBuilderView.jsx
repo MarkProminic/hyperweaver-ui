@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { getServiceType } from './syslogUtils';
 
@@ -27,6 +28,7 @@ const getRulePreviewAction = (ruleBuilder, serviceType) => {
  * Interactive rule builder form with conditional fields
  */
 const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderChange, addRule }) => {
+  const { t } = useTranslation();
   const serviceType = getServiceType(config);
 
   return (
@@ -34,14 +36,14 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
       <div className="card-body">
         <h4 className="fs-6 fw-bold mb-4">
           <i className="fas fa-plus me-2" />
-          <span>Syslog Rule Builder</span>
+          <span>{t('hostTime.syslogRuleBuilder.heading')}</span>
         </h4>
 
         <div className="row g-3">
           <div className="col-lg-3">
             <div className="mb-3">
               <label className="form-label" htmlFor="rule-facility">
-                Facility
+                {t('hostTime.syslogRuleBuilder.facilityLabel')}
               </label>
               <select
                 id="rule-facility"
@@ -83,7 +85,7 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
           <div className="col-lg-3">
             <div className="mb-3">
               <label className="form-label" htmlFor="rule-level">
-                Level
+                {t('hostTime.syslogRuleBuilder.levelLabel')}
               </label>
               <select
                 id="rule-level"
@@ -97,28 +99,28 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
                   </option>
                 )) || [
                   <option key="emerg" value="emerg">
-                    emerg - Emergency
+                    emerg - {t('hostTime.syslogRuleBuilder.levelEmerg')}
                   </option>,
                   <option key="alert" value="alert">
-                    alert - Alert
+                    alert - {t('hostTime.syslogRuleBuilder.levelAlert')}
                   </option>,
                   <option key="crit" value="crit">
-                    crit - Critical
+                    crit - {t('hostTime.syslogRuleBuilder.levelCrit')}
                   </option>,
                   <option key="err" value="err">
-                    err - Error
+                    err - {t('hostTime.syslogRuleBuilder.levelErr')}
                   </option>,
                   <option key="warning" value="warning">
-                    warning - Warning
+                    warning - {t('hostTime.syslogRuleBuilder.levelWarning')}
                   </option>,
                   <option key="notice" value="notice">
-                    notice - Notice
+                    notice - {t('hostTime.syslogRuleBuilder.levelNotice')}
                   </option>,
                   <option key="info" value="info">
-                    info - Info
+                    info - {t('hostTime.syslogRuleBuilder.levelInfo')}
                   </option>,
                   <option key="debug" value="debug">
-                    debug - Debug
+                    debug - {t('hostTime.syslogRuleBuilder.levelDebug')}
                   </option>,
                 ]}
               </select>
@@ -128,7 +130,7 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
           <div className="col-lg-6">
             <div className="mb-3">
               <label className="form-label" htmlFor="rule-action-type">
-                Action Type
+                {t('hostTime.syslogRuleBuilder.actionTypeLabel')}
               </label>
               <select
                 id="rule-action-type"
@@ -146,18 +148,22 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
                   handleRuleBuilderChange('action_target', defaultTargets[e.target.value] || '');
                 }}
               >
-                <option value="file">Log to File</option>
-                <option value="remote_host">Send to Remote Host</option>
-                <option value="all_users">Broadcast to All Users (*)</option>
-                <option value="user">Send to Specific User(s)</option>
+                <option value="file">{t('hostTime.syslogRuleBuilder.actionLogToFile')}</option>
+                <option value="remote_host">
+                  {t('hostTime.syslogRuleBuilder.actionSendRemote')}
+                </option>
+                <option value="all_users">
+                  {t('hostTime.syslogRuleBuilder.actionBroadcastAll')}
+                </option>
+                <option value="user">{t('hostTime.syslogRuleBuilder.actionSendUser')}</option>
               </select>
               <p className="form-text text-muted small">
-                {ruleBuilder.action_type === 'file' && 'Log messages to a local file'}
+                {ruleBuilder.action_type === 'file' && t('hostTime.syslogRuleBuilder.helpFile')}
                 {ruleBuilder.action_type === 'remote_host' &&
-                  'Forward messages to a remote syslog server'}
+                  t('hostTime.syslogRuleBuilder.helpRemote')}
                 {ruleBuilder.action_type === 'all_users' &&
-                  'Send messages to all logged-in users (emergency only)'}
-                {ruleBuilder.action_type === 'user' && 'Send messages to specific user(s)'}
+                  t('hostTime.syslogRuleBuilder.helpAllUsers')}
+                {ruleBuilder.action_type === 'user' && t('hostTime.syslogRuleBuilder.helpUser')}
               </p>
             </div>
           </div>
@@ -169,7 +175,7 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="rule-file-path">
-                  Log File Path
+                  {t('hostTime.syslogRuleBuilder.filePathLabel')}
                 </label>
                 <div className="input-group">
                   <span className="input-group-text">
@@ -181,11 +187,11 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
                     type="text"
                     value={ruleBuilder.action_target}
                     onChange={e => handleRuleBuilderChange('action_target', e.target.value)}
-                    placeholder="/var/log/custom.log"
+                    placeholder={t('hostTime.syslogRuleBuilder.filePathPlaceholder')}
                   />
                 </div>
                 <p className="form-text text-muted small">
-                  Full path to the log file. Directory must exist or be writable by syslog daemon.
+                  {t('hostTime.syslogRuleBuilder.filePathHelp')}
                 </p>
               </div>
             </div>
@@ -197,7 +203,7 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
             <div className="col-lg-4">
               <div className="mb-3">
                 <label className="form-label" htmlFor="rule-remote-host">
-                  Remote Hostname
+                  {t('hostTime.syslogRuleBuilder.remoteHostLabel')}
                 </label>
                 <div className="input-group">
                   <span className="input-group-text">
@@ -209,18 +215,18 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
                     type="text"
                     value={ruleBuilder.action_target}
                     onChange={e => handleRuleBuilderChange('action_target', e.target.value)}
-                    placeholder="loghost.company.com"
+                    placeholder={t('hostTime.syslogRuleBuilder.remoteHostPlaceholder')}
                   />
                 </div>
                 <p className="form-text text-muted small">
-                  Hostname or IP address of remote syslog server.
+                  {t('hostTime.syslogRuleBuilder.remoteHostHelp')}
                 </p>
               </div>
             </div>
             <div className="col-lg-4">
               <div className="mb-3">
                 <label className="form-label" htmlFor="rule-remote-protocol">
-                  Protocol
+                  {t('hostTime.syslogRuleBuilder.protocolLabel')}
                 </label>
                 <select
                   id="rule-remote-protocol"
@@ -228,18 +234,18 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
                   value={ruleBuilder.remote_protocol}
                   onChange={e => handleRuleBuilderChange('remote_protocol', e.target.value)}
                 >
-                  <option value="udp">UDP (Standard)</option>
-                  <option value="tcp">TCP (Reliable)</option>
+                  <option value="udp">{t('hostTime.syslogRuleBuilder.protocolUdp')}</option>
+                  <option value="tcp">{t('hostTime.syslogRuleBuilder.protocolTcp')}</option>
                 </select>
                 <p className="form-text text-muted small">
-                  UDP is standard syslog protocol. TCP provides reliable delivery.
+                  {t('hostTime.syslogRuleBuilder.protocolHelp')}
                 </p>
               </div>
             </div>
             <div className="col-lg-4">
               <div className="mb-3">
                 <label className="form-label" htmlFor="rule-remote-port">
-                  Port (Optional)
+                  {t('hostTime.syslogRuleBuilder.portLabel')}
                 </label>
                 <div className="input-group">
                   <span className="input-group-text">
@@ -253,11 +259,11 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
                     max="65535"
                     value={ruleBuilder.remote_port}
                     onChange={e => handleRuleBuilderChange('remote_port', e.target.value)}
-                    placeholder="514 (default)"
+                    placeholder={t('hostTime.syslogRuleBuilder.portPlaceholder')}
                   />
                 </div>
                 <p className="form-text text-muted small">
-                  Leave empty for default port 514. Use custom port if required.
+                  {t('hostTime.syslogRuleBuilder.portHelp')}
                 </p>
               </div>
             </div>
@@ -269,7 +275,7 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
             <div className="col-lg-8">
               <div className="mb-3">
                 <label className="form-label" htmlFor="rule-username">
-                  Username(s)
+                  {t('hostTime.syslogRuleBuilder.usernameLabel')}
                 </label>
                 <div className="input-group">
                   <span className="input-group-text">
@@ -281,19 +287,18 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
                     type="text"
                     value={ruleBuilder.action_target}
                     onChange={e => handleRuleBuilderChange('action_target', e.target.value)}
-                    placeholder="root,operator"
+                    placeholder={t('hostTime.syslogRuleBuilder.usernamePlaceholder')}
                   />
                 </div>
                 <p className="form-text text-muted small">
-                  Single user (e.g., &quot;root&quot;) or multiple users separated by commas (e.g.,
-                  &quot;root,operator&quot;).
+                  {t('hostTime.syslogRuleBuilder.usernameHelp')}
                 </p>
               </div>
             </div>
             <div className="col-lg-4">
               <div className="mb-3">
                 <label className="form-label" htmlFor="rule-multiple-users">
-                  Multiple Users
+                  {t('hostTime.syslogRuleBuilder.multipleUsersLabel')}
                 </label>
                 <div className="form-check form-switch">
                   <input
@@ -305,11 +310,11 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
                     onChange={e => handleRuleBuilderChange('multiple_users', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="rule-multiple-users">
-                    Multiple
+                    {t('hostTime.syslogRuleBuilder.multipleUsersCheckbox')}
                   </label>
                 </div>
                 <p className="form-text text-muted small">
-                  Enable to send to multiple users (comma-separated).
+                  {t('hostTime.syslogRuleBuilder.multipleUsersHelp')}
                 </p>
               </div>
             </div>
@@ -321,10 +326,11 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
             <div className="d-flex justify-content-between align-items-center">
               <div className="d-flex align-items-center gap-2">
                 <div>
-                  <p className="fw-semibold">Emergency Broadcast Mode</p>
+                  <p className="fw-semibold">
+                    {t('hostTime.syslogRuleBuilder.emergencyBroadcastTitle')}
+                  </p>
                   <p className="small mb-0">
-                    This will send messages to all logged-in users&apos; terminals. Use only for
-                    emergency situations as it interrupts all users.
+                    {t('hostTime.syslogRuleBuilder.emergencyBroadcastMessage')}
                   </p>
                 </div>
               </div>
@@ -345,13 +351,15 @@ const RuleBuilderView = ({ config, facilities, ruleBuilder, handleRuleBuilderCha
             disabled={!ruleBuilder.facility || !ruleBuilder.level || !ruleBuilder.action_target}
           >
             <i className="fas fa-plus me-2" />
-            <span>Add Rule to Configuration</span>
+            <span>{t('hostTime.syslogRuleBuilder.addRuleButton')}</span>
           </button>
         </div>
 
         {/* Preview of generated rule */}
         <div className="alert alert-secondary mt-4">
-          <h5 className="fs-6 fw-bold mb-2">Rule Preview ({serviceType.display} Format)</h5>
+          <h5 className="fs-6 fw-bold mb-2">
+            {t('hostTime.syslogRuleBuilder.rulePreviewHeading', { service: serviceType.display })}
+          </h5>
           <code className="small">
             {ruleBuilder.facility}.{ruleBuilder.level}\t\t\t
             {getRulePreviewAction(ruleBuilder, serviceType)}

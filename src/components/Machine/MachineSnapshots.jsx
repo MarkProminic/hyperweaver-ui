@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   getMachineSnapshots,
@@ -34,25 +35,28 @@ import SnapshotTemplateModal from './SnapshotTemplateModal';
 
 const depthOf = node => (String(node || '').match(/-/gu) || []).length;
 
-const CONFIRM_TITLES = {
-  restore: 'Restore Snapshot',
-  'restore-start': 'Restore Snapshot and Start',
-  delete: 'Delete Snapshot',
+const CONFIRM_TITLE_KEYS = {
+  restore: 'machine.machineSnapshots.confirmRestoreTitle',
+  'restore-start': 'machine.machineSnapshots.confirmRestoreStartTitle',
+  delete: 'machine.machineSnapshots.confirmDeleteTitle',
 };
 
-const CONFIRM_ACTIONS = {
-  restore: 'Restore',
-  'restore-start': 'Restore and start',
-  delete: 'Delete',
+const CONFIRM_ACTION_KEYS = {
+  restore: 'machine.machineSnapshots.confirmRestoreAction',
+  'restore-start': 'machine.machineSnapshots.confirmRestoreStartAction',
+  delete: 'machine.machineSnapshots.confirmDeleteAction',
 };
 
-const confirmMessage = ({ kind, snapshot }, machineName) => {
+const confirmMessage = ({ kind, snapshot }, machineName, t) => {
   if (kind === 'delete') {
-    return `Delete snapshot "${snapshot.name}"? The machine itself is unaffected.`;
+    return t('machine.machineSnapshots.confirmDeleteMessage', { snapshotName: snapshot.name });
   }
-  const base = `Restore ${machineName} to snapshot "${snapshot.name}"? The machine's current disk state is replaced by the snapshot's.`;
+  const base = t('machine.machineSnapshots.confirmRestoreMessage', {
+    machineName,
+    snapshotName: snapshot.name,
+  });
   return kind === 'restore-start'
-    ? `${base} The machine powers back on once the restore completes.`
+    ? `${base} ${t('machine.machineSnapshots.confirmRestoreStartSuffix')}`
     : base;
 };
 
@@ -64,6 +68,7 @@ const confirmMessage = ({ kind, snapshot }, machineName) => {
  * of it pins nothing).
  */
 const SnapshotHoldsModal = ({ isOpen, onClose, currentServer, snapshot }) => {
+  const { t } = useTranslation();
   const [holdsByDataset, setHoldsByDataset] = useState(null);
   const [tag, setTag] = useState('');
   const [busy, setBusy] = useState(false);
@@ -91,7 +96,12 @@ const SnapshotHoldsModal = ({ isOpen, onClose, currentServer, snapshot }) => {
     );
     const failed = results.find(({ result }) => !result.success);
     if (failed) {
-      setError(`Holds query failed on ${failed.dataset}: ${failed.result.message}`);
+      setError(
+        t('machine.machineSnapshots.holdsQueryFailed', {
+          dataset: failed.dataset,
+          message: failed.result.message,
+        })
+      );
     }
     setHoldsByDataset(
       Object.fromEntries(
@@ -101,7 +111,7 @@ const SnapshotHoldsModal = ({ isOpen, onClose, currentServer, snapshot }) => {
         ])
       )
     );
-  }, [isOpen, snapshot, currentServer]);
+  }, [isOpen, snapshot, currentServer, t]);
 
   useEffect(() => {
     setTag('');
@@ -153,7 +163,7 @@ const SnapshotHoldsModal = ({ isOpen, onClose, currentServer, snapshot }) => {
     );
     setBusy(false);
     if (!result.success) {
-      setError(`Release failed on ${dataset}: ${result.message}`);
+      setError(t('machine.machineSnapshots.releaseFailed', { dataset, message: result.message }));
       return;
     }
     setTimeout(load, 2000);
@@ -163,19 +173,17 @@ const SnapshotHoldsModal = ({ isOpen, onClose, currentServer, snapshot }) => {
     <ContentModal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Holds — ${snapshot.name}`}
+      title={t('machine.machineSnapshots.holdsTitle', { snapshotName: snapshot.name })}
       icon="fas fa-lock"
     >
       <p className="form-text mt-0">
-        A held snapshot cannot be destroyed until every hold releases. A machine snapshot spans{' '}
-        {datasets.length} dataset{datasets.length === 1 ? '' : 's'} — holding pins the tag on ALL of
-        them.
+        {t('machine.machineSnapshots.holdsExplanation', { count: datasets.length })}
       </p>
       {error && <div className="alert alert-danger py-2">{error}</div>}
       {holdsByDataset === null && !error && (
         <p className="text-muted mb-2">
           <i className="fas fa-spinner fa-pulse me-2" />
-          Loading…
+          {t('machine.machineSnapshots.loading')}
         </p>
       )}
       {holdsByDataset !== null &&
@@ -183,7 +191,7 @@ const SnapshotHoldsModal = ({ isOpen, onClose, currentServer, snapshot }) => {
           <div className="mb-2" key={dataset}>
             <code className="small">{handleOf(dataset)}</code>
             {(holdsByDataset[dataset] || []).length === 0 ? (
-              <span className="text-muted small ms-2">no holds</span>
+              <span className="text-muted small ms-2">{t('machine.machineSnapshots.noHolds')}</span>
             ) : (
               <div className="d-flex flex-wrap gap-1 mt-1">
                 {holdsByDataset[dataset].map(hold => (
@@ -192,7 +200,10 @@ const SnapshotHoldsModal = ({ isOpen, onClose, currentServer, snapshot }) => {
                     <button
                       type="button"
                       className="btn btn-link p-0 text-white"
-                      title={`Release '${hold.tag}' on ${dataset}`}
+                      title={t('machine.machineSnapshots.releaseHoldTooltip', {
+                        tag: hold.tag,
+                        dataset,
+                      })}
                       onClick={() => release(dataset, hold.tag)}
                       disabled={busy}
                     >
@@ -208,8 +219,8 @@ const SnapshotHoldsModal = ({ isOpen, onClose, currentServer, snapshot }) => {
         <input
           className="form-control"
           type="text"
-          placeholder="e.g. keep-for-audit"
-          aria-label="New hold tag"
+          placeholder={t('machine.machineSnapshots.holdTagPlaceholder')}
+          aria-label={t('machine.machineSnapshots.holdTagAriaLabel')}
           value={tag}
           onChange={e => setTag(e.target.value)}
           disabled={busy}
@@ -221,7 +232,7 @@ const SnapshotHoldsModal = ({ isOpen, onClose, currentServer, snapshot }) => {
           disabled={busy || !tag.trim()}
         >
           <i className="fas fa-lock me-1" />
-          Hold all datasets
+          {t('machine.machineSnapshots.holdAllButton')}
         </button>
       </div>
     </ContentModal>
@@ -236,10 +247,10 @@ SnapshotHoldsModal.propTypes = {
 };
 
 const POLICY_TYPES = [
-  { value: 'none', label: 'None — scheduled snapshots off' },
-  { value: 'simple', label: 'Simple — keep the newest N' },
-  { value: 'age', label: 'Age — delete older than N days' },
-  { value: 'rotation', label: 'Rotation — hourly/daily/weekly tiers' },
+  { value: 'none', labelKey: 'machine.machineSnapshots.policyNone' },
+  { value: 'simple', labelKey: 'machine.machineSnapshots.policySimple' },
+  { value: 'age', labelKey: 'machine.machineSnapshots.policyAge' },
+  { value: 'rotation', labelKey: 'machine.machineSnapshots.policyRotation' },
 ];
 
 // Placeholder keeps mirror the agent's rotation defaults per tier.
@@ -251,6 +262,7 @@ const TIER_KEEP_DEFAULT = { hourly: '24', daily: '8', weekly: '5' };
  * null clears the override back to the agent default).
  */
 const SnapshotPolicyEditor = ({ currentServer, machineName, current, onFollowTask }) => {
+  const { t } = useTranslation();
   const [type, setType] = useState('');
   const [quiesce, setQuiesce] = useState(false);
   const [keep, setKeep] = useState('');
@@ -284,10 +296,14 @@ const SnapshotPolicyEditor = ({ currentServer, machineName, current, onFollowTas
     );
     setBusy(false);
     if (!result.success) {
-      setNote(`Policy update failed: ${result.message}`);
+      setNote(t('machine.machineSnapshots.policyUpdateFailed', { message: result.message }));
       return;
     }
-    setNote(policy === null ? 'Override cleared — the agent default applies.' : 'Policy saved.');
+    setNote(
+      policy === null
+        ? t('machine.machineSnapshots.overrideCleared')
+        : t('machine.machineSnapshots.policySaved')
+    );
     if (result.data?.task_id) {
       onFollowTask(result.data.task_id);
     }
@@ -295,7 +311,7 @@ const SnapshotPolicyEditor = ({ currentServer, machineName, current, onFollowTas
 
   const handleApply = () => {
     if (!type) {
-      setNote('Pick a policy type first.');
+      setNote(t('machine.machineSnapshots.pickPolicyType'));
       return;
     }
     const policy = { type };
@@ -324,12 +340,12 @@ const SnapshotPolicyEditor = ({ currentServer, machineName, current, onFollowTas
 
   return (
     <div className="border-top pt-2 mt-3">
-      <h5 className="fs-6 fw-bold mb-2">Scheduled snapshots (retention policy)</h5>
+      <h5 className="fs-6 fw-bold mb-2">{t('machine.machineSnapshots.retentionPolicyHeading')}</h5>
       {note && <div className="alert alert-info py-1 small">{note}</div>}
       <div className="row g-2 align-items-end">
         <div className="col-12 col-md-4">
           <label className="form-label small mb-1" htmlFor="snapshot-policy-type">
-            Policy
+            {t('machine.machineSnapshots.policyLabel')}
           </label>
           <select
             id="snapshot-policy-type"
@@ -338,10 +354,10 @@ const SnapshotPolicyEditor = ({ currentServer, machineName, current, onFollowTas
             onChange={e => setType(e.target.value)}
             disabled={busy}
           >
-            <option value="">(agent default)</option>
+            <option value="">{t('machine.machineSnapshots.agentDefaultOption')}</option>
             {POLICY_TYPES.map(entry => (
               <option key={entry.value} value={entry.value}>
-                {entry.label}
+                {t(entry.labelKey)}
               </option>
             ))}
           </select>
@@ -349,7 +365,7 @@ const SnapshotPolicyEditor = ({ currentServer, machineName, current, onFollowTas
         {type === 'simple' && (
           <div className="col-6 col-md-2">
             <label className="form-label small mb-1" htmlFor="snapshot-policy-keep">
-              Keep
+              {t('machine.machineSnapshots.keepLabel')}
             </label>
             <input
               id="snapshot-policy-keep"
@@ -366,7 +382,7 @@ const SnapshotPolicyEditor = ({ currentServer, machineName, current, onFollowTas
         {type === 'age' && (
           <div className="col-6 col-md-2">
             <label className="form-label small mb-1" htmlFor="snapshot-policy-age">
-              Max age (days)
+              {t('machine.machineSnapshots.maxAgeLabel')}
             </label>
             <input
               id="snapshot-policy-age"
@@ -384,7 +400,7 @@ const SnapshotPolicyEditor = ({ currentServer, machineName, current, onFollowTas
           ['hourly', 'daily', 'weekly'].map(tier => (
             <div className="col-4 col-md-2" key={tier}>
               <label className="form-label small mb-1" htmlFor={`snapshot-policy-${tier}`}>
-                {tier} keep
+                {t('machine.machineSnapshots.tierKeepLabel', { tier })}
               </label>
               <input
                 id={`snapshot-policy-${tier}`}
@@ -410,7 +426,7 @@ const SnapshotPolicyEditor = ({ currentServer, machineName, current, onFollowTas
                 disabled={busy}
               />
               <label className="form-check-label small" htmlFor="snapshot-policy-quiesce">
-                Quiesce (qga fsfreeze)
+                {t('machine.machineSnapshots.quiesceLabel')}
               </label>
             </div>
           </div>
@@ -422,7 +438,7 @@ const SnapshotPolicyEditor = ({ currentServer, machineName, current, onFollowTas
             onClick={handleApply}
             disabled={busy || !type}
           >
-            Apply policy
+            {t('machine.machineSnapshots.applyPolicyButton')}
           </button>
         </div>
         <div className="col-auto">
@@ -431,9 +447,9 @@ const SnapshotPolicyEditor = ({ currentServer, machineName, current, onFollowTas
             className="btn btn-sm btn-outline-secondary"
             onClick={() => send(null)}
             disabled={busy}
-            title="Remove this machine's override — the agent default applies"
+            title={t('machine.machineSnapshots.clearOverrideTooltip')}
           >
-            Clear override
+            {t('machine.machineSnapshots.clearOverrideButton')}
           </button>
         </div>
       </div>
@@ -457,6 +473,7 @@ const MachineSnapshots = ({
   takeOpen,
   onTakeClose,
 }) => {
+  const { t } = useTranslation();
   const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
@@ -509,10 +526,10 @@ const MachineSnapshots = ({
       setSnapshots(result.data?.snapshots || []);
       setMsg('');
     } else {
-      setMsg(`Failed to load snapshots: ${result.message}`);
+      setMsg(t('machine.machineSnapshots.loadFailed', { message: result.message }));
     }
     setLoading(false);
-  }, [currentServer, machineName]);
+  }, [currentServer, machineName, t]);
 
   // Slow poll keeps the list honest without a refresh button (Mark's nit:
   // the card carries no action buttons — Take Snapshot lives in the page
@@ -543,7 +560,11 @@ const MachineSnapshots = ({
   const handleTake = async () => {
     const usePrefix = takeForm.mode === 'prefix';
     if (usePrefix ? !takeForm.prefix.trim() : !takeForm.name.trim()) {
-      setMsg(usePrefix ? 'Snapshot prefix is required.' : 'Snapshot name is required.');
+      setMsg(
+        usePrefix
+          ? t('machine.machineSnapshots.prefixRequired')
+          : t('machine.machineSnapshots.nameRequired')
+      );
       return;
     }
     setBusy(true);
@@ -579,7 +600,7 @@ const MachineSnapshots = ({
       setMsg('');
       await followQueuedTask(result.data?.task_id);
     } else {
-      setMsg(`Snapshot failed: ${result.message}`);
+      setMsg(t('machine.machineSnapshots.snapshotFailed', { message: result.message }));
     }
   };
 
@@ -587,7 +608,7 @@ const MachineSnapshots = ({
   // restore itself requires a stopped machine, so starting is a second step.
   const restoreThenStart = async taskId => {
     if (!taskId) {
-      setMsg('Restore queued, but no task id came back — start the machine yourself.');
+      setMsg(t('machine.machineSnapshots.restoreNoTaskId'));
       return;
     }
     const task = await pollTaskRow(
@@ -598,11 +619,15 @@ const MachineSnapshots = ({
       60
     );
     if (!task) {
-      setMsg('Restore is still running — start the machine once it completes.');
+      setMsg(t('machine.machineSnapshots.restoreStillRunning'));
       return;
     }
     if (task.status === 'failed') {
-      setMsg(`Restore failed — not starting. ${task.error_message || ''}`.trim());
+      setMsg(
+        `${t('machine.machineSnapshots.restoreFailedNotStarting', {
+          errorMessage: task.error_message || '',
+        })}`.trim()
+      );
       return;
     }
     const start = await startMachine(
@@ -611,7 +636,11 @@ const MachineSnapshots = ({
       currentServer.protocol,
       machineName
     );
-    setMsg(start.success ? '' : `Restored, but the start failed: ${start.message}`);
+    setMsg(
+      start.success
+        ? ''
+        : t('machine.machineSnapshots.restoredStartFailed', { message: start.message })
+    );
   };
 
   // Rename and/or edit the description — only CHANGED fields ride (a
@@ -626,7 +655,7 @@ const MachineSnapshots = ({
       body.description = editForm.description;
     }
     if (Object.keys(body).length === 0) {
-      setMsg('Nothing changed — edit the name or the description first.');
+      setMsg(t('machine.machineSnapshots.editNothingChanged'));
       return;
     }
     setBusy(true);
@@ -640,7 +669,7 @@ const MachineSnapshots = ({
     );
     setBusy(false);
     if (!result.success) {
-      setMsg(`Snapshot edit failed: ${result.message}`);
+      setMsg(t('machine.machineSnapshots.editFailed', { message: result.message }));
       return;
     }
     setEditSnap(null);
@@ -665,7 +694,15 @@ const MachineSnapshots = ({
     setConfirm(null);
     if (!result.success) {
       setBusy(false);
-      setMsg(`Snapshot ${kind === 'delete' ? 'delete' : 'restore'} failed: ${result.message}`);
+      setMsg(
+        t('machine.machineSnapshots.confirmActionFailed', {
+          action:
+            kind === 'delete'
+              ? t('machine.machineSnapshots.deleteWord')
+              : t('machine.machineSnapshots.restoreWord'),
+          message: result.message,
+        })
+      );
       return;
     }
     setMsg('');
@@ -681,12 +718,12 @@ const MachineSnapshots = ({
       <div className="card-body">
         <h4 className="fs-6 fw-bold mb-2">
           <i className="fas fa-camera me-2" />
-          Snapshots ({snapshots.length})
+          {t('machine.machineSnapshots.snapshotsHeading', { count: snapshots.length })}
         </h4>
 
         {msg && <div className="alert alert-warning py-2">{msg}</div>}
         {!loading && snapshots.length === 0 && (
-          <p className="text-muted mb-0 small">No snapshots yet.</p>
+          <p className="text-muted mb-0 small">{t('machine.machineSnapshots.noSnapshotsYet')}</p>
         )}
 
         {canMutate && (
@@ -718,31 +755,31 @@ const MachineSnapshots = ({
                   {snapshot.current && (
                     <span
                       className="badge text-bg-success ms-2"
-                      title="The machine's current state derives from this snapshot"
+                      title={t('machine.machineSnapshots.currentStateTooltip')}
                     >
-                      Current
+                      {t('machine.machineSnapshots.currentBadge')}
                     </span>
                   )}
                   {Array.isArray(snapshot.dataset_names) && snapshot.dataset_names.length > 0 ? (
                     <button
                       type="button"
                       className={`badge border-0 ms-2 ${snapshot.holds > 0 ? 'text-bg-secondary' : 'text-bg-light border'}`}
-                      title="ZFS holds pin this snapshot against deletion — click to manage"
+                      title={t('machine.machineSnapshots.holdsManageTooltip')}
                       onClick={() => setHoldsFor(snapshot)}
                       disabled={busy}
                     >
                       <i
                         className={`fas ${snapshot.holds > 0 ? 'fa-lock' : 'fa-lock-open'} me-1`}
                       />
-                      {snapshot.holds || 0} hold{snapshot.holds === 1 ? '' : 's'}
+                      {t('machine.machineSnapshots.holdsCount', { count: snapshot.holds || 0 })}
                     </button>
                   ) : (
                     snapshot.holds > 0 && (
                       <span
                         className="badge text-bg-secondary ms-2"
-                        title="ZFS holds pin this snapshot against deletion"
+                        title={t('machine.machineSnapshots.holdsPinTooltip')}
                       >
-                        {snapshot.holds} hold{snapshot.holds === 1 ? '' : 's'}
+                        {t('machine.machineSnapshots.holdsCount', { count: snapshot.holds })}
                       </span>
                     )
                   )}
@@ -765,7 +802,7 @@ const MachineSnapshots = ({
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-secondary"
-                      title="Rename this snapshot or edit its description"
+                      title={t('machine.machineSnapshots.renameTooltip')}
                       disabled={busy}
                       onClick={() => {
                         setEditSnap(snapshot);
@@ -779,8 +816,8 @@ const MachineSnapshots = ({
                       className="btn btn-sm btn-outline-warning"
                       title={
                         isRunning
-                          ? 'Restore needs the machine stopped — stop it first'
-                          : 'Restore the machine to this snapshot'
+                          ? t('machine.machineSnapshots.restoreStoppedTooltip')
+                          : t('machine.machineSnapshots.restoreTooltip')
                       }
                       disabled={isRunning || busy}
                       onClick={() => setConfirm({ kind: 'restore', snapshot })}
@@ -792,8 +829,8 @@ const MachineSnapshots = ({
                       className="btn btn-sm btn-outline-warning"
                       title={
                         isRunning
-                          ? 'Restore needs the machine stopped — stop it first'
-                          : 'Restore to this snapshot, then power the machine back on'
+                          ? t('machine.machineSnapshots.restoreStoppedTooltip')
+                          : t('machine.machineSnapshots.restoreStartTooltip')
                       }
                       disabled={isRunning || busy}
                       onClick={() => setConfirm({ kind: 'restore-start', snapshot })}
@@ -805,7 +842,7 @@ const MachineSnapshots = ({
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-secondary"
-                          title="Build a local .box template from this snapshot"
+                          title={t('machine.machineSnapshots.buildTemplateTooltip')}
                           disabled={busy}
                           onClick={() => setTemplateFrom({ mode: 'export', snapshot })}
                         >
@@ -814,7 +851,7 @@ const MachineSnapshots = ({
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-info"
-                          title="Publish this snapshot to a registry"
+                          title={t('machine.machineSnapshots.publishTooltip')}
                           disabled={busy}
                           onClick={() => setTemplateFrom({ mode: 'publish', snapshot })}
                         >
@@ -825,7 +862,7 @@ const MachineSnapshots = ({
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-danger"
-                      title="Delete this snapshot (its state merges into child snapshots)"
+                      title={t('machine.machineSnapshots.deleteTooltip')}
                       disabled={busy}
                       onClick={() => setConfirm({ kind: 'delete', snapshot })}
                     >
@@ -843,28 +880,28 @@ const MachineSnapshots = ({
         isOpen={takeOpen}
         onClose={onTakeClose}
         onSubmit={handleTake}
-        title={`Take Snapshot — ${machineName}`}
+        title={t('machine.machineSnapshots.takeSnapshotTitle', { machineName })}
         icon="fas fa-camera"
-        submitText="Take Snapshot"
+        submitText={t('machine.machineSnapshots.takeSnapshotSubmit')}
         loading={busy}
         showCancelButton
       >
         <div className="mb-3">
-          <span className="form-label d-block">Naming</span>
+          <span className="form-label d-block">{t('machine.machineSnapshots.namingLabel')}</span>
           <div className="btn-group btn-group-sm" role="group">
             <button
               type="button"
               className={`btn btn-outline-secondary ${takeForm.mode === 'name' ? 'active' : ''}`}
               onClick={() => setTakeForm(prev => ({ ...prev, mode: 'name' }))}
             >
-              Named
+              {t('machine.machineSnapshots.namedOption')}
             </button>
             <button
               type="button"
               className={`btn btn-outline-secondary ${takeForm.mode === 'prefix' ? 'active' : ''}`}
               onClick={() => setTakeForm(prev => ({ ...prev, mode: 'prefix' }))}
             >
-              Prefix (timestamped, auto-pruned)
+              {t('machine.machineSnapshots.prefixOption')}
             </button>
           </div>
         </div>
@@ -872,12 +909,12 @@ const MachineSnapshots = ({
           <>
             <div className="mb-3">
               <label className="form-label" htmlFor="snapshot-prefix">
-                Prefix
+                {t('machine.machineSnapshots.prefixLabel')}
               </label>
               <input
                 id="snapshot-prefix"
                 className="form-control"
-                placeholder="e.g. nightly — becomes nightly-YYYYMMDD-HHMM"
+                placeholder={t('machine.machineSnapshots.prefixPlaceholder')}
                 value={takeForm.prefix}
                 onChange={e => setTakeForm({ ...takeForm, prefix: e.target.value })}
                 required
@@ -885,7 +922,7 @@ const MachineSnapshots = ({
             </div>
             <div className="mb-3">
               <label className="form-label" htmlFor="snapshot-retention">
-                Retention (keep newest N; 0 = keep all)
+                {t('machine.machineSnapshots.retentionLabel')}
               </label>
               <input
                 id="snapshot-retention"
@@ -901,7 +938,7 @@ const MachineSnapshots = ({
         ) : (
           <div className="mb-3">
             <label className="form-label" htmlFor="snapshot-name">
-              Name
+              {t('machine.machineSnapshots.nameLabel')}
             </label>
             <input
               id="snapshot-name"
@@ -914,7 +951,7 @@ const MachineSnapshots = ({
         )}
         <div className="mb-3">
           <label className="form-label" htmlFor="snapshot-description">
-            Description (optional)
+            {t('machine.machineSnapshots.descriptionLabel')}
           </label>
           <input
             id="snapshot-description"
@@ -932,7 +969,7 @@ const MachineSnapshots = ({
             onChange={e => setTakeForm({ ...takeForm, quiesce: e.target.checked })}
           />
           <label className="form-check-label" htmlFor="snapshot-quiesce">
-            Quiesce — fsfreeze the guest via the guest agent for an app-consistent snapshot
+            {t('machine.machineSnapshots.quiesceOptionLabel')}
           </label>
         </div>
         {isRunning && (
@@ -945,7 +982,7 @@ const MachineSnapshots = ({
               onChange={e => setTakeForm({ ...takeForm, live: e.target.checked })}
             />
             <label className="form-check-label" htmlFor="snapshot-live">
-              Live snapshot — capture without pausing the running machine
+              {t('machine.machineSnapshots.liveSnapshotLabel')}
             </label>
           </div>
         )}
@@ -956,15 +993,16 @@ const MachineSnapshots = ({
           isOpen
           onClose={() => setEditSnap(null)}
           onSubmit={handleEdit}
-          title={`Edit Snapshot — ${editSnap.name}`}
+          title={t('machine.machineSnapshots.editSnapshotTitle', { snapshotName: editSnap.name })}
           icon="fas fa-pen"
-          submitText="Save"
+          submitText={t('machine.machineSnapshots.saveSubmit')}
           loading={busy}
           showCancelButton
         >
           <div className="mb-3">
             <label className="form-label" htmlFor="snapshot-edit-name">
-              New name (blank = keep <code>{editSnap.name}</code>)
+              {t('machine.machineSnapshots.newNamePrefix')} <code>{editSnap.name}</code>
+              {t('machine.machineSnapshots.newNameSuffix')}
             </label>
             <input
               id="snapshot-edit-name"
@@ -973,13 +1011,12 @@ const MachineSnapshots = ({
               onChange={e => setEditForm(prev => ({ ...prev, new_name: e.target.value }))}
             />
             <p className="form-text text-muted mb-0">
-              The rename applies across every dataset this snapshot spans; a name collision fails
-              with the {`agent's`} own error.
+              {t('machine.machineSnapshots.renameCollisionNote')}
             </p>
           </div>
           <div className="mb-0">
             <label className="form-label" htmlFor="snapshot-edit-description">
-              Description (clearing it REMOVES the stored description)
+              {t('machine.machineSnapshots.clearDescriptionLabel')}
             </label>
             <input
               id="snapshot-edit-description"
@@ -996,9 +1033,9 @@ const MachineSnapshots = ({
           isOpen
           onClose={() => setConfirm(null)}
           onConfirm={handleConfirm}
-          title={CONFIRM_TITLES[confirm.kind]}
-          message={confirmMessage(confirm, machineName)}
-          confirmText={CONFIRM_ACTIONS[confirm.kind]}
+          title={t(CONFIRM_TITLE_KEYS[confirm.kind])}
+          message={confirmMessage(confirm, machineName, t)}
+          confirmText={t(CONFIRM_ACTION_KEYS[confirm.kind])}
           loading={busy}
         />
       )}

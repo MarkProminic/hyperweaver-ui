@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { humanSize } from './zfsUtils';
 
@@ -8,50 +9,53 @@ import { humanSize } from './zfsUtils';
  * Edits collect in the parent's diff map; only CHANGED keys ride the PUT.
  */
 
-const ZfsPropertiesEditor = ({ properties, edits, onEdit, disabled }) => (
-  <div className="border rounded" style={{ maxHeight: '24rem', overflowY: 'auto' }}>
-    <table className="table table-sm table-striped small mb-0 align-middle">
-      <thead>
-        <tr>
-          <th scope="col">Property</th>
-          <th scope="col" style={{ width: '45%' }}>
-            Value
-          </th>
-          <th scope="col">Source</th>
-        </tr>
-      </thead>
-      <tbody>
-        {Object.entries(properties).map(([key, entry]) => {
-          const current = entry?.value ?? String(entry);
-          const readOnly = (entry?.source ?? '-') === '-';
-          const edited = edits[key] !== undefined && edits[key] !== current;
-          return (
-            <tr key={key} className={edited ? 'table-warning' : ''}>
-              <td>
-                <code className="small">{key}</code>
-              </td>
-              <td>
-                {readOnly ? (
-                  <span title={current}>{humanSize(current)}</span>
-                ) : (
-                  <input
-                    className="form-control form-control-sm font-monospace"
-                    type="text"
-                    aria-label={`Value for ${key}`}
-                    value={edits[key] ?? current}
-                    onChange={e => onEdit(key, e.target.value)}
-                    disabled={disabled}
-                  />
-                )}
-              </td>
-              <td className="text-muted">{entry?.source || ''}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  </div>
-);
+const ZfsPropertiesEditor = ({ properties, edits, onEdit, disabled }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="border rounded" style={{ maxHeight: '24rem', overflowY: 'auto' }}>
+      <table className="table table-sm table-striped small mb-0 align-middle">
+        <thead>
+          <tr>
+            <th scope="col">{t('host.zfsPropertiesEditor.propertyHeader')}</th>
+            <th scope="col" style={{ width: '45%' }}>
+              {t('host.zfsPropertiesEditor.valueHeader')}
+            </th>
+            <th scope="col">{t('host.zfsPropertiesEditor.sourceHeader')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(properties).map(([key, entry]) => {
+            const current = entry?.value ?? String(entry);
+            const readOnly = (entry?.source ?? '-') === '-';
+            const edited = edits[key] !== undefined && edits[key] !== current;
+            return (
+              <tr key={key} className={edited ? 'table-warning' : ''}>
+                <td>
+                  <code className="small">{key}</code>
+                </td>
+                <td>
+                  {readOnly ? (
+                    <span title={current}>{humanSize(current)}</span>
+                  ) : (
+                    <input
+                      className="form-control form-control-sm font-monospace"
+                      type="text"
+                      aria-label={t('host.zfsPropertiesEditor.valueLabel', { key })}
+                      value={edits[key] ?? current}
+                      onChange={e => onEdit(key, e.target.value)}
+                      disabled={disabled}
+                    />
+                  )}
+                </td>
+                <td className="text-muted">{entry?.source || ''}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 ZfsPropertiesEditor.propTypes = {
   properties: PropTypes.object.isRequired,

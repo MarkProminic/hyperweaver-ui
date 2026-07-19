@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../../../contexts/ServerContext';
 import FormModal from '../../../../common/FormModal';
 
 const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     storage_path_id: '',
     checksum: '',
@@ -36,15 +38,15 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
     const newErrors = {};
 
     if (selectedFiles.length === 0) {
-      newErrors.files = 'At least one file is required';
+      newErrors.files = t('artifacts.artifactUploadModal.filesRequired');
     }
 
     if (!formData.storage_path_id) {
-      newErrors.storage_path_id = 'Storage location is required';
+      newErrors.storage_path_id = t('artifacts.artifactUploadModal.storageLocationRequired');
     }
 
     if (formData.checksum.trim() && !formData.checksum_algorithm) {
-      newErrors.checksum_algorithm = 'Checksum algorithm is required when checksum is provided';
+      newErrors.checksum_algorithm = t('artifacts.artifactUploadModal.checksumAlgorithmRequired');
     }
 
     const validExtensions = ['.iso', '.img', '.vmdk', '.vhd', '.vhdx', '.qcow2'];
@@ -52,7 +54,10 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
     for (const entry of selectedFiles) {
       const extension = entry.file.name.toLowerCase().substring(entry.file.name.lastIndexOf('.'));
       if (!validExtensions.includes(extension)) {
-        newErrors.files = `File "${entry.file.name}" has an unsupported file type. Supported: ${validExtensions.join(', ')}`;
+        newErrors.files = t('artifacts.artifactUploadModal.unsupportedFileType', {
+          filename: entry.file.name,
+          extensions: validExtensions.join(', '),
+        });
         break;
       }
     }
@@ -117,7 +122,7 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
 
   const formatFileSize = bytes => {
     if (bytes === 0) {
-      return '0 Bytes';
+      return t('artifacts.artifactUploadModal.bytesSize');
     }
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
@@ -269,7 +274,7 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
       if (successfulUploads.length > 0) {
         onSuccess(results);
       } else {
-        onError('All uploads failed. Please check the files and try again.');
+        onError(t('artifacts.artifactUploadModal.uploadErrorAllFailed'));
       }
     } catch (submitErr) {
       onError(`Error during upload: ${submitErr.message}`);
@@ -285,19 +290,14 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
       <FormModal
         isOpen
         onClose={onClose}
-        title="Upload Files"
+        title={t('artifacts.artifactUploadModal.title')}
         icon="fas fa-upload"
-        submitText="Close"
+        submitText={t('artifacts.artifactUploadModal.closeButton')}
         submitVariant="is-info"
       >
         <div className="alert alert-warning">
-          <p>
-            <strong>No enabled storage locations available.</strong>
-          </p>
-          <p>
-            You need at least one enabled storage location before you can upload artifacts. Please
-            create or enable a storage location first.
-          </p>
+          <p>{t('artifacts.artifactUploadModal.noEnabledLocations')}</p>
+          <p>{t('artifacts.artifactUploadModal.enableLocationsFirstMessage')}</p>
         </div>
       </FormModal>
     );
@@ -308,9 +308,13 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Upload Files"
+      title={t('artifacts.artifactUploadModal.title')}
       icon="fas fa-upload"
-      submitText={loading ? 'Uploading...' : 'Upload Files'}
+      submitText={
+        loading
+          ? t('artifacts.artifactUploadModal.uploadingButton')
+          : t('artifacts.artifactUploadModal.submitButton')
+      }
       submitVariant="is-primary"
       submitIcon="fas fa-upload"
       loading={loading}
@@ -319,7 +323,7 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
     >
       <div className="mb-3">
         <label htmlFor="upload-storage-location" className="form-label">
-          Storage Location
+          {t('artifacts.artifactUploadModal.storageLocationLabel')}
         </label>
         <select
           id="upload-storage-location"
@@ -328,7 +332,7 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
           disabled={loading}
           className={`form-select ${errors.storage_path_id ? 'is-invalid' : ''}`}
         >
-          <option value="">Select storage location...</option>
+          <option value="">{t('artifacts.artifactUploadModal.selectStorageLocation')}</option>
           {enabledStoragePaths.map(path => (
             <option key={path.id} value={path.id}>
               {path.name} ({path.type}) - {path.path}
@@ -338,12 +342,14 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
         {errors.storage_path_id && (
           <p className="form-text text-danger">{errors.storage_path_id}</p>
         )}
-        <p className="form-text text-muted">Where to store the uploaded files</p>
+        <p className="form-text text-muted">
+          {t('artifacts.artifactUploadModal.storageLocationHelper')}
+        </p>
       </div>
 
       <div className="mb-3">
         <label htmlFor="artifact-upload-file-input" className="form-label">
-          Files
+          {t('artifacts.artifactUploadModal.filesLabel')}
         </label>
         <div
           className={`border rounded p-4 text-center ${dragOver ? 'border-primary bg-body-tertiary' : ''} ${errors.files ? 'bg-danger-subtle' : ''}`}
@@ -363,7 +369,9 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
             <i className="fas fa-upload" />
           </div>
           <div className="mb-3">
-            {dragOver ? 'Drop files here' : 'Choose files or drag and drop'}
+            {dragOver
+              ? t('artifacts.artifactUploadModal.dragDropActiveText')
+              : t('artifacts.artifactUploadModal.dragDropText')}
           </div>
           <input
             id="artifact-upload-file-input"
@@ -377,13 +385,15 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
           />
         </div>
         {errors.files && <p className="form-text text-danger">{errors.files}</p>}
-        <p className="form-text text-muted">Supported formats: ISO, IMG, VMDK, VHD, VHDX, QCOW2</p>
+        <p className="form-text text-muted">{t('artifacts.artifactUploadModal.filesHelper')}</p>
       </div>
 
       {/* Selected Files List */}
       {selectedFiles.length > 0 && (
         <div className="mb-3">
-          <span className="form-label">Selected Files ({selectedFiles.length})</span>
+          <span className="form-label">
+            {t('artifacts.artifactUploadModal.selectedFilesLabel', { count: selectedFiles.length })}
+          </span>
           <div className="card">
             <div className="card-body">
               {selectedFiles.map(({ id, file }) => {
@@ -414,8 +424,10 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
                           {progress && (
                             <span className={`badge ms-2 ${getProgressTagClass(progress.status)}`}>
                               {progress.status === 'uploading' && `${progress.progress}%`}
-                              {progress.status === 'completed' && 'Complete'}
-                              {progress.status === 'error' && 'Error'}
+                              {progress.status === 'completed' &&
+                                t('artifacts.artifactUploadModal.uploadCompleteStatus')}
+                              {progress.status === 'error' &&
+                                t('artifacts.artifactUploadModal.uploadErrorStatus')}
                             </span>
                           )}
                         </div>
@@ -451,14 +463,14 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
 
       <div className="mb-3">
         <label htmlFor="artifact-checksum-input" className="form-label">
-          Checksum (Optional)
+          {t('artifacts.artifactUploadModal.checksumLabel')}
         </label>
         <div className="input-group">
           <input
             id="artifact-checksum-input"
             className="form-control"
             type="text"
-            placeholder="Expected checksum for verification"
+            placeholder={t('artifacts.artifactUploadModal.checksumPlaceholder')}
             value={formData.checksum}
             onChange={e => handleInputChange('checksum', e.target.value)}
             disabled={loading}
@@ -474,29 +486,27 @@ const ArtifactUploadModal = ({ server, storagePaths, onClose, onSuccess, onError
             <option value="sha256">SHA256</option>
           </select>
         </div>
-        <p className="form-text text-muted">
-          Optional checksum for file integrity verification (applies to all files)
-        </p>
+        <p className="form-text text-muted">{t('artifacts.artifactUploadModal.checksumHelper')}</p>
       </div>
 
       {selectedStoragePath && (
         <div className="alert alert-info">
           <div>
-            <p>
-              <strong>Upload Destination:</strong>
-            </p>
+            <p>{t('artifacts.artifactUploadModal.uploadDestinationHeading')}</p>
             <ul>
               <li>
-                <strong>Name:</strong> {selectedStoragePath.name}
+                {t('artifacts.artifactUploadModal.nameField')}: {selectedStoragePath.name}
               </li>
               <li>
-                <strong>Path:</strong> {selectedStoragePath.path}
+                {t('artifacts.artifactUploadModal.pathField')}: {selectedStoragePath.path}
               </li>
               <li>
-                <strong>Type:</strong> {selectedStoragePath.type.toUpperCase()}
+                {t('artifacts.artifactUploadModal.typeField')}:{' '}
+                {selectedStoragePath.type.toUpperCase()}
               </li>
               <li>
-                <strong>Current Files:</strong> {selectedStoragePath.file_count || 0}
+                {t('artifacts.artifactUploadModal.currentFilesField')}:{' '}
+                {selectedStoragePath.file_count || 0}
               </li>
             </ul>
           </div>

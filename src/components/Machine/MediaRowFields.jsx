@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { PathInput } from '../common';
 
@@ -34,6 +35,7 @@ export const DiskSourceFields = ({
   currentServer,
   disabled,
 }) => {
+  const { t } = useTranslation();
   const modeId = `${idPrefix}-mode${idSuffix}`;
   const sizeId = `${idPrefix}-size${idSuffix}`;
   const pathId = `${idPrefix}-path${idSuffix}`;
@@ -47,8 +49,8 @@ export const DiskSourceFields = ({
           onChange={e => onPatch({ mode: e.target.value })}
           disabled={disabled}
         >
-          <option value="new">New disk</option>
-          <option value="existing">Existing image</option>
+          <option value="new">{t('machineEdit.diskSourceFields.newDisk')}</option>
+          <option value="existing">{t('machineEdit.diskSourceFields.existingImage')}</option>
         </select>
       </FieldCol>
       {row.mode === 'new' ? (
@@ -84,7 +86,7 @@ export const DiskSourceFields = ({
               onChange={next => onPatch({ path: next })}
               server={currentServer}
               mode="file"
-              pickTitle="Pick the disk image"
+              pickTitle={t('machineEdit.diskSourceFields.pickDiskImage')}
               disabled={disabled}
             />
           )}
@@ -126,6 +128,7 @@ export const CdromSourceFields = ({
   currentServer,
   disabled,
 }) => {
+  const { t } = useTranslation();
   const sourceId = `${idPrefix}-source${idSuffix}`;
   const isoId = `${idPrefix}-iso${idSuffix}`;
   const pathId = `${idPrefix}-path${idSuffix}`;
@@ -141,13 +144,13 @@ export const CdromSourceFields = ({
             onChange={e => onPatch({ source: e.target.value })}
             disabled={disabled}
           >
-            <option value="iso">Cached ISO</option>
-            <option value="path">Agent path</option>
+            <option value="iso">{t('machineEdit.cdromSourceFields.cachedIso')}</option>
+            <option value="path">{t('machineEdit.cdromSourceFields.agentPath')}</option>
           </select>
         </FieldCol>
       )}
       {useIso ? (
-        <FieldCol col={isoCol} id={isoId} label="Cached ISO">
+        <FieldCol col={isoCol} id={isoId} label={t('machineEdit.cdromSourceFields.cachedIso')}>
           <select
             id={isoId}
             className="form-select form-select-sm"
@@ -155,7 +158,7 @@ export const CdromSourceFields = ({
             onChange={e => onPatch({ iso: e.target.value })}
             disabled={disabled}
           >
-            <option value="">Select…</option>
+            <option value="">{t('machineEdit.cdromSourceFields.select')}</option>
             {isoOptions.map(filename => (
               <option key={filename} value={filename}>
                 {filename}
@@ -164,7 +167,7 @@ export const CdromSourceFields = ({
           </select>
         </FieldCol>
       ) : (
-        <FieldCol col={pathCol} id={pathId} label="ISO path (on the agent host)">
+        <FieldCol col={pathCol} id={pathId} label={t('machineEdit.cdromSourceFields.isoPath')}>
           <PathInput
             id={pathId}
             className="form-control form-control-sm"
@@ -172,7 +175,7 @@ export const CdromSourceFields = ({
             onChange={next => onPatch({ path: next })}
             server={currentServer}
             mode="file"
-            pickTitle="Pick the ISO"
+            pickTitle={t('machineEdit.cdromSourceFields.pickIso')}
             disabled={disabled}
           />
         </FieldCol>
@@ -206,12 +209,17 @@ export const ControllerPortFields = ({
   portPlaceholder,
   disabled,
 }) => {
+  const { t } = useTranslation();
   const controllerId = `${idPrefix}-controller${idSuffix}`;
   const portId = `${idPrefix}-port${idSuffix}`;
   return (
     <>
       {showController && (
-        <FieldCol col="col-3 col-md-2" id={controllerId} label="Controller">
+        <FieldCol
+          col="col-3 col-md-2"
+          id={controllerId}
+          label={t('machineEdit.controllerPortFields.controller')}
+        >
           <input
             id={controllerId}
             className="form-control form-control-sm"
@@ -224,7 +232,11 @@ export const ControllerPortFields = ({
         </FieldCol>
       )}
       {showPort && (
-        <FieldCol col="col-2 col-md-1" id={portId} label="Port">
+        <FieldCol
+          col="col-2 col-md-1"
+          id={portId}
+          label={t('machineEdit.controllerPortFields.port')}
+        >
           <input
             id={portId}
             className="form-control form-control-sm"

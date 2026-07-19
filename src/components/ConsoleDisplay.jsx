@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React, { Suspense, lazy, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import InactiveConsoleDisplay from './InactiveConsoleDisplay';
 import SshConsoleDisplay from './SshConsoleDisplay';
@@ -9,15 +10,6 @@ import ZloginConsoleDisplay from './ZloginConsoleDisplay';
 // Lazy on purpose: the IronRDP client is a ~6MB WASM-carrying chunk — it
 // downloads only when an RDP console actually opens, never with the page.
 const RdpConsoleDisplay = lazy(() => import('./RdpConsoleDisplay'));
-
-const rdpLoadingFallback = (
-  <div className="hw-console-container d-flex align-items-center justify-content-center">
-    <div className="text-center text-white-50">
-      <i className="fas fa-spinner fa-pulse fa-2x" />
-      <p className="mt-2 small">Loading the RDP client...</p>
-    </div>
-  </div>
-);
 
 const ConsoleDisplay = ({
   machineDetails,
@@ -54,7 +46,17 @@ const ConsoleDisplay = ({
   handleVncClipboardPaste,
   setShowZloginConsole,
 }) => {
+  const { t } = useTranslation();
   const previewVncRef = useRef(null);
+
+  const rdpLoadingFallback = (
+    <div className="hw-console-container d-flex align-items-center justify-content-center">
+      <div className="text-center text-white-50">
+        <i className="fas fa-spinner fa-pulse fa-2x" />
+        <p className="mt-2 small">{t('console.consoleDisplay.rdpLoading')}</p>
+      </div>
+    </div>
+  );
 
   const hasVnc = machineDetails.active_vnc_session;
   const hasZlogin = machineDetails.zlogin_session && machineDetails.zlogin_session.id;

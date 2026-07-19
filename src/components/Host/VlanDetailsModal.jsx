@@ -1,15 +1,19 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { ContentModal } from '../common';
 
 const VlanDetailsModal = ({ vlan, onClose }) => {
+  const { t } = useTranslation();
   const renderDetailRow = (label, value, monospace = false) => (
     <div className="row">
       <div className="col-4">
         <strong>{label}:</strong>
       </div>
       <div className="col">
-        <span className={monospace ? 'font-monospace' : ''}>{value || 'N/A'}</span>
+        <span className={monospace ? 'font-monospace' : ''}>
+          {value || t('host.vlanDetailsModal.notAvailable')}
+        </span>
       </div>
     </div>
   );
@@ -21,13 +25,17 @@ const VlanDetailsModal = ({ vlan, onClose }) => {
       case 'down':
         return <span className="badge text-bg-danger">{state}</span>;
       default:
-        return <span className="badge text-bg-secondary">{state || 'Unknown'}</span>;
+        return (
+          <span className="badge text-bg-secondary">
+            {state || t('host.vlanDetailsModal.unknown')}
+          </span>
+        );
     }
   };
 
   const getVlanTag = vid => {
     if (vid === undefined || vid === null || vid === '') {
-      return <span className="badge text-bg-dark">No VID</span>;
+      return <span className="badge text-bg-dark">{t('host.vlanDetailsModal.noVid')}</span>;
     }
 
     // Assign colors based on VLAN ID to make each VLAN visually distinct
@@ -51,7 +59,7 @@ const VlanDetailsModal = ({ vlan, onClose }) => {
 
   const formatTimestamp = timestamp => {
     if (!timestamp) {
-      return 'N/A';
+      return t('host.vlanDetailsModal.notAvailable');
     }
     try {
       return new Date(timestamp).toLocaleString();
@@ -61,37 +69,42 @@ const VlanDetailsModal = ({ vlan, onClose }) => {
   };
 
   return (
-    <ContentModal isOpen onClose={onClose} title={`VLAN Details: ${vlan.link}`} icon="fas fa-tags">
+    <ContentModal
+      isOpen
+      onClose={onClose}
+      title={t('host.vlanDetailsModal.vlanDetailsTitle', { link: vlan.link })}
+      icon="fas fa-tags"
+    >
       <div>
         {/* Basic VLAN Information */}
         <div className="card mb-3">
           <div className="card-body">
             <h4 className="fs-6 fw-bold mb-3">
               <i className="fas fa-info-circle me-2" />
-              <span>Basic Information</span>
+              <span>{t('host.vlanDetailsModal.basicInformation')}</span>
             </h4>
 
-            {renderDetailRow('VLAN Name', vlan.link, true)}
+            {renderDetailRow(t('host.vlanDetailsModal.vlanName'), vlan.link, true)}
 
             <div className="row">
               <div className="col-4">
-                <strong>VLAN ID:</strong>
+                <strong>{t('host.vlanDetailsModal.vlanIdLabel')}:</strong>
               </div>
               <div className="col">{getVlanTag(vlan.vid)}</div>
             </div>
 
-            {renderDetailRow('Physical Link', vlan.over, true)}
+            {renderDetailRow(t('host.vlanDetailsModal.physicalLink'), vlan.over, true)}
 
             <div className="row">
               <div className="col-4">
-                <strong>State:</strong>
+                <strong>{t('host.vlanDetailsModal.state')}:</strong>
               </div>
               <div className="col">{getStateTag(vlan.state)}</div>
             </div>
 
-            {renderDetailRow('Class', vlan.class)}
-            {renderDetailRow('MTU', vlan.mtu || '1500')}
-            {renderDetailRow('Flags', vlan.flags)}
+            {renderDetailRow(t('host.vlanDetailsModal.class'), vlan.class)}
+            {renderDetailRow(t('host.vlanDetailsModal.mtu'), vlan.mtu || '1500')}
+            {renderDetailRow(t('host.vlanDetailsModal.flags'), vlan.flags)}
           </div>
         </div>
 
@@ -101,23 +114,29 @@ const VlanDetailsModal = ({ vlan, onClose }) => {
             <div className="card-body">
               <h4 className="fs-6 fw-bold mb-3">
                 <i className="fas fa-cogs me-2" />
-                <span>Technical Details</span>
+                <span>{t('host.vlanDetailsModal.technicalDetails')}</span>
               </h4>
 
-              {vlan.details.link && renderDetailRow('Link Name', vlan.details.link, true)}
-              {vlan.details.class && renderDetailRow('Link Class', vlan.details.class)}
-              {vlan.details.vid && renderDetailRow('VLAN ID', vlan.details.vid)}
-              {vlan.details.over && renderDetailRow('Over Link', vlan.details.over, true)}
+              {vlan.details.link &&
+                renderDetailRow(t('host.vlanDetailsModal.linkName'), vlan.details.link, true)}
+              {vlan.details.class &&
+                renderDetailRow(t('host.vlanDetailsModal.linkClass'), vlan.details.class)}
+              {vlan.details.vid &&
+                renderDetailRow(t('host.vlanDetailsModal.vlanIdLabel'), vlan.details.vid)}
+              {vlan.details.over &&
+                renderDetailRow(t('host.vlanDetailsModal.overLink'), vlan.details.over, true)}
               {vlan.details.state && (
                 <div className="row">
                   <div className="col-4">
-                    <strong>Current State:</strong>
+                    <strong>{t('host.vlanDetailsModal.currentState')}:</strong>
                   </div>
                   <div className="col">{getStateTag(vlan.details.state)}</div>
                 </div>
               )}
-              {vlan.details.mtu && renderDetailRow('MTU Size', vlan.details.mtu)}
-              {vlan.details.flags && renderDetailRow('Interface Flags', vlan.details.flags)}
+              {vlan.details.mtu &&
+                renderDetailRow(t('host.vlanDetailsModal.mtuSize'), vlan.details.mtu)}
+              {vlan.details.flags &&
+                renderDetailRow(t('host.vlanDetailsModal.interfaceFlags'), vlan.details.flags)}
             </div>
           </div>
         )}
@@ -127,17 +146,28 @@ const VlanDetailsModal = ({ vlan, onClose }) => {
           <div className="card-body">
             <h4 className="fs-6 fw-bold mb-3">
               <i className="fas fa-clock me-2" />
-              <span>Metadata</span>
+              <span>{t('host.vlanDetailsModal.metadata')}</span>
             </h4>
 
             {vlan.scan_timestamp &&
-              renderDetailRow('Last Scanned', formatTimestamp(vlan.scan_timestamp))}
-            {vlan.created_at && renderDetailRow('Created At', formatTimestamp(vlan.created_at))}
-            {vlan.updated_at && renderDetailRow('Updated At', formatTimestamp(vlan.updated_at))}
+              renderDetailRow(
+                t('host.vlanDetailsModal.lastScanned'),
+                formatTimestamp(vlan.scan_timestamp)
+              )}
+            {vlan.created_at &&
+              renderDetailRow(
+                t('host.vlanDetailsModal.createdAt'),
+                formatTimestamp(vlan.created_at)
+              )}
+            {vlan.updated_at &&
+              renderDetailRow(
+                t('host.vlanDetailsModal.updatedAt'),
+                formatTimestamp(vlan.updated_at)
+              )}
 
             <div className="row">
               <div className="col-4">
-                <strong>Data Source:</strong>
+                <strong>{t('host.vlanDetailsModal.dataSource')}:</strong>
               </div>
               <div className="col">
                 <span className="badge text-bg-info">{vlan.source || 'database'}</span>
@@ -152,7 +182,7 @@ const VlanDetailsModal = ({ vlan, onClose }) => {
             <div className="card-body">
               <h4 className="fs-6 fw-bold mb-3">
                 <i className="fas fa-code me-2" />
-                <span>Raw Data (Development)</span>
+                <span>{t('host.vlanDetailsModal.rawDataDevelopment')}</span>
               </h4>
 
               <pre className="bg-body-tertiary p-3 small">{JSON.stringify(vlan, null, 2)}</pre>

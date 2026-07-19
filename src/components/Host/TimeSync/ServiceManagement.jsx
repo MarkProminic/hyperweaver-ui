@@ -1,36 +1,39 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const TimeSyncServiceManagement = ({ availableSystems, loading, syncing, onSwitch }) => {
+  const { t } = useTranslation();
+
   const getSystemInfo = systemKey => {
     const systemData = {
       ntp: {
-        name: 'Traditional NTP',
+        name: t('hostTime.timeSyncServiceManagement.ntpName'),
         icon: 'fa-clock',
-        description: 'Network Time Protocol - Traditional UNIX time synchronization service.',
+        description: t('hostTime.timeSyncServiceManagement.ntpDescription'),
         features: [
-          'Mature and widely supported',
-          'Standard on most UNIX systems',
-          'Uses /etc/inet/ntp.conf',
+          t('hostTime.timeSyncServiceManagement.ntpFeature1'),
+          t('hostTime.timeSyncServiceManagement.ntpFeature2'),
+          t('hostTime.timeSyncServiceManagement.ntpFeature3'),
         ],
       },
       chrony: {
-        name: 'Chrony',
+        name: t('hostTime.timeSyncServiceManagement.chronyName'),
         icon: 'fa-stopwatch',
-        description: 'Modern time synchronization daemon with enhanced features.',
+        description: t('hostTime.timeSyncServiceManagement.chronyDescription'),
         features: [
-          'Better for intermittent connections',
-          'Faster synchronization',
-          'Uses /etc/inet/chrony.conf',
+          t('hostTime.timeSyncServiceManagement.chronyFeature1'),
+          t('hostTime.timeSyncServiceManagement.chronyFeature2'),
+          t('hostTime.timeSyncServiceManagement.chronyFeature3'),
         ],
       },
       ntpsec: {
-        name: 'NTPsec',
+        name: t('hostTime.timeSyncServiceManagement.ntpsecName'),
         icon: 'fa-shield-alt',
-        description: 'Security-focused NTP implementation with enhanced security features.',
+        description: t('hostTime.timeSyncServiceManagement.ntpsecDescription'),
         features: [
-          'Enhanced security and code quality',
-          'Backward compatible with NTP',
-          'Active security maintenance',
+          t('hostTime.timeSyncServiceManagement.ntpsecFeature1'),
+          t('hostTime.timeSyncServiceManagement.ntpsecFeature2'),
+          t('hostTime.timeSyncServiceManagement.ntpsecFeature3'),
         ],
       },
     };
@@ -46,21 +49,21 @@ const TimeSyncServiceManagement = ({ availableSystems, loading, syncing, onSwitc
 
   const getSwitchButtonLabel = (isCurrent, systemData, systemInfo) => {
     if (isCurrent) {
-      return 'Current Service';
+      return t('hostTime.timeSyncServiceManagement.buttonCurrentService');
     }
     if (!systemData?.can_switch_to) {
-      return 'Cannot Switch';
+      return t('hostTime.timeSyncServiceManagement.buttonCannotSwitch');
     }
     if (!systemData?.installed) {
-      return 'Install & Switch';
+      return t('hostTime.timeSyncServiceManagement.buttonInstallSwitch');
     }
-    return `Switch to ${systemInfo.name}`;
+    return t('hostTime.timeSyncServiceManagement.buttonSwitchTo', { service: systemInfo.name });
   };
 
   return (
     <div className="card">
       <div className="card-body">
-        <h3 className="fs-6 fw-bold">Time Synchronization Service Management</h3>
+        <h3 className="fs-6 fw-bold">{t('hostTime.timeSyncServiceManagement.heading')}</h3>
 
         {/* Available Systems */}
         {availableSystems?.available && (
@@ -77,7 +80,11 @@ const TimeSyncServiceManagement = ({ availableSystems, loading, syncing, onSwitc
                       <div className="d-flex align-items-center">
                         <i className={`fas ${systemInfo.icon} me-2`} />
                         {systemInfo.name}
-                        {isCurrent && <span className="badge text-bg-success ms-2">Current</span>}
+                        {isCurrent && (
+                          <span className="badge text-bg-success ms-2">
+                            {t('hostTime.timeSyncServiceManagement.badgeCurrent')}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="card-body">
@@ -94,18 +101,26 @@ const TimeSyncServiceManagement = ({ availableSystems, loading, syncing, onSwitc
                             <span
                               className={`badge ${systemData.installed ? 'text-bg-success' : 'text-bg-warning'}`}
                             >
-                              {systemData.installed ? 'Installed' : 'Not Installed'}
+                              {systemData.installed
+                                ? t('hostTime.timeSyncServiceManagement.badgeInstalled')
+                                : t('hostTime.timeSyncServiceManagement.badgeNotInstalled')}
                             </span>
                             {systemData.installed && (
                               <span
                                 className={`badge ${systemData.enabled ? 'text-bg-info' : 'text-bg-secondary'}`}
                               >
-                                {systemData.enabled ? 'Enabled' : 'Disabled'}
+                                {systemData.enabled
+                                  ? t('hostTime.timeSyncServiceManagement.badgeEnabled')
+                                  : t('hostTime.timeSyncServiceManagement.badgeDisabled')}
                               </span>
                             )}
                           </div>
                           {systemData.package_name && (
-                            <p className="small text-muted">Package: {systemData.package_name}</p>
+                            <p className="small text-muted">
+                              {t('hostTime.timeSyncServiceManagement.packageLabel', {
+                                name: systemData.package_name,
+                              })}
+                            </p>
                           )}
                         </div>
                       )}
@@ -140,10 +155,9 @@ const TimeSyncServiceManagement = ({ availableSystems, loading, syncing, onSwitc
         {!availableSystems?.available && !loading && (
           <div className="alert alert-warning">
             <p>
-              <strong>No Time Synchronization Systems Available</strong>
+              <strong>{t('hostTime.timeSyncServiceManagement.noSystemsAvailableTitle')}</strong>
               <br />
-              Unable to detect available time synchronization systems. The system may need package
-              installation or configuration.
+              {t('hostTime.timeSyncServiceManagement.noSystemsAvailableMessage')}
             </p>
           </div>
         )}

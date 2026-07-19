@@ -1,9 +1,16 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const TimeSyncServiceInfo = ({ statusInfo }) => {
+  const { t } = useTranslation();
+
   const getServiceStatusBadge = (service, status, available) => {
     if (service === 'none' || !available) {
-      return <span className="badge text-bg-secondary">Not Available</span>;
+      return (
+        <span className="badge text-bg-secondary">
+          {t('hostTime.timeSyncServiceInfo.notAvailable')}
+        </span>
+      );
     }
 
     let serviceLabel = service.toUpperCase();
@@ -15,26 +22,42 @@ const TimeSyncServiceInfo = ({ statusInfo }) => {
 
     switch (status) {
       case 'available':
-        return <span className="badge text-bg-success">{serviceLabel} - Online</span>;
+        return (
+          <span className="badge text-bg-success">
+            {t('hostTime.timeSyncServiceInfo.statusOnline', { service: serviceLabel })}
+          </span>
+        );
       case 'disabled':
-        return <span className="badge text-bg-warning">{serviceLabel} - Disabled</span>;
+        return (
+          <span className="badge text-bg-warning">
+            {t('hostTime.timeSyncServiceInfo.statusDisabled', { service: serviceLabel })}
+          </span>
+        );
       case 'unavailable':
-        return <span className="badge text-bg-danger">{serviceLabel} - Unavailable</span>;
+        return (
+          <span className="badge text-bg-danger">
+            {t('hostTime.timeSyncServiceInfo.statusUnavailable', { service: serviceLabel })}
+          </span>
+        );
       default:
-        return <span className="badge text-bg-secondary">{serviceLabel} - Unknown</span>;
+        return (
+          <span className="badge text-bg-secondary">
+            {t('hostTime.timeSyncServiceInfo.statusUnknown', { service: serviceLabel })}
+          </span>
+        );
     }
   };
 
   return (
     <div className="card mb-4">
       <div className="card-body">
-        <h3 className="fs-6 fw-bold">Service Information</h3>
+        <h3 className="fs-6 fw-bold">{t('hostTime.timeSyncServiceInfo.heading')}</h3>
         <div className="table-responsive">
           <table className="table">
             <tbody>
               <tr>
                 <td>
-                  <strong>Service Type</strong>
+                  <strong>{t('hostTime.timeSyncServiceInfo.serviceType')}</strong>
                 </td>
                 <td>
                   {getServiceStatusBadge(
@@ -46,36 +69,39 @@ const TimeSyncServiceInfo = ({ statusInfo }) => {
               </tr>
               <tr>
                 <td>
-                  <strong>Current Timezone</strong>
+                  <strong>{t('hostTime.timeSyncServiceInfo.currentTimezone')}</strong>
                 </td>
-                <td className="font-monospace">{statusInfo.timezone || 'Unknown'}</td>
+                <td className="font-monospace">
+                  {statusInfo.timezone || t('hostTime.timeSyncServiceInfo.unknown')}
+                </td>
               </tr>
               <tr>
                 <td>
-                  <strong>Last Status Check</strong>
+                  <strong>{t('hostTime.timeSyncServiceInfo.lastStatusCheck')}</strong>
                 </td>
                 <td>
                   {statusInfo.last_checked
                     ? new Date(statusInfo.last_checked).toLocaleString()
-                    : 'Unknown'}
+                    : t('hostTime.timeSyncServiceInfo.unknown')}
                 </td>
               </tr>
               {statusInfo.service_details && (
                 <>
                   <tr>
                     <td>
-                      <strong>Service State</strong>
+                      <strong>{t('hostTime.timeSyncServiceInfo.serviceState')}</strong>
                     </td>
                     <td className="font-monospace">
-                      {statusInfo.service_details.state || 'Unknown'}
+                      {statusInfo.service_details.state ||
+                        t('hostTime.timeSyncServiceInfo.unknown')}
                     </td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Service FMRI</strong>
+                      <strong>{t('hostTime.timeSyncServiceInfo.serviceFmri')}</strong>
                     </td>
                     <td className="font-monospace">
-                      {statusInfo.service_details.fmri || 'Unknown'}
+                      {statusInfo.service_details.fmri || t('hostTime.timeSyncServiceInfo.unknown')}
                     </td>
                   </tr>
                 </>
@@ -87,10 +113,9 @@ const TimeSyncServiceInfo = ({ statusInfo }) => {
         {!statusInfo.available && (
           <div className="alert alert-warning">
             <p>
-              <strong>No Time Synchronization Service Available</strong>
+              <strong>{t('hostTime.timeSyncServiceInfo.noServiceAvailableTitle')}</strong>
               <br />
-              Neither NTP nor Chrony services are available on this system. You may need to install
-              and configure a time synchronization service.
+              {t('hostTime.timeSyncServiceInfo.noServiceAvailableMessage')}
             </p>
           </div>
         )}

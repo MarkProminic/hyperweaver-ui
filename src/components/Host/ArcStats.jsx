@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { formatBytes } from './StorageUtils';
 
@@ -69,6 +70,7 @@ const getL2HitRatioClass = ratio => {
 };
 
 const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
+  const { t } = useTranslation();
   if (arcStats.length === 0) {
     return null;
   }
@@ -80,7 +82,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
           <div className="d-flex align-items-center gap-2">
             <h4 className="fs-5 fw-bold mb-0">
               <i className="fas fa-memory me-2" />
-              <span>ZFS ARC Statistics</span>
+              <span>{t('host.arcStats.title')}</span>
             </h4>
           </div>
           <div className="d-flex align-items-center gap-2">
@@ -88,7 +90,9 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
               type="button"
               className="btn btn-sm btn-link"
               onClick={() => toggleSection('arcStats')}
-              title={sectionsCollapsed.arcStats ? 'Expand section' : 'Collapse section'}
+              title={
+                sectionsCollapsed.arcStats ? t('host.arcStats.expand') : t('host.arcStats.collapse')
+              }
             >
               <i
                 className={`fas ${sectionsCollapsed.arcStats ? 'fa-chevron-down' : 'fa-chevron-up'}`}
@@ -104,19 +108,19 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                 <div className="table-responsive mb-4">
                   <h6 className="fs-6 fw-bold mb-2 text-info">
                     <i className="fas fa-chart-pie me-2" />
-                    <span>ARC Overview</span>
+                    <span>{t('host.arcStats.arcOverview')}</span>
                   </h6>
                   <table className="table table-striped">
                     <thead>
                       <tr>
-                        <th>Current Size</th>
-                        <th>Target Size</th>
-                        <th>Min/Max Size</th>
-                        <th>Hit Ratio</th>
-                        <th>Data Efficiency</th>
-                        <th>Prefetch Efficiency</th>
-                        <th>Compression Ratio</th>
-                        <th>Last Updated</th>
+                        <th>{t('host.arcStats.currentSize')}</th>
+                        <th>{t('host.arcStats.targetSize')}</th>
+                        <th>{t('host.arcStats.minMaxSize')}</th>
+                        <th>{t('host.arcStats.hitRatio')}</th>
+                        <th>{t('host.arcStats.dataEfficiency')}</th>
+                        <th>{t('host.arcStats.prefetchEfficiency')}</th>
+                        <th>{t('host.arcStats.compressionRatio')}</th>
+                        <th>{t('host.arcStats.lastUpdated')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -149,10 +153,16 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                             </td>
                             <td>
                               <div className="d-flex flex-wrap gap-2">
-                                <span className="badge text-bg-secondary" title="Minimum ARC Size">
+                                <span
+                                  className="badge text-bg-secondary"
+                                  title={t('host.arcStats.minSizeTitle')}
+                                >
                                   {formatBytes(parseFloat(arc.arc_min_size) || 0)}
                                 </span>
-                                <span className="badge text-bg-dark" title="Maximum ARC Size">
+                                <span
+                                  className="badge text-bg-dark"
+                                  title={t('host.arcStats.maxSizeTitle')}
+                                >
                                   {formatBytes(parseFloat(arc.arc_max_size) || 0)}
                                 </span>
                               </div>
@@ -206,7 +216,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                   <div className="col-lg-4">
                     <h6 className="fs-6 fw-bold mb-2 text-success">
                       <i className="fas fa-memory me-2" />
-                      <span>Memory Breakdown</span>
+                      <span>{t('host.arcStats.memoryBreakdown')}</span>
                     </h6>
                     <table className="table table-striped table-sm">
                       <tbody>
@@ -214,37 +224,37 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                           <React.Fragment key={`arc-memory-${arc.scan_timestamp}`}>
                             <tr>
                               <td>
-                                <strong>MRU Size</strong>
+                                <strong>{t('host.arcStats.mruSize')}</strong>
                               </td>
                               <td>{formatBytes(parseFloat(arc.mru_size) || 0)}</td>
                             </tr>
                             <tr>
                               <td>
-                                <strong>MFU Size</strong>
+                                <strong>{t('host.arcStats.mfuSize')}</strong>
                               </td>
                               <td>{formatBytes(parseFloat(arc.mfu_size) || 0)}</td>
                             </tr>
                             <tr>
                               <td>
-                                <strong>Data Size</strong>
+                                <strong>{t('host.arcStats.dataSize')}</strong>
                               </td>
                               <td>{formatBytes(parseFloat(arc.data_size) || 0)}</td>
                             </tr>
                             <tr>
                               <td>
-                                <strong>Metadata Size</strong>
+                                <strong>{t('host.arcStats.metadataSize')}</strong>
                               </td>
                               <td>{formatBytes(parseFloat(arc.metadata_size) || 0)}</td>
                             </tr>
                             <tr>
                               <td>
-                                <strong>Meta Used</strong>
+                                <strong>{t('host.arcStats.metaUsed')}</strong>
                               </td>
                               <td>{formatBytes(parseFloat(arc.arc_meta_used) || 0)}</td>
                             </tr>
                             <tr>
                               <td>
-                                <strong>Meta Limit</strong>
+                                <strong>{t('host.arcStats.metaLimit')}</strong>
                               </td>
                               <td>{formatBytes(parseFloat(arc.arc_meta_limit) || 0)}</td>
                             </tr>
@@ -258,7 +268,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                   <div className="col-lg-4">
                     <h6 className="fs-6 fw-bold mb-2 text-warning">
                       <i className="fas fa-bullseye me-2" />
-                      <span>Hit/Miss Statistics</span>
+                      <span>{t('host.arcStats.hitMissStats')}</span>
                     </h6>
                     <table className="table table-striped table-sm">
                       <tbody>
@@ -266,7 +276,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                           <React.Fragment key={`arc-hits-${arc.scan_timestamp}`}>
                             <tr>
                               <td>
-                                <strong>Total Hits</strong>
+                                <strong>{t('host.arcStats.totalHits')}</strong>
                               </td>
                               <td>
                                 <span className="badge text-bg-success">
@@ -276,7 +286,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                             </tr>
                             <tr>
                               <td>
-                                <strong>Total Misses</strong>
+                                <strong>{t('host.arcStats.totalMisses')}</strong>
                               </td>
                               <td>
                                 <span className="badge text-bg-warning">
@@ -286,25 +296,25 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                             </tr>
                             <tr>
                               <td>
-                                <strong>MRU Hits</strong>
+                                <strong>{t('host.arcStats.mruHits')}</strong>
                               </td>
                               <td>{(parseFloat(arc.mru_hits) || 0).toLocaleString()}</td>
                             </tr>
                             <tr>
                               <td>
-                                <strong>MFU Hits</strong>
+                                <strong>{t('host.arcStats.mfuHits')}</strong>
                               </td>
                               <td>{(parseFloat(arc.mfu_hits) || 0).toLocaleString()}</td>
                             </tr>
                             <tr>
                               <td>
-                                <strong>MRU Ghost Hits</strong>
+                                <strong>{t('host.arcStats.mruGhostHits')}</strong>
                               </td>
                               <td>{(parseFloat(arc.mru_ghost_hits) || 0).toLocaleString()}</td>
                             </tr>
                             <tr>
                               <td>
-                                <strong>MFU Ghost Hits</strong>
+                                <strong>{t('host.arcStats.mfuGhostHits')}</strong>
                               </td>
                               <td>{(parseFloat(arc.mfu_ghost_hits) || 0).toLocaleString()}</td>
                             </tr>
@@ -318,7 +328,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                   <div className="col-lg-4">
                     <h6 className="fs-6 fw-bold mb-2 text-info">
                       <i className="fas fa-exchange-alt me-2" />
-                      <span>Demand vs Prefetch</span>
+                      <span>{t('host.arcStats.demandVsPrefetch')}</span>
                     </h6>
                     <table className="table table-striped table-sm">
                       <tbody>
@@ -326,7 +336,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                           <React.Fragment key={`arc-demand-${arc.scan_timestamp}`}>
                             <tr>
                               <td>
-                                <strong>Demand Data Hits</strong>
+                                <strong>{t('host.arcStats.demandDataHits')}</strong>
                               </td>
                               <td>
                                 <span className="badge text-bg-success">
@@ -336,7 +346,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                             </tr>
                             <tr>
                               <td>
-                                <strong>Demand Data Misses</strong>
+                                <strong>{t('host.arcStats.demandDataMisses')}</strong>
                               </td>
                               <td>
                                 <span className="badge text-bg-warning">
@@ -346,7 +356,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                             </tr>
                             <tr>
                               <td>
-                                <strong>Demand Meta Hits</strong>
+                                <strong>{t('host.arcStats.demandMetaHits')}</strong>
                               </td>
                               <td>
                                 <span className="badge text-bg-success">
@@ -356,7 +366,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                             </tr>
                             <tr>
                               <td>
-                                <strong>Demand Meta Misses</strong>
+                                <strong>{t('host.arcStats.demandMetaMisses')}</strong>
                               </td>
                               <td>
                                 <span className="badge text-bg-warning">
@@ -366,7 +376,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                             </tr>
                             <tr>
                               <td>
-                                <strong>Prefetch Data Hits</strong>
+                                <strong>{t('host.arcStats.prefetchDataHits')}</strong>
                               </td>
                               <td>
                                 <span className="badge text-bg-info">
@@ -376,7 +386,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                             </tr>
                             <tr>
                               <td>
-                                <strong>Prefetch Data Misses</strong>
+                                <strong>{t('host.arcStats.prefetchDataMisses')}</strong>
                               </td>
                               <td>
                                 <span className="badge text-bg-dark">
@@ -396,15 +406,15 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
                   <div className="mt-4">
                     <h6 className="fs-6 fw-bold mb-2 text-danger">
                       <i className="fas fa-layer-group me-2" />
-                      <span>L2ARC Statistics</span>
+                      <span>{t('host.arcStats.l2arcStats')}</span>
                     </h6>
                     <table className="table table-striped table-sm">
                       <thead>
                         <tr>
-                          <th>L2 Size</th>
-                          <th>L2 Hits</th>
-                          <th>L2 Misses</th>
-                          <th>L2 Hit Ratio</th>
+                          <th>{t('host.arcStats.l2Size')}</th>
+                          <th>{t('host.arcStats.l2Hits')}</th>
+                          <th>{t('host.arcStats.l2Misses')}</th>
+                          <th>{t('host.arcStats.l2HitRatio')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -448,7 +458,7 @@ const ArcStats = ({ arcStats, sectionsCollapsed, toggleSection }) => {
               </div>
             ) : (
               <div className="alert alert-info">
-                <p>No ZFS ARC statistics available. The backend may still be collecting data.</p>
+                <p>{t('host.arcStats.noData')}</p>
               </div>
             )}
           </>

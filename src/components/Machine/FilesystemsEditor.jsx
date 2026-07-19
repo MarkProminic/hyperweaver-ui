@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 /** bhyve lofs host-directory mounts — the create `filesystems[]` / PUT
  *  add_filesystems / remove_filesystems surface. */
@@ -10,6 +11,7 @@ const FilesystemsEditor = ({
   onRemoveChange,
   disabled,
 }) => {
+  const { t } = useTranslation();
   const setRow = (index, patch) =>
     onAddChange(addFilesystems.map((row, i) => (i === index ? { ...row, ...patch } : row)));
 
@@ -19,12 +21,14 @@ const FilesystemsEditor = ({
   return (
     <div className="d-flex flex-column gap-2">
       <p className="form-text text-muted mt-0">
-        Generic lofs host-directory mounts into the zone (<code>special</code> = host dir,{' '}
-        <code>dir</code> = mount point in the guest). Changes ride the Apply pipeline.
+        {t('machineEdit.filesystemsEditor.mountsIntro1')}
+        <code>special</code>
+        {t('machineEdit.filesystemsEditor.mountsIntro2')} <code>dir</code>
+        {t('machineEdit.filesystemsEditor.mountsIntro3')}
       </p>
       {currentFilesystems.length > 0 && (
         <>
-          <h6 className="fw-bold">Current</h6>
+          <h6 className="fw-bold">{t('machineEdit.filesystemsEditor.current')}</h6>
           {currentFilesystems.map(fs => {
             const isMarked = removeFilesystems.includes(fs.dir);
             return (
@@ -48,7 +52,7 @@ const FilesystemsEditor = ({
                       className="form-check-label small text-danger"
                       htmlFor={`fs-remove-${fs.dir}`}
                     >
-                      Remove
+                      {t('machineEdit.filesystemsEditor.remove')}
                     </label>
                   </div>
                 </div>
@@ -57,12 +61,12 @@ const FilesystemsEditor = ({
           })}
         </>
       )}
-      <h6 className="fw-bold mt-2">Add Mount</h6>
+      <h6 className="fw-bold mt-2">{t('machineEdit.filesystemsEditor.addMount')}</h6>
       {addFilesystems.map((row, index) => (
         <div className="row g-2 align-items-end" key={row.key}>
           <div className="col-6 col-md-3">
             <label className="form-label small mb-1" htmlFor={`fs-special-${row.key}`}>
-              Host dir (special)
+              {t('machineEdit.filesystemsEditor.hostDir')}
             </label>
             <input
               id={`fs-special-${row.key}`}
@@ -74,7 +78,7 @@ const FilesystemsEditor = ({
           </div>
           <div className="col-6 col-md-3">
             <label className="form-label small mb-1" htmlFor={`fs-dir-${row.key}`}>
-              Mount point (dir)
+              {t('machineEdit.filesystemsEditor.mountPoint')}
             </label>
             <input
               id={`fs-dir-${row.key}`}
@@ -86,7 +90,7 @@ const FilesystemsEditor = ({
           </div>
           <div className="col-4 col-md-2">
             <label className="form-label small mb-1" htmlFor={`fs-type-${row.key}`}>
-              Type
+              {t('machineEdit.filesystemsEditor.type')}
             </label>
             <input
               id={`fs-type-${row.key}`}
@@ -99,7 +103,7 @@ const FilesystemsEditor = ({
           </div>
           <div className="col-6 col-md-3">
             <label className="form-label small mb-1" htmlFor={`fs-options-${row.key}`}>
-              Options
+              {t('machineEdit.filesystemsEditor.options')}
             </label>
             <input
               id={`fs-options-${row.key}`}
@@ -114,7 +118,7 @@ const FilesystemsEditor = ({
             <button
               type="button"
               className="btn btn-sm btn-outline-danger"
-              aria-label="Remove row"
+              aria-label={t('machineEdit.filesystemsEditor.removeRow')}
               onClick={() => onAddChange(addFilesystems.filter(entry => entry.key !== row.key))}
               disabled={disabled}
             >
@@ -136,7 +140,7 @@ const FilesystemsEditor = ({
           disabled={disabled}
         >
           <i className="fas fa-plus me-2" />
-          Add Mount
+          {t('machineEdit.filesystemsEditor.addMount')}
         </button>
       </div>
     </div>

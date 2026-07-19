@@ -1,3 +1,5 @@
+import i18n from '../i18n';
+
 /**
  * Friendly labels for task operation values (sync item 11). The provisioning
  * pipeline minted operations whose raw names read poorly in the task tables;
@@ -5,42 +7,45 @@
  * is already readable. Shared by Tasks.jsx and TaskDetailModal.jsx so both
  * agents' task rows label identically.
  */
-const OPERATION_LABELS = {
-  provisioner_import: 'Provisioner Import',
-  machine_prepare: 'Render + Materialize Working Directory',
-  machine_create_orchestration: 'Machine Creation',
-  machine_create_storage: 'Create Storage',
-  machine_create_config: 'Configure VM',
-  machine_create_finalize: 'Finalize Machine',
-  template_download: 'Template Download',
-  machine_provision_orchestration: 'Provisioning Pipeline',
-  machine_wait_ssh: 'Wait for SSH',
-  machine_sync_parent: 'Sync Folders',
-  machine_sync: 'Sync Folder',
-  machine_provision_parent: 'Run Playbooks',
-  machine_provision: 'Run Playbook',
-  machine_modify: 'Modify Machine',
-  reset: 'Reset',
-  pause: 'Pause',
-  resume: 'Resume',
-  snapshot_take: 'Take Snapshot',
-  snapshot_restore: 'Restore Snapshot',
-  snapshot_delete: 'Delete Snapshot',
-  machine_clone_current: 'Clone Current State',
-  template_delete: 'Template Delete',
-  template_export: 'Template Export',
-  template_upload: 'Template Publish',
-  template_move: 'Template Move',
-  zone_modify: 'Modify Zone',
-  provisioning_network_setup: 'Provisioning Network Setup',
-  provisioning_network_teardown: 'Provisioning Network Teardown',
-  artifact_scan: 'File Cache Scan',
-  artifact_download: 'File Download',
-  hcl_download: 'HCL Portal Download',
-  agent_update: 'Agent Update',
+const OPERATION_LABEL_KEYS = {
+  provisioner_import: 'tasks.operation.provisionerImport',
+  machine_prepare: 'tasks.operation.machinePrepare',
+  machine_create_orchestration: 'tasks.operation.machineCreateOrchestration',
+  machine_create_storage: 'tasks.operation.machineCreateStorage',
+  machine_create_config: 'tasks.operation.machineCreateConfig',
+  machine_create_finalize: 'tasks.operation.machineCreateFinalize',
+  template_download: 'tasks.operation.templateDownload',
+  machine_provision_orchestration: 'tasks.operation.machineProvisionOrchestration',
+  machine_wait_ssh: 'tasks.operation.machineWaitSsh',
+  machine_sync_parent: 'tasks.operation.machineSyncParent',
+  machine_sync: 'tasks.operation.machineSync',
+  machine_provision_parent: 'tasks.operation.machineProvisionParent',
+  machine_provision: 'tasks.operation.machineProvision',
+  machine_modify: 'tasks.operation.machineModify',
+  reset: 'tasks.operation.reset',
+  pause: 'tasks.operation.pause',
+  resume: 'tasks.operation.resume',
+  snapshot_take: 'tasks.operation.snapshotTake',
+  snapshot_restore: 'tasks.operation.snapshotRestore',
+  snapshot_delete: 'tasks.operation.snapshotDelete',
+  machine_clone_current: 'tasks.operation.machineCloneCurrent',
+  template_delete: 'tasks.operation.templateDelete',
+  template_export: 'tasks.operation.templateExport',
+  template_upload: 'tasks.operation.templateUpload',
+  template_move: 'tasks.operation.templateMove',
+  zone_modify: 'tasks.operation.zoneModify',
+  provisioning_network_setup: 'tasks.operation.provisioningNetworkSetup',
+  provisioning_network_teardown: 'tasks.operation.provisioningNetworkTeardown',
+  artifact_scan: 'tasks.operation.artifactScan',
+  artifact_download: 'tasks.operation.artifactDownload',
+  hcl_download: 'tasks.operation.hclDownload',
+  agent_update: 'tasks.operation.agentUpdate',
 };
 
-export const taskOperationLabel = operation => OPERATION_LABELS[operation] || operation;
+export const taskOperationLabel = operation => {
+  const key = OPERATION_LABEL_KEYS[operation];
+  return key ? i18n.t(key) : operation;
+};
 
 export const TERMINAL_TASK_STATUSES = ['completed', 'completed_with_errors', 'failed', 'cancelled'];
 

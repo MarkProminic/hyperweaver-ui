@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../contexts/ServerContext';
 import { hasConsole, hasFeature } from '../utils/capabilities';
@@ -36,6 +37,7 @@ const VncConsoleDisplay = ({
   handleVncShowDotChange,
   handleVncClipboardPaste,
 }) => {
+  const { t } = useTranslation();
   const { makeAgentRequest } = useServers();
   const [screenshotUrl, setScreenshotUrl] = useState(null);
   const rdpAvailable = hasConsole(currentServer, 'rdp');
@@ -95,13 +97,17 @@ const VncConsoleDisplay = ({
       {/* VNC Console Header */}
       <div className="bg-dark text-white p-3 d-flex justify-content-between align-items-center">
         <div>
-          <h6 className="fs-6 fw-bold text-white mb-1">Active VNC Session</h6>
+          <h6 className="fs-6 fw-bold text-white mb-1">
+            {t('console.vncConsoleDisplay.activeSession')}
+          </h6>
           {machineDetails.vnc_session_info && machineDetails.vnc_session_info.web_port && (
             <p className="small text-white-50 mb-0">
-              Port: {machineDetails.vnc_session_info.web_port} | Started:{' '}
-              {machineDetails.vnc_session_info.created_at
-                ? new Date(machineDetails.vnc_session_info.created_at).toLocaleString()
-                : 'Unknown'}
+              {t('console.vncConsoleDisplay.portStarted', {
+                port: machineDetails.vnc_session_info.web_port,
+                started: machineDetails.vnc_session_info.created_at
+                  ? new Date(machineDetails.vnc_session_info.created_at).toLocaleString()
+                  : t('console.vncConsoleDisplay.unknown'),
+              })}
             </p>
           )}
         </div>
@@ -159,7 +165,7 @@ const VncConsoleDisplay = ({
                   console.error('📋 VNC PREVIEW PASTE: Error:', error);
                 }
               }}
-              title="Paste from Browser Clipboard"
+              title={t('console.vncConsoleDisplay.pasteFromClipboard')}
             >
               <i className="fas fa-paste" />
             </button>
@@ -169,7 +175,7 @@ const VncConsoleDisplay = ({
             className="btn btn-sm btn-primary"
             onClick={() => handleVncConsole(selectedMachine)}
             disabled={loading || loadingVnc}
-            title="Expand VNC Console"
+            title={t('console.vncConsoleDisplay.expandConsole')}
           >
             <i className="fas fa-expand" />
           </button>
@@ -179,7 +185,7 @@ const VncConsoleDisplay = ({
                 type="button"
                 className="btn btn-sm btn-warning"
                 onClick={() => setActiveConsoleType('zlogin')}
-                title="Switch to zlogin Console"
+                title={t('console.vncConsoleDisplay.switchToZlogin')}
               >
                 <i className="fas fa-terminal" />
               </button>
@@ -210,7 +216,7 @@ const VncConsoleDisplay = ({
                   }
                 }}
                 disabled={loading}
-                title="Start zlogin Console"
+                title={t('console.vncConsoleDisplay.startZlogin')}
               >
                 <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'}`} />
               </button>
@@ -221,7 +227,7 @@ const VncConsoleDisplay = ({
                 type="button"
                 className="btn btn-sm btn-success"
                 onClick={() => setActiveConsoleType('ssh')}
-                title="Switch to SSH Console"
+                title={t('console.vncConsoleDisplay.switchToSsh')}
               >
                 <i className="fas fa-terminal" />
               </button>
@@ -240,7 +246,7 @@ const VncConsoleDisplay = ({
                   })
                 }
                 disabled={loading}
-                title="Start an SSH shell inside the guest"
+                title={t('console.vncConsoleDisplay.startSsh')}
               >
                 <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'}`} />
               </button>
@@ -251,7 +257,7 @@ const VncConsoleDisplay = ({
                 type="button"
                 className="btn btn-sm btn-info"
                 onClick={() => setActiveConsoleType('rdp')}
-                title="Switch to RDP Console"
+                title={t('console.vncConsoleDisplay.switchToRdp')}
               >
                 <i className="fab fa-windows" />
               </button>
@@ -270,7 +276,7 @@ const VncConsoleDisplay = ({
                   })
                 }
                 disabled={loading}
-                title="Start the browser VRDP console (VRDE over the agent)"
+                title={t('console.vncConsoleDisplay.startRdp')}
               >
                 <i className={loading ? 'fas fa-spinner fa-pulse' : 'fab fa-windows'} />
               </button>
@@ -304,7 +310,9 @@ const VncConsoleDisplay = ({
             return (
               <img
                 src={screenshotUrl}
-                alt={`Console preview of ${selectedMachine}`}
+                alt={t('console.vncConsoleDisplay.consolePreviewAlt', {
+                  machineName: selectedMachine,
+                })}
                 className="hw-console-screenshot"
               />
             );
@@ -315,12 +323,16 @@ const VncConsoleDisplay = ({
                 <div className="has-margin-bottom-12px">
                   <img
                     src="/ui/images/startcloud.svg"
-                    alt="Start Console"
+                    alt={t('console.vncConsoleDisplay.startConsoleAlt')}
                     className="hw-startup-icon"
                   />
                 </div>
-                <div className="fs-6 fw-medium">No Console Session</div>
-                <div className="small mt-6 opacity-07">Click Console to start session</div>
+                <div className="fs-6 fw-medium">
+                  {t('console.vncConsoleDisplay.noConsoleSession')}
+                </div>
+                <div className="small mt-6 opacity-07">
+                  {t('console.vncConsoleDisplay.clickToStart')}
+                </div>
               </div>
             </div>
           );

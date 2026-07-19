@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const RevealInput = ({
   id,
@@ -11,6 +12,7 @@ const RevealInput = ({
   autoComplete = 'new-password',
   minLength,
 }) => {
+  const { t } = useTranslation();
   const [show, setShow] = useState(false);
   return (
     <div className="input-group">
@@ -30,7 +32,7 @@ const RevealInput = ({
         type="button"
         className="btn btn-outline-secondary"
         onClick={() => setShow(prev => !prev)}
-        title={show ? 'Hide the password' : 'Show the password'}
+        title={show ? t('common.revealInput.hidePassword') : t('common.revealInput.showPassword')}
         disabled={disabled}
       >
         <i className={`fas ${show ? 'fa-eye-slash' : 'fa-eye'}`} />

@@ -1,6 +1,7 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -24,23 +25,22 @@ const DirectModeFields = ({
   setApiKey,
   loading,
 }) => {
+  const { t } = useTranslation();
   if (directFirstBoot) {
     return (
       <div className="alert alert-info text-start">
         <p className="mb-2">
-          <strong>First boot?</strong> This host has no API keys yet. Read its setup token from the
-          host (<code>setup.token</code> beside the config file, or the agent startup log) to create
-          the first key.
+          <strong>{t('auth.login.firstBootTitle')}</strong> {t('auth.login.firstBootDesc')}
         </p>
         <label className="form-label" htmlFor="setupToken">
-          Setup token
+          {t('auth.login.setupTokenLabel')}
         </label>
         <input
           id="setupToken"
           type="text"
           className="form-control font-monospace mb-2"
           autoComplete="off"
-          placeholder="64-character token"
+          placeholder={t('auth.login.setupTokenPlaceholder')}
           value={setupToken}
           onChange={e => setSetupToken(e.target.value)}
           disabled={loading}
@@ -58,7 +58,7 @@ const DirectModeFields = ({
               aria-hidden="true"
             />
           )}
-          Generate first API key
+          {t('auth.login.generateFirstKeyBtn')}
         </button>
         <button
           type="button"
@@ -66,7 +66,7 @@ const DirectModeFields = ({
           onClick={onShowKeyEntry}
           disabled={loading}
         >
-          I already have a key
+          {t('auth.login.alreadyHaveKeyBtn')}
         </button>
       </div>
     );
@@ -75,7 +75,7 @@ const DirectModeFields = ({
   return (
     <div className="mb-3 text-start">
       <label className="form-label" htmlFor="apiKey">
-        API Key
+        {t('auth.login.apiKeyLabel')}
       </label>
       {/* Companion username field gives password managers an account label to file the
           key under (current-password below makes them offer to save/autofill it). */}
@@ -95,12 +95,12 @@ const DirectModeFields = ({
         className="form-control font-monospace"
         name="apiKey"
         autoComplete="current-password"
-        placeholder="hw_..."
+        placeholder={t('auth.login.apiKeyPlaceholder')}
         value={apiKey}
         onChange={e => setApiKey(e.target.value)}
         disabled={loading}
       />
-      <div className="form-text text-muted">Generate keys under Settings once signed in</div>
+      <div className="form-text text-muted">{t('auth.login.generateKeysHelpText')}</div>
     </div>
   );
 };
@@ -142,28 +142,31 @@ const redirectToOidc = (provider, { register = false } = {}) => {
  * Notice shown while an OIDC provider is selected: the auto-redirect countdown (the parent
  * effect owns the timer) with immediate-go / cancel controls, or the static redirect copy.
  */
-const OidcRedirectNotice = ({ authMethod, oidcCountdown, onCancel }) => (
-  <div className="alert alert-info mb-3">
-    <i className="fas fa-external-link-alt me-1" />
-    {oidcCountdown !== null && oidcCountdown > 0
-      ? `Redirecting you to sign in in ${oidcCountdown}…`
-      : 'You will be redirected to your identity provider to sign in.'}
-    {oidcCountdown !== null && (
-      <div className="mt-2 d-flex gap-2 justify-content-center">
-        <button
-          type="button"
-          className="btn btn-sm btn-primary"
-          onClick={() => redirectToOidc(authMethod.replace('oidc-', ''))}
-        >
-          Sign in now
-        </button>
-        <button type="button" className="btn btn-sm btn-outline-secondary" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-    )}
-  </div>
-);
+const OidcRedirectNotice = ({ authMethod, oidcCountdown, onCancel }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="alert alert-info mb-3">
+      <i className="fas fa-external-link-alt me-1" />
+      {oidcCountdown !== null && oidcCountdown > 0
+        ? t('auth.login.redirectCountdown', { count: oidcCountdown })
+        : t('auth.login.redirectStaticMsg')}
+      {oidcCountdown !== null && (
+        <div className="mt-2 d-flex gap-2 justify-content-center">
+          <button
+            type="button"
+            className="btn btn-sm btn-primary"
+            onClick={() => redirectToOidc(authMethod.replace('oidc-', ''))}
+          >
+            {t('auth.login.signInNowBtn')}
+          </button>
+          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={onCancel}>
+            {t('auth.login.cancelBtn')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 OidcRedirectNotice.propTypes = {
   authMethod: PropTypes.string,
@@ -177,11 +180,12 @@ OidcRedirectNotice.propTypes = {
  * OFF with no OIDC provider → no self-registration path, render nothing.
  */
 const RegisterPrompt = ({ authMethods, authMethod, registrationEnabled }) => {
+  const { t } = useTranslation();
   if (registrationEnabled) {
     return (
       <div className="mt-3">
         <p className="mb-0">
-          Don&apos;t have an account? <a href="/register">Register here</a>
+          {t('auth.login.noAccountMsg')} <a href="/register">{t('auth.login.registerLink')}</a>
         </p>
       </div>
     );
@@ -195,13 +199,13 @@ const RegisterPrompt = ({ authMethods, authMethod, registrationEnabled }) => {
   return (
     <div className="mt-3">
       <p className="mb-0">
-        Don&apos;t have an account?{' '}
+        {t('auth.login.noAccountMsg')}{' '}
         <button
           type="button"
           className="btn btn-link p-0 align-baseline"
           onClick={() => redirectToOidc(method.id.slice('oidc-'.length), { register: true })}
         >
-          Create one with {method.name}
+          {t('auth.login.createOneWith', { provider: method.name })}
         </button>
       </p>
     </div>
@@ -232,42 +236,51 @@ const CredentialFields = ({
   setPassword,
   loading,
   methodsLoading,
-}) => (
-  <>
-    <div className="mb-3 text-start">
-      <label className="form-label" htmlFor="identifier">
-        {authMethod === 'ldap' ? 'Username' : 'Email or Username'}
-      </label>
-      <input
-        id="identifier"
-        type="text"
-        className="form-control"
-        name="identifier"
-        autoComplete="username"
-        placeholder={authMethod === 'ldap' ? 'Username' : 'Username or Email'}
-        value={identifier}
-        onChange={e => setIdentifier(e.target.value)}
-        disabled={loading || methodsLoading}
-      />
-    </div>
-    <div className="mb-3 text-start">
-      <label className="form-label" htmlFor="password">
-        Password
-      </label>
-      <input
-        id="password"
-        type="password"
-        name="password"
-        autoComplete="current-password"
-        className="form-control"
-        placeholder="******"
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-        disabled={loading}
-      />
-    </div>
-  </>
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      <div className="mb-3 text-start">
+        <label className="form-label" htmlFor="identifier">
+          {authMethod === 'ldap'
+            ? t('auth.login.usernameLabel')
+            : t('auth.login.emailOrUsernameLabel')}
+        </label>
+        <input
+          id="identifier"
+          type="text"
+          className="form-control"
+          name="identifier"
+          autoComplete="username"
+          placeholder={
+            authMethod === 'ldap'
+              ? t('auth.login.usernamePlaceholder')
+              : t('auth.login.emailOrUsernamePlaceholder')
+          }
+          value={identifier}
+          onChange={e => setIdentifier(e.target.value)}
+          disabled={loading || methodsLoading}
+        />
+      </div>
+      <div className="mb-3 text-start">
+        <label className="form-label" htmlFor="password">
+          {t('auth.login.passwordLabel')}
+        </label>
+        <input
+          id="password"
+          type="password"
+          name="password"
+          autoComplete="current-password"
+          className="form-control"
+          placeholder="******"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          disabled={loading}
+        />
+      </div>
+    </>
+  );
+};
 
 CredentialFields.propTypes = {
   authMethod: PropTypes.string,
@@ -283,18 +296,25 @@ CredentialFields.propTypes = {
  * The form's submit button: spinner while a login is in flight, the provider
  * name when an OIDC method is selected. Extracted from Login for complexity.
  */
-const LoginSubmitButton = ({ loading, authMethod, authMethods }) => (
-  <div className="mb-3">
-    <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-      {loading && (
-        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
-      )}
-      {authMethod.startsWith('oidc-')
-        ? authMethods.find(m => m.id === authMethod)?.name || 'Continue with OpenID Connect'
-        : 'Login'}
-    </button>
-  </div>
-);
+const LoginSubmitButton = ({ loading, authMethod, authMethods }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="mb-3">
+      <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+        {loading && (
+          <span
+            className="spinner-border spinner-border-sm me-2"
+            role="status"
+            aria-hidden="true"
+          />
+        )}
+        {authMethod.startsWith('oidc-')
+          ? authMethods.find(m => m.id === authMethod)?.name || t('auth.login.continueWithOidcBtn')
+          : t('auth.login.loginBtn')}
+      </button>
+    </div>
+  );
+};
 
 LoginSubmitButton.propTypes = {
   loading: PropTypes.bool,
@@ -307,6 +327,7 @@ LoginSubmitButton.propTypes = {
  * @returns {JSX.Element} Login component
  */
 const Login = () => {
+  const { t } = useTranslation();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -507,7 +528,7 @@ const Login = () => {
     }
 
     if (!identifier || !password) {
-      setMsg('Please enter both username/email and password');
+      setMsg(t('auth.login.enterBothFieldsError'));
       return;
     }
 
@@ -531,7 +552,7 @@ const Login = () => {
       }
     } catch (loginErr) {
       console.error('Login error:', loginErr);
-      setMsg('An unexpected error occurred. Please try again.');
+      setMsg(t('auth.login.unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -558,12 +579,12 @@ const Login = () => {
 
   const getAuthMethodHelpText = () => {
     if (authMethod === 'ldap') {
-      return 'Use your directory credentials';
+      return t('auth.login.ldapHelpText');
     }
     if (authMethod.startsWith('oidc-')) {
-      return 'Sign in through your identity provider';
+      return t('auth.login.oidcHelpText');
     }
-    return 'Use your local account credentials';
+    return t('auth.login.localHelpText');
   };
 
   const isError = msg.includes('error') || msg.includes('failed') || msg.includes('Invalid');
@@ -593,15 +614,15 @@ const Login = () => {
                         <p className="mb-0">{modeError}</p>
                       </div>
                       <button type="button" className="btn btn-primary" onClick={refresh}>
-                        Retry
+                        {t('auth.login.retryBtn')}
                       </button>
                     </>
                   ) : (
                     <>
                       <div className="spinner-border text-primary" role="status">
-                        <span className="visually-hidden">Loading...</span>
+                        <span className="visually-hidden">{t('auth.login.loading')}</span>
                       </div>
-                      <p className="mt-3 mb-0">Contacting host...</p>
+                      <p className="mt-3 mb-0">{t('auth.login.contactingHost')}</p>
                     </>
                   )}
                 </div>
@@ -626,12 +647,9 @@ const Login = () => {
             <div className="col-12 col-lg-5">
               <div className="card">
                 <div className="card-body p-4">
-                  <h1 className="h4 text-center mb-3">Your API key</h1>
+                  <h1 className="h4 text-center mb-3">{t('auth.login.yourApiKeyTitle')}</h1>
                   <div className="alert alert-warning">
-                    <p className="mb-0">
-                      <strong>Save this key now.</strong> It is shown only once — the host stores
-                      only a hash, and the bootstrap endpoint has been disabled.
-                    </p>
+                    <p className="mb-0">{t('auth.login.saveKeyWarning')}</p>
                   </div>
                   <div className="input-group mb-3">
                     <input
@@ -645,7 +663,7 @@ const Login = () => {
                       type="button"
                       className="btn btn-outline-secondary"
                       onClick={() => copyText(bootstrappedKey)}
-                      title="Copy to clipboard"
+                      title={t('auth.login.copyToClipboard')}
                     >
                       <i className="fas fa-copy" />
                     </button>
@@ -655,7 +673,7 @@ const Login = () => {
                     className="btn btn-primary w-100"
                     onClick={() => setBootstrappedKey(null)}
                   >
-                    I saved it — continue
+                    {t('auth.login.savedContinueBtn')}
                   </button>
                 </div>
               </div>
@@ -719,21 +737,18 @@ const Login = () => {
                       }}
                       disabled={loading}
                     >
-                      Sign in with the desktop agent
+                      {t('auth.login.signInWithDesktopBtn')}
                     </button>
-                    <div className="form-text text-muted">
-                      Asks the Hyperweaver Agent running on this machine to open a signed-in session
-                      — no key needed.
-                    </div>
+                    <div className="form-text text-muted">{t('auth.login.desktopAgentDesc')}</div>
                     {desktopCountdown !== null && desktopCountdown > 0 && (
                       <div className="form-text">
-                        Signing in automatically in {desktopCountdown}s…{' '}
+                        {t('auth.login.autoSignInCountdown', { count: desktopCountdown })}{' '}
                         <button
                           type="button"
                           className="btn btn-link btn-sm p-0 align-baseline"
                           onClick={() => setDesktopCountdown(null)}
                         >
-                          Cancel
+                          {t('auth.login.cancelBtn')}
                         </button>
                       </div>
                     )}
@@ -766,7 +781,7 @@ const Login = () => {
                 {!methodsLoading && authMethods.length > 1 && (
                   <div className="mb-3 text-start">
                     <label className="form-label" htmlFor="authMethod">
-                      Authentication Method
+                      {t('auth.login.authMethodLabel')}
                     </label>
                     <select
                       id="authMethod"
@@ -800,7 +815,7 @@ const Login = () => {
                 )}
                 <div className="mt-3">
                   <a href="/docs" className="text-muted" target="_blank" rel="noopener noreferrer">
-                    Documentation
+                    {t('auth.login.documentationLink')}
                   </a>
                 </div>
               </div>

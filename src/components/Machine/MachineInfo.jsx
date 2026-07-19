@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { machineStatusVariant } from './machineHelpers';
 
 const statusClass = status => `text-${machineStatusVariant(status)}`;
 
 const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selectedMachine }) => {
+  const { t } = useTranslation();
   if (!machineDetails || !machineDetails.machine_info) {
     return null;
   }
@@ -36,7 +38,7 @@ const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selec
       <>
         <tr>
           <td className="px-3 py-2">
-            <strong>Name</strong>
+            <strong>{t('machine.machineInfo.nameLabel')}</strong>
           </td>
           <td className="px-3 py-2">
             <code className="small">{configuration.zonename}</code>
@@ -44,7 +46,7 @@ const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selec
         </tr>
         <tr>
           <td className="px-3 py-2">
-            <strong>Path</strong>
+            <strong>{t('machine.machineInfo.pathLabel')}</strong>
           </td>
           <td className="px-3 py-2">
             <code className="small">{configuration.zonepath}</code>
@@ -53,41 +55,47 @@ const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selec
         {configuration.bootargs && (
           <tr>
             <td className="px-3 py-2">
-              <strong>Boot Args</strong>
+              <strong>{t('machine.machineInfo.bootArgsLabel')}</strong>
             </td>
             <td className="px-3 py-2">
-              <code className="small">{configuration.bootargs || 'None'}</code>
+              <code className="small">
+                {configuration.bootargs || t('machine.machineInfo.noneFallback')}
+              </code>
             </td>
           </tr>
         )}
         {configuration.hostid && (
           <tr>
             <td className="px-3 py-2">
-              <strong>Host ID</strong>
+              <strong>{t('machine.machineInfo.hostIdLabel')}</strong>
             </td>
             <td className="px-3 py-2">
-              <span className="badge text-bg-secondary">{configuration.hostid || 'None'}</span>
+              <span className="badge text-bg-secondary">
+                {configuration.hostid || t('machine.machineInfo.noneFallback')}
+              </span>
             </td>
           </tr>
         )}
         {configuration.pool && (
           <tr>
             <td className="px-3 py-2">
-              <strong>Pool</strong>
+              <strong>{t('machine.machineInfo.poolLabel')}</strong>
             </td>
             <td className="px-3 py-2">
-              <span className="badge text-bg-secondary">{configuration.pool || 'None'}</span>
+              <span className="badge text-bg-secondary">
+                {configuration.pool || t('machine.machineInfo.noneFallback')}
+              </span>
             </td>
           </tr>
         )}
         {configuration['scheduling-class'] && (
           <tr>
             <td className="px-3 py-2">
-              <strong>Scheduling Class</strong>
+              <strong>{t('machine.machineInfo.schedulingClassLabel')}</strong>
             </td>
             <td className="px-3 py-2">
               <span className="badge text-bg-secondary">
-                {configuration['scheduling-class'] || 'None'}
+                {configuration['scheduling-class'] || t('machine.machineInfo.noneFallback')}
               </span>
             </td>
           </tr>
@@ -95,21 +103,23 @@ const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selec
         {configuration.limitpriv && (
           <tr>
             <td className="px-3 py-2">
-              <strong>Limit Privileges</strong>
+              <strong>{t('machine.machineInfo.limitPrivilegesLabel')}</strong>
             </td>
             <td className="px-3 py-2">
-              <span className="badge text-bg-secondary">{configuration.limitpriv || 'None'}</span>
+              <span className="badge text-bg-secondary">
+                {configuration.limitpriv || t('machine.machineInfo.noneFallback')}
+              </span>
             </td>
           </tr>
         )}
         {configuration['fs-allowed'] && (
           <tr>
             <td className="px-3 py-2">
-              <strong>FS Allowed</strong>
+              <strong>{t('machine.machineInfo.fsAllowedLabel')}</strong>
             </td>
             <td className="px-3 py-2">
               <span className="badge text-bg-secondary">
-                {configuration['fs-allowed'] || 'None'}
+                {configuration['fs-allowed'] || t('machine.machineInfo.noneFallback')}
               </span>
             </td>
           </tr>
@@ -123,35 +133,38 @@ const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selec
       <div className="card-body">
         <h4 className="fs-6 fw-bold mb-3">
           <i className="fas fa-info-circle me-2" />
-          Machine Information
+          {t('machine.machineInfo.heading')}
         </h4>
         <div className="table-responsive">
           <table className="table table-striped small">
             <tbody>
               <tr>
                 <td className="px-3 py-2">
-                  <strong>System Status</strong>
+                  <strong>{t('machine.machineInfo.systemStatusLabel')}</strong>
                 </td>
                 <td className="px-3 py-2">
                   <span className={`fw-semibold text-capitalize ${statusClass(status)}`}>
-                    {status || 'Unknown'}
+                    {status || t('machine.machineInfo.unknownFallback')}
                   </span>
                 </td>
               </tr>
               {machine_info.backing && (
                 <tr>
                   <td className="px-3 py-2">
-                    <strong>Backing</strong>
+                    <strong>{t('machine.machineInfo.backingLabel')}</strong>
                   </td>
                   <td className="px-3 py-2">
                     <span
                       className="badge text-bg-secondary"
-                      title="How lifecycle operations reach the hypervisor"
+                      title={t('machine.machineInfo.backingTooltip')}
                     >
                       {machine_info.backing}
                     </span>
                     {machine_info.home && (
-                      <code className="small ms-2" title="Vagrant project directory">
+                      <code
+                        className="small ms-2"
+                        title={t('machine.machineInfo.vagrantDirTooltip')}
+                      >
                         {machine_info.home}
                       </code>
                     )}
@@ -161,25 +174,29 @@ const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selec
               {Object.keys(monitoringHealth).length > 0 && (
                 <tr>
                   <td className="px-3 py-2">
-                    <strong>Host Health</strong>
+                    <strong>{t('machine.machineInfo.hostHealthLabel')}</strong>
                   </td>
                   <td className="px-3 py-2">
                     <span className={`fw-semibold ${getHealthClass(monitoringHealth.status)}`}>
                       {monitoringHealth.status
                         ? monitoringHealth.status.charAt(0).toUpperCase() +
                           monitoringHealth.status.slice(1)
-                        : 'Unknown'}
+                        : t('machine.machineInfo.unknownFallback')}
                     </span>
                     {(monitoringHealth.networkErrors > 0 || monitoringHealth.storageErrors > 0) && (
                       <div className="d-flex flex-wrap gap-1 mt-1">
                         {monitoringHealth.networkErrors > 0 && (
                           <span className="badge text-bg-warning">
-                            Net Errors: {monitoringHealth.networkErrors}
+                            {t('machine.machineInfo.netErrorsBadge', {
+                              count: monitoringHealth.networkErrors,
+                            })}
                           </span>
                         )}
                         {monitoringHealth.storageErrors > 0 && (
                           <span className="badge text-bg-warning">
-                            Storage Errors: {monitoringHealth.storageErrors}
+                            {t('machine.machineInfo.storageErrorsBadge', {
+                              count: monitoringHealth.storageErrors,
+                            })}
                           </span>
                         )}
                       </div>
@@ -189,13 +206,13 @@ const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selec
               )}
               <tr>
                 <td className="px-3 py-2">
-                  <strong>Last Seen</strong>
+                  <strong>{t('machine.machineInfo.lastSeenLabel')}</strong>
                 </td>
                 <td className="px-3 py-2">
                   <span className="text-muted">
                     {machine_info.last_seen
                       ? new Date(machine_info.last_seen).toLocaleString()
-                      : 'N/A'}
+                      : t('machine.machineInfo.notApplicableFallback')}
                   </span>
                 </td>
               </tr>
@@ -203,7 +220,7 @@ const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selec
                 configuration.guest_info.ips.length > 0 && (
                   <tr>
                     <td className="px-3 py-2">
-                      <strong>Guest IP</strong>
+                      <strong>{t('machine.machineInfo.guestIpLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">
                       {configuration.guest_info.ips.map(ip => (
@@ -212,10 +229,12 @@ const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selec
                         </code>
                       ))}
                       <span className="text-muted small">
-                        via{' '}
-                        {configuration.guest_info.source === 'additions'
-                          ? 'Guest Additions'
-                          : 'guest agent'}
+                        {t('machine.machineInfo.viaSource', {
+                          source:
+                            configuration.guest_info.source === 'additions'
+                              ? t('machine.machineInfo.guestAdditionsSource')
+                              : t('machine.machineInfo.guestAgentSource'),
+                        })}
                       </span>
                     </td>
                   </tr>
@@ -223,15 +242,19 @@ const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selec
               {(machine_info.is_orphaned || machine_info.auto_discovered) && (
                 <tr>
                   <td className="px-3 py-2">
-                    <strong>Flags</strong>
+                    <strong>{t('machine.machineInfo.flagsLabel')}</strong>
                   </td>
                   <td className="px-3 py-2">
                     <div className="d-flex flex-wrap gap-1">
                       {machine_info.is_orphaned && (
-                        <span className="badge text-bg-warning">Orphaned</span>
+                        <span className="badge text-bg-warning">
+                          {t('machine.machineInfo.orphanedBadge')}
+                        </span>
                       )}
                       {machine_info.auto_discovered && (
-                        <span className="badge text-bg-info">Auto-discovered</span>
+                        <span className="badge text-bg-info">
+                          {t('machine.machineInfo.autoDiscoveredBadge')}
+                        </span>
                       )}
                     </div>
                   </td>

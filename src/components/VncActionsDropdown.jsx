@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import VncActionsSubmenu from './Vnc/VncActionsSubmenu';
 import VncDisplaySettingsSubmenu from './Vnc/VncDisplaySettingsSubmenu';
@@ -28,6 +29,7 @@ const VncActionsDropdown = ({
   onShowDotChange = null,
   onClipboardPaste = null,
 }) => {
+  const { t } = useTranslation();
   const [isActive, setIsActive] = useState(false);
   const [modifierKeys, setModifierKeys] = useState({
     ctrl: false,
@@ -139,7 +141,7 @@ const VncActionsDropdown = ({
             tabIndex={0}
           >
             <i className="fas fa-skull me-2" />
-            <span>Kill VNC Session</span>
+            <span>{t('console.vncActionsDropdown.killSession')}</span>
           </div>
         </>
       )}
@@ -186,7 +188,7 @@ const VncActionsDropdown = ({
         role="button"
         tabIndex={0}
       >
-        VNC Actions
+        {t('console.vncActionsDropdown.vncActions')}
         <i className="fas fa-angle-down ms-1" aria-hidden="true" />
       </span>
       <div

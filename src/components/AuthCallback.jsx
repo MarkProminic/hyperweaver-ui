@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -10,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
  * Processes the token and redirects to the appropriate page
  */
 const AuthCallback = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { setAuthData } = useAuth();
@@ -24,26 +26,26 @@ const AuthCallback = () => {
 
     if (error) {
       // Handle authentication errors
-      let errorMessage = 'Authentication failed';
+      let errorMessage = t('auth.authCallback.authFailed');
 
       switch (error) {
         case 'oidc_failed':
-          errorMessage = 'OIDC authentication failed';
+          errorMessage = t('auth.authCallback.oidcFailed');
           break;
         case 'oidc_not_enabled':
-          errorMessage = 'OIDC authentication is not enabled';
+          errorMessage = t('auth.authCallback.oidcNotEnabled');
           break;
         case 'access_denied':
-          errorMessage = 'Access denied - you may not have permission to access this system';
+          errorMessage = t('auth.authCallback.accessDenied');
           break;
         case 'token_generation_failed':
-          errorMessage = 'Failed to generate authentication token';
+          errorMessage = t('auth.authCallback.tokenGenerationFailed');
           break;
         case 'no_token':
-          errorMessage = 'No authentication token received';
+          errorMessage = t('auth.authCallback.noToken');
           break;
         default:
-          errorMessage = `Authentication error: ${error}`;
+          errorMessage = t('auth.authCallback.authError', { error });
       }
 
       console.error('Authentication error:', error);
@@ -76,7 +78,7 @@ const AuthCallback = () => {
       } catch (authError) {
         console.error('Error processing authentication callback:', authError);
         navigate('/ui/login', {
-          state: { error: 'Failed to process authentication' },
+          state: { error: t('auth.authCallback.processingFailed') },
           replace: true,
         });
       }
@@ -84,20 +86,20 @@ const AuthCallback = () => {
       // No token and no error - shouldn't happen
       console.error('Auth callback received with no token or error');
       navigate('/ui/login', {
-        state: { error: 'Invalid authentication response' },
+        state: { error: t('auth.authCallback.invalidResponse') },
         replace: true,
       });
     }
-  }, [searchParams, navigate, setAuthData]);
+  }, [searchParams, navigate, setAuthData, t]);
 
   // Show loading while processing
   return (
     <div className="auth-callback-container">
       <div className="auth-callback-content">
         <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
+          <span className="visually-hidden">{t('auth.authCallback.loading')}</span>
         </div>
-        <p className="mt-3">Processing authentication...</p>
+        <p className="mt-3">{t('auth.authCallback.processing')}</p>
       </div>
     </div>
   );

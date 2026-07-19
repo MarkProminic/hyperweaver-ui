@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const commonProperties = [
   'maxbw',
@@ -28,6 +29,7 @@ const propertyValueOptions = {
 };
 
 const VnicPropertiesFields = ({ properties, onAddProperty, onRemoveProperty, disabled }) => {
+  const { t } = useTranslation();
   const [propertyKey, setPropertyKey] = useState('');
   const [propertyValue, setPropertyValue] = useState('');
 
@@ -48,7 +50,9 @@ const VnicPropertiesFields = ({ properties, onAddProperty, onRemoveProperty, dis
           onChange={e => setPropertyValue(e.target.value)}
           disabled={disabled}
         >
-          <option value="">Select {propertyKey} value</option>
+          <option value="">
+            {t('hostTools.VnicPropertiesFields.selectPropertyValueOption', { propertyKey })}
+          </option>
           {propertyValueOptions[propertyKey].map(option => (
             <option key={option} value={option}>
               {option}
@@ -61,7 +65,7 @@ const VnicPropertiesFields = ({ properties, onAddProperty, onRemoveProperty, dis
       <input
         className="form-control"
         type="text"
-        placeholder="Property value"
+        placeholder={t('hostTools.VnicPropertiesFields.propertyValuePlaceholder')}
         value={propertyValue}
         onChange={e => setPropertyValue(e.target.value)}
         disabled={disabled}
@@ -72,7 +76,7 @@ const VnicPropertiesFields = ({ properties, onAddProperty, onRemoveProperty, dis
   return (
     <div className="mb-3">
       <label className="form-label" htmlFor="vnic-create-prop-key">
-        Additional Properties
+        {t('hostTools.VnicPropertiesFields.additionalPropertiesLabel')}
       </label>
       <div className="input-group">
         <select
@@ -82,7 +86,7 @@ const VnicPropertiesFields = ({ properties, onAddProperty, onRemoveProperty, dis
           onChange={e => setPropertyKey(e.target.value)}
           disabled={disabled}
         >
-          <option value="">Select property</option>
+          <option value="">{t('hostTools.VnicPropertiesFields.selectPropertyOption')}</option>
           {commonProperties
             .filter(prop => !properties[prop])
             .map(prop => (
@@ -98,14 +102,14 @@ const VnicPropertiesFields = ({ properties, onAddProperty, onRemoveProperty, dis
           onClick={handleAdd}
           disabled={!propertyKey.trim() || !propertyValue.trim() || disabled}
         >
-          Add
+          {t('hostTools.VnicPropertiesFields.addButton')}
         </button>
       </div>
 
       {Object.keys(properties).length > 0 && (
         <div className="mt-3">
           <p>
-            <strong>Current Properties:</strong>
+            <strong>{t('hostTools.VnicPropertiesFields.currentPropertiesHeading')}</strong>
           </p>
           <div className="d-flex flex-wrap gap-2">
             {Object.entries(properties).map(([key, value]) => (
@@ -114,7 +118,7 @@ const VnicPropertiesFields = ({ properties, onAddProperty, onRemoveProperty, dis
                 <button
                   type="button"
                   className="btn-close btn-close-white"
-                  aria-label="Remove"
+                  aria-label={t('hostTools.VnicPropertiesFields.removeAriaLabel')}
                   onClick={() => onRemoveProperty(key)}
                   disabled={disabled}
                 />

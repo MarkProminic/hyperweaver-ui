@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import VncActionsDropdown from '../VncActionsDropdown';
 import VncViewerReact from '../VncViewerReact';
@@ -33,6 +34,8 @@ const VncModal = ({
   handleVncShowDotChange,
   handleVncClipboardPaste,
 }) => {
+  const { t } = useTranslation();
+
   if (!showVncConsole) {
     return null;
   }
@@ -49,7 +52,7 @@ const VncModal = ({
         }}
         role="button"
         tabIndex={0}
-        aria-label="Close modal"
+        aria-label={t('machine.vncModal.closeModal')}
       />
       <div
         className={isVncFullScreen ? 'hw-modal-container-fullscreen' : 'hw-modal-container-normal'}
@@ -112,7 +115,7 @@ const VncModal = ({
                 type="button"
                 className="btn btn-sm btn-info"
                 onClick={handleVncModalPaste}
-                title="Paste from Browser Clipboard"
+                title={t('machine.vncModal.pasteFromBrowser')}
               >
                 <i className="fas fa-paste" />
               </button>
@@ -134,29 +137,35 @@ const VncModal = ({
               }}
               disabled={loading}
               title={
-                machineDetails.zlogin_session ? 'Switch to zlogin Console' : 'Start zlogin Console'
+                machineDetails.zlogin_session
+                  ? t('machine.vncModal.switchToZlogin')
+                  : t('machine.vncModal.startZlogin')
               }
             >
               <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'} me-2`} />
-              <span>{loading ? 'Starting...' : 'zlogin'}</span>
+              <span>{loading ? t('machine.vncModal.starting') : t('machine.vncModal.zlogin')}</span>
             </button>
             <button
               type="button"
               className="btn btn-sm btn-info"
               onClick={openVncFullScreen}
-              title={isVncFullScreen ? 'Exit Full Screen' : 'Enter Full Screen'}
+              title={
+                isVncFullScreen
+                  ? t('machine.vncModal.exitFullScreen')
+                  : t('machine.vncModal.enterFullScreen')
+              }
             >
               <i className={`fas ${isVncFullScreen ? 'fa-compress' : 'fa-expand'} me-2`} />
-              <span>{isVncFullScreen ? 'Exit' : 'Full'}</span>
+              <span>{isVncFullScreen ? t('machine.vncModal.exit') : 'Full'}</span>
             </button>
             <button
               type="button"
               className="btn btn-sm btn-light"
               onClick={closeVncConsole}
-              title="Close Console"
+              title={t('machine.vncModal.closeConsole')}
             >
               <i className="fas fa-times me-2" />
-              <span>Exit</span>
+              <span>{t('machine.vncModal.exit')}</span>
             </button>
           </div>
         </header>
@@ -168,11 +177,8 @@ const VncModal = ({
                   <div className="mb-3">
                     <i className="fas fa-exclamation-triangle fa-3x text-warning" />
                   </div>
-                  <h4 className="fs-4 fw-bold">VNC Console Loading Error</h4>
-                  <p className="mb-4">
-                    The VNC console failed to load in embedded mode. This could be due to proxy
-                    issues or browser compatibility.
-                  </p>
+                  <h4 className="fs-4 fw-bold">{t('machine.vncModal.vncConsoleLoadingError')}</h4>
+                  <p className="mb-4">{t('machine.vncModal.vncConsoleFailedToLoad')}</p>
                   <div className="d-flex justify-content-center gap-2">
                     <button
                       type="button"
@@ -180,7 +186,7 @@ const VncModal = ({
                       onClick={openDirectVncFallback}
                     >
                       <i className="fas fa-external-link-alt me-2" />
-                      <span>Open Direct VNC Console</span>
+                      <span>{t('machine.vncModal.openDirectVncConsole')}</span>
                     </button>
                     <button
                       type="button"
@@ -188,7 +194,7 @@ const VncModal = ({
                       onClick={() => setVncLoadError(false)}
                     >
                       <i className="fas fa-redo me-2" />
-                      <span>Retry Embedded</span>
+                      <span>{t('machine.vncModal.retryEmbedded')}</span>
                     </button>
                   </div>
                 </div>
@@ -226,7 +232,7 @@ const VncModal = ({
                   <div>
                     <i className="fas fa-spinner fa-pulse fa-3x hw-loading-spinner" />
                   </div>
-                  <p className="mt-3">Starting VNC console...</p>
+                  <p className="mt-3">{t('machine.vncModal.startingVncConsole')}</p>
                 </div>
               );
             }

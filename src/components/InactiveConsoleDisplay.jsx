@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useMode } from '../contexts/ModeContext';
 import { hasConsole, hasFeature, hasFeatureStrict } from '../utils/capabilities';
@@ -30,52 +31,59 @@ const RdpStartButtons = ({
   onStartVrdp,
   onStartGuestRdp,
   onNativeRdp,
-}) => (
-  <>
-    {(rdpAvailable || launchersAvailable) && (
-      <button
-        type="button"
-        className="btn btn-sm btn-info"
-        onClick={rdpAvailable ? onStartVrdp : onNativeRdp}
-        onContextMenu={event => {
-          // Right-click = the native path (agent host's RDP client /
-          // the guest rdp_url) — one button, both implementations.
-          event.preventDefault();
-          if (launchersAvailable && machineRunning) {
-            onNativeRdp();
+}) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      {(rdpAvailable || launchersAvailable) && (
+        <button
+          type="button"
+          className="btn btn-sm btn-info"
+          onClick={rdpAvailable ? onStartVrdp : onNativeRdp}
+          onContextMenu={event => {
+            // Right-click = the native path (agent host's RDP client /
+            // the guest rdp_url) — one button, both implementations.
+            event.preventDefault();
+            if (launchersAvailable && machineRunning) {
+              onNativeRdp();
+            }
+          }}
+          disabled={loading || !machineRunning}
+          title={
+            machineRunning
+              ? t('console.rdpStartButtons.vrdpHint')
+              : t('console.rdpStartButtons.machineMustBeRunning')
           }
-        }}
-        disabled={loading || !machineRunning}
-        title={
-          machineRunning
-            ? "VRDP console (the hypervisor's display) — click: in the browser; right-click: open in your RDP app"
-            : 'The machine must be running'
-        }
-      >
-        <i className="fas fa-display me-2" />
-        <span>{loading ? 'Starting...' : 'VRDP'}</span>
-      </button>
-    )}
-    {rdpAvailable && guestRdpIp && (
-      <button
-        type="button"
-        className="btn btn-sm btn-info"
-        onClick={onStartGuestRdp}
-        onContextMenu={event => {
-          event.preventDefault();
-          if (launchersAvailable) {
-            onNativeRdp();
-          }
-        }}
-        disabled={loading}
-        title={`RDP to the guest's own desktop (${guestRdpIp}) — click: in the browser; right-click: open in your RDP app`}
-      >
-        <i className="fab fa-windows me-2" />
-        <span>{loading ? 'Starting...' : 'RDP'}</span>
-      </button>
-    )}
-  </>
-);
+        >
+          <i className="fas fa-display me-2" />
+          <span>
+            {loading ? t('console.rdpStartButtons.starting') : t('console.rdpStartButtons.vrdp')}
+          </span>
+        </button>
+      )}
+      {rdpAvailable && guestRdpIp && (
+        <button
+          type="button"
+          className="btn btn-sm btn-info"
+          onClick={onStartGuestRdp}
+          onContextMenu={event => {
+            event.preventDefault();
+            if (launchersAvailable) {
+              onNativeRdp();
+            }
+          }}
+          disabled={loading}
+          title={t('console.rdpStartButtons.rdpHint', { address: guestRdpIp })}
+        >
+          <i className="fab fa-windows me-2" />
+          <span>
+            {loading ? t('console.rdpStartButtons.starting') : t('console.rdpStartButtons.rdp')}
+          </span>
+        </button>
+      )}
+    </>
+  );
+};
 
 RdpStartButtons.propTypes = {
   rdpAvailable: PropTypes.bool,
@@ -103,6 +111,7 @@ const InactiveConsoleDisplay = ({
   waitForVncSessionReady,
   startZloginSessionExplicitly,
 }) => {
+  const { t } = useTranslation();
   const { isDirect } = useMode();
   // Bumping the key remounts the screenshot — a fresh capture on demand.
   const [screenshotKey, setScreenshotKey] = useState(0);
@@ -190,8 +199,12 @@ const InactiveConsoleDisplay = ({
       {/* Inactive Console Header */}
       <div className="bg-dark text-white p-3 d-flex justify-content-between align-items-center">
         <div>
-          <h6 className="fs-6 fw-bold text-white mb-1">Console Management</h6>
-          <p className="small text-white-50 mb-0">No active sessions • Click to start</p>
+          <h6 className="fs-6 fw-bold text-white mb-1">
+            {t('console.inactiveConsoleDisplay.consoleManagement')}
+          </h6>
+          <p className="small text-white-50 mb-0">
+            {t('console.inactiveConsoleDisplay.noActiveSessions')}
+          </p>
         </div>
         <div className="d-flex gap-1 m-0 flex-wrap">
           {vncAvailable && (
@@ -200,10 +213,18 @@ const InactiveConsoleDisplay = ({
               className="btn btn-sm btn-info"
               onClick={handleStartVnc}
               disabled={loading || loadingVnc || !machineRunning}
-              title={machineRunning ? 'Start VNC Console' : 'The machine must be running'}
+              title={
+                machineRunning
+                  ? t('console.inactiveConsoleDisplay.startVnc')
+                  : t('console.inactiveConsoleDisplay.machineMustBeRunning')
+              }
             >
               <i className="fas fa-desktop me-2" />
-              <span>{loadingVnc ? 'Starting...' : 'VNC'}</span>
+              <span>
+                {loadingVnc
+                  ? t('console.inactiveConsoleDisplay.starting')
+                  : t('console.inactiveConsoleDisplay.vnc')}
+              </span>
             </button>
           )}
           {zloginAvailable && (
@@ -212,10 +233,14 @@ const InactiveConsoleDisplay = ({
               className="btn btn-sm btn-success"
               onClick={handleStartZlogin}
               disabled={loading}
-              title="Start zlogin Console"
+              title={t('console.inactiveConsoleDisplay.startZlogin')}
             >
               <i className="fas fa-terminal me-2" />
-              <span>{loading ? 'Starting...' : 'zlogin'}</span>
+              <span>
+                {loading
+                  ? t('console.inactiveConsoleDisplay.starting')
+                  : t('console.inactiveConsoleDisplay.zlogin')}
+              </span>
             </button>
           )}
           {sshAvailable && (
@@ -226,16 +251,20 @@ const InactiveConsoleDisplay = ({
               disabled={loading || !sshReady}
               title={(() => {
                 if (!machineRunning) {
-                  return 'The machine must be running';
+                  return t('console.inactiveConsoleDisplay.machineMustBeRunning');
                 }
                 if (!sshReady) {
-                  return 'No guest networking data yet — SSH needs a discovered IP (guest agent / Guest Additions)';
+                  return t('console.inactiveConsoleDisplay.sshNotReady');
                 }
-                return `Start an SSH shell inside the guest (${guestRdpIp})`;
+                return t('console.inactiveConsoleDisplay.startSsh', { address: guestRdpIp });
               })()}
             >
               <i className="fas fa-terminal me-2" />
-              <span>{loading ? 'Starting...' : 'SSH'}</span>
+              <span>
+                {loading
+                  ? t('console.inactiveConsoleDisplay.starting')
+                  : t('console.inactiveConsoleDisplay.ssh')}
+              </span>
             </button>
           )}
           <RdpStartButtons
@@ -253,7 +282,7 @@ const InactiveConsoleDisplay = ({
               type="button"
               className="btn btn-sm btn-secondary"
               onClick={() => setScreenshotKey(key => key + 1)}
-              title="Refresh the screenshot"
+              title={t('console.inactiveConsoleDisplay.refreshScreenshot')}
             >
               <i className="fas fa-sync-alt" />
             </button>
@@ -267,8 +296,8 @@ const InactiveConsoleDisplay = ({
                 disabled={!isDirect}
                 title={
                   isDirect
-                    ? "Open the machine's working directory in the host's file manager"
-                    : 'Available in Direct (desktop) mode only'
+                    ? t('console.inactiveConsoleDisplay.openWorkingDirectory')
+                    : t('console.inactiveConsoleDisplay.directModeOnly')
                 }
               >
                 <i className="fas fa-folder-open" />
@@ -277,7 +306,7 @@ const InactiveConsoleDisplay = ({
                 type="button"
                 className="btn btn-sm btn-secondary"
                 onClick={() => handleLauncher('ftp')}
-                title="Open your sftp client (WinSCP/FileZilla/Finder) at this machine"
+                title={t('console.inactiveConsoleDisplay.openSftpClient')}
               >
                 <i className="fas fa-file-arrow-down" />
               </button>
@@ -299,7 +328,7 @@ const InactiveConsoleDisplay = ({
               frameless
             />
             <div className="small text-white-50 mt-1">
-              Live screenshot — start a console above to interact
+              {t('console.inactiveConsoleDisplay.liveScreenshotHint')}
             </div>
           </div>
         ) : (
@@ -307,14 +336,14 @@ const InactiveConsoleDisplay = ({
             <div className="has-margin-bottom-12px">
               <img
                 src="/ui/images/startcloud.svg"
-                alt="Start Console"
+                alt={t('console.inactiveConsoleDisplay.startConsoleAlt')}
                 className="hw-startup-icon"
               />
             </div>
             <div className="fs-6 fw-medium mb-2">
-              <strong>No Active Console Session</strong>
+              <strong>{t('console.inactiveConsoleDisplay.noActiveConsoleSession')}</strong>
             </div>
-            <div className="small">Click the buttons above to start a console session</div>
+            <div className="small">{t('console.inactiveConsoleDisplay.clickButtonsToStart')}</div>
           </div>
         )}
       </div>

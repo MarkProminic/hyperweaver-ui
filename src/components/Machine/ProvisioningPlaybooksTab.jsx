@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import StepCardList from './ProvisioningStepList';
 import { LinesField, OptionalBoolSelect } from './ProvisioningVarRows';
@@ -17,15 +18,20 @@ import { LinesField, OptionalBoolSelect } from './ProvisioningVarRows';
 const RUN_MODES = ['always', 'once', 'not_first'];
 
 const PlaybookTitle = ({ playbook }) => {
+  const { t } = useTranslation();
   const collections = Array.isArray(playbook.collections) ? playbook.collections.length : 0;
   return (
     <>
       <span className="hw-rc-role">{playbook.playbook || '—'}</span>
-      <span className="hw-chip hw-chip-tag">run: {playbook.run || 'once'}</span>
+      <span className="hw-chip hw-chip-tag">
+        {t('provisioning.provisioningPlaybooksTab.runChip', { run: playbook.run || 'once' })}
+      </span>
       {collections > 0 && (
         <span className="hw-chip">
-          {collections} collection{collections > 1 ? 's' : ''}
-          {playbook.remote_collections === true ? ' (galaxy)' : ''}
+          {t('provisioning.provisioningPlaybooksTab.collectionsChip', { count: collections })}
+          {playbook.remote_collections === true
+            ? ` ${t('provisioning.provisioningPlaybooksTab.galaxySuffix')}`
+            : ''}
         </span>
       )}
       {playbook.install_mode && <span className="hw-chip">{playbook.install_mode}</span>}
@@ -38,6 +44,7 @@ PlaybookTitle.propTypes = {
 };
 
 const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlacementChange }) => {
+  const { t } = useTranslation();
   const uiId = playbook._ui_id;
   const text = (key, value) => patch({ [key]: value === '' ? undefined : value });
   return (
@@ -45,7 +52,9 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
       {playbook.description && <p className="hw-rc-desc">{playbook.description}</p>}
       <div className="hw-rc-fields">
         <span className="hw-field">
-          <label htmlFor={`playbook-path-${uiId}`}>playbook</label>
+          <label htmlFor={`playbook-path-${uiId}`}>
+            {t('provisioning.provisioningPlaybooksTab.playbookLabel')}
+          </label>
           <input
             id={`playbook-path-${uiId}`}
             className="form-control form-control-sm font-monospace hw-field-med"
@@ -57,7 +66,9 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
           />
         </span>
         <span className="hw-field">
-          <label htmlFor={`playbook-placement-${uiId}`}>runs</label>
+          <label htmlFor={`playbook-placement-${uiId}`}>
+            {t('provisioning.provisioningPlaybooksTab.runsLabel')}
+          </label>
           <select
             id={`playbook-placement-${uiId}`}
             className="form-select form-select-sm w-auto"
@@ -69,12 +80,18 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
               }
             }}
           >
-            <option value="local">in the guest (ansible-local)</option>
-            <option value="remote">from the host (remote ansible)</option>
+            <option value="local">
+              {t('provisioning.provisioningPlaybooksTab.runsLocalOption')}
+            </option>
+            <option value="remote">
+              {t('provisioning.provisioningPlaybooksTab.runsRemoteOption')}
+            </option>
           </select>
         </span>
         <span className="hw-field">
-          <label htmlFor={`playbook-run-${uiId}`}>run</label>
+          <label htmlFor={`playbook-run-${uiId}`}>
+            {t('provisioning.provisioningPlaybooksTab.runLabel')}
+          </label>
           <select
             id={`playbook-run-${uiId}`}
             className="form-select form-select-sm w-auto"
@@ -90,7 +107,9 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
           </select>
         </span>
         <span className="hw-field">
-          <label htmlFor={`playbook-install-${uiId}`}>install ansible via</label>
+          <label htmlFor={`playbook-install-${uiId}`}>
+            {t('provisioning.provisioningPlaybooksTab.installAnsibleViaLabel')}
+          </label>
           <select
             id={`playbook-install-${uiId}`}
             className="form-select form-select-sm w-auto"
@@ -98,7 +117,7 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
             disabled={disabled}
             onChange={e => text('install_mode', e.target.value)}
           >
-            <option value="">not set</option>
+            <option value="">{t('provisioning.provisioningPlaybooksTab.notSetOption')}</option>
             <option value="pip">pip</option>
             <option value="pkg">pkg</option>
           </select>
@@ -106,7 +125,9 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
       </div>
       <div className="hw-rc-fields">
         <span className="hw-field">
-          <label htmlFor={`playbook-interpreter-${uiId}`}>python interpreter</label>
+          <label htmlFor={`playbook-interpreter-${uiId}`}>
+            {t('provisioning.provisioningPlaybooksTab.pythonInterpreterLabel')}
+          </label>
           <input
             id={`playbook-interpreter-${uiId}`}
             className="form-control form-control-sm font-monospace hw-field-med"
@@ -118,7 +139,9 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
           />
         </span>
         <span className="hw-field">
-          <label htmlFor={`playbook-config-${uiId}`}>config file</label>
+          <label htmlFor={`playbook-config-${uiId}`}>
+            {t('provisioning.provisioningPlaybooksTab.configFileLabel')}
+          </label>
           <input
             id={`playbook-config-${uiId}`}
             className="form-control form-control-sm font-monospace hw-field-med"
@@ -130,7 +153,9 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
           />
         </span>
         <span className="hw-field">
-          <label htmlFor={`playbook-workdir-${uiId}`}>run from</label>
+          <label htmlFor={`playbook-workdir-${uiId}`}>
+            {t('provisioning.provisioningPlaybooksTab.runFromLabel')}
+          </label>
           <input
             id={`playbook-workdir-${uiId}`}
             className="form-control form-control-sm font-monospace hw-field-short"
@@ -144,7 +169,9 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
       </div>
       <div className="hw-rc-fields">
         <span className="hw-field">
-          <label htmlFor={`playbook-callbacks-${uiId}`}>callbacks</label>
+          <label htmlFor={`playbook-callbacks-${uiId}`}>
+            {t('provisioning.provisioningPlaybooksTab.callbacksLabel')}
+          </label>
           <input
             id={`playbook-callbacks-${uiId}`}
             className="form-control form-control-sm font-monospace hw-field-short"
@@ -156,7 +183,9 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
           />
         </span>
         <span className="hw-field">
-          <label htmlFor={`playbook-compat-${uiId}`}>compatibility</label>
+          <label htmlFor={`playbook-compat-${uiId}`}>
+            {t('provisioning.provisioningPlaybooksTab.compatibilityLabel')}
+          </label>
           <input
             id={`playbook-compat-${uiId}`}
             className="form-control form-control-sm hw-field-tiny"
@@ -169,21 +198,21 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
         </span>
         <OptionalBoolSelect
           id={`playbook-pipelining-${uiId}`}
-          label="ssh pipelining"
+          label={t('provisioning.provisioningPlaybooksTab.sshPipeliningLabel')}
           value={playbook.ssh_pipelining}
           disabled={disabled}
           onChange={value => patch({ ssh_pipelining: value })}
         />
         <OptionalBoolSelect
           id={`playbook-verbose-${uiId}`}
-          label="verbose"
+          label={t('provisioning.provisioningPlaybooksTab.verboseLabel')}
           value={playbook.verbose}
           disabled={disabled}
           onChange={value => patch({ verbose: value })}
         />
         <OptionalBoolSelect
           id={`playbook-remote-collections-${uiId}`}
-          label="galaxy-install collections"
+          label={t('provisioning.provisioningPlaybooksTab.galaxyInstallCollectionsLabel')}
           value={playbook.remote_collections}
           disabled={disabled}
           onChange={value => patch({ remote_collections: value })}
@@ -192,14 +221,16 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
       <div className="hw-rc-fields">
         <LinesField
           id={`playbook-collections-${uiId}`}
-          label="collections (one per line)"
+          label={t('provisioning.provisioningPlaybooksTab.collectionsLabel')}
           lines={playbook.collections}
           disabled={disabled}
           placeholder={'startcloud.startcloud_roles\nstartcloud.hcl_roles'}
           onCommit={list => patch({ collections: list })}
         />
         <span className="hw-field">
-          <label htmlFor={`playbook-description-${uiId}`}>description</label>
+          <label htmlFor={`playbook-description-${uiId}`}>
+            {t('provisioning.provisioningPlaybooksTab.descriptionLabel')}
+          </label>
           <input
             id={`playbook-description-${uiId}`}
             className="form-control form-control-sm hw-field-wide"
@@ -211,9 +242,8 @@ const PlaybookBody = ({ playbook, patch, disabled, pathListId, placement, onPlac
         </span>
       </div>
       <p className="form-text text-muted mb-0">
-        <code>galaxy-install collections: false</code> means the collections ship inside the
-        provisioner package and reach the guest through the folder sync — the galaxy is never
-        called.
+        <code>galaxy-install collections: false</code>{' '}
+        {t('provisioning.provisioningPlaybooksTab.galaxyExplanation')}
       </p>
     </>
   );
@@ -229,6 +259,7 @@ PlaybookBody.propTypes = {
 };
 
 const ProvisioningPlaybooksTab = ({ playbookLists, pathOptions, onChange, disabled, makeRow }) => {
+  const { t } = useTranslation();
   const { local, remote } = playbookLists;
   // Registry playbook candidates (advisory, design D16) — a datalist under
   // the path input; free text always stands.
@@ -271,11 +302,12 @@ const ProvisioningPlaybooksTab = ({ playbookLists, pathOptions, onChange, disabl
   return (
     <div>
       <p className="form-text text-muted mt-0 mb-2">
-        Order is exactly what you see: the local playbooks run first, top to bottom, then the remote
-        playbooks, top to bottom. Drag reorders within a list; the <code>runs</code> selector moves
-        an entry to the end of the other list. <code>run</code> gates each against the
-        machine&apos;s provision history: <code>always</code> every run, <code>once</code> only when
-        never provisioned, <code>not_first</code> only after a prior success.
+        {t('provisioning.provisioningPlaybooksTab.introPart1')} <code>runs</code>{' '}
+        {t('provisioning.provisioningPlaybooksTab.introPart2')} <code>run</code>{' '}
+        {t('provisioning.provisioningPlaybooksTab.introPart3')} <code>always</code>{' '}
+        {t('provisioning.provisioningPlaybooksTab.introPart4')} <code>once</code>{' '}
+        {t('provisioning.provisioningPlaybooksTab.introPart5')} <code>not_first</code>{' '}
+        {t('provisioning.provisioningPlaybooksTab.introPart6')}
       </p>
       {pathListId && (
         <datalist id={pathListId}>
@@ -286,14 +318,14 @@ const ProvisioningPlaybooksTab = ({ playbookLists, pathOptions, onChange, disabl
       )}
       <h6 className="fs-6 fw-bold mb-2">
         <i className="fas fa-box me-2" />
-        Local — ansible-local, inside the guest
+        {t('provisioning.provisioningPlaybooksTab.localHeading')}
       </h6>
-      {renderList(local, 'local', 'Add Playbook')}
+      {renderList(local, 'local', t('provisioning.provisioningPlaybooksTab.addPlaybook'))}
       <h6 className="fs-6 fw-bold mt-3 mb-2">
         <i className="fas fa-tower-broadcast me-2" />
-        Remote — host ansible over the guest transport
+        {t('provisioning.provisioningPlaybooksTab.remoteHeading')}
       </h6>
-      {renderList(remote, 'remote', 'Add Remote Playbook')}
+      {renderList(remote, 'remote', t('provisioning.provisioningPlaybooksTab.addRemotePlaybook'))}
     </div>
   );
 };

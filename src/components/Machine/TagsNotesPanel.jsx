@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { setMachineNotes, setMachineTags } from '../../api/machineAPI';
 
@@ -16,6 +17,7 @@ const parseTags = text =>
     .filter(Boolean);
 
 const TagsNotesPanel = ({ currentServer, machineName, currentTags, currentNotes, disabled }) => {
+  const { t } = useTranslation();
   const seededTags = (Array.isArray(currentTags) ? currentTags : []).join(', ');
   const seededNotes = typeof currentNotes === 'string' ? currentNotes : '';
   const [tags, setTags] = useState(seededTags);
@@ -76,26 +78,26 @@ const TagsNotesPanel = ({ currentServer, machineName, currentTags, currentNotes,
       setError(failures.join('; '));
       return;
     }
-    setMsg('Saved.');
+    setMsg(t('machine.tagsNotesPanel.saved'));
   };
 
   return (
     <div className="border-top pt-3 mt-3">
-      <h6 className="fw-bold">Tags &amp; Notes</h6>
+      <h6 className="fw-bold">{t('machine.tagsNotesPanel.heading')}</h6>
       <p className="form-text text-muted mt-0">
-        Saved immediately (no task, valid while running) — independent of the Apply button below.
+        {t('machine.tagsNotesPanel.savedImmediatelyNote')}
       </p>
       {error && <div className="alert alert-danger py-2">{error}</div>}
       <div className="row g-3">
         <div className="col-12 col-md-5">
           <label className="form-label" htmlFor="machine-tags">
-            Tags (comma-separated)
+            {t('machine.tagsNotesPanel.tagsLabel')}
           </label>
           <input
             id="machine-tags"
             className="form-control"
             type="text"
-            placeholder="e.g. web, production"
+            placeholder={t('machine.tagsNotesPanel.tagsPlaceholder')}
             value={tags}
             onChange={e => setTags(e.target.value)}
             disabled={disabled || saving}
@@ -103,7 +105,7 @@ const TagsNotesPanel = ({ currentServer, machineName, currentTags, currentNotes,
         </div>
         <div className="col-12 col-md-7">
           <label className="form-label" htmlFor="machine-notes">
-            Notes
+            {t('machine.tagsNotesPanel.notesLabel')}
           </label>
           <textarea
             id="machine-notes"
@@ -123,7 +125,7 @@ const TagsNotesPanel = ({ currentServer, machineName, currentTags, currentNotes,
           disabled={disabled || saving || !changed}
         >
           <i className={`fas ${saving ? 'fa-spinner fa-pulse' : 'fa-save'} me-2`} />
-          Save tags &amp; notes
+          {t('machine.tagsNotesPanel.saveButton')}
         </button>
         {msg && <span className="text-success small">{msg}</span>}
       </div>

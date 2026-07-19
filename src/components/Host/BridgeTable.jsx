@@ -1,7 +1,9 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const BridgeTable = ({ bridges, loading, onDelete, onViewDetails }) => {
+  const { t } = useTranslation();
   const [deleteLoading, setDeleteLoading] = useState({});
 
   const handleDelete = async bridge => {
@@ -18,22 +20,26 @@ const BridgeTable = ({ bridges, loading, onDelete, onViewDetails }) => {
   const getProtectionTag = protection => {
     switch (protection?.toLowerCase()) {
       case 'stp':
-        return <span className="badge text-bg-success">STP</span>;
+        return <span className="badge text-bg-success">{t('host.bridgeTable.protectionStp')}</span>;
       case 'rstp':
-        return <span className="badge text-bg-info">RSTP</span>;
+        return <span className="badge text-bg-info">{t('host.bridgeTable.protectionRstp')}</span>;
       case 'none':
-        return <span className="badge text-bg-secondary">None</span>;
+        return <span className="badge text-bg-secondary">{t('host.bridgeTable.none')}</span>;
       default:
-        return <span className="badge text-bg-secondary">{protection || 'Unknown'}</span>;
+        return (
+          <span className="badge text-bg-secondary">
+            {protection || t('host.bridgeTable.unknown')}
+          </span>
+        );
     }
   };
 
   const formatLinks = links => {
     if (!links || !Array.isArray(links)) {
-      return 'N/A';
+      return t('host.bridgeTable.notAvailable');
     }
     if (links.length === 0) {
-      return 'None';
+      return t('host.bridgeTable.none');
     }
     if (links.length <= 2) {
       return links.join(', ');
@@ -45,7 +51,7 @@ const BridgeTable = ({ bridges, loading, onDelete, onViewDetails }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading bridges...</p>
+        <p className="mt-2">{t('host.bridgeTable.loading')}</p>
       </div>
     );
   }
@@ -54,7 +60,7 @@ const BridgeTable = ({ bridges, loading, onDelete, onViewDetails }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-bridge-water fa-2x text-muted" />
-        <p className="mt-2 text-muted">No bridges found</p>
+        <p className="mt-2 text-muted">{t('host.bridgeTable.empty')}</p>
       </div>
     );
   }
@@ -64,14 +70,14 @@ const BridgeTable = ({ bridges, loading, onDelete, onViewDetails }) => {
       <table className="table table-striped table-hover">
         <thead>
           <tr>
-            <th>Bridge Name</th>
-            <th>Protection</th>
-            <th>Priority</th>
-            <th>Member Links</th>
-            <th>Max Age</th>
-            <th>Hello Time</th>
-            <th>Forward Delay</th>
-            <th width="120">Actions</th>
+            <th>{t('host.bridgeTable.nameHeader')}</th>
+            <th>{t('host.bridgeTable.protectionHeader')}</th>
+            <th>{t('host.bridgeTable.priorityHeader')}</th>
+            <th>{t('host.bridgeTable.memberLinksHeader')}</th>
+            <th>{t('host.bridgeTable.maxAgeHeader')}</th>
+            <th>{t('host.bridgeTable.helloTimeHeader')}</th>
+            <th>{t('host.bridgeTable.forwardDelayHeader')}</th>
+            <th width="120">{t('host.bridgeTable.actionsHeader')}</th>
           </tr>
         </thead>
         <tbody>
@@ -86,7 +92,9 @@ const BridgeTable = ({ bridges, loading, onDelete, onViewDetails }) => {
                 <td>{getProtectionTag(bridge.protection)}</td>
                 <td>
                   <span className="badge text-bg-secondary">
-                    {bridge.priority !== undefined ? bridge.priority : 'N/A'}
+                    {bridge.priority !== undefined
+                      ? bridge.priority
+                      : t('host.bridgeTable.notAvailable')}
                   </span>
                 </td>
                 <td>
@@ -95,24 +103,29 @@ const BridgeTable = ({ bridges, loading, onDelete, onViewDetails }) => {
                   </span>
                   {bridge.links && bridge.links.length > 0 && (
                     <div className="small text-muted">
-                      {bridge.links.length} link
-                      {bridge.links.length !== 1 ? 's' : ''}
+                      {t('host.bridgeTable.linkCount', { count: bridge.links.length })}
                     </div>
                   )}
                 </td>
                 <td>
                   <span className="small">
-                    {bridge.max_age !== undefined ? `${bridge.max_age}s` : 'N/A'}
+                    {bridge.max_age !== undefined
+                      ? `${bridge.max_age}s`
+                      : t('host.bridgeTable.notAvailable')}
                   </span>
                 </td>
                 <td>
                   <span className="small">
-                    {bridge.hello_time !== undefined ? `${bridge.hello_time}s` : 'N/A'}
+                    {bridge.hello_time !== undefined
+                      ? `${bridge.hello_time}s`
+                      : t('host.bridgeTable.notAvailable')}
                   </span>
                 </td>
                 <td>
                   <span className="small">
-                    {bridge.forward_delay !== undefined ? `${bridge.forward_delay}s` : 'N/A'}
+                    {bridge.forward_delay !== undefined
+                      ? `${bridge.forward_delay}s`
+                      : t('host.bridgeTable.notAvailable')}
                   </span>
                 </td>
                 <td>
@@ -123,7 +136,7 @@ const BridgeTable = ({ bridges, loading, onDelete, onViewDetails }) => {
                       className="btn btn-secondary btn-sm"
                       onClick={() => onViewDetails(bridge)}
                       disabled={loading || isDeleting}
-                      title="View Details"
+                      title={t('host.bridgeTable.viewDetailsTitle')}
                     >
                       <i className="fas fa-info-circle" />
                     </button>
@@ -134,7 +147,7 @@ const BridgeTable = ({ bridges, loading, onDelete, onViewDetails }) => {
                       className="btn btn-danger btn-sm"
                       onClick={() => handleDelete(bridge)}
                       disabled={loading || isDeleting}
-                      title="Delete Bridge"
+                      title={t('host.bridgeTable.deleteButtonTitle')}
                     >
                       {isDeleting && (
                         <span

@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../../../contexts/ServerContext';
 import FormModal from '../../../../common/FormModal';
 
 const StoragePathEditModal = ({ server, storagePath, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     enabled: true,
@@ -28,9 +30,9 @@ const StoragePathEditModal = ({ server, storagePath, onClose, onSuccess, onError
     const newErrors = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('artifacts.storagePathEditModal.nameRequired');
     } else if (formData.name.length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
+      newErrors.name = t('artifacts.storagePathEditModal.nameMinLength');
     }
 
     setErrors(newErrors);
@@ -95,9 +97,9 @@ const StoragePathEditModal = ({ server, storagePath, onClose, onSuccess, onError
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Edit Storage Path"
+      title={t('artifacts.storagePathEditModal.title')}
       icon="fas fa-edit"
-      submitText="Update"
+      submitText={t('artifacts.storagePathEditModal.submitButton')}
       submitVariant="is-primary"
       submitIcon="fas fa-save"
       loading={loading}
@@ -105,25 +107,25 @@ const StoragePathEditModal = ({ server, storagePath, onClose, onSuccess, onError
     >
       <div className="mb-3">
         <label htmlFor="edit-storage-path-name" className="form-label">
-          Name
+          {t('artifacts.storagePathEditModal.nameLabel')}
         </label>
         <input
           id="edit-storage-path-name"
           className={`form-control ${errors.name ? 'is-invalid' : ''}`}
           type="text"
-          placeholder="e.g., Primary ISO Storage"
+          placeholder={t('artifacts.storagePathEditModal.namePlaceholder')}
           value={formData.name}
           onChange={e => handleInputChange('name', e.target.value)}
           disabled={loading}
         />
         {errors.name && <p className="form-text text-danger">{errors.name}</p>}
-        <p className="form-text text-muted">A descriptive name for this storage location</p>
+        <p className="form-text text-muted">{t('artifacts.storagePathEditModal.nameHelper')}</p>
       </div>
 
       {/* Read-only fields */}
       <div className="mb-3">
         <label htmlFor="edit-storage-path-path" className="form-label">
-          Path
+          {t('artifacts.storagePathEditModal.pathLabel')}
         </label>
         <input
           id="edit-storage-path-path"
@@ -133,12 +135,12 @@ const StoragePathEditModal = ({ server, storagePath, onClose, onSuccess, onError
           disabled
           readOnly
         />
-        <p className="form-text text-muted">Path cannot be changed after creation</p>
+        <p className="form-text text-muted">{t('artifacts.storagePathEditModal.pathHelper')}</p>
       </div>
 
       <div className="mb-3">
         <label htmlFor="edit-storage-path-type" className="form-label">
-          Type
+          {t('artifacts.storagePathEditModal.typeLabel')}
         </label>
         <select
           id="edit-storage-path-type"
@@ -146,10 +148,10 @@ const StoragePathEditModal = ({ server, storagePath, onClose, onSuccess, onError
           value={storagePath.type}
           disabled
         >
-          <option value="iso">ISO Files</option>
-          <option value="image">VM Images</option>
+          <option value="iso">{t('artifacts.storagePathEditModal.isoFiles')}</option>
+          <option value="image">{t('artifacts.storagePathEditModal.vmImages')}</option>
         </select>
-        <p className="form-text text-muted">Type cannot be changed after creation</p>
+        <p className="form-text text-muted">{t('artifacts.storagePathEditModal.typeHelper')}</p>
       </div>
 
       <div className="mb-3">
@@ -163,13 +165,13 @@ const StoragePathEditModal = ({ server, storagePath, onClose, onSuccess, onError
             disabled={loading}
           />
           <label className="form-check-label" htmlFor="edit-storage-path-enabled">
-            Enable storage location
+            {t('artifacts.storagePathEditModal.enableLabel')}
           </label>
         </div>
         <p className="form-text text-muted">
           {formData.enabled
-            ? 'This storage location can be used for uploads and downloads'
-            : 'This storage location is read-only when disabled'}
+            ? t('artifacts.storagePathEditModal.enabledDescription')
+            : t('artifacts.storagePathEditModal.disabledDescription')}
         </p>
       </div>
 
@@ -177,18 +179,22 @@ const StoragePathEditModal = ({ server, storagePath, onClose, onSuccess, onError
       <div className="alert alert-secondary">
         <div>
           <p>
-            <strong>Storage Statistics:</strong>
+            <strong>{t('artifacts.storagePathEditModal.storageStatisticsHeading')}</strong>
           </p>
           <div className="row">
             <div className="col">
               <div className="text-center">
-                <p className="text-uppercase small fw-semibold text-muted">Files</p>
+                <p className="text-uppercase small fw-semibold text-muted">
+                  {t('artifacts.storagePathEditModal.filesLabel')}
+                </p>
                 <p className="fs-6 fw-bold">{storagePath.file_count || 0}</p>
               </div>
             </div>
             <div className="col">
               <div className="text-center">
-                <p className="text-uppercase small fw-semibold text-muted">Total Size</p>
+                <p className="text-uppercase small fw-semibold text-muted">
+                  {t('artifacts.storagePathEditModal.totalSizeLabel')}
+                </p>
                 <p className="fs-6 fw-bold">
                   {storagePath.total_size
                     ? `${(storagePath.total_size / (1024 * 1024 * 1024)).toFixed(1)} GB`
@@ -199,7 +205,9 @@ const StoragePathEditModal = ({ server, storagePath, onClose, onSuccess, onError
             {storagePath.disk_usage && (
               <div className="col">
                 <div className="text-center">
-                  <p className="text-uppercase small fw-semibold text-muted">Disk Usage</p>
+                  <p className="text-uppercase small fw-semibold text-muted">
+                    {t('artifacts.storagePathEditModal.diskUsageLabel')}
+                  </p>
                   <p className="fs-6 fw-bold">{storagePath.disk_usage.use_percent}</p>
                 </div>
               </div>
@@ -211,9 +219,10 @@ const StoragePathEditModal = ({ server, storagePath, onClose, onSuccess, onError
       {!formData.enabled && storagePath.file_count > 0 && (
         <div className="alert alert-warning">
           <p>
-            <strong>Warning:</strong> This storage location contains {storagePath.file_count}{' '}
-            file(s). Disabling it will make these artifacts read-only and prevent new uploads or
-            downloads to this location.
+            <strong>{t('artifacts.storagePathEditModal.disableWarningHeading')}</strong>{' '}
+            {t('artifacts.storagePathEditModal.disableWarningMessage', {
+              count: storagePath.file_count,
+            })}
           </p>
         </div>
       )}

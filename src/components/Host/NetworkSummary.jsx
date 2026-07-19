@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const NetworkSummary = ({ networkInterfaces, sectionsCollapsed, toggleSection }) => {
+  const { t } = useTranslation();
   if (networkInterfaces.length === 0) {
     return null;
   }
@@ -12,7 +14,7 @@ const NetworkSummary = ({ networkInterfaces, sectionsCollapsed, toggleSection })
           <div className="d-flex align-items-center gap-2">
             <h4 className="fs-5 fw-bold mb-0">
               <i className="fas fa-chart-pie me-2" />
-              Network Summary
+              {t('host.networkSummary.title')}
             </h4>
           </div>
           <div className="d-flex align-items-center gap-2">
@@ -20,7 +22,11 @@ const NetworkSummary = ({ networkInterfaces, sectionsCollapsed, toggleSection })
               type="button"
               className="btn btn-sm btn-link"
               onClick={() => toggleSection('summary')}
-              title={sectionsCollapsed.summary ? 'Expand section' : 'Collapse section'}
+              title={
+                sectionsCollapsed.summary
+                  ? t('host.networkSummary.expand')
+                  : t('host.networkSummary.collapse')
+              }
             >
               <i
                 className={`fas ${sectionsCollapsed.summary ? 'fa-chevron-down' : 'fa-chevron-up'}`}
@@ -33,29 +39,35 @@ const NetworkSummary = ({ networkInterfaces, sectionsCollapsed, toggleSection })
             <div className="col">
               <div className="d-flex flex-wrap gap-2">
                 <div className="d-flex align-items-center">
-                  <span className="badge text-bg-secondary">Total Interfaces</span>
+                  <span className="badge text-bg-secondary">
+                    {t('host.networkSummary.totalInterfaces')}
+                  </span>
                   <span className="badge text-bg-info">{networkInterfaces.length}</span>
                 </div>
                 <div className="d-flex align-items-center">
-                  <span className="badge text-bg-secondary">Physical</span>
+                  <span className="badge text-bg-secondary">
+                    {t('host.networkSummary.physical')}
+                  </span>
                   <span className="badge text-bg-primary">
                     {networkInterfaces.filter(i => i.class === 'phys').length}
                   </span>
                 </div>
                 <div className="d-flex align-items-center">
-                  <span className="badge text-bg-secondary">Virtual</span>
+                  <span className="badge text-bg-secondary">
+                    {t('host.networkSummary.virtual')}
+                  </span>
                   <span className="badge text-bg-info">
                     {networkInterfaces.filter(i => i.class === 'vnic').length}
                   </span>
                 </div>
                 <div className="d-flex align-items-center">
-                  <span className="badge text-bg-secondary">Up</span>
+                  <span className="badge text-bg-secondary">{t('host.networkSummary.up')}</span>
                   <span className="badge text-bg-success">
                     {networkInterfaces.filter(i => i.state === 'up').length}
                   </span>
                 </div>
                 <div className="d-flex align-items-center">
-                  <span className="badge text-bg-secondary">Down</span>
+                  <span className="badge text-bg-secondary">{t('host.networkSummary.down')}</span>
                   <span className="badge text-bg-danger">
                     {networkInterfaces.filter(i => i.state === 'down').length}
                   </span>

@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import Chart from '../../Chart';
 import Highcharts from '../../Highcharts';
@@ -12,6 +13,7 @@ const PoolCharts = ({
   poolChartRefs,
   seriesVisibility,
 }) => {
+  const { t } = useTranslation();
   const poolEntries = Object.entries(poolChartData).filter(([, data]) => data.totalData.length > 0);
 
   if (poolIOStats.length === 0 || poolEntries.length === 0) {
@@ -25,7 +27,7 @@ const PoolCharts = ({
           <span className="me-1">
             <i className="fas fa-database" />
           </span>
-          <span>ZFS Pool I/O Performance Charts</span>
+          <span>{t('hostCharts.poolCharts.sectionTitle')}</span>
         </span>
       </h5>
       <div className="row">
@@ -41,7 +43,7 @@ const PoolCharts = ({
                 <button
                   className="btn btn-sm btn-link is-chart-expand-button"
                   onClick={() => expandChart(poolName, 'pool')}
-                  title="Expand chart to full size"
+                  title={t('hostCharts.poolCharts.expandButtonTitle')}
                 >
                   <span className="me-1 text-white">
                     <i className="fas fa-expand" />

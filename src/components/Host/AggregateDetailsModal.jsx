@@ -1,11 +1,13 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { ContentModal } from '../common';
 
 const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
+  const { t } = useTranslation();
   const formatValue = value => {
     if (value === null || value === undefined) {
-      return 'N/A';
+      return t('host.aggregateDetailsModal.notAvailable');
     }
     if (typeof value === 'boolean') {
       return value ? 'Yes' : 'No';
@@ -23,7 +25,11 @@ const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
       case 'down':
         return <span className="badge text-bg-danger">{state}</span>;
       default:
-        return <span className="badge text-bg-secondary">{state || 'Unknown'}</span>;
+        return (
+          <span className="badge text-bg-secondary">
+            {state || t('host.aggregateDetailsModal.unknown')}
+          </span>
+        );
     }
   };
 
@@ -39,7 +45,11 @@ const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
     };
 
     const colorClass = policyColors[policy] || 'text-bg-secondary';
-    return <span className={`badge ${colorClass}`}>{policy || 'Unknown'}</span>;
+    return (
+      <span className={`badge ${colorClass}`}>
+        {policy || t('host.aggregateDetailsModal.unknown')}
+      </span>
+    );
   };
 
   const getLacpModeTag = mode => {
@@ -51,7 +61,11 @@ const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
       case 'off':
         return <span className="badge text-bg-secondary">{mode}</span>;
       default:
-        return <span className="badge text-bg-secondary">{mode || 'N/A'}</span>;
+        return (
+          <span className="badge text-bg-secondary">
+            {mode || t('host.aggregateDetailsModal.notAvailable')}
+          </span>
+        );
     }
   };
 
@@ -71,14 +85,19 @@ const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
   const memberLinks = formatLinks(aggregate.links || aggregate.over);
 
   return (
-    <ContentModal isOpen onClose={onClose} title="Aggregate Details" icon="fas fa-network-wired">
-      <h5 className="fs-6 fw-bold">Basic Information</h5>
+    <ContentModal
+      isOpen
+      onClose={onClose}
+      title={t('host.aggregateDetailsModal.title')}
+      icon="fas fa-network-wired"
+    >
+      <h5 className="fs-6 fw-bold">{t('host.aggregateDetailsModal.basicInformation')}</h5>
       <div className="table-responsive">
         <table className="table table-striped">
           <tbody>
             <tr>
               <td>
-                <strong>Name</strong>
+                <strong>{t('host.aggregateDetailsModal.name')}</strong>
               </td>
               <td>
                 <span className="font-monospace">{aggregateName}</span>
@@ -86,7 +105,7 @@ const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
             </tr>
             <tr>
               <td>
-                <strong>Class</strong>
+                <strong>{t('host.aggregateDetailsModal.class')}</strong>
               </td>
               <td>
                 <span className="badge text-bg-info">{aggregate.class || 'aggr'}</span>
@@ -94,37 +113,37 @@ const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
             </tr>
             <tr>
               <td>
-                <strong>State</strong>
+                <strong>{t('host.aggregateDetailsModal.state')}</strong>
               </td>
               <td>{getStateTag(aggregate.state)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Policy</strong>
+                <strong>{t('host.aggregateDetailsModal.policy')}</strong>
               </td>
               <td>{getPolicyTag(aggregate.policy)}</td>
             </tr>
             <tr>
               <td>
-                <strong>LACP Mode</strong>
+                <strong>{t('host.aggregateDetailsModal.lacpMode')}</strong>
               </td>
               <td>{getLacpModeTag(aggregate.lacp_mode)}</td>
             </tr>
             <tr>
               <td>
-                <strong>LACP Timer</strong>
+                <strong>{t('host.aggregateDetailsModal.lacpTimer')}</strong>
               </td>
               <td>{formatValue(aggregate.lacp_timer)}</td>
             </tr>
             <tr>
               <td>
-                <strong>MTU</strong>
+                <strong>{t('host.aggregateDetailsModal.mtu')}</strong>
               </td>
               <td>{formatValue(aggregate.mtu)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Speed</strong>
+                <strong>{t('host.aggregateDetailsModal.speed')}</strong>
               </td>
               <td>{formatValue(aggregate.speed)}</td>
             </tr>
@@ -134,13 +153,13 @@ const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
 
       {memberLinks.length > 0 && (
         <>
-          <h5 className="fs-6 fw-bold mt-5">Member Links</h5>
+          <h5 className="fs-6 fw-bold mt-5">{t('host.aggregateDetailsModal.memberLinks')}</h5>
           <div className="table-responsive">
             <table className="table table-striped">
               <thead>
                 <tr>
-                  <th>Link Name</th>
-                  <th>Status</th>
+                  <th>{t('host.aggregateDetailsModal.linkName')}</th>
+                  <th>{t('host.aggregateDetailsModal.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -150,7 +169,9 @@ const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
                       <span className="font-monospace">{link}</span>
                     </td>
                     <td>
-                      <span className="badge text-bg-success">Active</span>
+                      <span className="badge text-bg-success">
+                        {t('host.aggregateDetailsModal.active')}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -162,31 +183,31 @@ const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
 
       {aggregateDetails && aggregateDetails.lacp && (
         <>
-          <h5 className="fs-6 fw-bold mt-5">LACP Details</h5>
+          <h5 className="fs-6 fw-bold mt-5">{t('host.aggregateDetailsModal.lacpDetails')}</h5>
           <div className="table-responsive">
             <table className="table table-striped">
               <tbody>
                 <tr>
                   <td>
-                    <strong>LACP Activity</strong>
+                    <strong>{t('host.aggregateDetailsModal.lacpActivity')}</strong>
                   </td>
                   <td>{formatValue(aggregateDetails.lacp.activity)}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>LACP Timeout</strong>
+                    <strong>{t('host.aggregateDetailsModal.lacpTimeout')}</strong>
                   </td>
                   <td>{formatValue(aggregateDetails.lacp.timeout)}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>LACP Aggregation</strong>
+                    <strong>{t('host.aggregateDetailsModal.lacpAggregation')}</strong>
                   </td>
                   <td>{formatValue(aggregateDetails.lacp.aggregation)}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>LACP Synchronization</strong>
+                    <strong>{t('host.aggregateDetailsModal.lacpSync')}</strong>
                   </td>
                   <td>{formatValue(aggregateDetails.lacp.synchronization)}</td>
                 </tr>
@@ -196,13 +217,13 @@ const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
         </>
       )}
 
-      <h5 className="fs-6 fw-bold mt-5">Technical Details</h5>
+      <h5 className="fs-6 fw-bold mt-5">{t('host.aggregateDetailsModal.technicalDetails')}</h5>
       <div className="table-responsive">
         <table className="table table-striped">
           <tbody>
             <tr>
               <td>
-                <strong>MAC Address</strong>
+                <strong>{t('host.aggregateDetailsModal.macAddress')}</strong>
               </td>
               <td>
                 <span className="font-monospace">{formatValue(aggregate.macaddress)}</span>
@@ -210,55 +231,55 @@ const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
             </tr>
             <tr>
               <td>
-                <strong>MAC Address Type</strong>
+                <strong>{t('host.aggregateDetailsModal.macAddressType')}</strong>
               </td>
               <td>{formatValue(aggregate.macaddrtype)}</td>
             </tr>
             <tr>
               <td>
-                <strong>VLAN ID</strong>
+                <strong>{t('host.aggregateDetailsModal.vlanId')}</strong>
               </td>
               <td>{formatValue(aggregate.vid)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Zone</strong>
+                <strong>{t('host.aggregateDetailsModal.zone')}</strong>
               </td>
               <td>{formatValue(aggregate.zone)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Media</strong>
+                <strong>{t('host.aggregateDetailsModal.media')}</strong>
               </td>
               <td>{formatValue(aggregate.media)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Duplex</strong>
+                <strong>{t('host.aggregateDetailsModal.duplex')}</strong>
               </td>
               <td>{formatValue(aggregate.duplex)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Device</strong>
+                <strong>{t('host.aggregateDetailsModal.device')}</strong>
               </td>
               <td>{formatValue(aggregate.device)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Bridge</strong>
+                <strong>{t('host.aggregateDetailsModal.bridge')}</strong>
               </td>
               <td>{formatValue(aggregate.bridge)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Pause</strong>
+                <strong>{t('host.aggregateDetailsModal.pause')}</strong>
               </td>
               <td>{formatValue(aggregate.pause)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Auto</strong>
+                <strong>{t('host.aggregateDetailsModal.auto')}</strong>
               </td>
               <td>{formatValue(aggregate.auto)}</td>
             </tr>
@@ -266,39 +287,43 @@ const AggregateDetailsModal = ({ aggregate, aggregateDetails, onClose }) => {
         </table>
       </div>
 
-      <h5 className="fs-6 fw-bold mt-5">Timestamps</h5>
+      <h5 className="fs-6 fw-bold mt-5">{t('host.aggregateDetailsModal.timestamps')}</h5>
       <div className="table-responsive">
         <table className="table table-striped">
           <tbody>
             <tr>
               <td>
-                <strong>Last Scan</strong>
+                <strong>{t('host.aggregateDetailsModal.lastScan')}</strong>
               </td>
               <td>
                 <span className="font-monospace">
                   {aggregate.scan_timestamp
                     ? new Date(aggregate.scan_timestamp).toLocaleString()
-                    : 'N/A'}
+                    : t('host.aggregateDetailsModal.notAvailable')}
                 </span>
               </td>
             </tr>
             <tr>
               <td>
-                <strong>Created</strong>
+                <strong>{t('host.aggregateDetailsModal.created')}</strong>
               </td>
               <td>
                 <span className="font-monospace">
-                  {aggregate.createdAt ? new Date(aggregate.createdAt).toLocaleString() : 'N/A'}
+                  {aggregate.createdAt
+                    ? new Date(aggregate.createdAt).toLocaleString()
+                    : t('host.aggregateDetailsModal.notAvailable')}
                 </span>
               </td>
             </tr>
             <tr>
               <td>
-                <strong>Updated</strong>
+                <strong>{t('host.aggregateDetailsModal.updated')}</strong>
               </td>
               <td>
                 <span className="font-monospace">
-                  {aggregate.updatedAt ? new Date(aggregate.updatedAt).toLocaleString() : 'N/A'}
+                  {aggregate.updatedAt
+                    ? new Date(aggregate.updatedAt).toLocaleString()
+                    : t('host.aggregateDetailsModal.notAvailable')}
                 </span>
               </td>
             </tr>

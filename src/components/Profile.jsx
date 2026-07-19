@@ -1,6 +1,7 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import axios from 'axios';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,6 +10,7 @@ import PasswordManagement from './Profile/PasswordManagement';
 import ProfileInfo from './Profile/ProfileInfo';
 
 const Profile = () => {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -31,12 +33,12 @@ const Profile = () => {
     e.preventDefault();
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setMsg('New passwords do not match');
+      setMsg(t('auth.profile.passwordsNotMatch'));
       return;
     }
 
     if (passwordData.newPassword.length < 8) {
-      setMsg('New password must be at least 8 characters long');
+      setMsg(t('auth.profile.passwordMinLength'));
       return;
     }
 
@@ -51,7 +53,7 @@ const Profile = () => {
       });
 
       if (response.data.success) {
-        setMsg('Password changed successfully!');
+        setMsg(t('auth.profile.passwordChangedSuccess'));
         setPasswordData({
           currentPassword: '',
           newPassword: '',
@@ -74,7 +76,7 @@ const Profile = () => {
    */
   const handleDeleteAccount = async () => {
     if (deleteData.confirmText !== 'DELETE') {
-      setMsg('You must type "DELETE" to confirm account deletion');
+      setMsg(t('auth.profile.deleteConfirmRequired'));
       return;
     }
 
@@ -149,7 +151,7 @@ const Profile = () => {
       <div className="container-fluid p-0">
         <div className="card">
           <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <strong>User Profile</strong>
+            <strong>{t('auth.profile.userProfileTitle')}</strong>
           </div>
 
           <div className="px-4">
@@ -168,10 +170,10 @@ const Profile = () => {
                 {/* Account Information */}
                 <div className="card">
                   <div className="card-body">
-                    <h2 className="fs-5 fw-bold">Account Information</h2>
+                    <h2 className="fs-5 fw-bold">{t('auth.profile.accountInfoTitle')}</h2>
                     <div className="mb-3">
                       <label className="form-label" htmlFor="username">
-                        Username
+                        {t('auth.profile.usernameLabel')}
                       </label>
                       <input
                         id="username"
@@ -184,7 +186,7 @@ const Profile = () => {
 
                     <div className="mb-3">
                       <label className="form-label" htmlFor="email">
-                        Email
+                        {t('auth.profile.emailLabel')}
                       </label>
                       <input
                         id="email"
@@ -196,15 +198,15 @@ const Profile = () => {
                     </div>
 
                     <div className="mb-3">
-                      <p className="form-label">Role</p>
+                      <p className="form-label">{t('auth.profile.roleLabel')}</p>
                       <span className={`badge ${getRoleBadgeClass(user?.role)}`}>
-                        {user?.role || 'Unknown'}
+                        {user?.role || t('auth.profile.unknown')}
                       </span>
                     </div>
 
                     <div className="mb-3">
                       <label className="form-label" htmlFor="createdAt">
-                        Member Since
+                        {t('auth.profile.memberSinceLabel')}
                       </label>
                       <input
                         id="createdAt"
@@ -213,7 +215,7 @@ const Profile = () => {
                         value={
                           user?.createdAt
                             ? new Date(user.createdAt).toLocaleDateString()
-                            : 'Unknown'
+                            : t('auth.profile.unknown')
                         }
                         disabled
                       />
@@ -234,16 +236,16 @@ const Profile = () => {
                 {/* Account Deletion */}
                 <div className="card">
                   <div className="card-body">
-                    <h2 className="fs-5 fw-bold text-danger">Danger Zone</h2>
+                    <h2 className="fs-5 fw-bold text-danger">
+                      {t('auth.profile.dangerZoneTitle')}
+                    </h2>
                     <div className="alert alert-danger">
                       <p>
-                        <strong>Warning:</strong> Account deletion is permanent and cannot be
-                        undone.
+                        <strong>{t('auth.profile.deletionWarning')}</strong>
                       </p>
                       {user?.role === 'super-admin' && (
                         <p>
-                          <strong>Note:</strong> As a super-admin, you cannot delete your account if
-                          you are the last super-admin.
+                          <strong>{t('auth.profile.superAdminNote')}</strong>
                         </p>
                       )}
                     </div>
@@ -253,7 +255,7 @@ const Profile = () => {
                       className="btn btn-outline-danger"
                       onClick={() => setShowDeleteModal(true)}
                     >
-                      Delete My Account
+                      {t('auth.profile.deleteAccountBtn')}
                     </button>
                   </div>
                 </div>
@@ -269,37 +271,37 @@ const Profile = () => {
           isOpen={showDeleteModal}
           onClose={closeDeleteModal}
           onSubmit={handleDeleteAccount}
-          title="⚠️ Delete Account"
+          title={t('auth.profile.deleteModalTitle')}
           icon="fas fa-exclamation-triangle"
-          submitText={loading ? 'Deleting...' : 'Delete Account Permanently'}
+          submitText={loading ? t('auth.profile.deletingBtn') : t('auth.profile.deletePermBtn')}
           submitVariant="is-danger"
           loading={loading}
           submitDisabled={deleteData.confirmText !== 'DELETE' || !deleteData.password}
         >
           <div className="alert alert-danger">
             <p>
-              <strong>WARNING: This action cannot be undone!</strong>
+              <strong>{t('auth.profile.deleteWarning')}</strong>
             </p>
-            <p>You are about to permanently delete your account:</p>
+            <p>{t('auth.profile.deletePermanentlyMsg')}</p>
           </div>
 
           <div className="card">
             <div className="card-body">
               <p>
-                <strong>Username:</strong> {user?.username}
+                <strong>{t('auth.profile.username')}:</strong> {user?.username}
               </p>
               <p>
-                <strong>Email:</strong> {user?.email}
+                <strong>{t('auth.profile.emailLabel')}:</strong> {user?.email}
               </p>
               <p>
-                <strong>Role:</strong> {user?.role}
+                <strong>{t('auth.profile.roleLabel')}:</strong> {user?.role}
               </p>
             </div>
           </div>
 
           <div className="mb-3">
             <label className="form-label" htmlFor="deletePassword">
-              Current Password
+              {t('auth.profile.currentPasswordLabel')}
             </label>
             <input
               id="deletePassword"
@@ -307,13 +309,13 @@ const Profile = () => {
               type="password"
               value={deleteData.password}
               onChange={e => setDeleteData({ ...deleteData, password: e.target.value })}
-              placeholder="Enter your current password"
+              placeholder={t('auth.profile.currentPasswordPlaceholder')}
             />
           </div>
 
           <div className="mb-3">
             <label className="form-label" htmlFor="deleteConfirm">
-              Type &quot;DELETE&quot; to confirm account deletion:
+              {t('auth.profile.confirmDeleteLabel')}
             </label>
             <input
               id="deleteConfirm"
@@ -321,12 +323,10 @@ const Profile = () => {
               type="text"
               value={deleteData.confirmText}
               onChange={e => setDeleteData({ ...deleteData, confirmText: e.target.value })}
-              placeholder="Type DELETE to confirm"
+              placeholder={t('auth.profile.confirmDeletePlaceholder')}
               autoComplete="off"
             />
-            <p className="form-text text-muted">
-              This will permanently remove your account and all associated data.
-            </p>
+            <p className="form-text text-muted">{t('auth.profile.permanentRemovalMsg')}</p>
           </div>
         </FormModal>
       )}

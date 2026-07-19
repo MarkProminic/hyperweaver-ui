@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { exportTemplate, getTemplateSources, publishTemplate } from '../../api/provisioningAPI';
 import { pickDefaultSource } from '../../utils/boxCatalog';
@@ -20,6 +21,7 @@ const SnapshotTemplateModal = ({
   snapshotName,
   onQueued,
 }) => {
+  const { t } = useTranslation();
   const [sources, setSources] = useState([]);
   const [form, setForm] = useState({
     filename: '',
@@ -79,12 +81,15 @@ const SnapshotTemplateModal = ({
         setError(result.message);
         return;
       }
-      onQueued(result.data, `Template export queued from ${snapshotName}.`);
+      onQueued(
+        result.data,
+        t('machine.snapshotTemplateModal.exportQueuedFallback', { snapshotName })
+      );
       onClose();
       return;
     }
     if (!form.source || !form.organization.trim() || !form.boxName.trim() || !form.version.trim()) {
-      setError('Publish needs a registry, organization, box name, and version.');
+      setError(t('machine.snapshotTemplateModal.publishFieldsRequired'));
       return;
     }
     setLoading(true);
@@ -108,7 +113,10 @@ const SnapshotTemplateModal = ({
       setError(result.message);
       return;
     }
-    onQueued(result.data, `Publish queued from ${snapshotName}.`);
+    onQueued(
+      result.data,
+      t('machine.snapshotTemplateModal.publishQueuedFallback', { snapshotName })
+    );
     onClose();
   };
 
@@ -117,28 +125,37 @@ const SnapshotTemplateModal = ({
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`${isPublish ? 'Publish' : 'Template'} from snapshot — ${snapshotName || ''}`}
+      title={
+        isPublish
+          ? t('machine.snapshotTemplateModal.publishTitle', { snapshotName: snapshotName || '' })
+          : t('machine.snapshotTemplateModal.templateTitle', { snapshotName: snapshotName || '' })
+      }
       icon={isPublish ? 'fas fa-cloud-arrow-up' : 'fas fa-box-archive'}
-      submitText={isPublish ? 'Queue Publish' : 'Queue Export'}
+      submitText={
+        isPublish
+          ? t('machine.snapshotTemplateModal.queuePublishSubmit')
+          : t('machine.snapshotTemplateModal.queueExportSubmit')
+      }
       loading={loading}
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
       <p className="form-text text-muted mt-0">
-        Built from the snapshot&apos;s point-in-time state — the machine keeps running and its
-        current state is untouched.
+        {t('machine.snapshotTemplateModal.pointInTimeNote')}
       </p>
 
       {!isPublish && (
         <div className="mb-2">
           <label className="form-label" htmlFor="snap-template-filename">
-            Filename (optional)
+            {t('machine.snapshotTemplateModal.filenameLabel')}
           </label>
           <input
             id="snap-template-filename"
             className="form-control"
             type="text"
-            placeholder={`(default — derived from ${machineName || 'the machine'})`}
+            placeholder={t('machine.snapshotTemplateModal.filenamePlaceholder', {
+              machineName: machineName || t('machine.snapshotTemplateModal.theMachine'),
+            })}
             value={form.filename}
             onChange={e => setField('filename', e.target.value)}
             disabled={loading}
@@ -150,7 +167,7 @@ const SnapshotTemplateModal = ({
         <div className="row g-3">
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="snap-publish-source">
-              Registry
+              {t('machine.snapshotTemplateModal.registryLabel')}
             </label>
             <select
               id="snap-publish-source"
@@ -159,18 +176,18 @@ const SnapshotTemplateModal = ({
               onChange={e => setField('source', e.target.value)}
               disabled={loading}
             >
-              <option value="">Select…</option>
+              <option value="">{t('machine.snapshotTemplateModal.selectOption')}</option>
               {sources.map(source => (
                 <option key={source.name} value={source.name}>
                   {source.name}
-                  {source.default ? ' (default)' : ''}
+                  {source.default ? ` ${t('machine.snapshotTemplateModal.defaultSuffix')}` : ''}
                 </option>
               ))}
             </select>
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="snap-publish-org">
-              Organization
+              {t('machine.snapshotTemplateModal.organizationLabel')}
             </label>
             <input
               id="snap-publish-org"
@@ -182,7 +199,7 @@ const SnapshotTemplateModal = ({
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="snap-publish-box">
-              Box name
+              {t('machine.snapshotTemplateModal.boxNameLabel')}
             </label>
             <input
               id="snap-publish-box"
@@ -194,7 +211,7 @@ const SnapshotTemplateModal = ({
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="snap-publish-version">
-              Version
+              {t('machine.snapshotTemplateModal.versionLabel')}
             </label>
             <input
               id="snap-publish-version"
@@ -206,7 +223,7 @@ const SnapshotTemplateModal = ({
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="snap-publish-arch">
-              Architecture (optional)
+              {t('machine.snapshotTemplateModal.architectureLabel')}
             </label>
             <input
               id="snap-publish-arch"
@@ -219,7 +236,7 @@ const SnapshotTemplateModal = ({
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="snap-publish-description">
-              Description (optional)
+              {t('machine.snapshotTemplateModal.descriptionLabel')}
             </label>
             <input
               id="snap-publish-description"

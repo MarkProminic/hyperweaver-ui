@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { ContentModal, FormModal } from './common';
 
@@ -12,56 +13,59 @@ export const AgentSettingsBackupModal = ({
   loading,
   onRestore,
   onDelete,
-}) => (
-  <ContentModal
-    isOpen={isOpen}
-    onClose={onClose}
-    title="Configuration Backups"
-    icon="fas fa-history"
-  >
-    {backups.length === 0 ? (
-      <p className="text-muted">No backups available</p>
-    ) : (
-      <table className="table table-striped">
-        <thead>
-          <tr>
-            <th>Filename</th>
-            <th>Created</th>
-            <th className="text-end">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {backups.map(backup => (
-            <tr key={backup.filename}>
-              <td>{backup.filename}</td>
-              <td>{new Date(backup.createdAt).toLocaleString()}</td>
-              <td className="text-end">
-                <div className="d-flex gap-2 justify-content-end">
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-warning w-100"
-                    onClick={() => onRestore(backup.filename)}
-                    disabled={loading}
-                  >
-                    Restore
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-danger w-100"
-                    onClick={() => onDelete(backup.filename)}
-                    disabled={loading}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </td>
+}) => {
+  const { t } = useTranslation();
+  return (
+    <ContentModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('agentSettings.agentSettingsModals.configurationBackupsTitle')}
+      icon="fas fa-history"
+    >
+      {backups.length === 0 ? (
+        <p className="text-muted">{t('agentSettings.agentSettingsModals.noBackupsAvailable')}</p>
+      ) : (
+        <table className="table table-striped">
+          <thead>
+            <tr>
+              <th>{t('agentSettings.agentSettingsModals.filenameHeader')}</th>
+              <th>{t('agentSettings.agentSettingsModals.createdHeader')}</th>
+              <th className="text-end">{t('agentSettings.agentSettingsModals.actionsHeader')}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    )}
-  </ContentModal>
-);
+          </thead>
+          <tbody>
+            {backups.map(backup => (
+              <tr key={backup.filename}>
+                <td>{backup.filename}</td>
+                <td>{new Date(backup.createdAt).toLocaleString()}</td>
+                <td className="text-end">
+                  <div className="d-flex gap-2 justify-content-end">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-warning w-100"
+                      onClick={() => onRestore(backup.filename)}
+                      disabled={loading}
+                    >
+                      {t('agentSettings.agentSettingsModals.restoreButton')}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger w-100"
+                      onClick={() => onDelete(backup.filename)}
+                      disabled={loading}
+                    >
+                      {t('agentSettings.agentSettingsModals.deleteButton')}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </ContentModal>
+  );
+};
 
 AgentSettingsBackupModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,

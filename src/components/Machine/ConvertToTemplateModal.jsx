@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getMachineSnapshots } from '../../api/machineAPI';
 import { exportTemplate } from '../../api/provisioningAPI';
@@ -20,6 +21,7 @@ const ConvertToTemplateModal = ({
   isRunning,
   onDone,
 }) => {
+  const { t } = useTranslation();
   const [filename, setFilename] = useState('');
   const [snapshotName, setSnapshotName] = useState('');
   const [snapshots, setSnapshots] = useState([]);
@@ -69,9 +71,9 @@ const ConvertToTemplateModal = ({
     }
     const taskId = result.data?.task_id;
     onDone({
-      text: `${result.data?.message || `Template export queued for ${machineName}`}${
-        taskId ? ` (task ${taskId})` : ''
-      } — the .box path and sha256 land in the task output.`,
+      text: `${result.data?.message || t('machine.convertToTemplateModal.queuedFallback', { machineName })}${
+        taskId ? ` ${t('machine.convertToTemplateModal.taskSuffix', { taskId })}` : ''
+      } ${t('machine.convertToTemplateModal.outputNote')}`,
       warning: false,
     });
     onClose();
@@ -82,9 +84,9 @@ const ConvertToTemplateModal = ({
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Convert to Template — ${machineName || ''}`}
+      title={t('machine.convertToTemplateModal.title', { machineName: machineName || '' })}
       icon="fas fa-box-archive"
-      submitText="Queue Export"
+      submitText={t('machine.convertToTemplateModal.submit')}
       submitIcon="fas fa-file-export"
       loading={loading}
       showCancelButton
@@ -92,19 +94,20 @@ const ConvertToTemplateModal = ({
       {error && <div className="alert alert-danger py-2">{error}</div>}
       {isRunning && !snapshotName && (
         <div className="alert alert-warning py-2">
-          The machine is running — the agent refuses a live export. Stop it first, or export from a
-          snapshot below.
+          {t('machine.convertToTemplateModal.runningWarning')}
         </div>
       )}
       <div className="mb-3">
         <label className="form-label" htmlFor="totemplate-filename">
-          Filename (optional)
+          {t('machine.convertToTemplateModal.filenameLabel')}
         </label>
         <input
           id="totemplate-filename"
           className="form-control"
           type="text"
-          placeholder={`(default — derived from ${machineName || 'the machine'})`}
+          placeholder={t('machine.convertToTemplateModal.filenamePlaceholder', {
+            machineName: machineName || t('machine.convertToTemplateModal.theMachine'),
+          })}
           value={filename}
           onChange={e => setFilename(e.target.value)}
           disabled={loading}
@@ -113,7 +116,7 @@ const ConvertToTemplateModal = ({
       {snapshots.length > 0 && (
         <div className="mb-3">
           <label className="form-label" htmlFor="totemplate-snapshot">
-            Export from snapshot (optional)
+            {t('machine.convertToTemplateModal.snapshotLabel')}
           </label>
           <select
             id="totemplate-snapshot"
@@ -122,20 +125,17 @@ const ConvertToTemplateModal = ({
             onChange={e => setSnapshotName(e.target.value)}
             disabled={loading}
           >
-            <option value="">(current state)</option>
+            <option value="">{t('machine.convertToTemplateModal.currentStateOption')}</option>
             {snapshots.map(snap => (
               <option key={snap.name} value={snap.name}>
                 {snap.name}
-                {snap.current ? ' (current)' : ''}
+                {snap.current ? ` ${t('machine.convertToTemplateModal.currentSuffix')}` : ''}
               </option>
             ))}
           </select>
         </div>
       )}
-      <p className="form-text text-muted mb-0">
-        Creates a local .box template. To publish it to a registry, use the host&apos;s Templates
-        page (Manage → Templates → Publish).
-      </p>
+      <p className="form-text text-muted mb-0">{t('machine.convertToTemplateModal.publishNote')}</p>
     </FormModal>
   );
 };

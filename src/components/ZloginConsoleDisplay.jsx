@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { hasConsole, hasFeature } from '../utils/capabilities';
 
@@ -31,238 +32,249 @@ const ZloginConsoleDisplay = ({
   forceZoneSessionCleanup,
   pasteTextToZone,
   handleZloginConsole,
-}) => (
-  <div className="hw-console-container">
-    {/* zlogin Console Header */}
-    <div className="bg-dark text-white p-3 d-flex justify-content-between align-items-center">
-      <div>
-        <h6 className="fs-6 fw-bold text-white mb-1">Active zlogin Session</h6>
-        {machineDetails.zlogin_session && (
-          <p className="small text-white-50 mb-0">
-            Session ID: {machineDetails.zlogin_session.id?.substring(0, 8) || 'Unknown'} | Started:{' '}
-            {machineDetails.zlogin_session.created_at
-              ? new Date(machineDetails.zlogin_session.created_at).toLocaleString()
-              : 'Unknown'}
-          </p>
-        )}
-      </div>
-      <div className="d-flex gap-1 m-0">
-        <ZloginActionsDropdown
-          variant="button"
-          onToggleReadOnly={() => setPreviewReadOnly(!previewReadOnly)}
-          onNewSession={() => handleZloginConsole(selectedMachine)}
-          onKillSession={async () => {
-            if (!currentServer || !selectedMachine) {
-              return;
-            }
-            try {
-              setLoading(true);
-              await forceZoneSessionCleanup(currentServer, selectedMachine);
-              setMachineDetails(prev => ({
-                ...prev,
-                zlogin_session: null,
-                active_zlogin_session: false,
-              }));
-            } catch (error) {
-              console.error('Error killing zlogin session:', error);
-              setError('Error killing zlogin session');
-            } finally {
-              setLoading(false);
-            }
-          }}
-          onScreenshot={() => {
-            const terminalElement = document.querySelector('.xterm-screen');
-            if (terminalElement) {
-              const text = terminalElement.textContent || terminalElement.innerText;
-              const blob = new Blob([text], { type: 'text/plain' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `zlogin-output-${selectedMachine}-${Date.now()}.txt`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-            }
-          }}
-          isReadOnly={previewReadOnly}
-          isAdmin={
-            user?.role === 'admin' ||
-            user?.role === 'super-admin' ||
-            user?.role === 'organization-admin'
-          }
-        />
-        {!previewReadOnly && (
-          <button
-            type="button"
-            className="btn btn-sm btn-info has-box-shadow"
-            onClick={async () => {
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="hw-console-container">
+      {/* zlogin Console Header */}
+      <div className="bg-dark text-white p-3 d-flex justify-content-between align-items-center">
+        <div>
+          <h6 className="fs-6 fw-bold text-white mb-1">
+            {t('console.zloginConsoleDisplay.activeSession')}
+          </h6>
+          {machineDetails.zlogin_session && (
+            <p className="small text-white-50 mb-0">
+              {t('console.zloginConsoleDisplay.sessionIdStarted', {
+                sessionId:
+                  machineDetails.zlogin_session.id?.substring(0, 8) ||
+                  t('console.zloginConsoleDisplay.unknown'),
+                started: machineDetails.zlogin_session.created_at
+                  ? new Date(machineDetails.zlogin_session.created_at).toLocaleString()
+                  : t('console.zloginConsoleDisplay.unknown'),
+              })}
+            </p>
+          )}
+        </div>
+        <div className="d-flex gap-1 m-0">
+          <ZloginActionsDropdown
+            variant="button"
+            onToggleReadOnly={() => setPreviewReadOnly(!previewReadOnly)}
+            onNewSession={() => handleZloginConsole(selectedMachine)}
+            onKillSession={async () => {
+              if (!currentServer || !selectedMachine) {
+                return;
+              }
               try {
-                if (navigator.clipboard && navigator.clipboard.readText) {
-                  const text = await navigator.clipboard.readText();
-                  if (text && currentServer && selectedMachine) {
-                    await pasteTextToZone(currentServer, selectedMachine, text);
-                  }
-                }
+                setLoading(true);
+                await forceZoneSessionCleanup(currentServer, selectedMachine);
+                setMachineDetails(prev => ({
+                  ...prev,
+                  zlogin_session: null,
+                  active_zlogin_session: false,
+                }));
               } catch (error) {
-                console.error('📋 ZLOGIN PREVIEW PASTE: Error:', error);
+                console.error('Error killing zlogin session:', error);
+                setError('Error killing zlogin session');
+              } finally {
+                setLoading(false);
               }
             }}
-            title="Paste from Browser Clipboard"
-          >
-            <i className="fas fa-paste" />
-          </button>
-        )}
-        <button
-          type="button"
-          className="btn btn-sm btn-primary"
-          onClick={() => {
-            if (machineDetails.zlogin_session) {
-              setShowZloginConsole(true);
-            } else {
-              handleZloginConsole(selectedMachine);
+            onScreenshot={() => {
+              const terminalElement = document.querySelector('.xterm-screen');
+              if (terminalElement) {
+                const text = terminalElement.textContent || terminalElement.innerText;
+                const blob = new Blob([text], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `zlogin-output-${selectedMachine}-${Date.now()}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }
+            }}
+            isReadOnly={previewReadOnly}
+            isAdmin={
+              user?.role === 'admin' ||
+              user?.role === 'super-admin' ||
+              user?.role === 'organization-admin'
             }
-          }}
-          disabled={loading}
-          title="Expand zlogin Console"
-        >
-          <i className="fas fa-expand" />
-        </button>
-        {hasConsole(currentServer, 'vnc') &&
-          (hasVnc ? (
+          />
+          {!previewReadOnly && (
             <button
               type="button"
-              className="btn btn-sm btn-warning"
-              onClick={() => setActiveConsoleType('vnc')}
-              title="Switch to VNC Console"
-            >
-              <i className="fas fa-desktop" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-sm btn-warning"
+              className="btn btn-sm btn-info has-box-shadow"
               onClick={async () => {
                 try {
-                  setLoadingVnc(true);
-                  const result = await startVncSession(
-                    currentServer.hostname,
-                    currentServer.port,
-                    currentServer.protocol,
-                    selectedMachine
-                  );
-
-                  if (result.success) {
-                    const readinessResult = await waitForVncSessionReady(selectedMachine);
-                    if (readinessResult.ready) {
-                      setMachineDetails(prev => ({
-                        ...prev,
-                        active_vnc_session: true,
-                        vnc_session_info: {
-                          ...result.data,
-                          ...readinessResult.sessionInfo,
-                        },
-                      }));
-                      setActiveConsoleType('vnc');
+                  if (navigator.clipboard && navigator.clipboard.readText) {
+                    const text = await navigator.clipboard.readText();
+                    if (text && currentServer && selectedMachine) {
+                      await pasteTextToZone(currentServer, selectedMachine, text);
                     }
                   }
                 } catch (error) {
-                  console.error('Error starting VNC:', error);
-                  setError('Error starting VNC console');
-                } finally {
-                  setLoadingVnc(false);
+                  console.error('📋 ZLOGIN PREVIEW PASTE: Error:', error);
                 }
               }}
-              disabled={loadingVnc}
-              title="Start VNC Console"
+              title={t('console.zloginConsoleDisplay.pasteFromClipboard')}
             >
-              <i className={`fas ${loadingVnc ? 'fa-spinner fa-pulse' : 'fa-desktop'}`} />
+              <i className="fas fa-paste" />
             </button>
-          ))}
-        {hasFeature(currentServer, 'ssh') &&
-          (hasSsh ? (
-            <button
-              type="button"
-              className="btn btn-sm btn-success"
-              onClick={() => setActiveConsoleType('ssh')}
-              title="Switch to SSH Console"
-            >
-              <i className="fas fa-terminal" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-sm btn-success"
-              onClick={() =>
-                startSshPreview({
-                  currentServer,
-                  selectedMachine,
-                  setLoading,
-                  setError,
-                  setMachineDetails,
-                  setActiveConsoleType,
-                })
+          )}
+          <button
+            type="button"
+            className="btn btn-sm btn-primary"
+            onClick={() => {
+              if (machineDetails.zlogin_session) {
+                setShowZloginConsole(true);
+              } else {
+                handleZloginConsole(selectedMachine);
               }
-              disabled={loading}
-              title="Start an SSH shell inside the guest"
-            >
-              <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'}`} />
-            </button>
-          ))}
-        {hasConsole(currentServer, 'rdp') &&
-          (hasRdp ? (
-            <button
-              type="button"
-              className="btn btn-sm btn-info"
-              onClick={() => setActiveConsoleType('rdp')}
-              title="Switch to RDP Console"
-            >
-              <i className="fab fa-windows" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-sm btn-info"
-              onClick={() =>
-                startRdpPreview({
-                  currentServer,
-                  selectedMachine,
-                  setLoading,
-                  setError,
-                  setMachineDetails,
-                  setActiveConsoleType,
-                })
-              }
-              disabled={loading}
-              title="Start the browser VRDP console (VRDE over the agent)"
-            >
-              <i className={loading ? 'fas fa-spinner fa-pulse' : 'fab fa-windows'} />
-            </button>
-          ))}
+            }}
+            disabled={loading}
+            title={t('console.zloginConsoleDisplay.expandConsole')}
+          >
+            <i className="fas fa-expand" />
+          </button>
+          {hasConsole(currentServer, 'vnc') &&
+            (hasVnc ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-warning"
+                onClick={() => setActiveConsoleType('vnc')}
+                title={t('console.zloginConsoleDisplay.switchToVnc')}
+              >
+                <i className="fas fa-desktop" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm btn-warning"
+                onClick={async () => {
+                  try {
+                    setLoadingVnc(true);
+                    const result = await startVncSession(
+                      currentServer.hostname,
+                      currentServer.port,
+                      currentServer.protocol,
+                      selectedMachine
+                    );
+
+                    if (result.success) {
+                      const readinessResult = await waitForVncSessionReady(selectedMachine);
+                      if (readinessResult.ready) {
+                        setMachineDetails(prev => ({
+                          ...prev,
+                          active_vnc_session: true,
+                          vnc_session_info: {
+                            ...result.data,
+                            ...readinessResult.sessionInfo,
+                          },
+                        }));
+                        setActiveConsoleType('vnc');
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Error starting VNC:', error);
+                    setError('Error starting VNC console');
+                  } finally {
+                    setLoadingVnc(false);
+                  }
+                }}
+                disabled={loadingVnc}
+                title={t('console.zloginConsoleDisplay.startVnc')}
+              >
+                <i className={`fas ${loadingVnc ? 'fa-spinner fa-pulse' : 'fa-desktop'}`} />
+              </button>
+            ))}
+          {hasFeature(currentServer, 'ssh') &&
+            (hasSsh ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-success"
+                onClick={() => setActiveConsoleType('ssh')}
+                title={t('console.zloginConsoleDisplay.switchToSsh')}
+              >
+                <i className="fas fa-terminal" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm btn-success"
+                onClick={() =>
+                  startSshPreview({
+                    currentServer,
+                    selectedMachine,
+                    setLoading,
+                    setError,
+                    setMachineDetails,
+                    setActiveConsoleType,
+                  })
+                }
+                disabled={loading}
+                title={t('console.zloginConsoleDisplay.startSsh')}
+              >
+                <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'}`} />
+              </button>
+            ))}
+          {hasConsole(currentServer, 'rdp') &&
+            (hasRdp ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-info"
+                onClick={() => setActiveConsoleType('rdp')}
+                title={t('console.zloginConsoleDisplay.switchToRdp')}
+              >
+                <i className="fab fa-windows" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm btn-info"
+                onClick={() =>
+                  startRdpPreview({
+                    currentServer,
+                    selectedMachine,
+                    setLoading,
+                    setError,
+                    setMachineDetails,
+                    setActiveConsoleType,
+                  })
+                }
+                disabled={loading}
+                title={t('console.zloginConsoleDisplay.startRdp')}
+              >
+                <i className={loading ? 'fas fa-spinner fa-pulse' : 'fab fa-windows'} />
+              </button>
+            ))}
+        </div>
       </div>
-    </div>
 
-    {/* zlogin Console Content */}
-    <div className="hw-console-content">
-      <ZoneShell
-        key={`preview-zlogin-${selectedMachine}-${previewReconnectKey}-${previewReadOnly ? 'ro' : 'rw'}`}
-        zoneName={selectedMachine}
-        readOnly={previewReadOnly}
-        context="preview"
-        className="hw-console-zone-shell"
-      />
-
-      <div className="hw-console-status-overlay">
-        <i
-          className={`fas fa-circle hw-console-status-icon has-margin-right-3px ${
-            machineDetails.zlogin_session ? 'hw-status-icon-active' : 'hw-status-icon-inactive'
-          }`}
+      {/* zlogin Console Content */}
+      <div className="hw-console-content">
+        <ZoneShell
+          key={`preview-zlogin-${selectedMachine}-${previewReconnectKey}-${previewReadOnly ? 'ro' : 'rw'}`}
+          zoneName={selectedMachine}
+          readOnly={previewReadOnly}
+          context="preview"
+          className="hw-console-zone-shell"
         />
-        {machineDetails.zlogin_session ? 'Live' : 'Offline'}
+
+        <div className="hw-console-status-overlay">
+          <i
+            className={`fas fa-circle hw-console-status-icon has-margin-right-3px ${
+              machineDetails.zlogin_session ? 'hw-status-icon-active' : 'hw-status-icon-inactive'
+            }`}
+          />
+          {machineDetails.zlogin_session
+            ? t('console.zloginConsoleDisplay.live')
+            : t('console.zloginConsoleDisplay.offline')}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 ZloginConsoleDisplay.propTypes = {
   machineDetails: PropTypes.shape({

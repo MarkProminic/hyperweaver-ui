@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 /**
@@ -84,22 +85,25 @@ LinesField.propTypes = {
 };
 
 /** A tri-state select over an OPTIONAL boolean key: (not set) / true / false. */
-export const OptionalBoolSelect = ({ id, label, value, onChange, disabled }) => (
-  <span className="hw-field">
-    <label htmlFor={id}>{label}</label>
-    <select
-      id={id}
-      className="form-select form-select-sm w-auto"
-      value={value === undefined ? '' : String(value)}
-      disabled={disabled}
-      onChange={e => onChange(e.target.value === '' ? undefined : e.target.value === 'true')}
-    >
-      <option value="">not set</option>
-      <option value="true">true</option>
-      <option value="false">false</option>
-    </select>
-  </span>
-);
+export const OptionalBoolSelect = ({ id, label, value, onChange, disabled }) => {
+  const { t } = useTranslation();
+  return (
+    <span className="hw-field">
+      <label htmlFor={id}>{label}</label>
+      <select
+        id={id}
+        className="form-select form-select-sm w-auto"
+        value={value === undefined ? '' : String(value)}
+        disabled={disabled}
+        onChange={e => onChange(e.target.value === '' ? undefined : e.target.value === 'true')}
+      >
+        <option value="">{t('provisioning.provisioningVarRows.notSetOption')}</option>
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
+    </span>
+  );
+};
 
 OptionalBoolSelect.propTypes = {
   id: PropTypes.string.isRequired,
@@ -141,7 +145,7 @@ const previewOf = text => {
  * default folded in; '' when the spec has no description (no button then —
  * Mark's ruling: only a real description earns the info affordance).
  */
-export const specInfoText = option => {
+const specInfoText = (option, t) => {
   if (!option || !option.description) {
     return '';
   }
@@ -150,23 +154,26 @@ export const specInfoText = option => {
     : String(option.description);
   const extras = [];
   if (option.default !== undefined) {
-    extras.push(`default: ${varToText(option.default)}`);
+    extras.push(
+      t('provisioning.provisioningVarRows.specDefault', { value: varToText(option.default) })
+    );
   }
   if (option.required) {
-    extras.push('required');
+    extras.push(t('provisioning.provisioningVarRows.specRequired'));
   }
   return extras.length > 0 ? `${description} (${extras.join(', ')})` : description;
 };
 
 /** Floating tooltip on an info button — hover/focus shows, click pins. */
 const InfoTip = ({ text }) => {
+  const { t } = useTranslation();
   const [pinned, setPinned] = useState(false);
   return (
     <span className={`hw-tip-wrap ${pinned ? 'hw-tip-pinned' : ''}`}>
       <button
         type="button"
         className="btn btn-sm btn-outline-secondary"
-        aria-label="About this variable"
+        aria-label={t('provisioning.provisioningVarRows.aboutVariableAriaLabel')}
         onClick={() => setPinned(prev => !prev)}
       >
         <i className="fas fa-circle-info" />
@@ -184,6 +191,7 @@ InfoTip.propTypes = {
 
 /** The YAML structure editor — commits on blur, and ONLY when it parses. */
 const YamlValueEditor = ({ initialText, onCommit, disabled }) => {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState(() => yamlFromText(initialText));
   const [invalid, setInvalid] = useState(false);
   const parses = value => {
@@ -205,7 +213,7 @@ const YamlValueEditor = ({ initialText, onCommit, disabled }) => {
         value={draft}
         spellCheck={false}
         disabled={disabled}
-        aria-label="Variable value (YAML)"
+        aria-label={t('provisioning.provisioningVarRows.variableValueYamlAriaLabel')}
         onChange={e => {
           setDraft(e.target.value);
           setInvalid(!parses(e.target.value) && e.target.value.trim() !== '');
@@ -217,9 +225,7 @@ const YamlValueEditor = ({ initialText, onCommit, disabled }) => {
         }}
       />
       {invalid && (
-        <div className="hw-invalid-msg">
-          Not valid YAML — the value is not saved until it parses.
-        </div>
+        <div className="hw-invalid-msg">{t('provisioning.provisioningVarRows.notValidYaml')}</div>
       )}
     </>
   );
@@ -236,6 +242,7 @@ YamlValueEditor.propTypes = {
  * structures render as a preview with the { } YAML editor behind it.
  */
 const VarRow = ({ name, valueText, info, listId, disabled, onRename, onValueText, onRemove }) => {
+  const { t } = useTranslation();
   const [keyText, setKeyText] = useState(name);
   const [valText, setValText] = useState(valueText);
   const [expanded, setExpanded] = useState(false);
@@ -258,7 +265,7 @@ const VarRow = ({ name, valueText, info, listId, disabled, onRename, onValueText
         onClick={() => setExpanded(false)}
         disabled={disabled}
       >
-        Done
+        {t('provisioning.provisioningVarRows.doneButton')}
       </button>
     );
   } else if (structured) {
@@ -266,14 +273,16 @@ const VarRow = ({ name, valueText, info, listId, disabled, onRename, onValueText
       <>
         <span
           className="hw-val-preview"
-          title={`A ${Array.isArray(structureOf(valueText)) ? 'list' : 'dict'} — open the YAML editor to change it`}
+          title={t('provisioning.provisioningVarRows.structurePreviewTitle', {
+            type: Array.isArray(structureOf(valueText)) ? 'list' : 'dict',
+          })}
         >
           {previewOf(valueText)}
         </span>
         <button
           type="button"
           className="btn btn-sm btn-outline-secondary font-monospace"
-          title="Edit as YAML"
+          title={t('provisioning.provisioningVarRows.editAsYaml')}
           onClick={() => setExpanded(true)}
           disabled={disabled}
         >
@@ -287,8 +296,8 @@ const VarRow = ({ name, valueText, info, listId, disabled, onRename, onValueText
         <input
           className="form-control form-control-sm font-monospace hw-var-value"
           type="text"
-          placeholder="value"
-          aria-label="Variable value"
+          placeholder={t('provisioning.provisioningVarRows.valuePlaceholder')}
+          aria-label={t('provisioning.provisioningVarRows.variableValueAriaLabel')}
           value={valText}
           disabled={disabled}
           onChange={e => setValText(e.target.value)}
@@ -301,7 +310,7 @@ const VarRow = ({ name, valueText, info, listId, disabled, onRename, onValueText
         <button
           type="button"
           className="btn btn-sm btn-outline-secondary font-monospace"
-          title="Edit as YAML (lists, dicts)"
+          title={t('provisioning.provisioningVarRows.editAsYamlListsDicts')}
           onClick={() => setExpanded(true)}
           disabled={disabled}
         >
@@ -318,8 +327,8 @@ const VarRow = ({ name, valueText, info, listId, disabled, onRename, onValueText
           className={`form-control form-control-sm font-monospace hw-var-key ${badKey ? 'is-invalid' : ''}`}
           type="text"
           list={listId}
-          placeholder="variable"
-          aria-label="Variable name"
+          placeholder={t('provisioning.provisioningVarRows.variableNamePlaceholder')}
+          aria-label={t('provisioning.provisioningVarRows.variableNameAriaLabel')}
           value={keyText}
           disabled={disabled}
           onChange={e => setKeyText(e.target.value)}
@@ -330,7 +339,7 @@ const VarRow = ({ name, valueText, info, listId, disabled, onRename, onValueText
         <button
           type="button"
           className="btn btn-sm btn-outline-danger"
-          aria-label="Remove this variable"
+          aria-label={t('provisioning.provisioningVarRows.removeVariableAriaLabel')}
           onClick={onRemove}
           disabled={disabled}
         >
@@ -340,7 +349,9 @@ const VarRow = ({ name, valueText, info, listId, disabled, onRename, onValueText
       {expanded && (
         <YamlValueEditor initialText={valueText} onCommit={onValueText} disabled={disabled} />
       )}
-      {badKey && <div className="hw-invalid-msg">{VAR_NAME_RULE}</div>}
+      {badKey && (
+        <div className="hw-invalid-msg">{t('provisioning.provisioningVarRows.varNameRule')}</div>
+      )}
     </div>
   );
 };
@@ -361,6 +372,7 @@ VarRow.propTypes = {
  * onChange; drafts (the + button) live locally until their name commits.
  */
 export const VarRowList = ({ idPrefix, entries, onChange, specOptions, disabled, addLabel }) => {
+  const { t } = useTranslation();
   const [drafts, setDrafts] = useState([]);
   const knownNames = specOptions ? Object.keys(specOptions) : [];
   const listId = knownNames.length > 0 ? `${idPrefix}-known-vars` : undefined;
@@ -400,7 +412,7 @@ export const VarRowList = ({ idPrefix, entries, onChange, specOptions, disabled,
           key={`${name}:${varToText(value)}`}
           name={name}
           valueText={varToText(value)}
-          info={specInfoText(specOptions?.[name])}
+          info={specInfoText(specOptions?.[name], t)}
           listId={listId}
           disabled={disabled}
           onRename={next => renameEntry(name, next)}

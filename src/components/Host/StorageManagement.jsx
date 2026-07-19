@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { hasFeature } from '../../utils/capabilities';
 
@@ -9,12 +10,13 @@ import ZfsDatasetsPanel from './ZfsDatasetsPanel';
 import ZfsPoolsPanel from './ZfsPoolsPanel';
 
 const StorageManagement = ({ server }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('arc');
 
   if (!server) {
     return (
       <div className="alert alert-info">
-        <p>No server selected for storage management.</p>
+        <p>{t('host.storageManagement.noServerAlert')}</p>
       </div>
     );
   }

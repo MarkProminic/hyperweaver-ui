@@ -1,7 +1,9 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const IpAddressTable = ({ addresses, loading, onDelete, onToggle }) => {
+  const { t } = useTranslation();
   const [actionLoading, setActionLoading] = useState({});
 
   const handleAction = async (address, action) => {
@@ -56,20 +58,34 @@ const IpAddressTable = ({ addresses, loading, onDelete, onToggle }) => {
       case 'dhcp':
         return <span className="badge text-bg-primary">{type}</span>;
       case 'addrconf':
-        return <span className="badge text-bg-primary">auto</span>;
+        return (
+          <span className="badge text-bg-primary">{t('host.ipAddressTableManagement.auto')}</span>
+        );
       default:
-        return <span className="badge text-bg-secondary">{type || 'Unknown'}</span>;
+        return (
+          <span className="badge text-bg-secondary">
+            {type || t('host.ipAddressTableManagement.unknown')}
+          </span>
+        );
     }
   };
 
   const getVersionTag = version => {
     switch (version?.toLowerCase()) {
       case 'v4':
-        return <span className="badge text-bg-info">IPv4</span>;
+        return (
+          <span className="badge text-bg-info">{t('host.ipAddressTableManagement.ipv4')}</span>
+        );
       case 'v6':
-        return <span className="badge text-bg-dark">IPv6</span>;
+        return (
+          <span className="badge text-bg-dark">{t('host.ipAddressTableManagement.ipv6')}</span>
+        );
       default:
-        return <span className="badge text-bg-secondary">{version || 'Unknown'}</span>;
+        return (
+          <span className="badge text-bg-secondary">
+            {version || t('host.ipAddressTableManagement.unknown')}
+          </span>
+        );
     }
   };
 
@@ -80,7 +96,7 @@ const IpAddressTable = ({ addresses, loading, onDelete, onToggle }) => {
     if (ipAddress && prefixLength) {
       return `${ipAddress}/${prefixLength}`;
     }
-    return ipAddress || 'N/A';
+    return ipAddress || t('host.ipAddressTableManagement.na');
   };
 
   const canEnable = address => address.state?.toLowerCase() === 'disabled';
@@ -91,7 +107,7 @@ const IpAddressTable = ({ addresses, loading, onDelete, onToggle }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading IP addresses...</p>
+        <p className="mt-2">{t('host.ipAddressTableManagement.loading')}</p>
       </div>
     );
   }
@@ -100,7 +116,7 @@ const IpAddressTable = ({ addresses, loading, onDelete, onToggle }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-globe fa-2x text-muted" />
-        <p className="mt-2 text-muted">No IP addresses found</p>
+        <p className="mt-2 text-muted">{t('host.ipAddressTableManagement.noData')}</p>
       </div>
     );
   }
@@ -110,13 +126,13 @@ const IpAddressTable = ({ addresses, loading, onDelete, onToggle }) => {
       <table className="table table-striped table-hover table-sm">
         <thead>
           <tr>
-            <th>Interface</th>
-            <th>Address Object</th>
-            <th>IP Address</th>
-            <th>Type</th>
-            <th>Version</th>
-            <th>State</th>
-            <th width="140">Actions</th>
+            <th>{t('host.ipAddressTableManagement.interface')}</th>
+            <th>{t('host.ipAddressTableManagement.addressObject')}</th>
+            <th>{t('host.ipAddressTableManagement.ipAddress')}</th>
+            <th>{t('host.ipAddressTableManagement.type')}</th>
+            <th>{t('host.ipAddressTableManagement.version')}</th>
+            <th>{t('host.ipAddressTableManagement.state')}</th>
+            <th width="140">{t('host.ipAddressTableManagement.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -157,7 +173,7 @@ const IpAddressTable = ({ addresses, loading, onDelete, onToggle }) => {
                         className="btn btn-sm btn-success"
                         onClick={() => handleAction(address, 'enable')}
                         disabled={loading || enableLoading || disableLoading || deleteLoading}
-                        title="Enable Address"
+                        title={t('host.ipAddressTableManagement.enableAddress')}
                       >
                         {enableLoading && (
                           <span
@@ -177,7 +193,7 @@ const IpAddressTable = ({ addresses, loading, onDelete, onToggle }) => {
                         className="btn btn-sm btn-warning"
                         onClick={() => handleAction(address, 'disable')}
                         disabled={loading || enableLoading || disableLoading || deleteLoading}
-                        title="Disable Address"
+                        title={t('host.ipAddressTableManagement.disableAddress')}
                       >
                         {disableLoading && (
                           <span
@@ -196,7 +212,7 @@ const IpAddressTable = ({ addresses, loading, onDelete, onToggle }) => {
                       className="btn btn-sm btn-danger"
                       onClick={() => handleAction(address, 'delete')}
                       disabled={loading || enableLoading || disableLoading || deleteLoading}
-                      title="Delete Address"
+                      title={t('host.ipAddressTableManagement.deleteAddress')}
                     >
                       {deleteLoading && (
                         <span

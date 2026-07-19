@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import Chart from '../../Chart';
 import Highcharts from '../../Highcharts';
@@ -13,6 +14,7 @@ const DeviceCharts = ({
   seriesVisibility,
   chartSortBy,
 }) => {
+  const { t } = useTranslation();
   const sortedEntries = getSortedChartEntries();
 
   if (diskIOStats.length === 0) {
@@ -26,7 +28,7 @@ const DeviceCharts = ({
           <span className="me-1">
             <i className="fas fa-chart-line" />
           </span>
-          <span>Individual Device Charts</span>
+          <span>{t('hostCharts.deviceCharts.sectionTitle')}</span>
         </span>
       </h5>
       <div className="row">
@@ -42,7 +44,7 @@ const DeviceCharts = ({
                 <button
                   className="btn btn-sm btn-link is-chart-expand-button"
                   onClick={() => expandChart(deviceName, 'individual')}
-                  title="Expand chart to full size"
+                  title={t('hostCharts.deviceCharts.expandButtonTitle')}
                 >
                   <span className="me-1 text-white">
                     <i className="fas fa-expand" />

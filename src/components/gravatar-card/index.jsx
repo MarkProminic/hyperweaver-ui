@@ -1,11 +1,14 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import GravatarSkeleton from './skeleton.jsx';
 import './style.scss';
 
 export default function GravatarCard({ gravatarData, hasError, isLoading }) {
+  const { t } = useTranslation();
+
   if (hasError) {
-    return <div className="gravatar-card__error">Gravatar profile not found!</div>;
+    return <div className="gravatar-card__error">{t('common.gravatarCard.notFound')}</div>;
   }
 
   if (isLoading) {
@@ -34,7 +37,7 @@ export default function GravatarCard({ gravatarData, hasError, isLoading }) {
           <img
             src={`https://api.gravatar.com/v3/qr-code/${gravatarData.hash}?size=256`}
             className="gravatar-card__qr"
-            alt="QR Code"
+            alt={t('common.gravatarCard.qrCode')}
           />
         </div>
         <div className="col">
@@ -42,29 +45,31 @@ export default function GravatarCard({ gravatarData, hasError, isLoading }) {
           <div className="gravatar-card__meta">
             <div>
               <p>
-                <strong>First Name:</strong> {gravatarData.first_name}
+                <strong>{t('common.gravatarCard.firstName')}:</strong> {gravatarData.first_name}
               </p>
               <p>
-                <strong>Last Name:</strong> {gravatarData.last_name}
+                <strong>{t('common.gravatarCard.lastName')}:</strong> {gravatarData.last_name}
               </p>
               <p>
-                <strong>Job Title:</strong> {gravatarData.job_title}{' '}
+                <strong>{t('common.gravatarCard.jobTitle')}:</strong> {gravatarData.job_title}{' '}
                 {gravatarData.company && `at ${gravatarData.company}`}
               </p>
               <p>
-                <strong>Location:</strong> {gravatarData.location}
+                <strong>{t('common.gravatarCard.location')}:</strong> {gravatarData.location}
               </p>
               <p>
-                <strong>Pronouns:</strong> {gravatarData.pronouns}
+                <strong>{t('common.gravatarCard.pronouns')}:</strong> {gravatarData.pronouns}
               </p>
               <p>
-                <strong>Timezone:</strong> {gravatarData.timezone}
+                <strong>{t('common.gravatarCard.timezone')}:</strong> {gravatarData.timezone}
               </p>
               <p>
-                <strong>Last Profile Edit:</strong> {gravatarData.last_profile_edit}
+                <strong>{t('common.gravatarCard.lastProfileEdit')}:</strong>{' '}
+                {gravatarData.last_profile_edit}
               </p>
               <p>
-                <strong>Registration Date:</strong> {gravatarData.registration_date}
+                <strong>{t('common.gravatarCard.registrationDate')}:</strong>{' '}
+                {gravatarData.registration_date}
               </p>
             </div>
           </div>
@@ -72,7 +77,7 @@ export default function GravatarCard({ gravatarData, hasError, isLoading }) {
 
           {gravatarData.links && (
             <div>
-              <h2>Links</h2>
+              <h2>{t('common.gravatarCard.links')}</h2>
               <ul>
                 {gravatarData.links.map(link => (
                   <li key={link.url}>
@@ -85,7 +90,7 @@ export default function GravatarCard({ gravatarData, hasError, isLoading }) {
 
           {gravatarData.interests && (
             <div>
-              <h2>Interests</h2>
+              <h2>{t('common.gravatarCard.interests')}</h2>
               <ul>
                 {gravatarData.interests.map(interest => (
                   <li key={interest.id}>{interest.name}</li>
@@ -96,11 +101,11 @@ export default function GravatarCard({ gravatarData, hasError, isLoading }) {
 
           {gravatarData.languages && (
             <div>
-              <h2>Languages</h2>
+              <h2>{t('common.gravatarCard.languages')}</h2>
               <ul>
                 {gravatarData.languages.map(lang => (
                   <li key={lang.code}>
-                    {lang.name} {lang.is_primary && '(Primary)'}
+                    {lang.name} {lang.is_primary && t('common.gravatarCard.primary')}
                   </li>
                 ))}
               </ul>
@@ -109,10 +114,13 @@ export default function GravatarCard({ gravatarData, hasError, isLoading }) {
 
           {gravatarData.verified_accounts && (
             <div className="gravatar-card__network">
-              <h2>Verified Accounts</h2>
+              <h2>{t('common.gravatarCard.verifiedAccounts')}</h2>
               <>
                 <a href={gravatarData.profile_url}>
-                  <img src="https://secure.gravatar.com/icons/gravatar.svg" alt="Gravatar" />
+                  <img
+                    src="https://secure.gravatar.com/icons/gravatar.svg"
+                    alt={t('common.gravatarCard.gravatar')}
+                  />
                 </a>
                 {gravatarData.verified_accounts.map(acc => (
                   <a key={acc.service_label} href={acc.url}>
@@ -125,7 +133,7 @@ export default function GravatarCard({ gravatarData, hasError, isLoading }) {
 
           {gravatarData.gallery && (
             <div>
-              <h2>Gallery</h2>
+              <h2>{t('common.gravatarCard.gallery')}</h2>
               <div className="gravatar-card__gallery">
                 {gravatarData.gallery.map(image => (
                   <img key={image.url} src={image.url} alt={image.alt_text} />

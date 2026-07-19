@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const ThemeContext = createContext();
 
@@ -12,6 +13,7 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider = ({ children }) => {
+  const { t } = useTranslation();
   // Theme options: 'auto', 'light', 'dark'
   const [theme, setTheme] = useState(() => {
     // Check localStorage for saved preference
@@ -69,7 +71,7 @@ export const ThemeProvider = ({ children }) => {
     if (theme === 'auto') {
       // Check if system prefers dark mode
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      return `Auto (${prefersDark ? 'Dark' : 'Light'})`;
+      return t('app.themeContext.autoStatus', { mode: prefersDark ? 'Dark' : 'Light' });
     }
     return theme.charAt(0).toUpperCase() + theme.slice(1);
   };

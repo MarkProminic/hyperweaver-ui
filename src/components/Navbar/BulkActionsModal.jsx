@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import Spinner from 'react-bootstrap/Spinner';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { resourceLabel } from '../../utils/resourceLabel';
@@ -26,6 +27,7 @@ const keyFor = (server, name) => `${server.id ?? server.hostname}:${name}`;
 const serverKey = server => server.id ?? server.hostname;
 
 const BulkActionsModal = ({ show, onClose, action, servers }) => {
+  const { t } = useTranslation();
   const { makeAgentRequest, startMachine, stopMachine, restartMachine } = useServers();
   const cfg = ACTIONS[action] || ACTIONS.start;
   const multiHost = servers.length > 1;
@@ -185,7 +187,9 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
         <td>
           <span className={c.running ? 'text-success' : 'text-secondary'}>
             <i className={`${c.running ? 'fas' : 'far'} fa-circle fa-xs me-1`} />
-            {c.running ? 'running' : 'stopped'}
+            {c.running
+              ? t('navbar.bulkActionsModal.running')
+              : t('navbar.bulkActionsModal.stopped')}
           </span>
         </td>
       </tr>
@@ -234,7 +238,7 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
       <Modal.Header closeButton={!running}>
         <Modal.Title>
           <i className={`${cfg.icon} me-2`} />
-          Bulk {cfg.verb} — {noun}
+          {t('navbar.bulkActionsModal.title', { verb: cfg.verb, noun })}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
@@ -245,7 +249,7 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
           <input
             type="text"
             className="form-control form-control-sm w-auto"
-            placeholder="Filter by name…"
+            placeholder={t('navbar.bulkActionsModal.filterByName')}
             value={nameFilter}
             onChange={e => setNameFilter(e.target.value)}
             disabled={loading || running}
@@ -256,9 +260,9 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
             onChange={e => setStatusFilter(e.target.value)}
             disabled={loading || running}
           >
-            <option value="all">All statuses</option>
-            <option value="running">Running</option>
-            <option value="stopped">Stopped</option>
+            <option value="all">{t('navbar.bulkActionsModal.allStatuses')}</option>
+            <option value="running">{t('navbar.bulkActionsModal.running')}</option>
+            <option value="stopped">{t('navbar.bulkActionsModal.stopped')}</option>
           </select>
         </div>
 
@@ -276,8 +280,8 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
                   disabled={loading || running}
                   title={
                     hostFilter.has(k)
-                      ? 'Click to drop this host from the filter'
-                      : 'Click to filter to this host'
+                      ? t('navbar.bulkActionsModal.dropHostFromFilter')
+                      : t('navbar.bulkActionsModal.filterToThisHost')
                   }
                 >
                   <i className="fas fa-server me-1" />
@@ -293,7 +297,7 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
                 onClick={() => setHostFilter(new Set())}
                 disabled={loading || running}
               >
-                All hosts
+                {t('navbar.bulkActionsModal.allHosts')}
               </button>
             )}
           </div>
@@ -302,7 +306,7 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
         {loading ? (
           <div className="text-center text-muted py-4">
             <Spinner animation="border" size="sm" className="me-2" />
-            Loading machines…
+            {t('navbar.bulkActionsModal.loadingMachines')}
           </div>
         ) : (
           <div className="table-responsive">
@@ -319,15 +323,15 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
                       aria-label="Select all"
                     />
                   </th>
-                  <th>Name</th>
-                  <th>Status</th>
+                  <th>{t('navbar.bulkActionsModal.name')}</th>
+                  <th>{t('navbar.bulkActionsModal.status')}</th>
                 </tr>
               </thead>
               <tbody>
                 {visible.length === 0 && (
                   <tr>
                     <td colSpan={3} className="text-center text-muted py-3">
-                      No matching machines
+                      {t('navbar.bulkActionsModal.noMatchingMachines')}
                     </td>
                   </tr>
                 )}
@@ -367,7 +371,7 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={onClose} disabled={running}>
-          Cancel
+          {t('navbar.bulkActionsModal.cancel')}
         </Button>
         <Button
           variant={cfg.variant}
@@ -375,7 +379,11 @@ const BulkActionsModal = ({ show, onClose, action, servers }) => {
           disabled={running || checkedCount === 0}
         >
           {running && <Spinner as="span" size="sm" animation="border" className="me-2" />}
-          {cfg.verb} {checkedCount} {checkedCount === 1 ? noun.replace(/s$/, '') : noun}
+          {t('navbar.bulkActionsModal.actionButton', {
+            verb: cfg.verb,
+            count: checkedCount,
+            noun: checkedCount === 1 ? noun.replace(/s$/, '') : noun,
+          })}
         </Button>
       </Modal.Footer>
     </Modal>

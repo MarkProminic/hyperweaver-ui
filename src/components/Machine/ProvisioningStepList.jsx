@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { applyPatch } from './ProvisioningVarRows';
 
@@ -10,6 +11,7 @@ import { applyPatch } from './ProvisioningVarRows';
  * full field set, trash. Array order IS the sync/run order on the wire.
  */
 const StepCardList = ({ rows, onChange, disabled, addLabel, makeRow, renderTitle, renderBody }) => {
+  const { t } = useTranslation();
   const [dragId, setDragId] = useState(null);
   const [expanded, setExpanded] = useState(() => new Set());
 
@@ -67,7 +69,7 @@ const StepCardList = ({ rows, onChange, disabled, addLabel, makeRow, renderTitle
               className="btn btn-link p-0 text-muted"
               draggable={!disabled}
               style={{ cursor: 'grab' }}
-              title="Drag to reorder"
+              title={t('provisioning.provisioningStepList.dragToReorder')}
               onDragStart={() => setDragId(row._ui_id)}
               onDragEnd={() => setDragId(null)}
             >
@@ -79,7 +81,7 @@ const StepCardList = ({ rows, onChange, disabled, addLabel, makeRow, renderTitle
               <button
                 type="button"
                 className="btn btn-sm btn-outline-secondary hw-expander"
-                title="Details"
+                title={t('provisioning.provisioningStepList.details')}
                 aria-expanded={expanded.has(row._ui_id)}
                 disabled={disabled}
                 onClick={() => toggleExpanded(row._ui_id)}
@@ -89,8 +91,8 @@ const StepCardList = ({ rows, onChange, disabled, addLabel, makeRow, renderTitle
               <button
                 type="button"
                 className="btn btn-sm btn-outline-danger"
-                aria-label="Remove"
-                title="Remove"
+                aria-label={t('provisioning.provisioningStepList.remove')}
+                title={t('provisioning.provisioningStepList.remove')}
                 disabled={disabled}
                 onClick={() => onChange(rows.filter(entry => entry._ui_id !== row._ui_id))}
               >

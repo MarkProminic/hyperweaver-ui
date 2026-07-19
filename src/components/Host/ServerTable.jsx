@@ -1,13 +1,15 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) => {
+  const { t } = useTranslation();
   const [copiedKey, setCopiedKey] = useState(null);
 
   // Mask API key for security (show first 6 and last 4 characters)
   const maskApiKey = apiKey => {
     if (!apiKey || apiKey.length < 10) {
-      return 'Not Set';
+      return t('host.serverTable.notSet');
     }
     const start = apiKey.substring(0, 6);
     const end = apiKey.substring(apiKey.length - 4);
@@ -32,10 +34,8 @@ const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) =
     return (
       <div className="text-center p-6">
         <i className="fas fa-server fa-3x mb-3 text-muted" />
-        <h3 className="fs-4 text-muted">No Servers Configured</h3>
-        <p className="text-muted mb-4">
-          You haven&apos;t added any Servers yet. Add a server to start managing machines.
-        </p>
+        <h3 className="fs-4 text-muted">{t('host.serverTable.empty.title')}</h3>
+        <p className="text-muted mb-4">{t('host.serverTable.empty.message')}</p>
       </div>
     );
   }
@@ -45,15 +45,15 @@ const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) =
       <table className="table table-striped table-hover">
         <thead>
           <tr>
-            <th>No</th>
-            <th>Hostname</th>
-            <th>Protocol</th>
-            <th>Port</th>
-            <th>Entity Name</th>
-            <th>API Key</th>
-            <th>Self-Signed TLS</th>
-            <th>Last Used</th>
-            <th>Actions</th>
+            <th>{t('host.serverTable.columns.no')}</th>
+            <th>{t('host.serverTable.columns.hostname')}</th>
+            <th>{t('host.serverTable.columns.protocol')}</th>
+            <th>{t('host.serverTable.columns.port')}</th>
+            <th>{t('host.serverTable.columns.entityName')}</th>
+            <th>{t('host.serverTable.columns.apiKey')}</th>
+            <th>{t('host.serverTable.columns.selfSignedTls')}</th>
+            <th>{t('host.serverTable.columns.lastUsed')}</th>
+            <th>{t('host.serverTable.columns.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -61,10 +61,12 @@ const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) =
             <tr key={`${server.hostname}:${server.port}`}>
               <td>{index + 1}</td>
               <td>
-                <strong>{server.hostname || server.serverHostname || 'No hostname'}</strong>
+                <strong>
+                  {server.hostname || server.serverHostname || t('host.serverTable.noHostname')}
+                </strong>
                 {!server.hostname && !server.serverHostname && (
                   <small className="text-danger d-block">
-                    Missing hostname data - Check console
+                    {t('host.serverTable.missingHostname')}
                   </small>
                 )}
               </td>
@@ -78,7 +80,11 @@ const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) =
                       type="button"
                       className={`btn btn-sm ${copiedKey === server.id ? 'btn-success' : 'btn-light'}`}
                       onClick={() => copyApiKey(server.api_key, server.id)}
-                      title={copiedKey === server.id ? 'Copied!' : 'Copy API Key'}
+                      title={
+                        copiedKey === server.id
+                          ? t('host.serverTable.copied')
+                          : t('host.serverTable.copyApiKey')
+                      }
                       disabled={loading}
                     >
                       <i className={`fas ${copiedKey === server.id ? 'fa-check' : 'fa-copy'}`} />
@@ -96,12 +102,18 @@ const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) =
                     checked={!!server.allow_insecure}
                     onChange={() => onToggleInsecure(server)}
                     disabled={loading}
-                    title="Accept this agent's self-signed TLS certificate"
-                    aria-label={`Allow self-signed TLS for ${server.hostname}`}
+                    title={t('host.serverTable.allowSelfSignedTls')}
+                    aria-label={t('host.serverTable.allowSelfSignedTlsLabel', {
+                      hostname: server.hostname,
+                    })}
                   />
                 </div>
               </td>
-              <td>{server.lastUsed ? new Date(server.lastUsed).toLocaleDateString() : 'Never'}</td>
+              <td>
+                {server.lastUsed
+                  ? new Date(server.lastUsed).toLocaleDateString()
+                  : t('host.serverTable.never')}
+              </td>
               <td>
                 <div className="d-flex gap-1">
                   <button
@@ -109,7 +121,7 @@ const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) =
                     className="btn btn-sm btn-warning"
                     onClick={() => onEdit(server.hostname)}
                     disabled={loading}
-                    title="Edit Server"
+                    title={t('host.serverTable.editServer')}
                   >
                     <i className="fas fa-edit" />
                   </button>
@@ -118,7 +130,7 @@ const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) =
                     className="btn btn-sm btn-danger"
                     onClick={() => onDelete(server.id)}
                     disabled={loading}
-                    title="Remove Server"
+                    title={t('host.serverTable.removeServer')}
                   >
                     <i className="fas fa-trash" />
                   </button>

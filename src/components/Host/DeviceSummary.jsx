@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const DeviceSummary = ({
   deviceCategories,
@@ -7,6 +8,8 @@ const DeviceSummary = ({
   sectionsCollapsed,
   toggleSection,
 }) => {
+  const { t } = useTranslation();
+
   if (Object.keys(deviceCategories).length === 0) {
     return null;
   }
@@ -18,7 +21,7 @@ const DeviceSummary = ({
           <div className="d-flex align-items-center gap-2">
             <h4 className="fs-5 fw-bold mb-0">
               <i className="fas fa-chart-pie me-2" />
-              Device Categories Summary
+              {t('host.deviceSummary.title')}
             </h4>
           </div>
           <div className="d-flex align-items-center gap-2">
@@ -26,7 +29,11 @@ const DeviceSummary = ({
               type="button"
               className="btn btn-sm btn-link"
               onClick={() => toggleSection('summary')}
-              title={sectionsCollapsed.summary ? 'Expand section' : 'Collapse section'}
+              title={
+                sectionsCollapsed.summary
+                  ? t('host.deviceSummary.expand')
+                  : t('host.deviceSummary.collapse')
+              }
             >
               <i
                 className={`fas ${sectionsCollapsed.summary ? 'fa-chevron-down' : 'fa-chevron-up'}`}
@@ -47,7 +54,9 @@ const DeviceSummary = ({
                   </div>
                 ))}
                 <div className="d-inline-flex">
-                  <span className="badge text-bg-secondary rounded-end-0">PPT Capable</span>
+                  <span className="badge text-bg-secondary rounded-end-0">
+                    {t('host.deviceSummary.pptCapableLabel')}
+                  </span>
                   <span className="badge text-bg-success rounded-start-0">
                     {devicesSummary.ppt_capable ||
                       Object.values(deviceCategories).reduce(
@@ -57,13 +66,17 @@ const DeviceSummary = ({
                   </span>
                 </div>
                 <div className="d-inline-flex">
-                  <span className="badge text-bg-secondary rounded-end-0">PPT Available</span>
+                  <span className="badge text-bg-secondary rounded-end-0">
+                    {t('host.deviceSummary.pptAvailableLabel')}
+                  </span>
                   <span className="badge text-bg-warning rounded-start-0">
                     {pptStatus.summary?.available || 0}
                   </span>
                 </div>
                 <div className="d-inline-flex">
-                  <span className="badge text-bg-secondary rounded-end-0">PPT Assigned</span>
+                  <span className="badge text-bg-secondary rounded-end-0">
+                    {t('host.deviceSummary.pptAssignedLabel')}
+                  </span>
                   <span className="badge text-bg-danger rounded-start-0">
                     {devicesSummary.ppt_assigned || 0}
                   </span>

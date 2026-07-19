@@ -1,8 +1,10 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { ContentModal } from '../common';
 
 const ServicePropertiesModal = ({ service, onClose }) => {
+  const { t } = useTranslation();
   const formatProperties = properties => {
     if (!properties) {
       return [];
@@ -49,23 +51,28 @@ const ServicePropertiesModal = ({ service, onClose }) => {
   };
 
   return (
-    <ContentModal isOpen onClose={onClose} title="Service Properties" icon="fas fa-cog">
+    <ContentModal
+      isOpen
+      onClose={onClose}
+      title={t('host.servicePropertiesModal.title')}
+      icon="fas fa-cog"
+    >
       {/* Service Basic Info */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Service Information</h3>
+          <h3 className="fs-6 fw-bold">{t('host.servicePropertiesModal.serviceInfo')}</h3>
           <div className="table-responsive">
             <table className="table">
               <tbody>
                 <tr>
                   <td>
-                    <strong>FMRI</strong>
+                    <strong>{t('host.servicePropertiesModal.fmri')}</strong>
                   </td>
                   <td className="font-monospace">{service.fmri}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Current State</strong>
+                    <strong>{t('host.servicePropertiesModal.currentState')}</strong>
                   </td>
                   <td>
                     <span className={`badge ${getStateTagClass(service.state)}`}>
@@ -83,19 +90,18 @@ const ServicePropertiesModal = ({ service, onClose }) => {
       {propertiesArray.length > 0 && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Configuration Properties</h3>
+            <h3 className="fs-6 fw-bold">{t('host.servicePropertiesModal.configProps')}</h3>
             <div className="mb-3">
               <p className="form-text text-muted">
-                These are the service configuration properties as returned by{' '}
-                <code>svccfg listprop</code>.
+                {t('host.servicePropertiesModal.configPropsHelp')}
               </p>
             </div>
             <div className="table-responsive">
               <table className="table table-striped">
                 <thead>
                   <tr>
-                    <th>Property</th>
-                    <th>Value</th>
+                    <th>{t('host.servicePropertiesModal.property')}</th>
+                    <th>{t('host.servicePropertiesModal.value')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -117,7 +123,7 @@ const ServicePropertiesModal = ({ service, onClose }) => {
       {/* Show message if no properties available */}
       {propertiesArray.length === 0 && (
         <div className="alert alert-info">
-          <p>No configuration properties available for this service.</p>
+          <p>{t('host.servicePropertiesModal.noProps')}</p>
         </div>
       )}
     </ContentModal>

@@ -1,5 +1,6 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import DeviceDetailsModal from './Host/DeviceDetailsModal';
 import DeviceFilters from './Host/DeviceFilters';
@@ -10,6 +11,7 @@ import PptDevicesTable from './Host/PptDevicesTable';
 import { useHostDevicesData } from './Host/useHostDevicesData';
 
 const HostDevices = () => {
+  const { t } = useTranslation();
   const {
     devices,
     deviceCategories,
@@ -43,19 +45,19 @@ const HostDevices = () => {
       <div className="hw-page-content-scrollable">
         <Helmet>
           <meta charSet="utf-8" />
-          <title>Device Monitoring - Hyperweaver</title>
+          <title>{t('pages.hostDevices.titlePage')}</title>
           <link rel="canonical" href={window.location.origin} />
         </Helmet>
         <div className="container-fluid p-0">
           <div className="card">
             <div className="titlebar card-header active d-flex justify-content-between align-items-center mb-0 p-3">
               <div>
-                <strong>Access Denied</strong>
+                <strong>{t('pages.hostDevices.accessDenied')}</strong>
               </div>
             </div>
             <div className="px-4">
               <div className="alert alert-danger">
-                <p>Please log in to access device monitoring.</p>
+                <p>{t('pages.hostDevices.loginRequired')}</p>
               </div>
             </div>
           </div>
@@ -69,29 +71,26 @@ const HostDevices = () => {
       <div className="hw-page-content-scrollable">
         <Helmet>
           <meta charSet="utf-8" />
-          <title>Device Monitoring - Hyperweaver</title>
+          <title>{t('pages.hostDevices.titlePage')}</title>
           <link rel="canonical" href={window.location.origin} />
         </Helmet>
         <div className="container-fluid p-0">
           <div className="card">
             <div className="titlebar card-header active d-flex justify-content-between align-items-center mb-0 p-3">
               <div>
-                <strong>Device Monitoring</strong>
+                <strong>{t('pages.hostDevices.heading')}</strong>
               </div>
             </div>
             <div className="px-4">
               <div className="alert alert-info">
-                <h2 className="fs-4 fw-bold">No Servers</h2>
-                <p>
-                  You haven&apos;t added any Servers yet. Add a server to start monitoring hardware
-                  devices.
-                </p>
+                <h2 className="fs-4 fw-bold">{t('pages.hostDevices.noServersHeading')}</h2>
+                <p>{t('pages.hostDevices.noServersBody')}</p>
                 <div className="mt-4">
                   <a href="/ui/settings/hyperweaver?tab=servers" className="btn btn-primary">
                     <span className="me-1">
                       <i className="fas fa-plus" />
                     </span>
-                    <span>Add Server</span>
+                    <span>{t('pages.hostDevices.addServer')}</span>
                   </a>
                 </div>
               </div>
@@ -108,7 +107,7 @@ const HostDevices = () => {
     <div className="hw-page-content-scrollable">
       <Helmet>
         <meta charSet="utf-8" />
-        <title>Device Monitoring - Hyperweaver</title>
+        <title>{t('pages.hostDevices.titlePage')}</title>
         <link rel="canonical" href={window.location.origin} />
       </Helmet>
       <div className="container-fluid p-0">

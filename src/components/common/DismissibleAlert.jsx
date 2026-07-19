@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const ALERT_AUTO_DISMISS_MS = 15000;
 
@@ -10,6 +11,7 @@ const ALERT_AUTO_DISMISS_MS = 15000;
  * interactive prompts (choice dialogs keep their own buttons).
  */
 const DismissibleAlert = ({ variant, text, onHide }) => {
+  const { t } = useTranslation();
   const [hidden, setHidden] = useState(false);
   // Ref keeps the timer armed on message change only — onHide identity churn
   // (inline arrows at the call sites) must not reset it every render.
@@ -34,7 +36,7 @@ const DismissibleAlert = ({ variant, text, onHide }) => {
       <button
         type="button"
         className="btn-close"
-        aria-label="Dismiss"
+        aria-label={t('common.dismissibleAlert.dismiss')}
         onClick={() => {
           setHidden(true);
           if (onHide) {

@@ -1,7 +1,9 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const VlanTable = ({ vlans, loading, onDelete, onViewDetails }) => {
+  const { t } = useTranslation();
   const [deleteLoading, setDeleteLoading] = useState({});
 
   const handleDelete = async vlan => {
@@ -33,13 +35,15 @@ const VlanTable = ({ vlans, loading, onDelete, onViewDetails }) => {
       case 'down':
         return <span className="badge text-bg-danger">{state}</span>;
       default:
-        return <span className="badge text-bg-secondary">{state || 'Unknown'}</span>;
+        return (
+          <span className="badge text-bg-secondary">{state || t('host.vlanTable.unknown')}</span>
+        );
     }
   };
 
   const getVlanTag = vid => {
     if (vid === undefined || vid === null || vid === '') {
-      return <span className="badge text-bg-dark">No VID</span>;
+      return <span className="badge text-bg-dark">{t('host.vlanTable.noVid')}</span>;
     }
 
     // Assign colors based on VLAN ID to make each VLAN visually distinct
@@ -65,7 +69,7 @@ const VlanTable = ({ vlans, loading, onDelete, onViewDetails }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading VLANs...</p>
+        <p className="mt-2">{t('host.vlanTable.loadingVlans')}</p>
       </div>
     );
   }
@@ -74,7 +78,7 @@ const VlanTable = ({ vlans, loading, onDelete, onViewDetails }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-tags fa-2x text-muted" />
-        <p className="mt-2 text-muted">No VLANs found</p>
+        <p className="mt-2 text-muted">{t('host.vlanTable.noVlansFound')}</p>
       </div>
     );
   }
@@ -84,13 +88,13 @@ const VlanTable = ({ vlans, loading, onDelete, onViewDetails }) => {
       <table className="table table-striped table-hover table-sm">
         <thead>
           <tr>
-            <th>VLAN Name</th>
-            <th>VLAN ID</th>
-            <th>Physical Link</th>
-            <th>State</th>
-            <th>MTU</th>
-            <th>Flags</th>
-            <th width="120">Actions</th>
+            <th>{t('host.vlanTable.vlanName')}</th>
+            <th>{t('host.vlanTable.vlanId')}</th>
+            <th>{t('host.vlanTable.physicalLink')}</th>
+            <th>{t('host.vlanTable.state')}</th>
+            <th>{t('host.vlanTable.mtu')}</th>
+            <th>{t('host.vlanTable.flags')}</th>
+            <th width="120">{t('host.vlanTable.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -126,7 +130,7 @@ const VlanTable = ({ vlans, loading, onDelete, onViewDetails }) => {
                       className="btn btn-sm btn-secondary"
                       onClick={() => onViewDetails(vlan)}
                       disabled={loading || isDeleting}
-                      title="View Details"
+                      title={t('host.vlanTable.viewDetails')}
                     >
                       <i className="fas fa-info-circle" />
                     </button>
@@ -137,7 +141,7 @@ const VlanTable = ({ vlans, loading, onDelete, onViewDetails }) => {
                       className="btn btn-sm btn-danger"
                       onClick={() => handleDelete(vlan)}
                       disabled={loading || isDeleting}
-                      title="Delete VLAN"
+                      title={t('host.vlanTable.deleteVlan')}
                     >
                       {isDeleting && (
                         <span

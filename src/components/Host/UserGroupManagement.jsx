@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 
@@ -9,6 +10,7 @@ import RoleSection from './RoleSection';
 import UserSection from './UserSection';
 
 const UserGroupManagement = ({ server }) => {
+  const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState('users');
   const [error, setError] = useState('');
 
@@ -17,16 +19,16 @@ const UserGroupManagement = ({ server }) => {
   if (!server || !makeAgentRequest) {
     return (
       <div className="alert alert-info">
-        <p>Please select a server to manage users and groups.</p>
+        <p>{t('host.userGroupManagement.selectServerMessage')}</p>
       </div>
     );
   }
 
   const sections = [
-    { key: 'users', label: 'Users', icon: 'fa-user' },
-    { key: 'groups', label: 'Groups', icon: 'fa-users' },
-    { key: 'roles', label: 'Roles', icon: 'fa-user-shield' },
-    { key: 'rbac', label: 'RBAC Discovery', icon: 'fa-search' },
+    { key: 'users', label: t('host.userGroupManagement.users'), icon: 'fa-user' },
+    { key: 'groups', label: t('host.userGroupManagement.groups'), icon: 'fa-users' },
+    { key: 'roles', label: t('host.userGroupManagement.roles'), icon: 'fa-user-shield' },
+    { key: 'rbac', label: t('host.userGroupManagement.rbacDiscovery'), icon: 'fa-search' },
   ];
 
   return (

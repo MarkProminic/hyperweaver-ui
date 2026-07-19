@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { memo, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { XTerm } from 'react-xtermjs';
 
 import { useZoneTerminal } from '../contexts/ZoneTerminalContext';
 
 const ZoneShell = memo(({ zoneName, readOnly = false, style = {}, className = '' }) => {
+  const { t } = useTranslation();
   const { getZoneAddons, getZoneOptions, fitZoneTerminal } = useZoneTerminal();
   const containerRef = useRef(null);
 
@@ -38,8 +40,12 @@ const ZoneShell = memo(({ zoneName, readOnly = false, style = {}, className = ''
         <div className="h-100 w-100 d-flex align-items-center justify-content-center text-white-50">
           <div className="text-center">
             <i className="fas fa-terminal fa-2x fa-pulse mb-2" />
-            <p>Connecting to {zoneName}...</p>
-            <p className="small text-muted">{readOnly ? 'Read-only mode' : 'Interactive mode'}</p>
+            <p>{t('console.zoneShell.connectingToZone', { zoneName })}</p>
+            <p className="small text-muted">
+              {readOnly
+                ? t('console.zoneShell.readOnlyMode')
+                : t('console.zoneShell.interactiveMode')}
+            </p>
           </div>
         </div>
       </div>

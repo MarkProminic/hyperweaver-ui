@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getMachineSnapshots } from '../../api/machineAPI';
 import { cloneMachine } from '../../api/provisioningAPI';
@@ -26,6 +27,7 @@ const CloneMachineModal = ({
   isRunning,
   onCloned,
 }) => {
+  const { t } = useTranslation();
   const [source, setSource] = useState('template');
   const [snapshot, setSnapshot] = useState('');
   const [linked, setLinked] = useState(false);
@@ -61,15 +63,15 @@ const CloneMachineModal = ({
 
   const handleSubmit = async () => {
     if (!hostname.trim()) {
-      setMsg('Clone needs a new hostname.');
+      setMsg(t('machine.cloneMachineModal.hostnameRequired'));
       return;
     }
     if (source === 'current' && isRunning && !snapshot) {
-      setMsg('Copying the current state of a RUNNING machine requires picking a snapshot.');
+      setMsg(t('machine.cloneMachineModal.snapshotRequiredWhileRunning'));
       return;
     }
     if (linked && !snapshot) {
-      setMsg('A linked clone requires a snapshot.');
+      setMsg(t('machine.cloneMachineModal.linkedRequiresSnapshot'));
       return;
     }
     setLoading(true);
@@ -137,9 +139,9 @@ const CloneMachineModal = ({
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Clone ${singular}: ${machineName}`}
+      title={t('machine.cloneMachineModal.title', { singular, machineName })}
       icon="fas fa-clone"
-      submitText="Clone"
+      submitText={t('machine.cloneMachineModal.submit')}
       loading={loading}
       showCancelButton
     >
@@ -157,8 +159,10 @@ const CloneMachineModal = ({
             onChange={() => setSource('template')}
           />
           <label className="form-check-label" htmlFor="clone-source-template">
-            <strong>Fresh from template</strong> — rebuild from the original template; changes made
-            inside the {singular.toLowerCase()} since creation are NOT copied
+            <strong>{t('machine.cloneMachineModal.freshFromTemplateStrong')}</strong>{' '}
+            {t('machine.cloneMachineModal.freshFromTemplateRest', {
+              noun: singular.toLowerCase(),
+            })}
           </label>
         </div>
         <div className="form-check">
@@ -171,7 +175,8 @@ const CloneMachineModal = ({
             onChange={() => setSource('current')}
           />
           <label className="form-check-label" htmlFor="clone-source-current">
-            <strong>Copy current state</strong> — duplicate today&apos;s disks exactly
+            <strong>{t('machine.cloneMachineModal.copyCurrentStrong')}</strong>{' '}
+            {t('machine.cloneMachineModal.copyCurrentRest')}
           </label>
         </div>
       </div>
@@ -180,11 +185,15 @@ const CloneMachineModal = ({
         <div className="border rounded p-2 mb-3">
           <div className="mb-2">
             <label className="form-label" htmlFor="clone-snapshot">
-              Snapshot{' '}
+              {t('machine.cloneMachineModal.snapshotLabel')}{' '}
               {isRunning ? (
-                <span className="text-danger">(required — the source is running)</span>
+                <span className="text-danger">
+                  {t('machine.cloneMachineModal.snapshotRequiredNote')}
+                </span>
               ) : (
-                <span className="text-muted">(optional)</span>
+                <span className="text-muted">
+                  {t('machine.cloneMachineModal.snapshotOptionalNote')}
+                </span>
               )}
             </label>
             <select
@@ -194,19 +203,23 @@ const CloneMachineModal = ({
               onChange={e => setSnapshot(e.target.value)}
             >
               <option value="">
-                {isRunning ? 'Pick a snapshot…' : 'none — clone the live disk state'}
+                {isRunning
+                  ? t('machine.cloneMachineModal.pickSnapshotOption')
+                  : t('machine.cloneMachineModal.noneCloneLiveOption')}
               </option>
               {snapshots.map(entry => (
                 <option key={entry.uuid || entry.name} value={entry.name}>
                   {entry.name}
-                  {entry.current ? ' (current)' : ''}
+                  {entry.current ? ` ${t('machine.cloneMachineModal.currentSuffix')}` : ''}
                 </option>
               ))}
             </select>
             {snapshots.length === 0 && (
               <div className="form-text">
-                No snapshots on this {singular.toLowerCase()} yet
-                {isRunning ? ' — take one first (Snapshots card), or stop the machine.' : '.'}
+                {t('machine.cloneMachineModal.noSnapshotsYet', { noun: singular.toLowerCase() })}
+                {isRunning
+                  ? ` ${t('machine.cloneMachineModal.takeOneFirstNote')}`
+                  : t('machine.cloneMachineModal.periodSuffix')}
               </div>
             )}
           </div>
@@ -220,8 +233,7 @@ const CloneMachineModal = ({
               disabled={!snapshot}
             />
             <label className="form-check-label" htmlFor="clone-linked">
-              Linked clone — a space-saving differencing copy (requires a snapshot; the clone
-              depends on the source&apos;s disk)
+              {t('machine.cloneMachineModal.linkedCloneLabel')}
             </label>
           </div>
         </div>
@@ -230,20 +242,20 @@ const CloneMachineModal = ({
       <div className="row g-3">
         <div className="col-12 col-md-6">
           <label className="form-label" htmlFor="clone-name">
-            New Name
+            {t('machine.cloneMachineModal.newNameLabel')}
           </label>
           <input
             id="clone-name"
             className="form-control"
             type="text"
-            placeholder="derived from hostname/domain"
+            placeholder={t('machine.cloneMachineModal.newNamePlaceholder')}
             value={name}
             onChange={e => setName(e.target.value)}
           />
         </div>
         <div className="col-12 col-md-6">
           <label className="form-label" htmlFor="clone-hostname">
-            New Hostname
+            {t('machine.cloneMachineModal.newHostnameLabel')}
           </label>
           <input
             id="clone-hostname"
@@ -256,7 +268,7 @@ const CloneMachineModal = ({
         </div>
         <div className="col-12 col-md-6">
           <label className="form-label" htmlFor="clone-domain">
-            Domain (blank = inherit)
+            {t('machine.cloneMachineModal.domainLabel')}
           </label>
           <input
             id="clone-domain"
@@ -268,7 +280,7 @@ const CloneMachineModal = ({
         </div>
         <div className="col-6 col-md-3">
           <label className="form-label" htmlFor="clone-memory">
-            Memory
+            {t('machine.cloneMachineModal.memoryLabel')}
           </label>
           <input
             id="clone-memory"
@@ -281,7 +293,7 @@ const CloneMachineModal = ({
         </div>
         <div className="col-6 col-md-3">
           <label className="form-label" htmlFor="clone-vcpus">
-            vCPUs
+            {t('machine.cloneMachineModal.vcpusLabel')}
           </label>
           <input
             id="clone-vcpus"
@@ -302,7 +314,7 @@ const CloneMachineModal = ({
               onChange={e => setStartAfter(e.target.checked)}
             />
             <label className="form-check-label" htmlFor="clone-start-after">
-              Start after clone
+              {t('machine.cloneMachineModal.startAfterCloneLabel')}
             </label>
           </div>
         </div>

@@ -8,6 +8,7 @@ import {
 } from '@xyflow/react';
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import '@xyflow/react/dist/style.css';
 
 // Import our custom components
@@ -45,6 +46,7 @@ const edgeTypes = {
 };
 
 const NetworkTopologyViewer = ({ networkData, onNodeClick, onEdgeClick }) => {
+  const { t } = useTranslation();
   // React Flow state
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -133,30 +135,30 @@ const NetworkTopologyViewer = ({ networkData, onNodeClick, onEdgeClick }) => {
             saturation = 85 + (utilization / 10) * 10;
             lightness = 55 + (utilization / 10) * 10;
           } else if (utilization <= 25) {
-            const t = (utilization - 10) / 15;
-            hue = 220 - t * 40;
+            const frac = (utilization - 10) / 15;
+            hue = 220 - frac * 40;
             saturation = 95;
-            lightness = 65 + t * 5;
+            lightness = 65 + frac * 5;
           } else if (utilization <= 50) {
-            const t = (utilization - 25) / 25;
-            hue = 180 - t * 60;
-            saturation = 95 - t * 15;
+            const frac = (utilization - 25) / 25;
+            hue = 180 - frac * 60;
+            saturation = 95 - frac * 15;
             lightness = 70;
           } else if (utilization <= 75) {
-            const t = (utilization - 50) / 25;
-            hue = 120 - t * 60;
-            saturation = 80 + t * 15;
-            lightness = 70 - t * 5;
+            const frac = (utilization - 50) / 25;
+            hue = 120 - frac * 60;
+            saturation = 80 + frac * 15;
+            lightness = 70 - frac * 5;
           } else if (utilization <= 90) {
-            const t = (utilization - 75) / 15;
-            hue = 60 - t * 30;
+            const frac = (utilization - 75) / 15;
+            hue = 60 - frac * 30;
             saturation = 95;
-            lightness = 65 - t * 5;
+            lightness = 65 - frac * 5;
           } else {
-            const t = (utilization - 90) / 10;
-            hue = 30 - t * 30;
-            saturation = 95 + t * 5;
-            lightness = 60 - t * 10;
+            const frac = (utilization - 90) / 10;
+            hue = 30 - frac * 30;
+            saturation = 95 + frac * 5;
+            lightness = 60 - frac * 10;
           }
           edgeColor = `hsl(${Math.round(hue)}, ${Math.round(saturation)}%, ${Math.round(lightness)}%)`;
         }
@@ -327,19 +329,31 @@ const NetworkTopologyViewer = ({ networkData, onNodeClick, onEdgeClick }) => {
               type="button"
               className={`btn btn-sm ${showMinimap ? 'btn-info' : 'btn-light'}`}
               onClick={() => setShowMinimap(!showMinimap)}
-              title={showMinimap ? 'Hide Minimap' : 'Show Minimap'}
+              title={
+                showMinimap
+                  ? t('hostTools.NetworkTopologyViewer.hideMinimap')
+                  : t('hostTools.NetworkTopologyViewer.showMinimap')
+              }
             >
               <i className="fas fa-map me-2" />
-              <span>Minimap</span>
+              <span>{t('hostTools.NetworkTopologyViewer.minimapButton')}</span>
             </button>
             <button
               type="button"
               className={`btn btn-sm ${isFullscreen ? 'btn-danger' : 'btn-primary'}`}
               onClick={() => setIsFullscreen(!isFullscreen)}
-              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+              title={
+                isFullscreen
+                  ? t('hostTools.NetworkTopologyViewer.exitFullscreen')
+                  : t('hostTools.NetworkTopologyViewer.enterFullscreen')
+              }
             >
               <i className={`fas ${isFullscreen ? 'fa-compress' : 'fa-expand'} me-2`} />
-              <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+              <span>
+                {isFullscreen
+                  ? t('hostTools.NetworkTopologyViewer.exitFullscreenButton')
+                  : t('hostTools.NetworkTopologyViewer.fullscreenButton')}
+              </span>
             </button>
           </div>
         </div>

@@ -1,8 +1,10 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { ContentModal } from '../common';
 
 const ServiceDetailsModal = ({ service, onClose }) => {
+  const { t } = useTranslation();
   const formatDetails = details => {
     if (!details) {
       return [];
@@ -35,23 +37,28 @@ const ServiceDetailsModal = ({ service, onClose }) => {
   };
 
   return (
-    <ContentModal isOpen onClose={onClose} title="Service Details" icon="fas fa-cogs">
+    <ContentModal
+      isOpen
+      onClose={onClose}
+      title={t('host.serviceDetailsModal.title')}
+      icon="fas fa-cogs"
+    >
       {/* Service Basic Info */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Basic Information</h3>
+          <h3 className="fs-6 fw-bold">{t('host.serviceDetailsModal.basicInfo')}</h3>
           <div className="table-responsive">
             <table className="table">
               <tbody>
                 <tr>
                   <td>
-                    <strong>FMRI</strong>
+                    <strong>{t('host.serviceDetailsModal.fmri')}</strong>
                   </td>
                   <td className="font-monospace">{service.fmri}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>State</strong>
+                    <strong>{t('host.serviceDetailsModal.state')}</strong>
                   </td>
                   <td>
                     <span className={`badge ${getStateTagClass(service.state)}`}>
@@ -61,9 +68,9 @@ const ServiceDetailsModal = ({ service, onClose }) => {
                 </tr>
                 <tr>
                   <td>
-                    <strong>Start Time</strong>
+                    <strong>{t('host.serviceDetailsModal.startTime')}</strong>
                   </td>
-                  <td>{service.stime || 'N/A'}</td>
+                  <td>{service.stime || t('host.serviceDetailsModal.notAvailable')}</td>
                 </tr>
               </tbody>
             </table>
@@ -75,7 +82,7 @@ const ServiceDetailsModal = ({ service, onClose }) => {
       {detailsArray.length > 0 && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Detailed Information</h3>
+            <h3 className="fs-6 fw-bold">{t('host.serviceDetailsModal.detailedInfo')}</h3>
             <div className="table-responsive">
               <table className="table">
                 <tbody>
@@ -103,7 +110,7 @@ const ServiceDetailsModal = ({ service, onClose }) => {
       {/* Show message if no details available */}
       {detailsArray.length === 0 && (
         <div className="alert alert-info">
-          <p>No detailed information available for this service.</p>
+          <p>{t('host.serviceDetailsModal.noDetails')}</p>
         </div>
       )}
     </ContentModal>

@@ -1,4 +1,5 @@
 import React, { useEffect, useContext, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ResizableBox } from 'react-resizable';
 import { Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -27,18 +28,22 @@ const ZoneRegister = React.lazy(() => import('./ZoneRegister'));
 const Accounts = React.lazy(() => import('./Accounts'));
 const Profile = React.lazy(() => import('./Profile'));
 
-const LoadingSpinner = () => (
-  <div className="d-flex justify-content-center align-items-center h-100 p-5">
-    <div className="text-center">
-      <div className="fs-4">
-        <i className="fas fa-spinner fa-spin" />
+const LoadingSpinner = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="d-flex justify-content-center align-items-center h-100 p-5">
+      <div className="text-center">
+        <div className="fs-4">
+          <i className="fas fa-spinner fa-spin" />
+        </div>
+        <p className="mt-3">{t('chrome.layout.loading')}</p>
       </div>
-      <p className="mt-3">Loading...</p>
     </div>
-  </div>
-);
+  );
+};
 
 const LayoutContent = () => {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const { isDirect } = useMode();
   const userSettings = useContext(UserSettings);
@@ -142,7 +147,10 @@ const LayoutContent = () => {
                   hasManageSurface(currentServer) ? (
                     <HostManage />
                   ) : (
-                    <NotAvailableStub title="Host Management" tokenLabel="any Manage surface" />
+                    <NotAvailableStub
+                      title={t('chrome.layout.hostManagement')}
+                      tokenLabel="any Manage surface"
+                    />
                   )
                 }
               />
@@ -152,7 +160,10 @@ const LayoutContent = () => {
                   hasFeature(currentServer, 'vnics') ? (
                     <HostNetworking />
                   ) : (
-                    <NotAvailableStub title="Host Networking" tokenLabel="vnics" />
+                    <NotAvailableStub
+                      title={t('chrome.layout.hostNetworking')}
+                      tokenLabel="vnics"
+                    />
                   )
                 }
               />
@@ -162,7 +173,7 @@ const LayoutContent = () => {
                   hasFeature(currentServer, 'zfs') ? (
                     <HostStorage />
                   ) : (
-                    <NotAvailableStub title="Host Storage" tokenLabel="zfs" />
+                    <NotAvailableStub title={t('chrome.layout.hostStorage')} tokenLabel="zfs" />
                   )
                 }
               />
@@ -172,7 +183,10 @@ const LayoutContent = () => {
                   hasFeature(currentServer, 'devices') ? (
                     <HostDevices />
                   ) : (
-                    <NotAvailableStub title="Device Monitoring" tokenLabel="devices" />
+                    <NotAvailableStub
+                      title={t('chrome.layout.deviceMonitoring')}
+                      tokenLabel="devices"
+                    />
                   )
                 }
               />
@@ -195,6 +209,7 @@ const LayoutContent = () => {
  * @returns {JSX.Element} Layout component
  */
 const Layout = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isAuthenticated, loading } = useAuth();
 
@@ -215,7 +230,7 @@ const Layout = () => {
           <div className="fs-3">
             <i className="fas fa-spinner fa-spin" />
           </div>
-          <p className="mt-3">Loading...</p>
+          <p className="mt-3">{t('chrome.layout.loading')}</p>
         </div>
       </div>
     );

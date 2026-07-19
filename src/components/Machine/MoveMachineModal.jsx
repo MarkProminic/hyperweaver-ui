@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { moveMachine } from '../../api/machineAPI';
 import { FormModal, PathInput } from '../common';
 
 const MoveMachineModal = ({ isOpen, onClose, currentServer, machineName, isRunning, onDone }) => {
+  const { t } = useTranslation();
   const [targetPath, setTargetPath] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -18,7 +20,7 @@ const MoveMachineModal = ({ isOpen, onClose, currentServer, machineName, isRunni
 
   const handleSubmit = async () => {
     if (!targetPath.trim()) {
-      setError('Enter the destination directory on the agent host.');
+      setError(t('machine.moveMachineModal.pathRequired'));
       return;
     }
     setLoading(true);
@@ -37,7 +39,7 @@ const MoveMachineModal = ({ isOpen, onClose, currentServer, machineName, isRunni
     }
     const taskId = result.data?.task_id || result.data?.parent_task_id;
     onDone({
-      text: `${result.data?.message || `Move queued for ${machineName}`}${taskId ? ` (task ${taskId})` : ''}`,
+      text: `${result.data?.message || t('machine.moveMachineModal.queuedFallback', { machineName })}${taskId ? ` ${t('machine.moveMachineModal.taskSuffix', { taskId })}` : ''}`,
       warning: false,
     });
     onClose();
@@ -48,22 +50,22 @@ const MoveMachineModal = ({ isOpen, onClose, currentServer, machineName, isRunni
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Move ${machineName}`}
+      title={t('machine.moveMachineModal.title', { machineName })}
       icon="fas fa-truck-arrow-right"
-      submitText="Move"
+      submitText={t('machine.moveMachineModal.submit')}
       submitIcon="fas fa-truck-arrow-right"
       loading={loading}
       showCancelButton
     >
       {isRunning && (
         <div className="alert alert-warning py-2">
-          {machineName} is running — moving needs it powered off; the agent will refuse.
+          {t('machine.moveMachineModal.runningWarning', { machineName })}
         </div>
       )}
       {error && <div className="alert alert-danger py-2">{error}</div>}
       <div className="mb-3">
         <label className="form-label" htmlFor="move-machine-target">
-          Destination directory (on the agent host) <span className="text-danger">*</span>
+          {t('machine.moveMachineModal.destinationLabel')} <span className="text-danger">*</span>
         </label>
         <PathInput
           id="move-machine-target"
@@ -71,12 +73,10 @@ const MoveMachineModal = ({ isOpen, onClose, currentServer, machineName, isRunni
           onChange={setTargetPath}
           server={currentServer}
           mode="directory"
-          pickTitle="Pick the destination"
+          pickTitle={t('machine.moveMachineModal.pickTitle')}
           disabled={loading}
         />
-        <p className="form-text text-muted mb-0">
-          The machine&apos;s files (disks included) relocate beneath this directory.
-        </p>
+        <p className="form-text text-muted mb-0">{t('machine.moveMachineModal.relocateNote')}</p>
       </div>
     </FormModal>
   );

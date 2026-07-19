@@ -1,4 +1,5 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
+import { useTranslation } from 'react-i18next';
 
 import { useAccountsData } from '../../hooks/useAccountsData';
 
@@ -12,6 +13,7 @@ import UsersTab from './UsersTab';
  * @returns {JSX.Element} Accounts component
  */
 const Accounts = () => {
+  const { t } = useTranslation();
   const data = useAccountsData();
 
   const { user, activeTab, setActiveTab, allUsers, viewScope, organizations, msg } = data;
@@ -20,7 +22,7 @@ const Accounts = () => {
     <div className="hw-page-content-scrollable">
       <Helmet>
         <meta charSet="utf-8" />
-        <title>User Management - Hyperweaver</title>
+        <title>{t('accounts.accounts.pageTitle')}</title>
         <link rel="canonical" href={window.location.origin} />
       </Helmet>
       <div className="container-fluid p-0">
@@ -28,7 +30,9 @@ const Accounts = () => {
           <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div className="d-flex align-items-center flex-wrap gap-2">
               <strong>
-                {user?.role === 'super-admin' ? 'Account Management' : 'User Management'}
+                {user?.role === 'super-admin'
+                  ? t('accounts.accounts.accountManagement')
+                  : t('accounts.accounts.userManagement')}
               </strong>
               {user?.role === 'super-admin' && (
                 <ul className="nav nav-tabs px-3 pt-2 mb-0">
@@ -41,7 +45,7 @@ const Accounts = () => {
                       aria-selected={activeTab === 'users'}
                     >
                       <i className="fas fa-users me-2" />
-                      Users
+                      {t('accounts.accounts.tabUsers')}
                     </button>
                   </li>
                   <li className="nav-item">
@@ -53,7 +57,7 @@ const Accounts = () => {
                       aria-selected={activeTab === 'organizations'}
                     >
                       <i className="fas fa-building me-2" />
-                      Organizations
+                      {t('accounts.accounts.tabOrganizations')}
                     </button>
                   </li>
                 </ul>
@@ -62,11 +66,17 @@ const Accounts = () => {
             <div className="d-flex align-items-center">
               {activeTab === 'users' && (
                 <span className="badge text-bg-info">
-                  {allUsers.length} {viewScope === 'all' ? 'Total' : 'Organization'} Users
+                  {allUsers.length}{' '}
+                  {viewScope === 'all'
+                    ? t('accounts.accounts.total')
+                    : t('accounts.accounts.organization')}{' '}
+                  {t('accounts.accounts.users')}
                 </span>
               )}
               {activeTab === 'organizations' && user?.role === 'super-admin' && (
-                <span className="badge text-bg-info">{organizations.length} Organizations</span>
+                <span className="badge text-bg-info">
+                  {organizations.length} {t('accounts.accounts.organizations')}
+                </span>
               )}
             </div>
           </div>
@@ -87,40 +97,44 @@ const Accounts = () => {
             {/* Help Section */}
             <div className="card">
               <div className="card-body">
-                <h2 className="fs-6 fw-bold">User Management Guide</h2>
+                <h2 className="fs-6 fw-bold">{t('accounts.accounts.helpTitle')}</h2>
                 <div className="small">
                   <div className="row g-3">
                     <div className="col">
                       <p>
-                        <strong>Roles:</strong>
+                        <strong>{t('accounts.accounts.helpRoles')}:</strong>
                       </p>
                       <ul>
                         <li>
-                          <strong>User:</strong> Basic access to machines and hosts
+                          <strong>{t('accounts.accounts.helpRoleUser')}:</strong>{' '}
+                          {t('accounts.accounts.helpRoleUserDesc')}
                         </li>
                         <li>
-                          <strong>Admin:</strong> Can manage users and organization settings
+                          <strong>{t('accounts.accounts.helpRoleAdmin')}:</strong>{' '}
+                          {t('accounts.accounts.helpRoleAdminDesc')}
                         </li>
                         <li>
-                          <strong>Super Admin:</strong> Full system access, can manage all users and
-                          organizations
+                          <strong>{t('accounts.accounts.helpRoleSuperAdmin')}:</strong>{' '}
+                          {t('accounts.accounts.helpRoleSuperAdminDesc')}
                         </li>
                       </ul>
                     </div>
                     <div className="col">
                       <p>
-                        <strong>Visibility:</strong>
+                        <strong>{t('accounts.accounts.helpVisibility')}:</strong>
                       </p>
                       <ul>
                         <li>
-                          <strong>Super Admins:</strong> Can see all users across all organizations
+                          <strong>{t('accounts.accounts.helpVisibilitySuperAdmins')}:</strong>{' '}
+                          {t('accounts.accounts.helpVisibilitySuperAdminsDesc')}
                         </li>
                         <li>
-                          <strong>Organization Admins:</strong> Can only see users in their
-                          organization
+                          <strong>{t('accounts.accounts.helpVisibilityOrgAdmins')}:</strong>{' '}
+                          {t('accounts.accounts.helpVisibilityOrgAdminsDesc')}
                         </li>
                         <li>
-                          <strong>Users:</strong> Cannot access user management
+                          <strong>{t('accounts.accounts.helpVisibilityUsers')}:</strong>{' '}
+                          {t('accounts.accounts.helpVisibilityUsersDesc')}
                         </li>
                       </ul>
                     </div>
@@ -128,22 +142,22 @@ const Accounts = () => {
                   <div className="row g-3">
                     <div className="col">
                       <p>
-                        <strong>Permissions:</strong>
+                        <strong>{t('accounts.accounts.helpPermissions')}:</strong>
                       </p>
                       <ul>
-                        <li>Super admins can modify any user except other super admins</li>
-                        <li>Admins can only modify regular users in their organization</li>
-                        <li>No one can modify their own role or deactivate themselves</li>
+                        <li>{t('accounts.accounts.helpPermissionsSuper')}</li>
+                        <li>{t('accounts.accounts.helpPermissionsAdmin')}</li>
+                        <li>{t('accounts.accounts.helpPermissionsModify')}</li>
                       </ul>
                     </div>
                     <div className="col">
                       <p>
-                        <strong>Organizations:</strong>
+                        <strong>{t('accounts.accounts.helpOrganizations')}:</strong>
                       </p>
                       <ul>
-                        <li>Users belong to organizations for access control</li>
-                        <li>Super admins operate at system level (no organization)</li>
-                        <li>Organization admins manage users within their scope</li>
+                        <li>{t('accounts.accounts.helpOrgsBelong')}</li>
+                        <li>{t('accounts.accounts.helpOrgsSuper')}</li>
+                        <li>{t('accounts.accounts.helpOrgsAdmin')}</li>
                       </ul>
                     </div>
                   </div>

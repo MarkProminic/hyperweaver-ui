@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { useState, useContext, useEffect, useRef, useCallback, forwardRef } from 'react';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Dropdown from 'react-bootstrap/Dropdown';
+import { useTranslation } from 'react-i18next';
 import { ResizableBox } from 'react-resizable';
 
 import { useFooter } from '../contexts/FooterContext';
@@ -10,15 +11,7 @@ import { UserSettings } from '../contexts/UserSettingsContext';
 import { hasFeature } from '../utils/capabilities';
 
 import HostShell from './Host/HostShell';
-import Tasks, { TASK_COLUMNS } from './Tasks';
-
-const PRIORITY_OPTIONS = [
-  { label: 'All', value: 20 },
-  { label: 'Low+', value: 40 },
-  { label: 'Medium+', value: 60 },
-  { label: 'High+', value: 80 },
-  { label: 'Critical', value: 100 },
-];
+import Tasks, { getTaskColumns } from './Tasks';
 
 // Custom dropdown toggle for the footer toolbar: a small icon button with no Bootstrap
 // caret. react-bootstrap injects onClick/ref/aria-* AND a `dropdown-toggle` className (whose
@@ -45,6 +38,14 @@ FooterToggle.propTypes = {
 };
 
 const Footer = () => {
+  const { t } = useTranslation();
+  const PRIORITY_OPTIONS = [
+    { label: t('chrome.footer.priorityAll'), value: 20 },
+    { label: t('chrome.footer.priorityLowPlus'), value: 40 },
+    { label: t('chrome.footer.priorityMediumPlus'), value: 60 },
+    { label: t('chrome.footer.priorityHighPlus'), value: 80 },
+    { label: t('chrome.footer.priorityCritical'), value: 100 },
+  ];
   const userSettings = useContext(UserSettings);
   const {
     footerIsActive,
@@ -223,7 +224,7 @@ const Footer = () => {
             }}
             onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
             onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-            title="Click me 3 times for a surprise!"
+            title={t('chrome.footer.versionSurprise')}
           >
             v{__APP_VERSION__ || '1.0.0'}
           </button>
@@ -246,13 +247,17 @@ const Footer = () => {
                 show={showShellDropdown && footerIsActive && effectiveView === 'shell'}
                 onToggle={handleShellToggle}
               >
-                <Dropdown.Toggle as={FooterToggle} active={effectiveView === 'shell'} title="Shell">
+                <Dropdown.Toggle
+                  as={FooterToggle}
+                  active={effectiveView === 'shell'}
+                  title={t('chrome.footer.shell')}
+                >
                   <i className="fas fa-terminal" />
                 </Dropdown.Toggle>
                 <Dropdown.Menu>
                   <Dropdown.Item as="button" type="button" onClick={handleRestartShell}>
                     <i className="fas fa-refresh me-2" />
-                    Restart Shell
+                    {t('chrome.footer.restartShell')}
                   </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
@@ -264,7 +269,7 @@ const Footer = () => {
                 type="button"
                 className={`btn btn-sm border-0 ${effectiveView === 'tasks' ? 'btn-info' : 'bg-body-secondary text-body'}`}
                 onClick={handleTasksClick}
-                title="Tasks"
+                title={t('chrome.footer.tasks')}
               >
                 <i className="fas fa-tasks" />
               </button>
@@ -288,7 +293,7 @@ const Footer = () => {
                   <Dropdown.Toggle
                     as={FooterToggle}
                     active={showFilterDropdown}
-                    title={`Priority filter: ${currentPriorityLabel}`}
+                    title={`${t('chrome.footer.priorityFilter')}: ${currentPriorityLabel}`}
                   >
                     <i className="fas fa-filter" />
                   </Dropdown.Toggle>
@@ -324,12 +329,12 @@ const Footer = () => {
                   <Dropdown.Toggle
                     as={FooterToggle}
                     active={showColumnsDropdown}
-                    title="Toggle columns"
+                    title={t('chrome.footer.toggleColumns')}
                   >
                     <i className="fas fa-table-columns" />
                   </Dropdown.Toggle>
                   <Dropdown.Menu>
-                    {TASK_COLUMNS.map(col => (
+                    {getTaskColumns(t).map(col => (
                       <label
                         key={col.key}
                         className="dropdown-item d-flex align-items-center gap-2 mb-0 cursor-pointer"
@@ -353,7 +358,7 @@ const Footer = () => {
               type="button"
               className="btn btn-sm border-0 bg-body-secondary text-body"
               onClick={handleToggle}
-              title={footerIsActive ? 'Collapse' : 'Expand'}
+              title={footerIsActive ? t('chrome.footer.collapse') : t('chrome.footer.expand')}
             >
               <i className={`fa ${footerIsActive ? 'fa-angle-down' : 'fa-angle-up'}`} />
             </button>

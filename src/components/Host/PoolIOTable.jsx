@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const PoolIOTable = ({ poolIOStats, sectionsCollapsed, toggleSection }) => {
+  const { t } = useTranslation();
   if (poolIOStats.length === 0) {
     return null;
   }
@@ -25,7 +27,7 @@ const PoolIOTable = ({ poolIOStats, sectionsCollapsed, toggleSection }) => {
           <div className="d-flex align-items-center gap-2">
             <h4 className="fs-5 fw-bold mb-0">
               <i className="fas fa-database me-2" />
-              <span>ZFS Pool I/O Performance ({poolIOStats.length})</span>
+              <span>{t('host.poolIOTable.title', { count: poolIOStats.length })}</span>
             </h4>
           </div>
           <div className="d-flex align-items-center gap-2">
@@ -33,7 +35,11 @@ const PoolIOTable = ({ poolIOStats, sectionsCollapsed, toggleSection }) => {
               type="button"
               className="btn btn-link btn-sm"
               onClick={() => toggleSection('poolIO')}
-              title={sectionsCollapsed.poolIO ? 'Expand section' : 'Collapse section'}
+              title={
+                sectionsCollapsed.poolIO
+                  ? t('host.poolIOTable.expandSection')
+                  : t('host.poolIOTable.collapseSection')
+              }
             >
               <i
                 className={`fas ${sectionsCollapsed.poolIO ? 'fa-chevron-down' : 'fa-chevron-up'}`}
@@ -46,17 +52,17 @@ const PoolIOTable = ({ poolIOStats, sectionsCollapsed, toggleSection }) => {
             <table className="table table-striped table-hover table-sm">
               <thead>
                 <tr>
-                  <th>Pool</th>
-                  <th>Type</th>
-                  <th>Allocation</th>
-                  <th>Free Space</th>
-                  <th>Read Ops</th>
-                  <th>Write Ops</th>
-                  <th>Read Bandwidth</th>
-                  <th>Write Bandwidth</th>
-                  <th>Total Wait</th>
-                  <th>Disk Wait</th>
-                  <th>Last Updated</th>
+                  <th>{t('host.poolIOTable.pool')}</th>
+                  <th>{t('host.poolIOTable.type')}</th>
+                  <th>{t('host.poolIOTable.allocation')}</th>
+                  <th>{t('host.poolIOTable.freeSpace')}</th>
+                  <th>{t('host.poolIOTable.readOps')}</th>
+                  <th>{t('host.poolIOTable.writeOps')}</th>
+                  <th>{t('host.poolIOTable.readBandwidth')}</th>
+                  <th>{t('host.poolIOTable.writeBandwidth')}</th>
+                  <th>{t('host.poolIOTable.totalWait')}</th>
+                  <th>{t('host.poolIOTable.diskWait')}</th>
+                  <th>{t('host.poolIOTable.lastUpdated')}</th>
                 </tr>
               </thead>
               <tbody>

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   provisionMachine,
@@ -34,6 +35,7 @@ const MachineProvisioning = ({
   onActionConsumed = null,
   onDocumentStored = null,
 }) => {
+  const { t } = useTranslation();
   const [msg, setMsg] = useState('');
   const [msgVariant, setMsgVariant] = useState('info');
   const [loading, setLoading] = useState(false);
@@ -125,15 +127,27 @@ const MachineProvisioning = ({
     const skipped = Array.isArray(data.playbooks_skipped) ? data.playbooks_skipped : [];
     if (!data.parent_task_id && skipped.length > 0) {
       // Run directives skipped everything — the agent's 200 no-op answer.
-      report(`Nothing to run — skipped by run directive: ${skipped.join(', ')}`, 'warning');
+      report(
+        t('provisioning.machineProvisioning.nothingToRun', { skipped: skipped.join(', ') }),
+        'warning'
+      );
       return;
     }
-    const parts = [data.message || 'Queued'];
+    const parts = [data.message || t('provisioning.machineProvisioning.queued')];
     if (data.parent_task_id) {
-      parts.push(`(task ${data.parent_task_id}${data.steps ? `, ${data.steps} steps` : ''})`);
+      parts.push(
+        data.steps
+          ? t('provisioning.machineProvisioning.taskWithSteps', {
+              id: data.parent_task_id,
+              steps: data.steps,
+            })
+          : t('provisioning.machineProvisioning.taskOnly', { id: data.parent_task_id })
+      );
     }
     if (skipped.length > 0) {
-      parts.push(`— skipped: ${skipped.join(', ')}`);
+      parts.push(
+        t('provisioning.machineProvisioning.skippedSuffix', { skipped: skipped.join(', ') })
+      );
     }
     report(parts.join(' '), 'success');
     setTimeout(loadStatus, 2000);
@@ -172,7 +186,7 @@ const MachineProvisioning = ({
       <div className="card-body">
         <h4 className="fs-6 fw-bold mb-3">
           <i className="fas fa-cubes me-2" />
-          Provisioning
+          {t('provisioning.machineProvisioning.heading')}
         </h4>
 
         {msg && (
@@ -181,7 +195,7 @@ const MachineProvisioning = ({
         {loading && (
           <div className="alert alert-info py-2 d-flex align-items-center gap-2">
             <i className="fas fa-spinner fa-spin" />
-            <span>Working…</span>
+            <span>{t('provisioning.machineProvisioning.working')}</span>
           </div>
         )}
 
@@ -193,7 +207,7 @@ const MachineProvisioning = ({
                   {(provisionerDoc.provisioner_name || provisionerDoc.provisioner_version) && (
                     <tr>
                       <td className="px-3 py-2">
-                        <strong>Provisioner</strong>
+                        <strong>{t('provisioning.machineProvisioning.provisionerLabel')}</strong>
                       </td>
                       <td className="px-3 py-2">
                         <code className="small">
@@ -205,7 +219,7 @@ const MachineProvisioning = ({
                   )}
                   <tr>
                     <td className="px-3 py-2">
-                      <strong>Status</strong>
+                      <strong>{t('provisioning.machineProvisioning.statusLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">
                       {status ? (
@@ -213,11 +227,14 @@ const MachineProvisioning = ({
                           <span
                             className={`badge ${status.provisioning_status === 'provisioned' ? 'text-bg-success' : 'text-bg-warning'}`}
                           >
-                            {status.provisioning_status || 'unknown'}
+                            {status.provisioning_status ||
+                              t('provisioning.machineProvisioning.unknown')}
                           </span>
                           {status.last_provisioned_at && (
                             <span className="small text-muted ms-2">
-                              last: {new Date(status.last_provisioned_at).toLocaleString()}
+                              {t('provisioning.machineProvisioning.lastProvisioned', {
+                                date: new Date(status.last_provisioned_at).toLocaleString(),
+                              })}
                             </span>
                           )}
                         </>
@@ -229,7 +246,7 @@ const MachineProvisioning = ({
                   {webAddress && (
                     <tr>
                       <td className="px-3 py-2">
-                        <strong>Welcome Page</strong>
+                        <strong>{t('provisioning.machineProvisioning.welcomePageLabel')}</strong>
                       </td>
                       <td className="px-3 py-2">
                         <a href={webAddress} target="_blank" rel="noopener noreferrer">
@@ -243,18 +260,13 @@ const MachineProvisioning = ({
               </table>
             </div>
             <p className="form-text text-muted mb-0">
-              Provision (the full pipeline), Sync Files, and Run Provisioners (playbooks only) live
-              in the Controls menu in the navbar. The document is edited below.
+              {t('provisioning.machineProvisioning.pipelineHint')}
             </p>
           </>
         ) : (
           <p className="text-muted mb-0">
-            No provisioner document yet — provisioning is not configured for this machine. Machines
-            created from a provisioner package carry one automatically
-            {canReshape
-              ? '; storing a document below enables the pipeline (its actions then appear under Controls in the navbar)'
-              : ''}
-            .
+            {t('provisioning.machineProvisioning.noDocumentYet')}
+            {canReshape ? t('provisioning.machineProvisioning.noDocumentReshapeSuffix') : ''}.
           </p>
         )}
 
@@ -266,10 +278,10 @@ const MachineProvisioning = ({
                 className="btn btn-sm btn-outline-secondary"
                 onClick={() => setHostsYmlOpen(true)}
                 disabled={loading}
-                title="Edit the WHOLE stored document as raw YAML — the emergency hatch between create-without-start and provision"
+                title={t('provisioning.machineProvisioning.editHostsYmlTitle')}
               >
                 <i className="fas fa-file-code me-2" />
-                Edit Hosts.yml (raw)
+                {t('provisioning.machineProvisioning.editHostsYmlButton')}
               </button>
             </div>
             <ProvisioningEditor
@@ -306,15 +318,15 @@ const MachineProvisioning = ({
             isOpen
             onClose={() => {
               setHookConfirm(null);
-              report('Provisioning not started — host hooks were not confirmed.', 'info');
+              report(t('provisioning.machineProvisioning.hookConfirmDeclined'), 'info');
             }}
             onConfirm={() => {
               setHookConfirm(null);
               runPipeline('provision', { confirm_host_hooks: true });
             }}
-            title="This package runs scripts on the agent host"
-            message={`${hookConfirm.reason} Confirming runs them and is remembered for this machine — future provisions will not ask again.`}
-            confirmText="Confirm & Provision"
+            title={t('provisioning.machineProvisioning.hookConfirmTitle')}
+            message={`${hookConfirm.reason} ${t('provisioning.machineProvisioning.hookConfirmSuffix')}`}
+            confirmText={t('provisioning.machineProvisioning.confirmAndProvision')}
             confirmVariant="warning"
             icon="fas fa-triangle-exclamation"
             loading={loading}

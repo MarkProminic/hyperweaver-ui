@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ConfirmModal } from '../common';
 
@@ -13,6 +14,7 @@ const UserTable = ({
   onSetPassword,
   onViewDetails,
 }) => {
+  const { t } = useTranslation();
   const [actionLoading, setActionLoading] = useState({});
   const [confirmAction, setConfirmAction] = useState(null);
 
@@ -43,18 +45,18 @@ const UserTable = ({
       setConfirmAction({
         type: 'delete',
         user,
-        title: 'Delete User',
-        message: `Are you sure you want to delete user "${user.username}"?\n\nThis will also remove their home directory and personal group.`,
-        confirmText: 'Delete',
+        title: t('host.userTable.deleteUserTitle'),
+        message: t('host.userTable.deleteUserConfirm', { username: user.username }),
+        confirmText: t('host.userTable.delete'),
         variant: 'is-danger',
       });
     } else if (action === 'lock') {
       setConfirmAction({
         type: 'lock',
         user,
-        title: 'Lock User Account',
-        message: `Are you sure you want to lock user "${user.username}"?`,
-        confirmText: 'Lock',
+        title: t('host.userTable.lockUserAccountTitle'),
+        message: t('host.userTable.lockUserConfirm', { username: user.username }),
+        confirmText: t('host.userTable.lock'),
         variant: 'is-warning',
       });
     } else {
@@ -66,21 +68,21 @@ const UserTable = ({
     // Determine user status based on available information
     // This is a simplified approach - actual implementation might need more logic
     if (user.uid < 100 && !user.comment?.includes('User')) {
-      return <i className="fas fa-cog text-info" title="System User" />;
+      return <i className="fas fa-cog text-info" title={t('host.userTable.systemUser')} />;
     }
-    return <i className="fas fa-user text-success" title="Regular User" />;
+    return <i className="fas fa-user text-success" title={t('host.userTable.regularUser')} />;
   };
 
   const getUserStatusTag = user => {
     if (user.uid < 100 && !user.comment?.includes('User')) {
-      return <span className="badge text-bg-info">System</span>;
+      return <span className="badge text-bg-info">{t('host.userTable.system')}</span>;
     }
-    return <span className="badge text-bg-success">Active</span>;
+    return <span className="badge text-bg-success">{t('host.userTable.active')}</span>;
   };
 
   const formatShell = shell => {
     if (!shell) {
-      return 'N/A';
+      return t('host.userTable.notAvailable');
     }
     const parts = shell.split('/');
     return parts[parts.length - 1] || shell;
@@ -88,7 +90,7 @@ const UserTable = ({
 
   const formatHome = home => {
     if (!home) {
-      return 'N/A';
+      return t('host.userTable.notAvailable');
     }
     if (home.length > 25) {
       return `...${home.slice(-22)}`;
@@ -100,7 +102,7 @@ const UserTable = ({
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading users...</p>
+        <p className="mt-2">{t('host.userTable.loadingUsers')}</p>
       </div>
     );
   }
@@ -109,7 +111,7 @@ const UserTable = ({
     return (
       <div className="text-center p-4">
         <i className="fas fa-users fa-2x text-muted" />
-        <p className="mt-2 text-muted">No users found</p>
+        <p className="mt-2 text-muted">{t('host.userTable.noUsersFound')}</p>
       </div>
     );
   }
@@ -119,14 +121,14 @@ const UserTable = ({
       <table className="table table-hover">
         <thead>
           <tr>
-            <th>Username</th>
-            <th>UID</th>
-            <th>GID</th>
-            <th>Comment</th>
-            <th>Home Directory</th>
-            <th>Shell</th>
-            <th>Status</th>
-            <th width="280">Actions</th>
+            <th>{t('host.userTable.username')}</th>
+            <th>{t('host.userTable.uid')}</th>
+            <th>{t('host.userTable.gid')}</th>
+            <th>{t('host.userTable.comment')}</th>
+            <th>{t('host.userTable.homeDirectory')}</th>
+            <th>{t('host.userTable.shell')}</th>
+            <th>{t('host.userTable.status')}</th>
+            <th width="280">{t('host.userTable.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -148,7 +150,7 @@ const UserTable = ({
               </td>
               <td>
                 <span className="small" title={user.comment}>
-                  {user.comment || 'N/A'}
+                  {user.comment || t('host.userTable.notAvailable')}
                 </span>
               </td>
               <td>
@@ -170,7 +172,7 @@ const UserTable = ({
                     className="btn btn-sm btn-secondary"
                     onClick={() => handleActionClick(user, 'edit')}
                     disabled={loading}
-                    title="Edit User"
+                    title={t('host.userTable.editUser')}
                   >
                     <i className="fas fa-edit" />
                   </button>
@@ -181,7 +183,7 @@ const UserTable = ({
                     className="btn btn-sm btn-info"
                     onClick={() => handleActionClick(user, 'setPassword')}
                     disabled={loading}
-                    title="Set Password"
+                    title={t('host.userTable.setPassword')}
                   >
                     <i className="fas fa-key" />
                   </button>
@@ -193,7 +195,7 @@ const UserTable = ({
                       className="btn btn-sm btn-warning"
                       onClick={() => handleActionClick(user, 'lock')}
                       disabled={loading}
-                      title="Lock Account"
+                      title={t('host.userTable.lockAccount')}
                     >
                       <i className="fas fa-lock" />
                     </button>
@@ -205,7 +207,7 @@ const UserTable = ({
                     className="btn btn-sm btn-secondary"
                     onClick={() => onViewDetails(user)}
                     disabled={loading}
-                    title="View Details"
+                    title={t('host.userTable.viewDetails')}
                   >
                     <i className="fas fa-info-circle" />
                   </button>
@@ -217,7 +219,7 @@ const UserTable = ({
                       className="btn btn-sm btn-danger"
                       onClick={() => handleActionClick(user, 'delete')}
                       disabled={loading || actionLoading[`${user.username}-delete`]}
-                      title="Delete User"
+                      title={t('host.userTable.deleteUser')}
                     >
                       {actionLoading[`${user.username}-delete`] ? (
                         <span

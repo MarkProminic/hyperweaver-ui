@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import ConfirmModal from '../../common/ConfirmModal';
 
@@ -10,6 +11,7 @@ import PerformanceSection from './PerformanceSection';
 import { useArcConfig } from './useArcConfig';
 
 const ArcConfiguration = ({ server }) => {
+  const { t } = useTranslation();
   const {
     currentConfig,
     formData,
@@ -33,7 +35,7 @@ const ArcConfiguration = ({ server }) => {
       <div className="card">
         <div className="card-body text-center">
           <span className="spinner-border" role="status" aria-hidden="true" />
-          <p className="mt-3">Loading ARC configuration...</p>
+          <p className="mt-3">{t('hostCharts.arcConfiguration.loadingMessage')}</p>
         </div>
       </div>
     );
@@ -57,7 +59,7 @@ const ArcConfiguration = ({ server }) => {
         <div className="card-body">
           <h4 className="fs-6 fw-bold mb-4">
             <i className="fas fa-cog me-2" />
-            <span>ZFS Configuration</span>
+            <span>{t('hostCharts.arcConfiguration.configurationTitle')}</span>
           </h4>
 
           <MemoryParametersSection
@@ -78,11 +80,15 @@ const ArcConfiguration = ({ server }) => {
             <div
               className={`alert alert-${getValidationColor(validation.errors, validation.warnings)} mt-4`}
             >
-              <h5 className="fs-6 fw-bold">Validation Results</h5>
+              <h5 className="fs-6 fw-bold">
+                {t('hostCharts.arcConfiguration.validationResultsTitle')}
+              </h5>
 
               {validation.errors && validation.errors.length > 0 && (
                 <div>
-                  <p className="fw-semibold text-danger">Errors:</p>
+                  <p className="fw-semibold text-danger">
+                    {t('hostCharts.arcConfiguration.errorsLabel')}:
+                  </p>
                   <ul>
                     {validation.errors.map(error => (
                       <li key={error}>{error}</li>
@@ -93,7 +99,9 @@ const ArcConfiguration = ({ server }) => {
 
               {validation.warnings && validation.warnings.length > 0 && (
                 <div>
-                  <p className="fw-semibold text-warning">Warnings:</p>
+                  <p className="fw-semibold text-warning">
+                    {t('hostCharts.arcConfiguration.warningsLabel')}:
+                  </p>
                   <ul>
                     {validation.warnings.map(warning => (
                       <li key={warning}>{warning}</li>
@@ -104,7 +112,9 @@ const ArcConfiguration = ({ server }) => {
 
               {validation.proposed_settings && (
                 <div>
-                  <p className="fw-semibold">Proposed Settings:</p>
+                  <p className="fw-semibold">
+                    {t('hostCharts.arcConfiguration.proposedSettingsLabel')}:
+                  </p>
                   <div className="d-flex flex-wrap gap-2">
                     {validation.proposed_settings.arc_max_gb && (
                       <span className="badge text-bg-info">
@@ -138,7 +148,7 @@ const ArcConfiguration = ({ server }) => {
                 />
               )}
               <i className="fas fa-check-circle me-2" />
-              <span>Validate Configuration</span>
+              <span>{t('hostCharts.arcConfiguration.validateButtonLabel')}</span>
             </button>
 
             <button
@@ -155,7 +165,7 @@ const ArcConfiguration = ({ server }) => {
                 />
               )}
               <i className="fas fa-save me-2" />
-              <span>Apply Configuration</span>
+              <span>{t('hostCharts.arcConfiguration.applyButtonLabel')}</span>
             </button>
 
             <button
@@ -172,7 +182,7 @@ const ArcConfiguration = ({ server }) => {
                 />
               )}
               <i className="fas fa-undo me-2" />
-              <span>Reset to Defaults</span>
+              <span>{t('hostCharts.arcConfiguration.resetButtonLabel')}</span>
             </button>
           </div>
         </div>
@@ -185,9 +195,9 @@ const ArcConfiguration = ({ server }) => {
         isOpen={showResetConfirm}
         onClose={cancelReset}
         onConfirm={confirmResetToDefaults}
-        title="Reset ARC Configuration"
-        message="Are you sure you want to reset ARC configuration to defaults? This will remove all custom settings."
-        confirmText="Reset to Defaults"
+        title={t('hostCharts.arcConfiguration.resetConfirmTitle')}
+        message={t('hostCharts.arcConfiguration.resetConfirmMessage')}
+        confirmText={t('hostCharts.arcConfiguration.resetConfirmButtonLabel')}
         confirmVariant="warning"
         loading={loading}
       />

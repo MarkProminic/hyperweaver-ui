@@ -2,6 +2,7 @@ import { AttachAddon } from '@xterm/addon-attach';
 import { FitAddon } from '@xterm/addon-fit';
 import PropTypes from 'prop-types';
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useXTerm } from 'react-xtermjs';
 
 import { getAgentBasePath, fetchWsTicket, makeAgentRequest } from '../api/serverUtils';
@@ -47,6 +48,7 @@ const SshConsoleDisplay = ({
   hasZlogin,
   hasRdp,
 }) => {
+  const { t } = useTranslation();
   const { instance, ref } = useXTerm();
   const wsRef = useRef(null);
   const { isDirect } = useMode();
@@ -97,7 +99,7 @@ const SshConsoleDisplay = ({
         instance.focus();
       };
       ws.onclose = () => {
-        instance.writeln('\r\n[connection closed]');
+        instance.writeln(`\r\n${t('console.sshConsoleDisplay.connectionClosed')}`);
       };
     });
 
@@ -114,7 +116,7 @@ const SshConsoleDisplay = ({
         wsRef.current = null;
       }
     };
-  }, [instance, ref, currentServer, session?.id]);
+  }, [instance, ref, currentServer, session?.id, t]);
 
   const handlePaste = async () => {
     try {
@@ -179,16 +181,21 @@ const SshConsoleDisplay = ({
       <div className="bg-dark text-white p-3 d-flex justify-content-between align-items-center flex-shrink-0">
         <div>
           <h6 className="fs-6 fw-bold text-white mb-1">
-            SSH — {session?.ssh_username ? `${session.ssh_username}@` : ''}
+            {t('console.sshConsoleDisplay.sshLabel')} —{' '}
+            {session?.ssh_username ? `${session.ssh_username}@` : ''}
             {selectedMachine}
           </h6>
           <p className="small text-white-50 mb-0">
-            Interactive shell inside the guest
+            {t('console.sshConsoleDisplay.interactiveShellDesc')}
             {session?.ssh_host && (
               <>
                 {' — '}
                 <code className="text-white-50">{session.ssh_host}</code>
-                {ipCandidates.length > 1 && ` (address ${ipIndex + 1}/${ipCandidates.length})`}
+                {ipCandidates.length > 1 &&
+                  t('console.sshConsoleDisplay.addressCount', {
+                    index: ipIndex + 1,
+                    count: ipCandidates.length,
+                  })}
               </>
             )}
           </p>
@@ -198,7 +205,7 @@ const SshConsoleDisplay = ({
             type="button"
             className="btn btn-sm btn-info"
             onClick={handlePaste}
-            title="Paste from Browser Clipboard"
+            title={t('console.sshConsoleDisplay.pasteFromClipboard')}
           >
             <i className="fas fa-paste" />
           </button>
@@ -208,7 +215,9 @@ const SshConsoleDisplay = ({
               className="btn btn-sm btn-warning"
               onClick={handleNextAddress}
               disabled={loading}
-              title={`Dead shell? Reconnect to the guest's next address: ${ipCandidates[nextIndex]}`}
+              title={t('console.sshConsoleDisplay.deadShellReconnect', {
+                address: ipCandidates[nextIndex],
+              })}
             >
               <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-shuffle'}`} />
             </button>
@@ -219,7 +228,7 @@ const SshConsoleDisplay = ({
                 type="button"
                 className="btn btn-sm btn-warning"
                 onClick={() => setActiveConsoleType('vnc')}
-                title="Switch to VNC Console"
+                title={t('console.sshConsoleDisplay.switchToVnc')}
               >
                 <i className="fas fa-desktop" />
               </button>
@@ -240,7 +249,7 @@ const SshConsoleDisplay = ({
                   })
                 }
                 disabled={loadingVnc}
-                title="Start VNC Console"
+                title={t('console.sshConsoleDisplay.startVnc')}
               >
                 <i className={`fas ${loadingVnc ? 'fa-spinner fa-pulse' : 'fa-desktop'}`} />
               </button>
@@ -251,7 +260,7 @@ const SshConsoleDisplay = ({
                 type="button"
                 className="btn btn-sm btn-warning"
                 onClick={() => setActiveConsoleType('zlogin')}
-                title="Switch to zlogin Console"
+                title={t('console.sshConsoleDisplay.switchToZlogin')}
               >
                 <i className="fas fa-terminal" />
               </button>
@@ -271,7 +280,7 @@ const SshConsoleDisplay = ({
                   })
                 }
                 disabled={loading}
-                title="Start zlogin Console"
+                title={t('console.sshConsoleDisplay.startZlogin')}
               >
                 <i className={`fas ${loading ? 'fa-spinner fa-pulse' : 'fa-terminal'}`} />
               </button>
@@ -282,7 +291,7 @@ const SshConsoleDisplay = ({
                 type="button"
                 className="btn btn-sm btn-info"
                 onClick={() => setActiveConsoleType('rdp')}
-                title="Switch to RDP Console"
+                title={t('console.sshConsoleDisplay.switchToRdp')}
               >
                 <i className="fab fa-windows" />
               </button>
@@ -301,7 +310,7 @@ const SshConsoleDisplay = ({
                   })
                 }
                 disabled={loading}
-                title="Start the browser VRDP console (VRDE over the agent)"
+                title={t('console.sshConsoleDisplay.startRdp')}
               >
                 <i className={loading ? 'fas fa-spinner fa-pulse' : 'fab fa-windows'} />
               </button>
@@ -315,7 +324,7 @@ const SshConsoleDisplay = ({
                   launchRdp({ currentServer, selectedMachine, isDirect, setLoading, setError })
                 }
                 disabled={loading}
-                title="Open a native VRDP session (VRDE console or the guest’s own RDP)"
+                title={t('console.sshConsoleDisplay.openNativeVrdp')}
               >
                 <i className="fas fa-display" />
               </button>
@@ -334,8 +343,8 @@ const SshConsoleDisplay = ({
                 disabled={!isDirect}
                 title={
                   isDirect
-                    ? "Open the machine's working directory in the host's file manager"
-                    : 'Available in Direct (desktop) mode only'
+                    ? t('console.sshConsoleDisplay.openWorkingDirectory')
+                    : t('console.sshConsoleDisplay.directModeOnly')
                 }
               >
                 <i className="fas fa-folder-open" />
@@ -352,7 +361,7 @@ const SshConsoleDisplay = ({
                     setError,
                   })
                 }
-                title="Open your sftp client (WinSCP/FileZilla/Finder) at this machine"
+                title={t('console.sshConsoleDisplay.openSftpClient')}
               >
                 <i className="fas fa-file-arrow-down" />
               </button>
@@ -362,10 +371,10 @@ const SshConsoleDisplay = ({
             type="button"
             className="btn btn-sm btn-danger"
             onClick={handleStop}
-            title="Stop the SSH session"
+            title={t('console.sshConsoleDisplay.stopSession')}
           >
             <i className="fas fa-stop me-2" />
-            <span>Stop SSH</span>
+            <span>{t('console.sshConsoleDisplay.stopSsh')}</span>
           </button>
         </div>
       </div>

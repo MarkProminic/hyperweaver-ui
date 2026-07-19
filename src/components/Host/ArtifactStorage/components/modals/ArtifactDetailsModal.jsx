@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../../../contexts/ServerContext';
 import ContentModal from '../../../../common/ContentModal';
 
 const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
+  const { t } = useTranslation();
   const { makeAgentRequest } = useServers();
   const [downloadError, setDownloadError] = useState('');
 
@@ -20,7 +22,7 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
 
   const formatDate = dateString => {
     if (!dateString) {
-      return 'N/A';
+      return t('artifacts.artifactDetailsModal.notAvailable');
     }
 
     try {
@@ -57,11 +59,11 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
 
   const getChecksumStatusText = verified => {
     if (verified === true) {
-      return 'Verified';
+      return t('artifacts.artifactDetailsModal.verifiedStatus');
     } else if (verified === false) {
-      return 'Mismatch';
+      return t('artifacts.artifactDetailsModal.mismatchStatus');
     }
-    return 'Not verified';
+    return t('artifacts.artifactDetailsModal.notVerifiedStatus');
   };
 
   const getFileTypeTagClass = fileType => {
@@ -133,42 +135,49 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
       <div>
         <div className="row">
           <div className="col">
-            <h4 className="fs-5 fw-bold">File Information</h4>
+            <h4 className="fs-5 fw-bold">
+              {t('artifacts.artifactDetailsModal.fileInformationHeading')}
+            </h4>
 
             <div className="table-responsive">
               <table className="table table-sm">
                 <tbody>
                   <tr>
                     <td>
-                      <strong>Filename:</strong>
+                      <strong>{t('artifacts.artifactDetailsModal.filenameLabel')}</strong>
                     </td>
                     <td className="font-monospace">{artifactData.filename}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>File Type:</strong>
+                      <strong>{t('artifacts.artifactDetailsModal.fileTypeLabel')}</strong>
                     </td>
                     <td>
                       <span className={`badge ${getFileTypeTagClass(artifactData.file_type)}`}>
-                        {artifactData.file_type?.toUpperCase() || 'Unknown'}
+                        {artifactData.file_type?.toUpperCase() ||
+                          t('artifacts.artifactDetailsModal.unknownType')}
                       </span>
                     </td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Extension:</strong>
+                      <strong>{t('artifacts.artifactDetailsModal.extensionLabel')}</strong>
                     </td>
-                    <td className="font-monospace">{artifactData.extension || 'N/A'}</td>
+                    <td className="font-monospace">
+                      {artifactData.extension || t('artifacts.artifactDetailsModal.notAvailable')}
+                    </td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>MIME Type:</strong>
+                      <strong>{t('artifacts.artifactDetailsModal.mimeTypeLabel')}</strong>
                     </td>
-                    <td className="font-monospace">{artifactData.mime_type || 'N/A'}</td>
+                    <td className="font-monospace">
+                      {artifactData.mime_type || t('artifacts.artifactDetailsModal.notAvailable')}
+                    </td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>File Size:</strong>
+                      <strong>{t('artifacts.artifactDetailsModal.fileSizeLabel')}</strong>
                     </td>
                     <td>
                       <strong>{formatSize(artifactData.size)}</strong>
@@ -179,7 +188,7 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
                   </tr>
                   <tr>
                     <td>
-                      <strong>Path:</strong>
+                      <strong>{t('artifacts.artifactDetailsModal.pathLabel')}</strong>
                     </td>
                     <td className="font-monospace small">{artifactData.path}</td>
                   </tr>
@@ -189,7 +198,9 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
           </div>
 
           <div className="col">
-            <h4 className="fs-5 fw-bold">Storage Details</h4>
+            <h4 className="fs-5 fw-bold">
+              {t('artifacts.artifactDetailsModal.storageDetailsHeading')}
+            </h4>
 
             <div className="table-responsive">
               <table className="table table-sm">
@@ -198,13 +209,13 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
                     <>
                       <tr>
                         <td>
-                          <strong>Storage Name:</strong>
+                          <strong>{t('artifacts.artifactDetailsModal.storageNameLabel')}</strong>
                         </td>
                         <td>{artifactData.storage_location.name}</td>
                       </tr>
                       <tr>
                         <td>
-                          <strong>Storage Path:</strong>
+                          <strong>{t('artifacts.artifactDetailsModal.storagePathLabel')}</strong>
                         </td>
                         <td className="font-monospace small">
                           {artifactData.storage_location.path}
@@ -212,7 +223,7 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
                       </tr>
                       <tr>
                         <td>
-                          <strong>Storage Type:</strong>
+                          <strong>{t('artifacts.artifactDetailsModal.storageTypeLabel')}</strong>
                         </td>
                         <td>
                           <span className="badge text-bg-secondary">
@@ -224,14 +235,14 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
                   )}
                   <tr>
                     <td>
-                      <strong>Discovered:</strong>
+                      <strong>{t('artifacts.artifactDetailsModal.discoveredLabel')}</strong>
                     </td>
                     <td>{formatDate(artifactData.discovered_at)}</td>
                   </tr>
                   {artifactData.source_url && (
                     <tr>
                       <td>
-                        <strong>Source URL:</strong>
+                        <strong>{t('artifacts.artifactDetailsModal.sourceUrlLabel')}</strong>
                       </td>
                       <td>
                         <a
@@ -262,7 +273,7 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
             <span className="me-1">
               <i className="fas fa-shield-alt" />
             </span>
-            <span>Checksum Information</span>
+            <span>{t('artifacts.artifactDetailsModal.checksumInformationHeading')}</span>
           </span>
         </h4>
 
@@ -270,13 +281,13 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
           <div className="col">
             <div className="mb-3">
               <label htmlFor="artifact-checksum" className="form-label">
-                Checksum
+                {t('artifacts.artifactDetailsModal.checksumLabel')}
               </label>
               <input
                 id="artifact-checksum"
                 className="form-control font-monospace small"
                 type="text"
-                value={artifactData.checksum || 'Not calculated'}
+                value={artifactData.checksum || t('artifacts.artifactDetailsModal.notCalculated')}
                 readOnly
               />
             </div>
@@ -286,10 +297,13 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
         <div className="row">
           <div className="col-auto">
             <div className="mb-3">
-              <span className="form-label">Algorithm</span>
+              <span className="form-label">
+                {t('artifacts.artifactDetailsModal.algorithmLabel')}
+              </span>
               <div>
                 <span className="badge text-bg-info">
-                  {artifactData.checksum_algorithm?.toUpperCase() || 'N/A'}
+                  {artifactData.checksum_algorithm?.toUpperCase() ||
+                    t('artifacts.artifactDetailsModal.notAvailable')}
                 </span>
               </div>
             </div>
@@ -297,7 +311,9 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
 
           <div className="col-auto">
             <div className="mb-3">
-              <span className="form-label">Verification Status</span>
+              <span className="form-label">
+                {t('artifacts.artifactDetailsModal.verificationStatusLabel')}
+              </span>
               <div>
                 <span className="d-inline-flex align-items-center">
                   <span className="me-1">
@@ -316,18 +332,14 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
 
         {artifactData.checksum_verified === false && (
           <div className="alert alert-warning">
-            <p>
-              <strong>Checksum Mismatch Warning:</strong> The calculated checksum does not match the
-              expected checksum. This could indicate file corruption or an incorrect expected
-              checksum value.
-            </p>
+            <p>{t('artifacts.artifactDetailsModal.checksumMismatchWarning')}</p>
           </div>
         )}
       </div>
 
       {/* Actions Section */}
       <div>
-        <h4 className="fs-5 fw-bold">Actions</h4>
+        <h4 className="fs-5 fw-bold">{t('artifacts.artifactDetailsModal.actionsHeading')}</h4>
 
         {downloadError && (
           <div className="alert alert-danger">
@@ -341,23 +353,29 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
             <span className="me-1">
               <i className="fas fa-download" />
             </span>
-            <span>Download File</span>
+            <span>{t('artifacts.artifactDetailsModal.downloadFileButton')}</span>
           </button>
         </div>
       </div>
 
       {/* Technical Details */}
       <div>
-        <h4 className="fs-5 fw-bold">Technical Details</h4>
+        <h4 className="fs-5 fw-bold">
+          {t('artifacts.artifactDetailsModal.technicalDetailsHeading')}
+        </h4>
         <div className="alert alert-secondary">
           <div className="row">
             <div className="col">
-              <p className="text-uppercase small fw-semibold text-muted">Artifact ID</p>
+              <p className="text-uppercase small fw-semibold text-muted">
+                {t('artifacts.artifactDetailsModal.artifactIdLabel')}
+              </p>
               <p className="font-monospace small">{artifactData.id}</p>
             </div>
             {artifactData.storage_location && (
               <div className="col">
-                <p className="text-uppercase small fw-semibold text-muted">Storage Location ID</p>
+                <p className="text-uppercase small fw-semibold text-muted">
+                  {t('artifacts.artifactDetailsModal.storageLocationIdLabel')}
+                </p>
                 <p className="font-monospace small">{artifactData.storage_location.id}</p>
               </div>
             )}
@@ -373,15 +391,11 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
               <span className="me-1">
                 <i className="fas fa-compact-disc" />
               </span>
-              <span>ISO Information</span>
+              <span>{t('artifacts.artifactDetailsModal.isoInformationHeading')}</span>
             </span>
           </h4>
           <div className="alert alert-info">
-            <p>
-              This is an ISO 9660 disc image file, commonly used for distributing operating systems,
-              software, and other bootable media. ISO files can be mounted as virtual drives or
-              burned to physical media.
-            </p>
+            <p>{t('artifacts.artifactDetailsModal.isoDescription')}</p>
           </div>
         </div>
       )}
@@ -394,15 +408,11 @@ const ArtifactDetailsModal = ({ artifact, details, server, onClose }) => {
                 <span className="me-1">
                   <i className="fas fa-hdd" />
                 </span>
-                <span>VM Image Information</span>
+                <span>{t('artifacts.artifactDetailsModal.vmImageInformationHeading')}</span>
               </span>
             </h4>
             <div className="alert alert-warning">
-              <p>
-                This is a virtual machine disk image file. These files contain complete virtual
-                machine hard drives and can be used with hypervisors such as VMware, VirtualBox,
-                KVM, or Hyper-V.
-              </p>
+              <p>{t('artifacts.artifactDetailsModal.vmImageDescription')}</p>
             </div>
           </div>
         )}

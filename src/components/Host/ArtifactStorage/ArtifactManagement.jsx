@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../contexts/ServerContext';
 import { ConfirmModal } from '../../common';
@@ -24,6 +25,7 @@ const getDownloadTagClass = status => {
 };
 
 const ArtifactManagement = ({ server }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('storage-paths');
 
   // Storage Paths state
@@ -402,7 +404,7 @@ const ArtifactManagement = ({ server }) => {
   if (!server) {
     return (
       <div className="alert alert-info">
-        <p>No server selected for artifact management.</p>
+        <p>{t('artifacts.artifactManagement.noServerSelected')}</p>
       </div>
     );
   }
@@ -413,9 +415,11 @@ const ArtifactManagement = ({ server }) => {
         isOpen={deleteStoragePathTarget !== null}
         onClose={() => setDeleteStoragePathTarget(null)}
         onConfirm={handleStoragePathDelete}
-        title="Delete Storage Path"
-        message={`Are you sure you want to delete storage path "${deleteStoragePathTarget?.name}"? This will remove the storage location but not the files themselves.`}
-        confirmText="Delete"
+        title={t('artifacts.artifactManagement.deleteStoragePathTitle')}
+        message={t('artifacts.artifactManagement.deleteStoragePathMessage', {
+          name: deleteStoragePathTarget?.name,
+        })}
+        confirmText={t('artifacts.artifactManagement.deleteButton')}
         confirmVariant="is-danger"
         icon="fas fa-trash"
         loading={storagePathsLoading}
@@ -425,9 +429,11 @@ const ArtifactManagement = ({ server }) => {
         isOpen={deleteArtifactIds !== null}
         onClose={() => setDeleteArtifactIds(null)}
         onConfirm={handleArtifactDelete}
-        title="Delete Artifacts"
-        message={`Are you sure you want to delete ${deleteArtifactIds?.length || 0} artifact(s)? This will permanently remove the files from storage.`}
-        confirmText="Delete"
+        title={t('artifacts.artifactManagement.deleteArtifactsTitle')}
+        message={t('artifacts.artifactManagement.deleteArtifactsMessage', {
+          count: deleteArtifactIds?.length || 0,
+        })}
+        confirmText={t('artifacts.artifactManagement.deleteButton')}
         confirmVariant="is-danger"
         icon="fas fa-trash"
         loading={artifactsLoading}
@@ -444,7 +450,7 @@ const ArtifactManagement = ({ server }) => {
             <span className="me-1">
               <i className="fas fa-folder" />
             </span>
-            <span>Storage Locations</span>
+            <span>{t('artifacts.artifactManagement.storageLocationsTab')}</span>
           </button>
         </li>
         <li className="nav-item">
@@ -456,7 +462,7 @@ const ArtifactManagement = ({ server }) => {
             <span className="me-1">
               <i className="fas fa-compact-disc" />
             </span>
-            <span>Artifacts</span>
+            <span>{t('artifacts.artifactManagement.artifactsTab')}</span>
           </button>
         </li>
       </ul>
@@ -477,12 +483,13 @@ const ArtifactManagement = ({ server }) => {
                   <span className="me-2">
                     <i className="fas fa-folder" />
                   </span>
-                  <span>Storage Locations</span>
+                  <span>{t('artifacts.artifactManagement.storageLocationsHeading')}</span>
                 </span>
               </h3>
               <p>
-                Configure designated storage locations for ISO files and VM artifacts on{' '}
-                <strong>{server.hostname}</strong>.
+                {t('artifacts.artifactManagement.storageLocationsDescription', {
+                  hostname: server.hostname,
+                })}
               </p>
             </div>
 
@@ -491,7 +498,9 @@ const ArtifactManagement = ({ server }) => {
                 <div className="d-flex justify-content-between align-items-center mb-4">
                   <div>
                     <h4 className="fs-6 fw-bold">
-                      Storage Paths ({storagePaths.length})
+                      {t('artifacts.artifactManagement.storagePathsCount', {
+                        count: storagePaths.length,
+                      })}
                       {storagePathsLoading && (
                         <span className="ms-2">
                           <i className="fas fa-spinner fa-spin" />
@@ -509,7 +518,7 @@ const ArtifactManagement = ({ server }) => {
                         <span className="me-1">
                           <i className="fas fa-sync-alt" />
                         </span>
-                        <span>Refresh</span>
+                        <span>{t('artifacts.artifactManagement.refreshButton')}</span>
                       </button>
                       <button
                         className="btn btn-primary"
@@ -519,7 +528,7 @@ const ArtifactManagement = ({ server }) => {
                         <span className="me-1">
                           <i className="fas fa-plus" />
                         </span>
-                        <span>Create Storage Path</span>
+                        <span>{t('artifacts.artifactManagement.createStoragePathButton')}</span>
                       </button>
                     </div>
                   </div>
@@ -549,12 +558,13 @@ const ArtifactManagement = ({ server }) => {
                   <span className="me-2">
                     <i className="fas fa-compact-disc" />
                   </span>
-                  <span>Artifacts</span>
+                  <span>{t('artifacts.artifactManagement.artifactsHeading')}</span>
                 </span>
               </h3>
               <p>
-                Manage ISO files, VM images, and other artifacts stored on{' '}
-                <strong>{server.hostname}</strong>.
+                {t('artifacts.artifactManagement.artifactsDescription', {
+                  hostname: server.hostname,
+                })}
               </p>
             </div>
 
@@ -567,8 +577,9 @@ const ArtifactManagement = ({ server }) => {
                         <i className="fas fa-download" />
                       </span>
                       <span>
-                        <strong>{activeDownloadsList.length}</strong> download
-                        {activeDownloadsList.length !== 1 ? 's' : ''} in progress
+                        {t('artifacts.artifactManagement.downloadsInProgress', {
+                          count: activeDownloadsList.length,
+                        })}
                       </span>
                     </div>
                   </div>

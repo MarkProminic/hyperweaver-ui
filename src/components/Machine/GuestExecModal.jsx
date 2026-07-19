@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getGuestExecStatus, runGuestControl, runGuestExec } from '../../api/machineAPI';
 import { FormModal, RevealInput } from '../common';
@@ -19,6 +20,7 @@ const GuestExecModal = ({
   isRunning,
   flavor = 'additions',
 }) => {
+  const { t } = useTranslation();
   const [path, setPath] = useState('');
   const [args, setArgs] = useState('');
   const [username, setUsername] = useState('');
@@ -71,7 +73,7 @@ const GuestExecModal = ({
 
   const handleSubmit = async () => {
     if (!path.trim()) {
-      setError('Enter the executable path inside the guest.');
+      setError(t('machine.guestExecModal.pathRequired'));
       return;
     }
     const argList = args
@@ -129,19 +131,19 @@ const GuestExecModal = ({
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Run in guest — ${machineName}`}
+      title={t('machine.guestExecModal.title', { machineName })}
       icon="fas fa-terminal"
-      submitText="Run"
+      submitText={t('machine.guestExecModal.submit')}
       submitIcon="fas fa-play"
       loading={loading || pendingPid !== null}
       showCancelButton
     >
       {!isRunning && (
         <div className="alert alert-warning py-2">
-          {machineName} is not running —{' '}
+          {t('machine.guestExecModal.notRunningPrefix', { machineName })}{' '}
           {qga
-            ? 'the guest agent needs a running guest.'
-            : 'Guest Additions exec needs a running guest.'}
+            ? t('machine.guestExecModal.qgaNeedsRunning')
+            : t('machine.guestExecModal.additionsNeedsRunning')}
         </div>
       )}
       {error && <div className="alert alert-danger py-2">{error}</div>}
@@ -149,13 +151,13 @@ const GuestExecModal = ({
       <div className="row g-3">
         <div className="col-12 col-md-8">
           <label className="form-label" htmlFor="guest-exec-path">
-            Executable path (inside the guest) <span className="text-danger">*</span>
+            {t('machine.guestExecModal.pathLabel')} <span className="text-danger">*</span>
           </label>
           <input
             id="guest-exec-path"
             className="form-control"
             type="text"
-            placeholder="e.g. /usr/bin/uname or C:\Windows\System32\ipconfig.exe"
+            placeholder={t('machine.guestExecModal.pathPlaceholder')}
             value={path}
             onChange={e => setPath(e.target.value)}
             disabled={loading}
@@ -163,7 +165,7 @@ const GuestExecModal = ({
         </div>
         <div className="col-12 col-md-4">
           <label className="form-label" htmlFor="guest-exec-timeout">
-            Timeout (seconds)
+            {t('machine.guestExecModal.timeoutLabel')}
           </label>
           <input
             id="guest-exec-timeout"
@@ -171,7 +173,11 @@ const GuestExecModal = ({
             type="number"
             min="1"
             {...(qga && { max: 600 })}
-            placeholder={qga ? '30, max 600' : 'n/a'}
+            placeholder={
+              qga
+                ? t('machine.guestExecModal.timeoutPlaceholderQga')
+                : t('machine.guestExecModal.timeoutPlaceholderNa')
+            }
             value={timeoutSeconds}
             onChange={e => setTimeoutSeconds(e.target.value)}
             disabled={loading}
@@ -179,7 +185,7 @@ const GuestExecModal = ({
         </div>
         <div className="col-12">
           <label className="form-label" htmlFor="guest-exec-args">
-            Arguments (one per line)
+            {t('machine.guestExecModal.argsLabel')}
           </label>
           <textarea
             id="guest-exec-args"
@@ -194,13 +200,13 @@ const GuestExecModal = ({
           <>
             <div className="col-12 col-md-6">
               <label className="form-label" htmlFor="guest-exec-username">
-                Guest username
+                {t('machine.guestExecModal.usernameLabel')}
               </label>
               <input
                 id="guest-exec-username"
                 className="form-control"
                 type="text"
-                placeholder="the machine's stored SSH user"
+                placeholder={t('machine.guestExecModal.usernamePlaceholder')}
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 disabled={loading}
@@ -208,13 +214,13 @@ const GuestExecModal = ({
             </div>
             <div className="col-12 col-md-6">
               <label className="form-label" htmlFor="guest-exec-password">
-                Guest password
+                {t('machine.guestExecModal.passwordLabel')}
               </label>
               <RevealInput
                 id="guest-exec-password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="the stored password"
+                placeholder={t('machine.guestExecModal.passwordPlaceholder')}
                 disabled={loading}
               />
             </div>
@@ -222,10 +228,7 @@ const GuestExecModal = ({
         )}
         {qga && (
           <div className="col-12">
-            <span className="form-text">
-              Runs through the guest-agent channel as the agent&apos;s in-guest user — no
-              credentials needed.
-            </span>
+            <span className="form-text">{t('machine.guestExecModal.qgaNoCredentialsNote')}</span>
           </div>
         )}
       </div>
@@ -233,17 +236,19 @@ const GuestExecModal = ({
       {pendingPid !== null && (
         <div className="alert alert-info py-2 mt-3 mb-0">
           <i className="fas fa-spinner fa-pulse me-2" />
-          Still running in the guest (pid {pendingPid}) — polling for the result…
+          {t('machine.guestExecModal.pollingNote', { pid: pendingPid })}
         </div>
       )}
 
       {output && (
         <div className="mt-3">
           <span className={`badge ${exitCode === 0 ? 'text-bg-success' : 'text-bg-danger'}`}>
-            exit {exitCode ?? '?'}
+            {t('machine.guestExecModal.exitBadge', { code: exitCode ?? '?' })}
           </span>
           {output.signal !== undefined && output.signal !== null && (
-            <span className="badge text-bg-warning ms-1">signal {output.signal}</span>
+            <span className="badge text-bg-warning ms-1">
+              {t('machine.guestExecModal.signalBadge', { signal: output.signal })}
+            </span>
           )}
           {output.stdout && (
             <pre className="small border rounded p-2 mt-2 mb-0">{output.stdout}</pre>

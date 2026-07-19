@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const formatBandwidth = mbps => {
   if (mbps >= 1) {
@@ -29,102 +30,110 @@ const DiskIOTable = ({
   resetDiskIOSort,
   sectionsCollapsed,
   toggleSection,
-}) => (
-  <div className="card mb-4">
-    <div className="card-body">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <div className="d-flex align-items-center gap-2">
-          <button
-            className="fs-5 fw-bold mb-0 cursor-pointer btn btn-link p-0"
-            onClick={resetDiskIOSort}
-            title="Click to reset sorting to default"
-            type="button"
-          >
-            <i className="fas fa-chart-bar me-2" />
-            <span>Real-Time Disk I/O Statistics ({diskIOStats.length})</span>
-            {diskIOSort.length > 1 && <i className="fas fa-sort-amount-down text-info ms-2" />}
-          </button>
-        </div>
-        <div className="d-flex align-items-center gap-2">
-          <button
-            className="btn btn-link btn-sm"
-            type="button"
-            onClick={() => toggleSection('diskIO')}
-            title={sectionsCollapsed.diskIO ? 'Expand section' : 'Collapse section'}
-          >
-            <i
-              className={`fas ${sectionsCollapsed.diskIO ? 'fa-chevron-down' : 'fa-chevron-up'}`}
-            />
-          </button>
-        </div>
-      </div>
-      {!sectionsCollapsed.diskIO && (
-        <>
-          {diskIOStats.length > 0 ? (
-            <div className="table-responsive">
-              <table className="table table-striped table-hover table-sm">
-                <thead>
-                  <tr>
-                    <th>Device</th>
-                    <th>Pool</th>
-                    <th>Read Ops</th>
-                    <th>Write Ops</th>
-                    <th>Read Bandwidth</th>
-                    <th>Write Bandwidth</th>
-                    <th>Total I/O</th>
-                    <th>Last Updated</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {diskIOStats.map(io => {
-                    const readMBps = (io.read_bandwidth_bytes || 0) / (1024 * 1024);
-                    const writeMBps = (io.write_bandwidth_bytes || 0) / (1024 * 1024);
-                    const totalMBps = readMBps + writeMBps;
+}) => {
+  const { t } = useTranslation();
 
-                    return (
-                      <tr key={`diskio-${io.device_name}-${io.scan_timestamp}`}>
-                        <td>
-                          <strong>{io.device_name}</strong>
-                        </td>
-                        <td>
-                          <span className="badge text-bg-primary">{io.pool}</span>
-                        </td>
-                        <td>{io.read_ops}</td>
-                        <td>{io.write_ops}</td>
-                        <td>
-                          <span className="badge text-bg-info">{formatBandwidth(readMBps)}</span>
-                        </td>
-                        <td>
-                          <span className="badge text-bg-warning">
-                            {formatBandwidth(writeMBps)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge ${getTotalIOClass(totalMBps)}`}>
-                            {formatBandwidth(totalMBps)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="text-muted small">
-                            {new Date(io.scan_timestamp).toLocaleTimeString()}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="alert alert-info">
-              <p>No disk I/O statistics available. The backend may still be collecting data.</p>
-            </div>
-          )}
-        </>
-      )}
+  return (
+    <div className="card mb-4">
+      <div className="card-body">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <div className="d-flex align-items-center gap-2">
+            <button
+              className="fs-5 fw-bold mb-0 cursor-pointer btn btn-link p-0"
+              onClick={resetDiskIOSort}
+              title={t('host.diskIOTable.resetSortTitle')}
+              type="button"
+            >
+              <i className="fas fa-chart-bar me-2" />
+              <span>{t('host.diskIOTable.titleWithCount', { count: diskIOStats.length })}</span>
+              {diskIOSort.length > 1 && <i className="fas fa-sort-amount-down text-info ms-2" />}
+            </button>
+          </div>
+          <div className="d-flex align-items-center gap-2">
+            <button
+              className="btn btn-link btn-sm"
+              type="button"
+              onClick={() => toggleSection('diskIO')}
+              title={
+                sectionsCollapsed.diskIO
+                  ? t('host.diskIOTable.expand')
+                  : t('host.diskIOTable.collapse')
+              }
+            >
+              <i
+                className={`fas ${sectionsCollapsed.diskIO ? 'fa-chevron-down' : 'fa-chevron-up'}`}
+              />
+            </button>
+          </div>
+        </div>
+        {!sectionsCollapsed.diskIO && (
+          <>
+            {diskIOStats.length > 0 ? (
+              <div className="table-responsive">
+                <table className="table table-striped table-hover table-sm">
+                  <thead>
+                    <tr>
+                      <th>{t('host.diskIOTable.deviceHeader')}</th>
+                      <th>{t('host.diskIOTable.poolHeader')}</th>
+                      <th>{t('host.diskIOTable.readOpsHeader')}</th>
+                      <th>{t('host.diskIOTable.writeOpsHeader')}</th>
+                      <th>{t('host.diskIOTable.readBandwidthHeader')}</th>
+                      <th>{t('host.diskIOTable.writeBandwidthHeader')}</th>
+                      <th>{t('host.diskIOTable.totalIoHeader')}</th>
+                      <th>{t('host.diskIOTable.lastUpdatedHeader')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {diskIOStats.map(io => {
+                      const readMBps = (io.read_bandwidth_bytes || 0) / (1024 * 1024);
+                      const writeMBps = (io.write_bandwidth_bytes || 0) / (1024 * 1024);
+                      const totalMBps = readMBps + writeMBps;
+
+                      return (
+                        <tr key={`diskio-${io.device_name}-${io.scan_timestamp}`}>
+                          <td>
+                            <strong>{io.device_name}</strong>
+                          </td>
+                          <td>
+                            <span className="badge text-bg-primary">{io.pool}</span>
+                          </td>
+                          <td>{io.read_ops}</td>
+                          <td>{io.write_ops}</td>
+                          <td>
+                            <span className="badge text-bg-info">{formatBandwidth(readMBps)}</span>
+                          </td>
+                          <td>
+                            <span className="badge text-bg-warning">
+                              {formatBandwidth(writeMBps)}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`badge ${getTotalIOClass(totalMBps)}`}>
+                              {formatBandwidth(totalMBps)}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="text-muted small">
+                              {new Date(io.scan_timestamp).toLocaleTimeString()}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="alert alert-info">
+                <p>{t('host.diskIOTable.empty')}</p>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 DiskIOTable.propTypes = {
   diskIOStats: PropTypes.array.isRequired,

@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 // vbox.<section>.<key> — the VirtualBox knob tree (per-hypervisor `vbox`
 // document section, Mark's ruling). kind: onoff | int | string. `suggest`
@@ -205,13 +206,17 @@ export const VocabularySelect = ({
   small = false,
   disabled = false,
 }) => {
+  const { t } = useTranslation();
   const allRows = entries.map(entry =>
     entry && typeof entry === 'object' ? entry : { value: entry, label: String(entry) }
   );
   const rows = allRows.filter(
     row => String(row.value) !== blankLabel && String(row.label) !== blankLabel
   );
-  const blankText = rows.length === allRows.length ? blankLabel : `${blankLabel} - Default`;
+  const blankText =
+    rows.length === allRows.length
+      ? blankLabel
+      : t('machineEdit.common.blankLabelDefault', { label: blankLabel });
   return (
     <select
       id={id}
@@ -401,33 +406,35 @@ const CPU_TOPO_FIELDS = [
 export const cpuTopoProduct = topo =>
   (Number(topo.sockets) || 0) * (Number(topo.cores) || 0) * (Number(topo.threads) || 0);
 
-export const CpuTopologyInputs = ({ idPrefix, topo, onField, disabled }) => (
-  <>
-    {CPU_TOPO_FIELDS.map(([key, max]) => (
-      <div className="col-4 col-md-2" key={key}>
-        <label className="form-label" htmlFor={`${idPrefix}-${key}`}>
-          {key[0].toUpperCase() + key.slice(1)}
-        </label>
-        <input
-          id={`${idPrefix}-${key}`}
-          className="form-control"
-          type="number"
-          min="1"
-          max={max}
-          value={topo[key] ?? ''}
-          onChange={e => onField(key, e.target.value === '' ? '' : Number(e.target.value))}
-          disabled={disabled}
-        />
+export const CpuTopologyInputs = ({ idPrefix, topo, onField, disabled }) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      {CPU_TOPO_FIELDS.map(([key, max]) => (
+        <div className="col-4 col-md-2" key={key}>
+          <label className="form-label" htmlFor={`${idPrefix}-${key}`}>
+            {t(`machineEdit.cpuTopologyInputs.${key}`)}
+          </label>
+          <input
+            id={`${idPrefix}-${key}`}
+            className="form-control"
+            type="number"
+            min="1"
+            max={max}
+            value={topo[key] ?? ''}
+            onChange={e => onField(key, e.target.value === '' ? '' : Number(e.target.value))}
+            disabled={disabled}
+          />
+        </div>
+      ))}
+      <div className="col-12">
+        <span className={`form-text ${cpuTopoProduct(topo) > 32 ? 'text-danger' : 'text-muted'}`}>
+          {t('machineEdit.cpuTopologyInputs.limitsHint', { product: cpuTopoProduct(topo) || '…' })}
+        </span>
       </div>
-    ))}
-    <div className="col-12">
-      <span className={`form-text ${cpuTopoProduct(topo) > 32 ? 'text-danger' : 'text-muted'}`}>
-        sockets × cores × threads = {cpuTopoProduct(topo) || '…'} vCPUs — bhyve limits: sockets ≤16,
-        cores ≤32, threads ≤2, product ≤32. Over-limit values are refused by the agent.
-      </span>
-    </div>
-  </>
-);
+    </>
+  );
+};
 
 CpuTopologyInputs.propTypes = {
   idPrefix: PropTypes.string.isRequired,
@@ -439,132 +446,138 @@ CpuTopologyInputs.propTypes = {
 const portRow = fields => ({ key: Date.now() + Math.random(), ...fields });
 
 /** hardware.serial[] rows — {port 1-4, io_base, irq, mode, type}. */
-export const SerialPortsEditor = ({ rows, onRowsChange, disabled }) => (
-  <div className="d-flex flex-column gap-2">
-    {rows.map((row, index) => (
-      <div className="row g-2 align-items-end" key={`serial-${row.key}`}>
-        <div className="col-2 col-md-1">
-          <label className="form-label small mb-1" htmlFor={`serial-port-${row.key}`}>
-            Port
-          </label>
-          <select
-            id={`serial-port-${row.key}`}
-            className="form-select form-select-sm"
-            value={row.port}
-            onChange={e =>
-              onRowsChange(rows.map((r, i) => (i === index ? { ...r, port: e.target.value } : r)))
-            }
-            disabled={disabled}
-          >
-            {['1', '2', '3', '4'].map(port => (
-              <option key={port} value={port}>
-                {port}
-              </option>
-            ))}
-          </select>
+export const SerialPortsEditor = ({ rows, onRowsChange, disabled }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="d-flex flex-column gap-2">
+      {rows.map((row, index) => (
+        <div className="row g-2 align-items-end" key={`serial-${row.key}`}>
+          <div className="col-2 col-md-1">
+            <label className="form-label small mb-1" htmlFor={`serial-port-${row.key}`}>
+              {t('machineEdit.serialPortsEditor.port')}
+            </label>
+            <select
+              id={`serial-port-${row.key}`}
+              className="form-select form-select-sm"
+              value={row.port}
+              onChange={e =>
+                onRowsChange(rows.map((r, i) => (i === index ? { ...r, port: e.target.value } : r)))
+              }
+              disabled={disabled}
+            >
+              {['1', '2', '3', '4'].map(port => (
+                <option key={port} value={port}>
+                  {port}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="col-3 col-md-2">
+            <label className="form-label small mb-1" htmlFor={`serial-iobase-${row.key}`}>
+              {t('machineEdit.serialPortsEditor.ioBase')}
+            </label>
+            <input
+              id={`serial-iobase-${row.key}`}
+              className="form-control form-control-sm"
+              list={`serial-iobase-${row.key}-options`}
+              placeholder="off"
+              value={row.io_base}
+              onChange={e =>
+                onRowsChange(
+                  rows.map((r, i) => (i === index ? { ...r, io_base: e.target.value } : r))
+                )
+              }
+              disabled={disabled}
+            />
+            <datalist id={`serial-iobase-${row.key}-options`}>
+              {['off', '0x3F8', '0x2F8', '0x3E8', '0x2E8'].map(option => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </div>
+          <div className="col-2 col-md-1">
+            <label className="form-label small mb-1" htmlFor={`serial-irq-${row.key}`}>
+              {t('machineEdit.serialPortsEditor.irq')}
+            </label>
+            <input
+              id={`serial-irq-${row.key}`}
+              className="form-control form-control-sm"
+              type="number"
+              min="0"
+              value={row.irq}
+              onChange={e =>
+                onRowsChange(rows.map((r, i) => (i === index ? { ...r, irq: e.target.value } : r)))
+              }
+              disabled={disabled}
+            />
+          </div>
+          <div className="col-3 col-md-4">
+            <label className="form-label small mb-1" htmlFor={`serial-mode-${row.key}`}>
+              {t('machineEdit.serialPortsEditor.mode')}
+            </label>
+            <input
+              id={`serial-mode-${row.key}`}
+              className="form-control form-control-sm"
+              placeholder="disconnected | server <pipe> | tcpserver <port> | file <path> | <device>"
+              value={row.mode}
+              onChange={e =>
+                onRowsChange(rows.map((r, i) => (i === index ? { ...r, mode: e.target.value } : r)))
+              }
+              disabled={disabled}
+            />
+          </div>
+          <div className="col-2 col-md-2">
+            <label className="form-label small mb-1" htmlFor={`serial-type-${row.key}`}>
+              {t('machineEdit.serialPortsEditor.uartType')}
+            </label>
+            <input
+              id={`serial-type-${row.key}`}
+              className="form-control form-control-sm"
+              list={`serial-type-${row.key}-options`}
+              value={row.type}
+              onChange={e =>
+                onRowsChange(rows.map((r, i) => (i === index ? { ...r, type: e.target.value } : r)))
+              }
+              disabled={disabled}
+            />
+            <datalist id={`serial-type-${row.key}-options`}>
+              {['16450', '16550A', '16750'].map(option => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </div>
+          <div className="col-auto">
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-danger"
+              aria-label={t('machineEdit.serialPortsEditor.dropRow')}
+              onClick={() => onRowsChange(rows.filter(entry => entry.key !== row.key))}
+              disabled={disabled}
+            >
+              <i className="fas fa-trash" />
+            </button>
+          </div>
         </div>
-        <div className="col-3 col-md-2">
-          <label className="form-label small mb-1" htmlFor={`serial-iobase-${row.key}`}>
-            IO base
-          </label>
-          <input
-            id={`serial-iobase-${row.key}`}
-            className="form-control form-control-sm"
-            list={`serial-iobase-${row.key}-options`}
-            placeholder="off"
-            value={row.io_base}
-            onChange={e =>
-              onRowsChange(
-                rows.map((r, i) => (i === index ? { ...r, io_base: e.target.value } : r))
-              )
-            }
-            disabled={disabled}
-          />
-          <datalist id={`serial-iobase-${row.key}-options`}>
-            {['off', '0x3F8', '0x2F8', '0x3E8', '0x2E8'].map(option => (
-              <option key={option} value={option} />
-            ))}
-          </datalist>
-        </div>
-        <div className="col-2 col-md-1">
-          <label className="form-label small mb-1" htmlFor={`serial-irq-${row.key}`}>
-            IRQ
-          </label>
-          <input
-            id={`serial-irq-${row.key}`}
-            className="form-control form-control-sm"
-            type="number"
-            min="0"
-            value={row.irq}
-            onChange={e =>
-              onRowsChange(rows.map((r, i) => (i === index ? { ...r, irq: e.target.value } : r)))
-            }
-            disabled={disabled}
-          />
-        </div>
-        <div className="col-3 col-md-4">
-          <label className="form-label small mb-1" htmlFor={`serial-mode-${row.key}`}>
-            Mode
-          </label>
-          <input
-            id={`serial-mode-${row.key}`}
-            className="form-control form-control-sm"
-            placeholder="disconnected | server <pipe> | tcpserver <port> | file <path> | <device>"
-            value={row.mode}
-            onChange={e =>
-              onRowsChange(rows.map((r, i) => (i === index ? { ...r, mode: e.target.value } : r)))
-            }
-            disabled={disabled}
-          />
-        </div>
-        <div className="col-2 col-md-2">
-          <label className="form-label small mb-1" htmlFor={`serial-type-${row.key}`}>
-            UART type
-          </label>
-          <input
-            id={`serial-type-${row.key}`}
-            className="form-control form-control-sm"
-            list={`serial-type-${row.key}-options`}
-            value={row.type}
-            onChange={e =>
-              onRowsChange(rows.map((r, i) => (i === index ? { ...r, type: e.target.value } : r)))
-            }
-            disabled={disabled}
-          />
-          <datalist id={`serial-type-${row.key}-options`}>
-            {['16450', '16550A', '16750'].map(option => (
-              <option key={option} value={option} />
-            ))}
-          </datalist>
-        </div>
-        <div className="col-auto">
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-danger"
-            aria-label="Drop this serial port row"
-            onClick={() => onRowsChange(rows.filter(entry => entry.key !== row.key))}
-            disabled={disabled}
-          >
-            <i className="fas fa-trash" />
-          </button>
-        </div>
+      ))}
+      <div>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary"
+          onClick={() =>
+            onRowsChange([
+              ...rows,
+              portRow({ port: '1', io_base: '', irq: '', mode: '', type: '' }),
+            ])
+          }
+          disabled={disabled}
+        >
+          <i className="fas fa-plus me-2" />
+          {t('machineEdit.serialPortsEditor.addSerialPort')}
+        </button>
       </div>
-    ))}
-    <div>
-      <button
-        type="button"
-        className="btn btn-sm btn-outline-secondary"
-        onClick={() =>
-          onRowsChange([...rows, portRow({ port: '1', io_base: '', irq: '', mode: '', type: '' })])
-        }
-        disabled={disabled}
-      >
-        <i className="fas fa-plus me-2" />
-        Serial Port
-      </button>
     </div>
-  </div>
-);
+  );
+};
 
 SerialPortsEditor.propTypes = {
   rows: PropTypes.array.isRequired,
@@ -573,112 +586,117 @@ SerialPortsEditor.propTypes = {
 };
 
 /** hardware.parallel[] rows — {port 1-2, io_base, irq, device}. */
-export const ParallelPortsEditor = ({ rows, onRowsChange, disabled }) => (
-  <div className="d-flex flex-column gap-2">
-    {rows.map((row, index) => (
-      <div className="row g-2 align-items-end" key={`parallel-${row.key}`}>
-        <div className="col-2 col-md-1">
-          <label className="form-label small mb-1" htmlFor={`parallel-port-${row.key}`}>
-            Port
-          </label>
-          <select
-            id={`parallel-port-${row.key}`}
-            className="form-select form-select-sm"
-            value={row.port}
-            onChange={e =>
-              onRowsChange(rows.map((r, i) => (i === index ? { ...r, port: e.target.value } : r)))
-            }
-            disabled={disabled}
-          >
-            {['1', '2'].map(port => (
-              <option key={port} value={port}>
-                {port}
-              </option>
-            ))}
-          </select>
+export const ParallelPortsEditor = ({ rows, onRowsChange, disabled }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="d-flex flex-column gap-2">
+      {rows.map((row, index) => (
+        <div className="row g-2 align-items-end" key={`parallel-${row.key}`}>
+          <div className="col-2 col-md-1">
+            <label className="form-label small mb-1" htmlFor={`parallel-port-${row.key}`}>
+              {t('machineEdit.parallelPortsEditor.port')}
+            </label>
+            <select
+              id={`parallel-port-${row.key}`}
+              className="form-select form-select-sm"
+              value={row.port}
+              onChange={e =>
+                onRowsChange(rows.map((r, i) => (i === index ? { ...r, port: e.target.value } : r)))
+              }
+              disabled={disabled}
+            >
+              {['1', '2'].map(port => (
+                <option key={port} value={port}>
+                  {port}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="col-3 col-md-2">
+            <label className="form-label small mb-1" htmlFor={`parallel-iobase-${row.key}`}>
+              {t('machineEdit.parallelPortsEditor.ioBase')}
+            </label>
+            <input
+              id={`parallel-iobase-${row.key}`}
+              className="form-control form-control-sm"
+              list={`parallel-iobase-${row.key}-options`}
+              placeholder="off"
+              value={row.io_base}
+              onChange={e =>
+                onRowsChange(
+                  rows.map((r, i) => (i === index ? { ...r, io_base: e.target.value } : r))
+                )
+              }
+              disabled={disabled}
+            />
+            <datalist id={`parallel-iobase-${row.key}-options`}>
+              {['off', '0x378', '0x278'].map(option => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </div>
+          <div className="col-2 col-md-1">
+            <label className="form-label small mb-1" htmlFor={`parallel-irq-${row.key}`}>
+              {t('machineEdit.parallelPortsEditor.irq')}
+            </label>
+            <input
+              id={`parallel-irq-${row.key}`}
+              className="form-control form-control-sm"
+              type="number"
+              min="0"
+              value={row.irq}
+              onChange={e =>
+                onRowsChange(rows.map((r, i) => (i === index ? { ...r, irq: e.target.value } : r)))
+              }
+              disabled={disabled}
+            />
+          </div>
+          <div className="col-4 col-md-4">
+            <label className="form-label small mb-1" htmlFor={`parallel-device-${row.key}`}>
+              {t('machineEdit.parallelPortsEditor.device')}
+            </label>
+            <input
+              id={`parallel-device-${row.key}`}
+              className="form-control form-control-sm"
+              placeholder="e.g. LPT1 or /dev/lp0"
+              value={row.device}
+              onChange={e =>
+                onRowsChange(
+                  rows.map((r, i) => (i === index ? { ...r, device: e.target.value } : r))
+                )
+              }
+              disabled={disabled}
+            />
+          </div>
+          <div className="col-auto">
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-danger"
+              aria-label={t('machineEdit.parallelPortsEditor.dropRow')}
+              onClick={() => onRowsChange(rows.filter(entry => entry.key !== row.key))}
+              disabled={disabled}
+            >
+              <i className="fas fa-trash" />
+            </button>
+          </div>
         </div>
-        <div className="col-3 col-md-2">
-          <label className="form-label small mb-1" htmlFor={`parallel-iobase-${row.key}`}>
-            IO base
-          </label>
-          <input
-            id={`parallel-iobase-${row.key}`}
-            className="form-control form-control-sm"
-            list={`parallel-iobase-${row.key}-options`}
-            placeholder="off"
-            value={row.io_base}
-            onChange={e =>
-              onRowsChange(
-                rows.map((r, i) => (i === index ? { ...r, io_base: e.target.value } : r))
-              )
-            }
-            disabled={disabled}
-          />
-          <datalist id={`parallel-iobase-${row.key}-options`}>
-            {['off', '0x378', '0x278'].map(option => (
-              <option key={option} value={option} />
-            ))}
-          </datalist>
-        </div>
-        <div className="col-2 col-md-1">
-          <label className="form-label small mb-1" htmlFor={`parallel-irq-${row.key}`}>
-            IRQ
-          </label>
-          <input
-            id={`parallel-irq-${row.key}`}
-            className="form-control form-control-sm"
-            type="number"
-            min="0"
-            value={row.irq}
-            onChange={e =>
-              onRowsChange(rows.map((r, i) => (i === index ? { ...r, irq: e.target.value } : r)))
-            }
-            disabled={disabled}
-          />
-        </div>
-        <div className="col-4 col-md-4">
-          <label className="form-label small mb-1" htmlFor={`parallel-device-${row.key}`}>
-            Device
-          </label>
-          <input
-            id={`parallel-device-${row.key}`}
-            className="form-control form-control-sm"
-            placeholder="e.g. LPT1 or /dev/lp0"
-            value={row.device}
-            onChange={e =>
-              onRowsChange(rows.map((r, i) => (i === index ? { ...r, device: e.target.value } : r)))
-            }
-            disabled={disabled}
-          />
-        </div>
-        <div className="col-auto">
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-danger"
-            aria-label="Drop this parallel port row"
-            onClick={() => onRowsChange(rows.filter(entry => entry.key !== row.key))}
-            disabled={disabled}
-          >
-            <i className="fas fa-trash" />
-          </button>
-        </div>
+      ))}
+      <div>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary"
+          onClick={() =>
+            onRowsChange([...rows, portRow({ port: '1', io_base: '', irq: '', device: '' })])
+          }
+          disabled={disabled}
+        >
+          <i className="fas fa-plus me-2" />
+          {t('machineEdit.parallelPortsEditor.addParallelPort')}
+        </button>
       </div>
-    ))}
-    <div>
-      <button
-        type="button"
-        className="btn btn-sm btn-outline-secondary"
-        onClick={() =>
-          onRowsChange([...rows, portRow({ port: '1', io_base: '', irq: '', device: '' })])
-        }
-        disabled={disabled}
-      >
-        <i className="fas fa-plus me-2" />
-        Parallel Port
-      </button>
     </div>
-  </div>
-);
+  );
+};
 
 ParallelPortsEditor.propTypes = {
   rows: PropTypes.array.isRequired,

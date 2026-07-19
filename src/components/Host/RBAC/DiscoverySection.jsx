@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../contexts/ServerContext';
 import { useDebounce } from '../../../utils/debounce';
@@ -9,6 +10,7 @@ import ProfilesTab from './ProfilesTab';
 import RolesTab from './RolesTab';
 
 const RBACDiscoverySection = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('authorizations');
   const [authorizations, setAuthorizations] = useState([]);
   const [profiles, setProfiles] = useState([]);
@@ -182,19 +184,24 @@ const RBACDiscoverySection = ({ server, onError }) => {
   };
 
   const tabs = [
-    { key: 'authorizations', label: 'Authorizations', icon: 'fa-shield-alt' },
-    { key: 'profiles', label: 'Profiles', icon: 'fa-id-card' },
-    { key: 'roles', label: 'Roles', icon: 'fa-user-shield' },
+    {
+      key: 'authorizations',
+      label: t('hostTools.DiscoverySection.tabAuthorizationsLabel'),
+      icon: 'fa-shield-alt',
+    },
+    {
+      key: 'profiles',
+      label: t('hostTools.DiscoverySection.tabProfilesLabel'),
+      icon: 'fa-id-card',
+    },
+    { key: 'roles', label: t('hostTools.DiscoverySection.tabRolesLabel'), icon: 'fa-user-shield' },
   ];
 
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">RBAC Discovery</h2>
-        <p>
-          Browse available authorizations, profiles, and roles on <strong>{server.hostname}</strong>
-          . Use this to discover what RBAC components are available for user and role configuration.
-        </p>
+        <h2 className="fs-5 fw-bold">{t('hostTools.DiscoverySection.heading')}</h2>
+        <p>{t('hostTools.DiscoverySection.description', { serverHostname: server.hostname })}</p>
       </div>
 
       {/* Tab Navigation */}
@@ -221,7 +228,9 @@ const RBACDiscoverySection = ({ server, onError }) => {
               <div className="col">
                 <div className="mb-3">
                   <label className="form-label" htmlFor="rbac-filter">
-                    Filter {activeTab === 'authorizations' ? 'Authorizations' : 'Profiles'}
+                    {t('hostTools.DiscoverySection.filterLabel', {
+                      type: activeTab === 'authorizations' ? 'Authorizations' : 'Profiles',
+                    })}
                   </label>
                   <input
                     id="rbac-filter"
@@ -229,8 +238,8 @@ const RBACDiscoverySection = ({ server, onError }) => {
                     type="text"
                     placeholder={
                       activeTab === 'authorizations'
-                        ? 'Enter authorization pattern (e.g., solaris.admin)'
-                        : 'Enter profile pattern (e.g., admin)'
+                        ? t('hostTools.DiscoverySection.filterAuthorizationPlaceholder')
+                        : t('hostTools.DiscoverySection.filterProfilePlaceholder')
                     }
                     value={
                       activeTab === 'authorizations'
@@ -252,7 +261,7 @@ const RBACDiscoverySection = ({ server, onError }) => {
               <div className="col-auto">
                 <div className="mb-3">
                   <label className="form-label" htmlFor="rbac-limit">
-                    Limit Results
+                    {t('hostTools.DiscoverySection.limitResultsLabel')}
                   </label>
                   <select
                     id="rbac-limit"
@@ -260,10 +269,10 @@ const RBACDiscoverySection = ({ server, onError }) => {
                     value={filters.limit}
                     onChange={e => handleFilterChange('limit', parseInt(e.target.value))}
                   >
-                    <option value={50}>50 Results</option>
-                    <option value={100}>100 Results</option>
-                    <option value={200}>200 Results</option>
-                    <option value={500}>500 Results</option>
+                    <option value={50}>{t('hostTools.DiscoverySection.option50Results')}</option>
+                    <option value={100}>{t('hostTools.DiscoverySection.option100Results')}</option>
+                    <option value={200}>{t('hostTools.DiscoverySection.option200Results')}</option>
+                    <option value={500}>{t('hostTools.DiscoverySection.option500Results')}</option>
                   </select>
                 </div>
               </div>
@@ -272,7 +281,7 @@ const RBACDiscoverySection = ({ server, onError }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="rbac-refresh">
-                  Refresh
+                  {t('hostTools.DiscoverySection.refreshLabel')}
                 </label>
                 <div>
                   <button
@@ -283,7 +292,7 @@ const RBACDiscoverySection = ({ server, onError }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-sync-alt me-2" />
-                    <span>Refresh</span>
+                    <span>{t('hostTools.DiscoverySection.refreshButton')}</span>
                   </button>
                 </div>
               </div>
@@ -293,7 +302,7 @@ const RBACDiscoverySection = ({ server, onError }) => {
               <div className="col-auto">
                 <div className="mb-3">
                   <label className="form-label" htmlFor="rbac-clear">
-                    Clear
+                    {t('hostTools.DiscoverySection.clearLabel')}
                   </label>
                   <div>
                     <button
@@ -304,7 +313,7 @@ const RBACDiscoverySection = ({ server, onError }) => {
                       disabled={loading}
                     >
                       <i className="fas fa-times me-2" />
-                      <span>Clear</span>
+                      <span>{t('hostTools.DiscoverySection.clearButton')}</span>
                     </button>
                   </div>
                 </div>
@@ -323,7 +332,9 @@ const RBACDiscoverySection = ({ server, onError }) => {
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div className="d-flex align-items-center gap-2">
                   <h3 className="fs-6 fw-bold">
-                    Authorizations ({authorizations.length})
+                    {t('hostTools.DiscoverySection.authorizationsHeader', {
+                      count: authorizations.length,
+                    })}
                     {loading && (
                       <span className="ms-2">
                         <i className="fas fa-spinner fa-spin" />
@@ -347,7 +358,7 @@ const RBACDiscoverySection = ({ server, onError }) => {
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div className="d-flex align-items-center gap-2">
                   <h3 className="fs-6 fw-bold">
-                    Profiles ({profiles.length})
+                    {t('hostTools.DiscoverySection.profilesHeader', { count: profiles.length })}
                     {loading && (
                       <span className="ms-2">
                         <i className="fas fa-spinner fa-spin" />
@@ -371,7 +382,7 @@ const RBACDiscoverySection = ({ server, onError }) => {
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div className="d-flex align-items-center gap-2">
                   <h3 className="fs-6 fw-bold">
-                    Available Roles ({roles.length})
+                    {t('hostTools.DiscoverySection.rolesHeader', { count: roles.length })}
                     {loading && (
                       <span className="ms-2">
                         <i className="fas fa-spinner fa-spin" />
@@ -390,13 +401,13 @@ const RBACDiscoverySection = ({ server, onError }) => {
       {/* Help Information */}
       <div className="alert alert-info">
         <p>
-          <strong>Tip:</strong> Use the copy button next to each item to copy its name to your
-          clipboard. You can then paste it when creating or editing users and roles.
+          <strong>{t('hostTools.DiscoverySection.tipHeading')}</strong>{' '}
+          {t('hostTools.DiscoverySection.tipContent')}
         </p>
         {activeTab === 'authorizations' && (
           <p className="mt-2">
-            <strong>Authorization Wildcards:</strong> Many authorizations support wildcards (*). For
-            example, &quot;solaris.admin.*&quot; grants all admin-related authorizations.
+            <strong>{t('hostTools.DiscoverySection.authorizationWildcardsHeading')}</strong>{' '}
+            {t('hostTools.DiscoverySection.authorizationWildcardsContent')}
           </p>
         )}
       </div>

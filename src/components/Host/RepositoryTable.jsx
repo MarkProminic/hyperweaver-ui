@@ -1,7 +1,9 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const RepositoryTable = ({ repositories, loading, onToggle, onEdit, onDelete }) => {
+  const { t } = useTranslation();
   const [actionLoading, setActionLoading] = useState({});
   const handleAction = async (repo, action) => {
     const key = `${repo.name}-${action}`;
@@ -35,28 +37,32 @@ const RepositoryTable = ({ repositories, loading, onToggle, onEdit, onDelete }) 
   const getStatusTag = repo => {
     const isEnabled = repo.enabled !== false;
     if (repo.status === 'online' && isEnabled) {
-      return <span className="badge text-bg-success">Online</span>;
+      return <span className="badge text-bg-success">{t('host.repositoryTable.online')}</span>;
     }
     if (repo.status === 'online' && !isEnabled) {
-      return <span className="badge text-bg-warning">Disabled</span>;
+      return <span className="badge text-bg-warning">{t('host.repositoryTable.disabled')}</span>;
     }
-    return <span className="badge text-bg-danger">Offline</span>;
+    return <span className="badge text-bg-danger">{t('host.repositoryTable.offline')}</span>;
   };
   const getTypeTag = type => {
     switch (type?.toLowerCase()) {
       case 'origin':
-        return <span className="badge text-bg-primary">Origin</span>;
+        return <span className="badge text-bg-primary">{t('host.repositoryTable.origin')}</span>;
       case 'mirror':
-        return <span className="badge text-bg-info">Mirror</span>;
+        return <span className="badge text-bg-info">{t('host.repositoryTable.mirror')}</span>;
       default:
-        return <span className="badge text-bg-secondary">{type || 'Unknown'}</span>;
+        return (
+          <span className="badge text-bg-secondary">
+            {type || t('host.repositoryTable.unknown')}
+          </span>
+        );
     }
   };
   const getProxyTag = proxy => {
     if (proxy === 'T' || proxy === true) {
-      return <span className="badge text-bg-warning">Yes</span>;
+      return <span className="badge text-bg-warning">{t('host.repositoryTable.yes')}</span>;
     }
-    return <span className="badge text-bg-secondary">No</span>;
+    return <span className="badge text-bg-secondary">{t('host.repositoryTable.no')}</span>;
   };
 
   const getAvailableActions = repo => {
@@ -66,14 +72,14 @@ const RepositoryTable = ({ repositories, loading, onToggle, onEdit, onDelete }) 
     if (isEnabled) {
       actions.push({
         key: 'disable',
-        label: 'Disable',
+        label: t('host.repositoryTable.disable'),
         icon: 'fa-pause',
         class: 'btn-warning',
       });
     } else {
       actions.push({
         key: 'enable',
-        label: 'Enable',
+        label: t('host.repositoryTable.enable'),
         icon: 'fa-play',
         class: 'btn-success',
       });
@@ -96,7 +102,7 @@ const RepositoryTable = ({ repositories, loading, onToggle, onEdit, onDelete }) 
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading repositories...</p>
+        <p className="mt-2">{t('host.repositoryTable.loadingRepositories')}</p>
       </div>
     );
   }
@@ -104,7 +110,7 @@ const RepositoryTable = ({ repositories, loading, onToggle, onEdit, onDelete }) 
     return (
       <div className="text-center p-4">
         <i className="fas fa-database fa-2x text-muted" />
-        <p className="mt-2 text-muted">No repositories found</p>
+        <p className="mt-2 text-muted">{t('host.repositoryTable.noRepositoriesFound')}</p>
       </div>
     );
   }
@@ -113,12 +119,12 @@ const RepositoryTable = ({ repositories, loading, onToggle, onEdit, onDelete }) 
       <table className="table table-striped table-hover">
         <thead>
           <tr>
-            <th>Publisher</th>
-            <th>Type</th>
-            <th>Status</th>
-            <th>Location</th>
-            <th>Proxy</th>
-            <th width="150">Actions</th>
+            <th>{t('host.repositoryTable.publisher')}</th>
+            <th>{t('host.repositoryTable.type')}</th>
+            <th>{t('host.repositoryTable.status')}</th>
+            <th>{t('host.repositoryTable.location')}</th>
+            <th>{t('host.repositoryTable.proxy')}</th>
+            <th width="150">{t('host.repositoryTable.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -156,7 +162,7 @@ const RepositoryTable = ({ repositories, loading, onToggle, onEdit, onDelete }) 
                           className={`btn btn-sm ${action.class}`}
                           onClick={() => handleAction(repo, action.key)}
                           disabled={loading || isLoading}
-                          title={action.label}
+                          title={action.label || ''}
                         >
                           {isLoading && (
                             <span
@@ -176,7 +182,7 @@ const RepositoryTable = ({ repositories, loading, onToggle, onEdit, onDelete }) 
                       className="btn btn-sm btn-secondary"
                       onClick={() => handleAction(repo, 'edit')}
                       disabled={loading}
-                      title="Edit Repository"
+                      title={t('host.repositoryTable.editRepository')}
                     >
                       <i className="fas fa-edit" />
                     </button>
@@ -187,7 +193,7 @@ const RepositoryTable = ({ repositories, loading, onToggle, onEdit, onDelete }) 
                       className="btn btn-sm btn-danger"
                       onClick={() => handleAction(repo, 'delete')}
                       disabled={loading}
-                      title="Delete Repository"
+                      title={t('host.repositoryTable.deleteRepository')}
                     >
                       <i className="fas fa-trash" />
                     </button>

@@ -1,65 +1,60 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { FormModal } from '../common';
 
-const ACTION_DETAILS = {
+const getActionDetails = t => ({
   sync: {
-    title: 'Force Time Synchronization',
+    title: t('host.ntpConfirmActionModal.syncTitle'),
     icon: 'fa-sync-alt',
     buttonClass: 'has-background-primary-dark has-text-primary-light',
-    description: 'Force immediate time synchronization with configured NTP servers.',
-    warning:
-      'This will attempt to synchronize the system clock immediately. The operation may take a few moments to complete.',
+    description: t('host.ntpConfirmActionModal.syncDescription'),
+    warning: t('host.ntpConfirmActionModal.syncWarning'),
   },
   restart: {
-    title: 'Restart Time Synchronization Service',
+    title: t('host.ntpConfirmActionModal.restartTitle'),
     icon: 'fa-redo',
     buttonClass: 'has-background-warning-dark has-text-warning-light',
-    description: 'Restart the time synchronization service to apply configuration changes.',
-    warning:
-      'The service will be briefly unavailable during restart. Time synchronization will resume automatically.',
+    description: t('host.ntpConfirmActionModal.restartDescription'),
+    warning: t('host.ntpConfirmActionModal.restartWarning'),
   },
   save: {
-    title: 'Save NTP Configuration',
+    title: t('host.ntpConfirmActionModal.saveTitle'),
     icon: 'fa-save',
     buttonClass: 'has-background-success-dark has-text-success-light',
-    description: 'Save the current configuration to the NTP configuration file.',
-    warning:
-      'This will overwrite the existing configuration. A restart of the time synchronization service may be required to apply changes.',
+    description: t('host.ntpConfirmActionModal.saveDescription'),
+    warning: t('host.ntpConfirmActionModal.saveWarning'),
   },
   'switch-ntp': {
-    title: 'Switch to Traditional NTP',
+    title: t('host.ntpConfirmActionModal.switchNtpTitle'),
     icon: 'fa-clock',
     buttonClass: 'has-background-info-dark has-text-info-light',
-    description: 'Switch to traditional Network Time Protocol (NTP) for time synchronization.',
-    warning:
-      'This operation will disable the current service, install NTP if needed, preserve server configurations where possible, and enable NTP service.',
+    description: t('host.ntpConfirmActionModal.switchNtpDescription'),
+    warning: t('host.ntpConfirmActionModal.switchNtpWarning'),
   },
   'switch-chrony': {
-    title: 'Switch to Chrony',
+    title: t('host.ntpConfirmActionModal.switchChronyTitle'),
     icon: 'fa-stopwatch',
     buttonClass: 'has-background-info-dark has-text-info-light',
-    description: 'Switch to modern Chrony daemon for enhanced time synchronization.',
-    warning:
-      'This operation will disable the current service, install Chrony if needed, preserve server configurations where possible, and enable Chrony service.',
+    description: t('host.ntpConfirmActionModal.switchChronyDescription'),
+    warning: t('host.ntpConfirmActionModal.switchChronyWarning'),
   },
   'switch-ntpsec': {
-    title: 'Switch to NTPsec',
+    title: t('host.ntpConfirmActionModal.switchNtpsecTitle'),
     icon: 'fa-shield-alt',
     buttonClass: 'has-background-info-dark has-text-info-light',
-    description: 'Switch to security-focused NTPsec implementation for enhanced security.',
-    warning:
-      'This operation will disable the current service, install NTPsec if needed, preserve server configurations where possible, and enable NTPsec service.',
+    description: t('host.ntpConfirmActionModal.switchNtpsecDescription'),
+    warning: t('host.ntpConfirmActionModal.switchNtpsecWarning'),
   },
-};
+});
 
-const getServiceTypeLabel = serviceType => {
+const getServiceTypeLabel = (serviceType, t) => {
   if (serviceType === 'ntp') {
-    return 'NTP';
+    return t('host.ntpConfirmActionModal.ntp');
   }
   if (serviceType === 'chrony') {
-    return 'Chrony';
+    return t('host.ntpConfirmActionModal.chrony');
   }
   return serviceType.toUpperCase();
 };
@@ -88,6 +83,7 @@ const getSubmitVariant = buttonClass => {
 };
 
 const NTPConfirmActionModal = ({ service, action, onClose, onConfirm }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -104,30 +100,32 @@ const NTPConfirmActionModal = ({ service, action, onClose, onConfirm }) => {
     }
   };
 
-  const getActionDetails = () => {
+  const getActionDetailsInternal = () => {
     if (action === 'timezone') {
       return {
-        title: 'Change System Timezone',
+        title: t('host.ntpConfirmActionModal.changeTimezoneTitle'),
         icon: 'fa-clock',
         buttonClass: 'has-background-info-dark has-text-info-light',
-        description: `Change the system timezone to "${service?.timezone}".`,
-        warning:
-          'Timezone changes may require a system reboot for full effect. Some services may continue using the old timezone until restarted.',
+        description: t('host.ntpConfirmActionModal.changeTimezoneDescription', {
+          timezone: service?.timezone,
+        }),
+        warning: t('host.ntpConfirmActionModal.changeTimezoneWarning'),
       };
     }
 
+    const actionDetails = getActionDetails(t);
     return (
-      ACTION_DETAILS[action] || {
-        title: 'Confirm Action',
+      actionDetails[action] || {
+        title: t('host.ntpConfirmActionModal.confirmAction'),
         icon: 'fa-question-circle',
         buttonClass: 'is-info',
-        description: `Perform ${action} action.`,
-        warning: 'Please confirm this action.',
+        description: t('host.ntpConfirmActionModal.performActionDescription', { action }),
+        warning: t('host.ntpConfirmActionModal.confirmWarning'),
       }
     );
   };
 
-  const actionDetails = getActionDetails();
+  const actionDetails = getActionDetailsInternal();
 
   return (
     <FormModal
@@ -145,7 +143,9 @@ const NTPConfirmActionModal = ({ service, action, onClose, onConfirm }) => {
         <div className="card mb-4">
           <div className="card-body">
             <h3 className="fs-6 fw-bold">
-              {action === 'timezone' ? 'Timezone Information' : 'Service Information'}
+              {action === 'timezone'
+                ? t('host.ntpConfirmActionModal.timezoneInfo')
+                : t('host.ntpConfirmActionModal.serviceInfo')}
             </h3>
             <div className="table-responsive">
               <table className="table">
@@ -154,15 +154,19 @@ const NTPConfirmActionModal = ({ service, action, onClose, onConfirm }) => {
                     <>
                       <tr>
                         <td>
-                          <strong>Current Timezone</strong>
+                          <strong>{t('host.ntpConfirmActionModal.currentTimezone')}</strong>
                         </td>
-                        <td className="font-monospace">{service.current || 'Unknown'}</td>
+                        <td className="font-monospace">
+                          {service.current || t('host.ntpConfirmActionModal.unknown')}
+                        </td>
                       </tr>
                       <tr>
                         <td>
-                          <strong>New Timezone</strong>
+                          <strong>{t('host.ntpConfirmActionModal.newTimezone')}</strong>
                         </td>
-                        <td className="font-monospace">{service.timezone || 'Unknown'}</td>
+                        <td className="font-monospace">
+                          {service.timezone || t('host.ntpConfirmActionModal.unknown')}
+                        </td>
                       </tr>
                     </>
                   ) : (
@@ -170,15 +174,17 @@ const NTPConfirmActionModal = ({ service, action, onClose, onConfirm }) => {
                       {service.service && (
                         <tr>
                           <td>
-                            <strong>Service Type</strong>
+                            <strong>{t('host.ntpConfirmActionModal.serviceType')}</strong>
                           </td>
-                          <td className="font-monospace">{getServiceTypeLabel(service.service)}</td>
+                          <td className="font-monospace">
+                            {getServiceTypeLabel(service.service, t)}
+                          </td>
                         </tr>
                       )}
                       {service.status && (
                         <tr>
                           <td>
-                            <strong>Service Status</strong>
+                            <strong>{t('host.ntpConfirmActionModal.serviceStatus')}</strong>
                           </td>
                           <td>
                             <span className={`badge ${getStatusTagColor(service.status)}`}>
@@ -190,7 +196,7 @@ const NTPConfirmActionModal = ({ service, action, onClose, onConfirm }) => {
                       {service.config_file && (
                         <tr>
                           <td>
-                            <strong>Configuration File</strong>
+                            <strong>{t('host.ntpConfirmActionModal.configFile')}</strong>
                           </td>
                           <td className="font-monospace">{service.config_file}</td>
                         </tr>
@@ -198,7 +204,7 @@ const NTPConfirmActionModal = ({ service, action, onClose, onConfirm }) => {
                       {service.timezone && action !== 'timezone' && (
                         <tr>
                           <td>
-                            <strong>Current Timezone</strong>
+                            <strong>{t('host.ntpConfirmActionModal.currentTimezone')}</strong>
                           </td>
                           <td className="font-monospace">{service.timezone}</td>
                         </tr>
@@ -217,7 +223,7 @@ const NTPConfirmActionModal = ({ service, action, onClose, onConfirm }) => {
         className={`alert ${action === 'timezone' || action === 'restart' ? 'alert-warning' : 'alert-info'}`}
       >
         <p>
-          <strong>Action:</strong> {actionDetails.description}
+          <strong>{t('host.ntpConfirmActionModal.action')}:</strong> {actionDetails.description}
         </p>
         <p className="mt-2">{actionDetails.warning}</p>
       </div>
@@ -226,22 +232,30 @@ const NTPConfirmActionModal = ({ service, action, onClose, onConfirm }) => {
       {action === 'sync' && service?.peers && service.peers.length > 0 && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Available Time Servers</h3>
+            <h3 className="fs-6 fw-bold">{t('host.ntpConfirmActionModal.availableTimeServers')}</h3>
             <div className="small">
               <ul>
                 {service.peers.slice(0, 5).map(peer => (
                   <li key={peer.remote} className="font-monospace">
                     {peer.remote}
                     {peer.indicator === '*' && (
-                      <span className="badge text-bg-success ms-1">Primary</span>
+                      <span className="badge text-bg-success ms-1">
+                        {t('host.ntpConfirmActionModal.primary')}
+                      </span>
                     )}
                     {peer.indicator === '+' && (
-                      <span className="badge text-bg-info ms-1">Backup</span>
+                      <span className="badge text-bg-info ms-1">
+                        {t('host.ntpConfirmActionModal.backup')}
+                      </span>
                     )}
                   </li>
                 ))}
                 {service.peers.length > 5 && (
-                  <li className="text-muted">...and {service.peers.length - 5} more servers</li>
+                  <li className="text-muted">
+                    {t('host.ntpConfirmActionModal.moreServers', {
+                      count: service.peers.length - 5,
+                    })}
+                  </li>
                 )}
               </ul>
             </div>
@@ -252,11 +266,11 @@ const NTPConfirmActionModal = ({ service, action, onClose, onConfirm }) => {
       {action === 'save' && service?.config_exists === false && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Configuration File Creation</h3>
+            <h3 className="fs-6 fw-bold">{t('host.ntpConfirmActionModal.configFileCreation')}</h3>
             <div className="alert alert-info">
               <p>
-                <strong>New Configuration File:</strong> The configuration file does not exist and
-                will be created.
+                <strong>{t('host.ntpConfirmActionModal.newConfigFile')}:</strong>{' '}
+                {t('host.ntpConfirmActionModal.configWillBeCreated')}
               </p>
             </div>
           </div>
@@ -266,11 +280,11 @@ const NTPConfirmActionModal = ({ service, action, onClose, onConfirm }) => {
       {action === 'timezone' && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Reboot Recommendation</h3>
+            <h3 className="fs-6 fw-bold">{t('host.ntpConfirmActionModal.rebootRecommendation')}</h3>
             <div className="alert alert-warning">
               <p>
-                <strong>System Reboot Recommended:</strong> For the timezone change to take full
-                effect across all system services, a system reboot is recommended after this change.
+                <strong>{t('host.ntpConfirmActionModal.systemRebootRecommended')}:</strong>{' '}
+                {t('host.ntpConfirmActionModal.rebootText')}
               </p>
             </div>
           </div>
@@ -280,12 +294,9 @@ const NTPConfirmActionModal = ({ service, action, onClose, onConfirm }) => {
       {action === 'restart' && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Service Restart Information</h3>
+            <h3 className="fs-6 fw-bold">{t('host.ntpConfirmActionModal.serviceRestartInfo')}</h3>
             <div className="alert alert-info">
-              <p>
-                The time synchronization service will be stopped and restarted. This is required to
-                apply configuration changes and may take a few seconds to complete.
-              </p>
+              <p>{t('host.ntpConfirmActionModal.restartWillOccur')}</p>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import PropTypes from 'prop-types';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Mode context — Axis 1 of the dual-mode design (see hyperweaver-dualmode-plan.md §1/§3).
@@ -37,6 +38,7 @@ export const useMode = () => {
  * @param {React.ReactNode} props.children - Child components
  */
 export const ModeProvider = ({ children }) => {
+  const { t } = useTranslation();
   const [serverInfo, setServerInfo] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -51,15 +53,15 @@ export const ModeProvider = ({ children }) => {
       if (response.data && (response.data.role === 'server' || response.data.role === 'agent')) {
         setServerInfo(response.data);
       } else {
-        setError('Origin /api/status returned an unrecognized payload');
+        setError(t('app.modeContext.unrecognizedPayload'));
       }
     } catch (probeErr) {
       console.error('Mode probe failed:', probeErr);
-      setError(probeErr.response?.data?.message || 'Failed to reach /api/status on origin');
+      setError(probeErr.response?.data?.message || t('app.modeContext.probeFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     probe();

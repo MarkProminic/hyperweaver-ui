@@ -1,8 +1,10 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { ContentModal } from '../common';
 
 const VnicDetailsModal = ({ vnic, onClose }) => {
+  const { t } = useTranslation();
   const formatDetails = details => {
     if (!details) {
       return [];
@@ -17,7 +19,7 @@ const VnicDetailsModal = ({ vnic, onClose }) => {
 
   const formatMac = mac => {
     if (!mac) {
-      return 'N/A';
+      return t('host.vnicDetailsModal.notAvailable');
     }
     // Format MAC address with colons if not already formatted
     if (mac.includes(':')) {
@@ -28,7 +30,7 @@ const VnicDetailsModal = ({ vnic, onClose }) => {
 
   const formatSpeed = speed => {
     if (!speed) {
-      return 'N/A';
+      return t('host.vnicDetailsModal.notAvailable');
     }
     if (speed >= 1000) {
       return `${speed / 1000} Gbps`;
@@ -49,94 +51,103 @@ const VnicDetailsModal = ({ vnic, onClose }) => {
   const detailsArray = formatDetails(vnic.details);
 
   return (
-    <ContentModal isOpen onClose={onClose} title="VNIC Details" icon="fas fa-network-wired">
+    <ContentModal
+      isOpen
+      onClose={onClose}
+      title={t('host.vnicDetailsModal.vnicDetails')}
+      icon="fas fa-network-wired"
+    >
       {/* VNIC Basic Info */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Basic Information</h3>
+          <h3 className="fs-6 fw-bold">{t('host.vnicDetailsModal.basicInformation')}</h3>
           <div className="table-responsive">
             <table className="table">
               <tbody>
                 <tr>
                   <td>
-                    <strong>VNIC Name</strong>
+                    <strong>{t('host.vnicDetailsModal.vnicName')}</strong>
                   </td>
                   <td className="font-monospace">{vnic.link}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Physical Link</strong>
+                    <strong>{t('host.vnicDetailsModal.physicalLink')}</strong>
                   </td>
-                  <td className="font-monospace">{vnic.over || 'N/A'}</td>
+                  <td className="font-monospace">
+                    {vnic.over || t('host.vnicDetailsModal.notAvailable')}
+                  </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>State</strong>
+                    <strong>{t('host.vnicDetailsModal.state')}</strong>
                   </td>
                   <td>
                     <span className={`badge ${getStateTagClass(vnic.state)}`}>
-                      {vnic.state || 'Unknown'}
+                      {vnic.state || t('host.vnicDetailsModal.unknown')}
                     </span>
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>MAC Address</strong>
+                    <strong>{t('host.vnicDetailsModal.macAddress')}</strong>
                   </td>
                   <td className="font-monospace">{formatMac(vnic.macaddress)}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>MAC Address Type</strong>
+                    <strong>{t('host.vnicDetailsModal.macAddressType')}</strong>
                   </td>
-                  <td>{vnic.macaddrtype || 'N/A'}</td>
+                  <td>{vnic.macaddrtype || t('host.vnicDetailsModal.notAvailable')}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>VLAN ID</strong>
+                    <strong>{t('host.vnicDetailsModal.vlanId')}</strong>
                   </td>
                   <td>
                     <span className="badge text-bg-secondary">
-                      {vnic.vid !== undefined ? vnic.vid : 'N/A'}
+                      {vnic.vid !== undefined ? vnic.vid : t('host.vnicDetailsModal.notAvailable')}
                     </span>
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Zone Assignment</strong>
+                    <strong>{t('host.vnicDetailsModal.zoneAssignment')}</strong>
                   </td>
                   <td className="font-monospace">
-                    {vnic.zone && vnic.zone !== '--' ? vnic.zone : 'Global Zone'}
+                    {vnic.zone && vnic.zone !== '--'
+                      ? vnic.zone
+                      : t('host.vnicDetailsModal.globalZone')}
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Speed</strong>
+                    <strong>{t('host.vnicDetailsModal.speed')}</strong>
                   </td>
                   <td>{formatSpeed(vnic.speed)}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>MTU</strong>
+                    <strong>{t('host.vnicDetailsModal.mtu')}</strong>
                   </td>
-                  <td>{vnic.mtu || 'N/A'}</td>
+                  <td>{vnic.mtu || t('host.vnicDetailsModal.notAvailable')}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Media Type</strong>
+                    <strong>{t('host.vnicDetailsModal.mediaType')}</strong>
                   </td>
-                  <td>{vnic.media || 'N/A'}</td>
+                  <td>{vnic.media || t('host.vnicDetailsModal.notAvailable')}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Duplex</strong>
+                    <strong>{t('host.vnicDetailsModal.duplex')}</strong>
                   </td>
-                  <td>{vnic.duplex || 'N/A'}</td>
+                  <td>{vnic.duplex || t('host.vnicDetailsModal.notAvailable')}</td>
                 </tr>
                 {vnic.device && (
                   <tr>
                     <td>
-                      <strong>Device</strong>
+                      <strong>{t('host.vnicDetailsModal.device')}</strong>
                     </td>
                     <td className="font-monospace">{vnic.device}</td>
                   </tr>
@@ -144,7 +155,7 @@ const VnicDetailsModal = ({ vnic, onClose }) => {
                 {vnic.bridge && vnic.bridge !== '--' && (
                   <tr>
                     <td>
-                      <strong>Bridge</strong>
+                      <strong>{t('host.vnicDetailsModal.bridge')}</strong>
                     </td>
                     <td className="font-monospace">{vnic.bridge}</td>
                   </tr>
@@ -152,7 +163,7 @@ const VnicDetailsModal = ({ vnic, onClose }) => {
                 {vnic.pause && (
                   <tr>
                     <td>
-                      <strong>Pause</strong>
+                      <strong>{t('host.vnicDetailsModal.pause')}</strong>
                     </td>
                     <td>{vnic.pause}</td>
                   </tr>
@@ -160,7 +171,7 @@ const VnicDetailsModal = ({ vnic, onClose }) => {
                 {vnic.auto && (
                   <tr>
                     <td>
-                      <strong>Auto Negotiation</strong>
+                      <strong>{t('host.vnicDetailsModal.autoNegotiation')}</strong>
                     </td>
                     <td>{vnic.auto}</td>
                   </tr>
@@ -175,13 +186,13 @@ const VnicDetailsModal = ({ vnic, onClose }) => {
       {detailsArray.length > 0 && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Additional Details</h3>
+            <h3 className="fs-6 fw-bold">{t('host.vnicDetailsModal.additionalDetails')}</h3>
             <div className="table-responsive">
               <table className="table table-striped">
                 <thead>
                   <tr>
-                    <th>Property</th>
-                    <th>Value</th>
+                    <th>{t('host.vnicDetailsModal.property')}</th>
+                    <th>{t('host.vnicDetailsModal.value')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -209,7 +220,7 @@ const VnicDetailsModal = ({ vnic, onClose }) => {
       {/* Show message if no additional details available */}
       {detailsArray.length === 0 && (
         <div className="alert alert-info">
-          <p>No additional detailed information available for this VNIC.</p>
+          <p>{t('host.vnicDetailsModal.noAdditionalDetails')}</p>
         </div>
       )}
 
@@ -217,14 +228,14 @@ const VnicDetailsModal = ({ vnic, onClose }) => {
       {(vnic.created_at || vnic.updated_at) && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Timestamps</h3>
+            <h3 className="fs-6 fw-bold">{t('host.vnicDetailsModal.timestamps')}</h3>
             <div className="table-responsive">
               <table className="table">
                 <tbody>
                   {vnic.created_at && (
                     <tr>
                       <td>
-                        <strong>Created</strong>
+                        <strong>{t('host.vnicDetailsModal.created')}</strong>
                       </td>
                       <td>{new Date(vnic.created_at).toLocaleString()}</td>
                     </tr>
@@ -232,7 +243,7 @@ const VnicDetailsModal = ({ vnic, onClose }) => {
                   {vnic.updated_at && (
                     <tr>
                       <td>
-                        <strong>Last Updated</strong>
+                        <strong>{t('host.vnicDetailsModal.lastUpdated')}</strong>
                       </td>
                       <td>{new Date(vnic.updated_at).toLocaleString()}</td>
                     </tr>

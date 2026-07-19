@@ -1,56 +1,66 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const TopologyViewSwitcher = ({ currentView, onViewChange, layoutType, onLayoutChange }) => {
+  const { t } = useTranslation();
   const views = [
     {
       id: 'physical',
-      name: 'Physical',
+      name: t('hostTools.TopologyViewSwitcher.physicalViewName'),
       icon: 'fa-ethernet',
-      description: 'Hardware NICs, aggregates, and physical connections',
+      description: t('hostTools.TopologyViewSwitcher.physicalViewDescription'),
       color: 'is-success',
     },
     {
       id: 'logical',
-      name: 'Virtual',
+      name: t('hostTools.TopologyViewSwitcher.virtualViewName'),
       icon: 'fa-network-wired',
-      description: 'VNICs, etherstubs, and logical connections',
+      description: t('hostTools.TopologyViewSwitcher.virtualViewDescription'),
       color: 'is-primary',
     },
     {
       id: 'zone-centric',
-      name: 'Zones',
+      name: t('hostTools.TopologyViewSwitcher.zonesViewName'),
       icon: 'fa-server',
-      description: 'Zone-centered network topology',
+      description: t('hostTools.TopologyViewSwitcher.zonesViewDescription'),
       color: 'is-warning',
     },
     {
       id: 'bandwidth',
-      name: 'Traffic',
+      name: t('hostTools.TopologyViewSwitcher.trafficViewName'),
       icon: 'fa-chart-line',
-      description: 'Live bandwidth and traffic flow analysis',
+      description: t('hostTools.TopologyViewSwitcher.trafficViewDescription'),
       color: 'is-info',
     },
     {
       id: 'vlan',
-      name: 'VLANs',
+      name: t('hostTools.TopologyViewSwitcher.vlansViewName'),
       icon: 'fa-tags',
-      description: 'Network segmentation and VLAN topology',
+      description: t('hostTools.TopologyViewSwitcher.vlansViewDescription'),
       color: 'is-link',
     },
     {
       id: 'troubleshoot',
-      name: 'Debug',
+      name: t('hostTools.TopologyViewSwitcher.debugViewName'),
       icon: 'fa-bug',
-      description: 'Troubleshooting and diagnostics view',
+      description: t('hostTools.TopologyViewSwitcher.debugViewDescription'),
       color: 'is-danger',
     },
   ];
 
   const layouts = [
-    { id: 'hierarchical', name: 'Hierarchical', icon: 'fa-sitemap' },
-    { id: 'force', name: 'Force', icon: 'fa-asterisk' },
-    { id: 'circular', name: 'Circular', icon: 'fa-circle-notch' },
-    { id: 'grid', name: 'Grid', icon: 'fa-th' },
+    {
+      id: 'hierarchical',
+      name: t('hostTools.TopologyViewSwitcher.hierarchicalLayoutName'),
+      icon: 'fa-sitemap',
+    },
+    { id: 'force', name: t('hostTools.TopologyViewSwitcher.forceLayoutName'), icon: 'fa-asterisk' },
+    {
+      id: 'circular',
+      name: t('hostTools.TopologyViewSwitcher.circularLayoutName'),
+      icon: 'fa-circle-notch',
+    },
+    { id: 'grid', name: t('hostTools.TopologyViewSwitcher.gridLayoutName'), icon: 'fa-th' },
   ];
 
   return (
@@ -77,7 +87,9 @@ const TopologyViewSwitcher = ({ currentView, onViewChange, layoutType, onLayoutC
       {/* Layout Selector */}
       <div className="d-flex justify-content-between align-items-center">
         <div className="d-flex align-items-center gap-2">
-          <span className="small fw-semibold me-3">Layout:</span>
+          <span className="small fw-semibold me-3">
+            {t('hostTools.TopologyViewSwitcher.layoutLabel')}
+          </span>
           <div className="btn-group">
             {layouts.map(layout => (
               <button

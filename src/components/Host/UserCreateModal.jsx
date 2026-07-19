@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import FormModal from '../common/FormModal';
 
 const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [isAdvanced, setIsAdvanced] = useState(false);
   const [availableGroups, setAvailableGroups] = useState([]);
@@ -136,7 +138,7 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
     e.preventDefault();
 
     if (!formData.username.trim()) {
-      onError('Username is required');
+      onError(t('host.userCreateModal.usernameRequired'));
       return;
     }
 
@@ -193,10 +195,10 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
         }
         onSuccess();
       } else {
-        onError(result.message || 'Failed to create user');
+        onError(result.message || t('host.userCreateModal.failedToCreateUser'));
       }
     } catch (err) {
-      onError(`Error creating user: ${err.message}`);
+      onError(t('host.userCreateModal.errorCreatingUser', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -209,13 +211,13 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create User"
+      title={t('host.userCreateModal.createUser')}
       icon="fas fa-user-plus"
-      submitText="Create User"
+      submitText={t('host.userCreateModal.createUser')}
       submitIcon="fas fa-plus"
       loading={loading}
       showCancelButton
-      aria-label="Create new user account"
+      aria-label={t('host.userCreateModal.createNewUserAccount')}
     >
       {/* Mode Toggle */}
       <div className="mb-3">
@@ -230,7 +232,7 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
             disabled={loading}
           />
           <label className="form-check-label" htmlFor="user-create-advanced">
-            Advanced Mode (RBAC Configuration)
+            {t('host.userCreateModal.advancedModeRbac')}
           </label>
         </div>
       </div>
@@ -242,7 +244,7 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
         <div className="col">
           <div className="mb-3">
             <label className="form-label" htmlFor="user-create-username">
-              Username <span className="text-danger">*</span>
+              {t('host.userCreateModal.username')} <span className="text-danger">*</span>
             </label>
             <input
               id="user-create-username"
@@ -252,7 +254,7 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
               onChange={e => handleInputChange('username', e.target.value)}
               required
               disabled={loading}
-              placeholder="Enter username"
+              placeholder={t('host.userCreateModal.enterUsername')}
             />
           </div>
         </div>
@@ -260,7 +262,7 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
           <div className="col">
             <div className="mb-3">
               <label className="form-label" htmlFor="user-create-uid">
-                User ID (UID)
+                {t('host.userCreateModal.userIdUid')}
               </label>
               <input
                 id="user-create-uid"
@@ -269,7 +271,7 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
                 value={formData.uid}
                 onChange={e => handleInputChange('uid', e.target.value)}
                 disabled={loading}
-                placeholder="Auto-assign if empty"
+                placeholder={t('host.userCreateModal.autoAssignIfEmpty')}
               />
             </div>
           </div>
@@ -278,7 +280,7 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
 
       <div className="mb-3">
         <label className="form-label" htmlFor="user-create-comment">
-          Comment
+          {t('host.userCreateModal.comment')}
         </label>
         <input
           id="user-create-comment"
@@ -287,13 +289,13 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
           value={formData.comment}
           onChange={e => handleInputChange('comment', e.target.value)}
           disabled={loading}
-          placeholder="User description or full name"
+          placeholder={t('host.userCreateModal.userDescriptionOrFullName')}
         />
       </div>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="user-create-shell">
-          Shell
+          {t('host.userCreateModal.shell')}
         </label>
         <select
           id="user-create-shell"
@@ -314,11 +316,11 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
       {isAdvanced && (
         <>
           <hr />
-          <h5 className="fs-6 fw-bold">RBAC Configuration</h5>
+          <h5 className="fs-6 fw-bold">{t('host.userCreateModal.rbacConfiguration')}</h5>
 
           <div className="mb-3">
             <label className="form-label" htmlFor="user-create-groups">
-              Groups
+              {t('host.userCreateModal.groups')}
             </label>
             <input
               id="user-create-groups"
@@ -327,16 +329,18 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
               value={formData.groups.join(', ')}
               onChange={e => handleArrayInputChange('groups', e.target.value)}
               disabled={loading}
-              placeholder="staff, admin, developers (comma-separated)"
+              placeholder={t('host.userCreateModal.groupsPlaceholder')}
             />
             <p className="form-text text-muted">
-              Available groups: {availableGroups.map(g => g.groupname).join(', ')}
+              {t('host.userCreateModal.availableGroups', {
+                groups: availableGroups.map(g => g.groupname).join(', '),
+              })}
             </p>
           </div>
 
           <div className="mb-3">
             <label className="form-label" htmlFor="user-create-authorizations">
-              Authorizations
+              {t('host.userCreateModal.authorizations')}
             </label>
             <textarea
               id="user-create-authorizations"
@@ -345,13 +349,13 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
               value={formData.authorizations.join(', ')}
               onChange={e => handleArrayInputChange('authorizations', e.target.value)}
               disabled={loading}
-              placeholder="solaris.admin.usermgr.*, solaris.network.* (comma-separated)"
+              placeholder={t('host.userCreateModal.authorizationsPlaceholder')}
             />
           </div>
 
           <div className="mb-3">
             <label className="form-label" htmlFor="user-create-profiles">
-              Profiles
+              {t('host.userCreateModal.profiles')}
             </label>
             <input
               id="user-create-profiles"
@@ -360,13 +364,13 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
               value={formData.profiles.join(', ')}
               onChange={e => handleArrayInputChange('profiles', e.target.value)}
               disabled={loading}
-              placeholder="System Administrator, Network Management (comma-separated)"
+              placeholder={t('host.userCreateModal.profilesPlaceholder')}
             />
           </div>
 
           <div className="mb-3">
             <label className="form-label" htmlFor="user-create-roles">
-              Roles
+              {t('host.userCreateModal.roles')}
             </label>
             <input
               id="user-create-roles"
@@ -375,16 +379,18 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
               value={formData.roles.join(', ')}
               onChange={e => handleArrayInputChange('roles', e.target.value)}
               disabled={loading}
-              placeholder="admin_role, backup_role (comma-separated)"
+              placeholder={t('host.userCreateModal.rolesPlaceholder')}
             />
             <p className="form-text text-muted">
-              Available roles: {availableRoles.map(r => r.rolename).join(', ')}
+              {t('host.userCreateModal.availableRoles', {
+                roles: availableRoles.map(r => r.rolename).join(', '),
+              })}
             </p>
           </div>
 
           <div className="mb-3">
             <label className="form-label" htmlFor="user-create-project">
-              Project
+              {t('host.userCreateModal.project')}
             </label>
             <input
               id="user-create-project"
@@ -393,7 +399,7 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
               value={formData.project}
               onChange={e => handleInputChange('project', e.target.value)}
               disabled={loading}
-              placeholder="admin_project"
+              placeholder={t('host.userCreateModal.projectPlaceholder')}
             />
           </div>
         </>
@@ -414,7 +420,7 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
             disabled={loading}
           />
           <label className="form-check-label" htmlFor="user-create-home">
-            Create Home Directory
+            {t('host.userCreateModal.createHomeDirectory')}
           </label>
         </div>
       </div>
@@ -431,7 +437,7 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
             disabled={loading}
           />
           <label className="form-check-label" htmlFor="user-create-personal-group">
-            Create Personal Group
+            {t('host.userCreateModal.createPersonalGroup')}
           </label>
         </div>
       </div>
@@ -449,7 +455,7 @@ const UserCreateModal = ({ server, onClose, onSuccess, onError }) => {
               disabled={loading}
             />
             <label className="form-check-label" htmlFor="user-create-force-zfs">
-              Force ZFS Home Directory
+              {t('host.userCreateModal.forceZfsHomeDirectory')}
             </label>
           </div>
         </div>

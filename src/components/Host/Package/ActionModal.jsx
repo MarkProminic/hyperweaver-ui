@@ -1,9 +1,11 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { FormModal } from '../../common';
 
 const PackageActionModal = ({ package: pkg, action, onClose, onConfirm }) => {
+  const { t } = useTranslation();
   const [options, setOptions] = useState({
     dryRun: false,
     acceptLicenses: false,
@@ -36,27 +38,32 @@ const PackageActionModal = ({ package: pkg, action, onClose, onConfirm }) => {
     switch (action) {
       case 'install':
         return {
-          title: 'Install Package',
+          title: t('host.packageActionModal.installPackage'),
           icon: 'fa-download',
           buttonClass: 'has-background-success-dark has-text-success-light',
-          description: `Install package "${pkg.name}" on the system.`,
-          warning: 'This will install the package and any required dependencies.',
+          description: t('host.packageActionModal.installPackageDescription', { name: pkg.name }),
+          warning: t('host.packageActionModal.installWarning'),
         };
       case 'uninstall':
         return {
-          title: 'Uninstall Package',
+          title: t('host.packageActionModal.uninstallPackage'),
           icon: 'fa-trash',
           buttonClass: 'has-background-danger-dark has-text-danger-light',
-          description: `Uninstall package "${pkg.name}" from the system.`,
-          warning: 'This will remove the package and may affect dependent packages.',
+          description: t('host.packageActionModal.uninstallPackageDescription', {
+            name: pkg.name,
+          }),
+          warning: t('host.packageActionModal.uninstallWarning'),
         };
       default:
         return {
-          title: 'Package Action',
+          title: t('host.packageActionModal.packageAction'),
           icon: 'fa-cube',
           buttonClass: 'is-info',
-          description: `Perform ${action} on package "${pkg.name}".`,
-          warning: 'Please confirm this action.',
+          description: t('host.packageActionModal.performActionDescription', {
+            action,
+            name: pkg.name,
+          }),
+          warning: t('host.packageActionModal.confirmAction'),
         };
     }
   };
@@ -80,36 +87,40 @@ const PackageActionModal = ({ package: pkg, action, onClose, onConfirm }) => {
       onSubmit={handleSubmit}
       title={actionDetails.title}
       icon={`fas ${actionDetails.icon}`}
-      submitText={loading ? 'Processing...' : actionDetails.title}
+      submitText={loading ? t('host.packageActionModal.processing') : actionDetails.title}
       submitVariant={getSubmitVariant()}
       loading={loading}
     >
       {/* Package Information */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Package Information</h3>
+          <h3 className="fs-6 fw-bold">{t('host.packageActionModal.packageInformation')}</h3>
           <div className="table-responsive">
             <table className="table">
               <tbody>
                 <tr>
                   <td>
-                    <strong>Package Name</strong>
+                    <strong>{t('host.packageActionModal.packageName')}</strong>
                   </td>
                   <td className="font-monospace">{pkg.name}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Publisher</strong>
+                    <strong>{t('host.packageActionModal.publisher')}</strong>
                   </td>
                   <td>
-                    <span className="badge text-bg-info">{pkg.publisher || 'Unknown'}</span>
+                    <span className="badge text-bg-info">
+                      {pkg.publisher || t('host.packageActionModal.unknown')}
+                    </span>
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Version</strong>
+                    <strong>{t('host.packageActionModal.version')}</strong>
                   </td>
-                  <td className="font-monospace">{pkg.version || 'Latest'}</td>
+                  <td className="font-monospace">
+                    {pkg.version || t('host.packageActionModal.latest')}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -120,7 +131,7 @@ const PackageActionModal = ({ package: pkg, action, onClose, onConfirm }) => {
       {/* Action Description */}
       <div className="alert alert-info">
         <p>
-          <strong>Action:</strong> {actionDetails.description}
+          <strong>{t('host.packageActionModal.action')}</strong> {actionDetails.description}
         </p>
         <p className="mt-2">{actionDetails.warning}</p>
       </div>
@@ -128,7 +139,7 @@ const PackageActionModal = ({ package: pkg, action, onClose, onConfirm }) => {
       {/* Options */}
       <div className="card">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Options</h3>
+          <h3 className="fs-6 fw-bold">{t('host.packageActionModal.options')}</h3>
 
           {/* Dry Run Option */}
           <div className="mb-3">
@@ -141,8 +152,8 @@ const PackageActionModal = ({ package: pkg, action, onClose, onConfirm }) => {
                 onChange={e => handleOptionChange('dryRun', e.target.checked)}
               />
               <label className="form-check-label" htmlFor="dry-run-option">
-                <strong>Dry Run</strong> - Show what would be done without actually performing the
-                action
+                <strong>{t('host.packageActionModal.dryRun')}</strong> -{' '}
+                {t('host.packageActionModal.dryRunDescription')}
               </label>
             </div>
           </div>
@@ -159,8 +170,8 @@ const PackageActionModal = ({ package: pkg, action, onClose, onConfirm }) => {
                   onChange={e => handleOptionChange('acceptLicenses', e.target.checked)}
                 />
                 <label className="form-check-label" htmlFor="accept-licenses-option">
-                  <strong>Accept Licenses</strong> - Automatically accept any required package
-                  licenses
+                  <strong>{t('host.packageActionModal.acceptLicenses')}</strong> -{' '}
+                  {t('host.packageActionModal.acceptLicensesDescription')}
                 </label>
               </div>
             </div>
@@ -169,18 +180,18 @@ const PackageActionModal = ({ package: pkg, action, onClose, onConfirm }) => {
           {/* Boot Environment Name */}
           <div className="mb-3">
             <label className="form-label" htmlFor="beName">
-              Boot Environment Name (Optional)
+              {t('host.packageActionModal.bootEnvironmentName')}
             </label>
             <input
               id="beName"
               className="form-control"
               type="text"
-              placeholder="Leave empty to use default"
+              placeholder={t('host.packageActionModal.leaveEmptyToUseDefault')}
               value={options.beName}
               onChange={e => handleOptionChange('beName', e.target.value)}
             />
             <p className="form-text text-muted">
-              Specify a boot environment name to create a backup before the operation.
+              {t('host.packageActionModal.bootEnvironmentDescription')}
             </p>
           </div>
         </div>

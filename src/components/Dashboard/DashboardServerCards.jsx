@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { hasMachines } from '../../utils/capabilities';
 import { resourceLabel } from '../../utils/resourceLabel';
@@ -9,20 +10,21 @@ import { getServerHealthStatus, getStatusColor } from './dashboardUtils';
  * Individual server status cards with health indicators.
  */
 const ServerCard = ({ serverResult, onNavigateToServer }) => {
+  const { t } = useTranslation();
   const { server, success, data, error: serverError } = serverResult;
   const status = getServerHealthStatus(serverResult);
   const statusColor = getStatusColor(status);
 
-  let statusTooltip = 'Host is healthy';
+  let statusTooltip = t('dashboard.serverCards.hostHealthy');
   if (status === 'offline') {
-    statusTooltip = serverError || 'Connection failed';
+    statusTooltip = serverError || t('dashboard.serverCards.connectionFailed');
   } else if (status === 'warning') {
     const issues = [];
     if (data?.loadavg?.[0] > 2) {
-      issues.push('High CPU load');
+      issues.push(t('dashboard.serverCards.highCpuLoad'));
     }
     if (data?.totalmem && data?.freemem && data.freemem / data.totalmem < 0.1) {
-      issues.push('Low memory');
+      issues.push(t('dashboard.serverCards.lowMemory'));
     }
     statusTooltip = issues.join(', ');
   }
@@ -61,17 +63,23 @@ const ServerCard = ({ serverResult, onNavigateToServer }) => {
                   </div>
                 </div>
                 <div className="col text-center">
-                  <div className="text-uppercase small fw-semibold text-muted">CPU Load</div>
+                  <div className="text-uppercase small fw-semibold text-muted">
+                    {t('dashboard.serverCards.cpuLoad')}
+                  </div>
                   <div className="fs-4 fw-bold">
-                    {data.loadavg ? data.loadavg[0].toFixed(2) : 'N/A'}
+                    {data.loadavg
+                      ? data.loadavg[0].toFixed(2)
+                      : t('dashboard.serverCards.notAvailable')}
                   </div>
                 </div>
                 <div className="col text-center">
-                  <div className="text-uppercase small fw-semibold text-muted">Memory</div>
+                  <div className="text-uppercase small fw-semibold text-muted">
+                    {t('dashboard.serverCards.memory')}
+                  </div>
                   <div className="fs-4 fw-bold">
                     {data.totalmem && data.freemem
                       ? `${Math.round(((data.totalmem - data.freemem) / data.totalmem) * 100)}%`
-                      : 'N/A'}
+                      : t('dashboard.serverCards.notAvailable')}
                   </div>
                 </div>
               </div>
@@ -82,12 +90,12 @@ const ServerCard = ({ serverResult, onNavigateToServer }) => {
                 onClick={() => onNavigateToServer(server)}
               >
                 <i className="fas fa-arrow-right me-2" />
-                View Details
+                {t('dashboard.serverCards.viewDetails')}
               </button>
             </>
           ) : (
             <>
-              <p className="text-muted mb-3">Connection Failed</p>
+              <p className="text-muted mb-3">{t('dashboard.serverCards.connectionFailedFull')}</p>
 
               <div className="row mb-3">
                 <div className="col text-center">
@@ -97,11 +105,15 @@ const ServerCard = ({ serverResult, onNavigateToServer }) => {
                   <div className="fs-4 fw-bold text-muted">-</div>
                 </div>
                 <div className="col text-center">
-                  <div className="text-uppercase small fw-semibold text-muted">CPU Load</div>
+                  <div className="text-uppercase small fw-semibold text-muted">
+                    {t('dashboard.serverCards.cpuLoad')}
+                  </div>
                   <div className="fs-4 fw-bold text-muted">-</div>
                 </div>
                 <div className="col text-center">
-                  <div className="text-uppercase small fw-semibold text-muted">Memory</div>
+                  <div className="text-uppercase small fw-semibold text-muted">
+                    {t('dashboard.serverCards.memory')}
+                  </div>
                   <div className="fs-4 fw-bold text-muted">-</div>
                 </div>
               </div>
@@ -113,7 +125,7 @@ const ServerCard = ({ serverResult, onNavigateToServer }) => {
                 disabled
               >
                 <i className="fas fa-arrow-right me-2" />
-                View Details
+                {t('dashboard.serverCards.viewDetails')}
               </button>
             </>
           )}

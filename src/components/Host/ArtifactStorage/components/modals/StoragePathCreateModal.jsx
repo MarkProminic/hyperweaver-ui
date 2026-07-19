@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../../../contexts/ServerContext';
 import FormModal from '../../../../common/FormModal';
 
 const StoragePathCreateModal = ({ server, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     path: '',
@@ -20,19 +22,19 @@ const StoragePathCreateModal = ({ server, onClose, onSuccess, onError }) => {
     const newErrors = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('artifacts.storagePathCreateModal.nameRequired');
     } else if (formData.name.length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
+      newErrors.name = t('artifacts.storagePathCreateModal.nameMinLength');
     }
 
     if (!formData.path.trim()) {
-      newErrors.path = 'Path is required';
+      newErrors.path = t('artifacts.storagePathCreateModal.pathRequired');
     } else if (!formData.path.startsWith('/')) {
-      newErrors.path = 'Path must be an absolute path starting with /';
+      newErrors.path = t('artifacts.storagePathCreateModal.pathAbsoluteRequired');
     }
 
     if (!formData.type) {
-      newErrors.type = 'Type is required';
+      newErrors.type = t('artifacts.storagePathCreateModal.typeRequired');
     }
 
     setErrors(newErrors);
@@ -95,9 +97,9 @@ const StoragePathCreateModal = ({ server, onClose, onSuccess, onError }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create Storage Path"
+      title={t('artifacts.storagePathCreateModal.title')}
       icon="fas fa-plus"
-      submitText="Create"
+      submitText={t('artifacts.storagePathCreateModal.submitButton')}
       submitVariant="is-primary"
       submitIcon="fas fa-plus"
       loading={loading}
@@ -105,43 +107,41 @@ const StoragePathCreateModal = ({ server, onClose, onSuccess, onError }) => {
     >
       <div className="mb-3">
         <label htmlFor="storage-path-name" className="form-label">
-          Name
+          {t('artifacts.storagePathCreateModal.nameLabel')}
         </label>
         <input
           id="storage-path-name"
           className={`form-control ${errors.name ? 'is-invalid' : ''}`}
           type="text"
-          placeholder="e.g., Primary ISO Storage"
+          placeholder={t('artifacts.storagePathCreateModal.namePlaceholder')}
           value={formData.name}
           onChange={e => handleInputChange('name', e.target.value)}
           disabled={loading}
         />
         {errors.name && <p className="form-text text-danger">{errors.name}</p>}
-        <p className="form-text text-muted">A descriptive name for this storage location</p>
+        <p className="form-text text-muted">{t('artifacts.storagePathCreateModal.nameHelper')}</p>
       </div>
 
       <div className="mb-3">
         <label htmlFor="storage-path-path" className="form-label">
-          Path
+          {t('artifacts.storagePathCreateModal.pathLabel')}
         </label>
         <input
           id="storage-path-path"
           className={`form-control ${errors.path ? 'is-invalid' : ''}`}
           type="text"
-          placeholder="e.g., /data/isos"
+          placeholder={t('artifacts.storagePathCreateModal.pathPlaceholder')}
           value={formData.path}
           onChange={e => handleInputChange('path', e.target.value)}
           disabled={loading}
         />
         {errors.path && <p className="form-text text-danger">{errors.path}</p>}
-        <p className="form-text text-muted">
-          Absolute path to the storage directory on the host system
-        </p>
+        <p className="form-text text-muted">{t('artifacts.storagePathCreateModal.pathHelper')}</p>
       </div>
 
       <div className="mb-3">
         <label htmlFor="storage-path-type" className="form-label">
-          Type
+          {t('artifacts.storagePathCreateModal.typeLabel')}
         </label>
         <select
           id="storage-path-type"
@@ -150,11 +150,11 @@ const StoragePathCreateModal = ({ server, onClose, onSuccess, onError }) => {
           onChange={e => handleInputChange('type', e.target.value)}
           disabled={loading}
         >
-          <option value="iso">ISO Files</option>
-          <option value="image">VM Images</option>
+          <option value="iso">{t('artifacts.storagePathCreateModal.isoFiles')}</option>
+          <option value="image">{t('artifacts.storagePathCreateModal.vmImages')}</option>
         </select>
         {errors.type && <p className="form-text text-danger">{errors.type}</p>}
-        <p className="form-text text-muted">Type of artifacts this storage location will contain</p>
+        <p className="form-text text-muted">{t('artifacts.storagePathCreateModal.typeHelper')}</p>
       </div>
 
       <div className="mb-3">
@@ -168,24 +168,21 @@ const StoragePathCreateModal = ({ server, onClose, onSuccess, onError }) => {
             disabled={loading}
           />
           <label className="form-check-label" htmlFor="storage-path-enabled">
-            Enable storage location
+            {t('artifacts.storagePathCreateModal.enableLabel')}
           </label>
         </div>
-        <p className="form-text text-muted">
-          Enabled storage locations can be used for uploads and downloads. Disabled locations are
-          read-only.
-        </p>
+        <p className="form-text text-muted">{t('artifacts.storagePathCreateModal.enableHelper')}</p>
       </div>
 
       <div className="alert alert-info">
         <div>
           <p>
-            <strong>Important:</strong>
+            <strong>{t('artifacts.storagePathCreateModal.importantHeading')}</strong>
           </p>
           <ul>
-            <li>The specified path must exist and be writable by the OmniOS system</li>
-            <li>Ensure adequate disk space is available for artifact storage</li>
-            <li>Path validation will be performed when creating the storage location</li>
+            <li>{t('artifacts.storagePathCreateModal.importantNote1')}</li>
+            <li>{t('artifacts.storagePathCreateModal.importantNote2')}</li>
+            <li>{t('artifacts.storagePathCreateModal.importantNote3')}</li>
           </ul>
         </div>
       </div>

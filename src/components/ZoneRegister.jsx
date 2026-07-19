@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 const ZoneRegister = () => {
+  const { t } = useTranslation();
   const [frontendhost, setFrontendHost] = useState('');
   const [frontendport, setFrontendPort] = useState('3000');
   const [frontendproto, setFrontendProto] = useState('');
@@ -58,7 +60,7 @@ const ZoneRegister = () => {
                   <div className="col-12 col-md-6">
                     <div className="mb-3">
                       <label className="form-label" htmlFor="backendproto">
-                        Backend Host Protocol
+                        {t('auth.zoneRegister.backendProtocolLabel')}
                       </label>
                       <select
                         className="form-select"
@@ -72,34 +74,34 @@ const ZoneRegister = () => {
                     </div>
                     <div className="mb-3">
                       <label className="form-label" htmlFor="backendhost">
-                        Backend Host Address
+                        {t('auth.zoneRegister.backendAddressLabel')}
                       </label>
                       <input
                         id="backendhost"
                         type="text"
                         className="form-control"
-                        placeholder="Backend Host"
+                        placeholder={t('auth.zoneRegister.backendHostPlaceholder')}
                         value={backendhost}
                         onChange={e => setBackendHost(e.target.value)}
                       />
                     </div>
                     <div className="mb-3">
                       <label className="form-label" htmlFor="backendport">
-                        Port
+                        {t('auth.zoneRegister.portLabel')}
                       </label>
                       <input
                         id="backendport"
                         type="text"
                         className="form-control"
                         autoComplete="off"
-                        placeholder="Port"
+                        placeholder={t('auth.zoneRegister.portPlaceholder')}
                         value={backendport}
                         onChange={e => setBackendPort(e.target.value)}
                       />
                     </div>
                     <div className="mb-3">
                       <label className="form-label" htmlFor="backendcode">
-                        Backend Node Security Code
+                        {t('auth.zoneRegister.backendSecurityCodeLabel')}
                       </label>
                       <input
                         id="backendcode"
@@ -116,47 +118,47 @@ const ZoneRegister = () => {
                   <div className="col-12 col-md-6">
                     <div className="mb-3">
                       <label className="form-label" htmlFor="frontendproto">
-                        Frontend Host Protocol
+                        {t('auth.zoneRegister.frontendProtocolLabel')}
                       </label>
                       <input
                         id="frontendproto"
                         type="text"
                         className="form-control"
-                        placeholder="Frontend Host Protocol"
+                        placeholder={t('auth.zoneRegister.frontendProtocolPlaceholder')}
                         value={frontendproto}
                         onChange={e => setFrontendProto(e.target.value)}
                       />
                     </div>
                     <div className="mb-3">
                       <label className="form-label" htmlFor="frontendhost">
-                        Frontend Host Address
+                        {t('auth.zoneRegister.frontendAddressLabel')}
                       </label>
                       <input
                         id="frontendhost"
                         type="text"
                         className="form-control"
-                        placeholder="Frontend Host"
+                        placeholder={t('auth.zoneRegister.frontendHostPlaceholder')}
                         value={frontendhost}
                         onChange={e => setFrontendHost(e.target.value)}
                       />
                     </div>
                     <div className="mb-3">
                       <label className="form-label" htmlFor="frontendport">
-                        Port
+                        {t('auth.zoneRegister.portLabel')}
                       </label>
                       <input
                         id="frontendport"
                         type="text"
                         className="form-control"
                         autoComplete="off"
-                        placeholder="Port"
+                        placeholder={t('auth.zoneRegister.portPlaceholder')}
                         value={frontendport}
                         onChange={e => setFrontendPort(e.target.value)}
                       />
                     </div>
                     <div className="mb-3">
                       <label className="form-label" htmlFor="frontendcode">
-                        Frontend Node Security Code
+                        {t('auth.zoneRegister.frontendSecurityCodeLabel')}
                       </label>
                       <input
                         id="frontendcode"
@@ -173,7 +175,7 @@ const ZoneRegister = () => {
                 <div className="text-center mt-3">
                   {msg && <p className="mb-2">{msg}</p>}
                   <button type="submit" className="btn btn-primary">
-                    Register
+                    {t('auth.zoneRegister.registerBtn')}
                   </button>
                 </div>
               </div>

@@ -1,14 +1,17 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { ContentModal } from '../common';
 
 const EtherstubDetailsModal = ({ etherstub, etherstubDetails, onClose }) => {
+  const { t } = useTranslation();
+
   const formatValue = value => {
     if (value === null || value === undefined) {
-      return 'N/A';
+      return t('host.etherstubDetailsModal.na');
     }
     if (typeof value === 'boolean') {
-      return value ? 'Yes' : 'No';
+      return value ? t('host.etherstubDetailsModal.yes') : t('host.etherstubDetailsModal.no');
     }
     if (typeof value === 'object') {
       return JSON.stringify(value, null, 2);
@@ -23,21 +26,30 @@ const EtherstubDetailsModal = ({ etherstub, etherstubDetails, onClose }) => {
       case 'down':
         return <span className="badge text-bg-danger">{state}</span>;
       default:
-        return <span className="badge text-bg-secondary">{state || 'Unknown'}</span>;
+        return (
+          <span className="badge text-bg-secondary">
+            {state || t('host.etherstubDetailsModal.unknown')}
+          </span>
+        );
     }
   };
 
   const etherstubName = etherstub.name || etherstub.link;
 
   return (
-    <ContentModal isOpen onClose={onClose} title="Etherstub Details" icon="fas fa-network-wired">
-      <h5 className="fs-6 fw-bold">Basic Information</h5>
+    <ContentModal
+      isOpen
+      onClose={onClose}
+      title={t('host.etherstubDetailsModal.title')}
+      icon="fas fa-network-wired"
+    >
+      <h5 className="fs-6 fw-bold">{t('host.etherstubDetailsModal.basicInfo')}</h5>
       <div className="table-responsive">
         <table className="table table-striped">
           <tbody>
             <tr>
               <td>
-                <strong>Name</strong>
+                <strong>{t('host.etherstubDetailsModal.name')}</strong>
               </td>
               <td>
                 <span className="font-monospace">{etherstubName}</span>
@@ -45,33 +57,35 @@ const EtherstubDetailsModal = ({ etherstub, etherstubDetails, onClose }) => {
             </tr>
             <tr>
               <td>
-                <strong>Class</strong>
+                <strong>{t('host.etherstubDetailsModal.class')}</strong>
               </td>
               <td>
-                <span className="badge text-bg-info">{etherstub.class || 'etherstub'}</span>
+                <span className="badge text-bg-info">
+                  {etherstub.class || t('host.etherstubDetailsModal.defaultClass')}
+                </span>
               </td>
             </tr>
             <tr>
               <td>
-                <strong>State</strong>
+                <strong>{t('host.etherstubDetailsModal.state')}</strong>
               </td>
               <td>{getStateTag(etherstub.state)}</td>
             </tr>
             <tr>
               <td>
-                <strong>MTU</strong>
+                <strong>{t('host.etherstubDetailsModal.mtu')}</strong>
               </td>
               <td>{formatValue(etherstub.mtu)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Over</strong>
+                <strong>{t('host.etherstubDetailsModal.over')}</strong>
               </td>
               <td>{formatValue(etherstub.over)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Zone</strong>
+                <strong>{t('host.etherstubDetailsModal.zone')}</strong>
               </td>
               <td>{formatValue(etherstub.zone)}</td>
             </tr>
@@ -81,15 +95,15 @@ const EtherstubDetailsModal = ({ etherstub, etherstubDetails, onClose }) => {
 
       {etherstubDetails && etherstubDetails.vnics && etherstubDetails.vnics.length > 0 && (
         <>
-          <h5 className="fs-6 fw-bold mt-5">Associated VNICs</h5>
+          <h5 className="fs-6 fw-bold mt-5">{t('host.etherstubDetailsModal.associatedVnics')}</h5>
           <div className="table-responsive">
             <table className="table table-striped">
               <thead>
                 <tr>
-                  <th>VNIC Name</th>
-                  <th>Over</th>
-                  <th>State</th>
-                  <th>Zone</th>
+                  <th>{t('host.etherstubDetailsModal.vnicName')}</th>
+                  <th>{t('host.etherstubDetailsModal.over')}</th>
+                  <th>{t('host.etherstubDetailsModal.state')}</th>
+                  <th>{t('host.etherstubDetailsModal.zone')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -109,13 +123,13 @@ const EtherstubDetailsModal = ({ etherstub, etherstubDetails, onClose }) => {
         </>
       )}
 
-      <h5 className="fs-6 fw-bold mt-5">Technical Details</h5>
+      <h5 className="fs-6 fw-bold mt-5">{t('host.etherstubDetailsModal.technicalDetails')}</h5>
       <div className="table-responsive">
         <table className="table table-striped">
           <tbody>
             <tr>
               <td>
-                <strong>MAC Address</strong>
+                <strong>{t('host.etherstubDetailsModal.macAddress')}</strong>
               </td>
               <td>
                 <span className="font-monospace">{formatValue(etherstub.macaddress)}</span>
@@ -123,55 +137,55 @@ const EtherstubDetailsModal = ({ etherstub, etherstubDetails, onClose }) => {
             </tr>
             <tr>
               <td>
-                <strong>MAC Address Type</strong>
+                <strong>{t('host.etherstubDetailsModal.macAddressType')}</strong>
               </td>
               <td>{formatValue(etherstub.macaddrtype)}</td>
             </tr>
             <tr>
               <td>
-                <strong>VLAN ID</strong>
+                <strong>{t('host.etherstubDetailsModal.vlanId')}</strong>
               </td>
               <td>{formatValue(etherstub.vid)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Speed</strong>
+                <strong>{t('host.etherstubDetailsModal.speed')}</strong>
               </td>
               <td>{formatValue(etherstub.speed)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Media</strong>
+                <strong>{t('host.etherstubDetailsModal.media')}</strong>
               </td>
               <td>{formatValue(etherstub.media)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Duplex</strong>
+                <strong>{t('host.etherstubDetailsModal.duplex')}</strong>
               </td>
               <td>{formatValue(etherstub.duplex)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Device</strong>
+                <strong>{t('host.etherstubDetailsModal.device')}</strong>
               </td>
               <td>{formatValue(etherstub.device)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Bridge</strong>
+                <strong>{t('host.etherstubDetailsModal.bridge')}</strong>
               </td>
               <td>{formatValue(etherstub.bridge)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Pause</strong>
+                <strong>{t('host.etherstubDetailsModal.pause')}</strong>
               </td>
               <td>{formatValue(etherstub.pause)}</td>
             </tr>
             <tr>
               <td>
-                <strong>Auto</strong>
+                <strong>{t('host.etherstubDetailsModal.auto')}</strong>
               </td>
               <td>{formatValue(etherstub.auto)}</td>
             </tr>
@@ -179,39 +193,43 @@ const EtherstubDetailsModal = ({ etherstub, etherstubDetails, onClose }) => {
         </table>
       </div>
 
-      <h5 className="fs-6 fw-bold mt-5">Timestamps</h5>
+      <h5 className="fs-6 fw-bold mt-5">{t('host.etherstubDetailsModal.timestamps')}</h5>
       <div className="table-responsive">
         <table className="table table-striped">
           <tbody>
             <tr>
               <td>
-                <strong>Last Scan</strong>
+                <strong>{t('host.etherstubDetailsModal.lastScan')}</strong>
               </td>
               <td>
                 <span className="font-monospace">
                   {etherstub.scan_timestamp
                     ? new Date(etherstub.scan_timestamp).toLocaleString()
-                    : 'N/A'}
+                    : t('host.etherstubDetailsModal.na')}
                 </span>
               </td>
             </tr>
             <tr>
               <td>
-                <strong>Created</strong>
+                <strong>{t('host.etherstubDetailsModal.created')}</strong>
               </td>
               <td>
                 <span className="font-monospace">
-                  {etherstub.createdAt ? new Date(etherstub.createdAt).toLocaleString() : 'N/A'}
+                  {etherstub.createdAt
+                    ? new Date(etherstub.createdAt).toLocaleString()
+                    : t('host.etherstubDetailsModal.na')}
                 </span>
               </td>
             </tr>
             <tr>
               <td>
-                <strong>Updated</strong>
+                <strong>{t('host.etherstubDetailsModal.updated')}</strong>
               </td>
               <td>
                 <span className="font-monospace">
-                  {etherstub.updatedAt ? new Date(etherstub.updatedAt).toLocaleString() : 'N/A'}
+                  {etherstub.updatedAt
+                    ? new Date(etherstub.updatedAt).toLocaleString()
+                    : t('host.etherstubDetailsModal.na')}
                 </span>
               </td>
             </tr>

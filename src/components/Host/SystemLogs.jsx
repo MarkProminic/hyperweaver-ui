@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getAgentBasePath, fetchWsTicket } from '../../api/serverUtils';
 import { useServers } from '../../contexts/ServerContext';
@@ -10,6 +11,7 @@ import LogFileExplorer from './SystemLogs/LogFileExplorer';
 import LogViewer from './SystemLogs/LogViewer';
 
 const SystemLogs = ({ server }) => {
+  const { t } = useTranslation();
   const [logFiles, setLogFiles] = useState([]);
   const [selectedLog, setSelectedLog] = useState(null);
   const [logData, setLogData] = useState(null);
@@ -377,24 +379,21 @@ const SystemLogs = ({ server }) => {
             <div className="card">
               <div className="card-body text-center p-6">
                 <i className="fas fa-file-alt fa-3x text-info" />
-                <h4 className="fs-5 fw-bold mt-4">System Log Viewer</h4>
-                <p>
-                  Select a log file from the left panel to view its contents. Use filters to search
-                  specific entries, limit line count, or view recent activity.
-                </p>
+                <h4 className="fs-5 fw-bold mt-4">{t('host.systemLogs.title')}</h4>
+                <p>{t('host.systemLogs.emptyMessage')}</p>
                 <div className="small text-muted">
                   <p>
-                    <strong>Available Logs:</strong>
+                    <strong>{t('host.systemLogs.availableLogs')}</strong>
                   </p>
                   <ul>
                     <li>
-                      <strong>System Logs:</strong> messages, syslog
+                      <strong>{t('host.systemLogs.systemLogsLabel')}</strong> messages, syslog
                     </li>
                     <li>
-                      <strong>Authentication:</strong> authlog
+                      <strong>{t('host.systemLogs.authLabel')}</strong> authlog
                     </li>
                     <li>
-                      <strong>Fault Manager:</strong> faults, errors, info
+                      <strong>{t('host.systemLogs.faultManagerLabel')}</strong> faults, errors, info
                     </li>
                   </ul>
                 </div>

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { useDebounce } from '../../utils/debounce';
@@ -9,6 +10,7 @@ import ServicePropertiesModal from './ServicePropertiesModal';
 import ServiceTable from './ServiceTable';
 
 const ServiceManagement = ({ server }) => {
+  const { t } = useTranslation();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -233,13 +235,13 @@ const ServiceManagement = ({ server }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="service-name-filter">
-                  Filter by Service Name
+                  {t('host.serviceManagement.filterName')}
                 </label>
                 <input
                   className="form-control"
                   id="service-name-filter"
                   type="text"
-                  placeholder="Enter service name pattern..."
+                  placeholder={t('host.serviceManagement.filterNamePlaceholder')}
                   value={filters.pattern}
                   onChange={e => handleFilterChange('pattern', e.target.value)}
                 />
@@ -248,7 +250,7 @@ const ServiceManagement = ({ server }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="zone-filter">
-                  Filter by Zone
+                  {t('host.serviceManagement.filterZone')}
                 </label>
                 <select
                   className="form-select"
@@ -256,7 +258,7 @@ const ServiceManagement = ({ server }) => {
                   value={filters.zone}
                   onChange={e => handleFilterChange('zone', e.target.value)}
                 >
-                  <option value="">All Zones</option>
+                  <option value="">{t('host.serviceManagement.allZones')}</option>
                   {availableZones.map(zone => (
                     <option key={zone} value={zone}>
                       {zone}
@@ -268,7 +270,7 @@ const ServiceManagement = ({ server }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="state-filter">
-                  Filter by State
+                  {t('host.serviceManagement.filterState')}
                 </label>
                 <select
                   className="form-select"
@@ -276,19 +278,19 @@ const ServiceManagement = ({ server }) => {
                   value={filters.state}
                   onChange={e => handleFilterChange('state', e.target.value)}
                 >
-                  <option value="">All States</option>
-                  <option value="online">Online</option>
-                  <option value="disabled">Disabled</option>
-                  <option value="offline">Offline</option>
-                  <option value="legacy_run">Legacy Run</option>
-                  <option value="maintenance">Maintenance</option>
+                  <option value="">{t('host.serviceManagement.allStates')}</option>
+                  <option value="online">{t('host.serviceManagement.online')}</option>
+                  <option value="disabled">{t('host.serviceManagement.disabled')}</option>
+                  <option value="offline">{t('host.serviceManagement.offline')}</option>
+                  <option value="legacy_run">{t('host.serviceManagement.legacyRun')}</option>
+                  <option value="maintenance">{t('host.serviceManagement.maintenance')}</option>
                 </select>
               </div>
             </div>
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="show-disabled-filter">
-                  Show Disabled
+                  {t('host.serviceManagement.showDisabled')}
                 </label>
                 <div className="form-check form-switch">
                   <input
@@ -300,7 +302,7 @@ const ServiceManagement = ({ server }) => {
                     onChange={e => handleFilterChange('showDisabled', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="show-disabled-filter">
-                    Include All
+                    {t('host.serviceManagement.includeAll')}
                   </label>
                 </div>
               </div>
@@ -314,7 +316,7 @@ const ServiceManagement = ({ server }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-sync-alt me-2" />
-                  <span>Refresh</span>
+                  <span>{t('host.serviceManagement.refresh')}</span>
                 </button>
               </div>
             </div>
@@ -327,7 +329,7 @@ const ServiceManagement = ({ server }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-times me-2" />
-                  <span>Clear</span>
+                  <span>{t('host.serviceManagement.clear')}</span>
                 </button>
               </div>
             </div>
@@ -348,7 +350,7 @@ const ServiceManagement = ({ server }) => {
         <div className="card-body">
           <div className="d-flex justify-content-between align-items-center mb-4">
             <h3 className="fs-6 fw-bold">
-              Services ({filteredServices.length})
+              {t('host.serviceManagement.servicesHeading', { count: filteredServices.length })}
               {loading && (
                 <span className="ms-2">
                   <i className="fas fa-spinner fa-spin" />

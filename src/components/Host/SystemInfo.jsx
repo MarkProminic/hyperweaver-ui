@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import ProvisioningTools from './ProvisioningTools.jsx';
 import ResourceUtilization from './ResourceUtilization.jsx';
@@ -14,6 +15,7 @@ const SystemInfo = ({
   arcSizeBytes,
   currentServer,
 }) => {
+  const { t } = useTranslation();
   const getHealthStatusClass = status => {
     if (status === 'healthy') {
       return 'text-bg-success';
@@ -29,7 +31,7 @@ const SystemInfo = ({
       <div className="card-body">
         <h5 className="h5 mb-4 d-flex align-items-center gap-2">
           <i className="fas fa-tachometer-alt" />
-          <span>Host Overview</span>
+          <span>{t('host.systemInfo.title')}</span>
         </h5>
 
         <div className="row g-3">
@@ -37,39 +39,40 @@ const SystemInfo = ({
           <div className="col-12 col-lg-6">
             <h6 className="h6 mb-3 d-flex align-items-center gap-2">
               <i className="fas fa-server text-info" />
-              <span>System Information</span>
+              <span>{t('host.systemInfo.systemInfo')}</span>
             </h6>
             <table className="table table-sm">
               <tbody>
                 <tr>
                   <td>
-                    <strong>Hostname</strong>
+                    <strong>{t('host.systemInfo.hostname')}</strong>
                   </td>
-                  <td>{serverStats.hostname || 'N/A'}</td>
+                  <td>{serverStats.hostname || t('host.systemInfo.notAvailable')}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Platform</strong>
+                    <strong>{t('host.systemInfo.platform')}</strong>
                   </td>
                   <td>
-                    {serverStats.type || 'N/A'} {serverStats.release || ''}
+                    {serverStats.type || t('host.systemInfo.notAvailable')}{' '}
+                    {serverStats.release || ''}
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Architecture</strong>
+                    <strong>{t('host.systemInfo.architecture')}</strong>
                   </td>
-                  <td>{serverStats.arch || 'N/A'}</td>
+                  <td>{serverStats.arch || t('host.systemInfo.notAvailable')}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Agent Version</strong>
+                    <strong>{t('host.systemInfo.agentVersion')}</strong>
                   </td>
-                  <td>{serverStats.version || 'N/A'}</td>
+                  <td>{serverStats.version || t('host.systemInfo.notAvailable')}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Uptime</strong>
+                    <strong>{t('host.systemInfo.uptime')}</strong>
                   </td>
                   <td>{formatUptime(serverStats.uptime)}</td>
                 </tr>
@@ -78,16 +81,20 @@ const SystemInfo = ({
                   <>
                     <tr>
                       <td>
-                        <strong>Monitoring Service</strong>
+                        <strong>{t('host.systemInfo.monitoringService')}</strong>
                       </td>
                       <td>
                         <span
                           className={`badge ${monitoringStatus.isRunning ? 'text-bg-success' : 'text-bg-danger'}`}
                         >
-                          {monitoringStatus.isRunning ? 'Running' : 'Stopped'}
+                          {monitoringStatus.isRunning
+                            ? t('host.systemInfo.running')
+                            : t('host.systemInfo.stopped')}
                         </span>
                         {monitoringStatus.isInitialized && (
-                          <span className="badge text-bg-success ms-1">Initialized</span>
+                          <span className="badge text-bg-success ms-1">
+                            {t('host.systemInfo.initialized')}
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -96,7 +103,7 @@ const SystemInfo = ({
                 {monitoringHealth.status && (
                   <tr>
                     <td>
-                      <strong>Service Health</strong>
+                      <strong>{t('host.systemInfo.serviceHealth')}</strong>
                     </td>
                     <td>
                       <span className={`badge ${getHealthStatusClass(monitoringHealth.status)}`}>
@@ -109,17 +116,19 @@ const SystemInfo = ({
                 {Object.keys(taskStats).length > 0 && (
                   <tr>
                     <td>
-                      <strong>Task Queue</strong>
+                      <strong>{t('host.systemInfo.taskQueue')}</strong>
                     </td>
                     <td>
                       <span className="badge text-bg-info me-1">
-                        {taskStats.pending || 0} Pending
+                        {taskStats.pending || 0} {t('host.systemInfo.pending')}
                       </span>
                       <span className="badge text-bg-success me-1">
-                        {taskStats.completed || 0} Done
+                        {taskStats.completed || 0} {t('host.systemInfo.done')}
                       </span>
                       {(taskStats.failed || 0) > 0 && (
-                        <span className="badge text-bg-danger">{taskStats.failed} Failed</span>
+                        <span className="badge text-bg-danger">
+                          {taskStats.failed} {t('host.systemInfo.failed')}
+                        </span>
                       )}
                     </td>
                   </tr>

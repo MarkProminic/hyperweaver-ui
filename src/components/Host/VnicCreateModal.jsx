@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { FormModal } from '../common';
@@ -10,6 +11,7 @@ import VnicOptionsFields from './VNIC/VnicOptionsFields';
 import VnicPropertiesFields from './VNIC/VnicPropertiesFields';
 
 const VnicCreateModal = ({ server, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     link: '',
@@ -239,21 +241,19 @@ const VnicCreateModal = ({ server, onClose, onSuccess, onError }) => {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      onError('VNIC name is required');
+      onError(t('host.vnicCreateModal.vnicNameRequired'));
       return false;
     }
 
     if (!formData.link.trim()) {
-      onError('Physical link is required');
+      onError(t('host.vnicCreateModal.physicalLinkRequired'));
       return false;
     }
 
     // Validate VNIC name format
     const nameRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
     if (!nameRegex.test(formData.name)) {
-      onError(
-        'VNIC name must start with a letter and contain only letters, numbers, and underscores'
-      );
+      onError(t('host.vnicCreateModal.vnicNameFormat'));
       return false;
     }
 
@@ -261,7 +261,7 @@ const VnicCreateModal = ({ server, onClose, onSuccess, onError }) => {
     if (formData.vlan_id) {
       const vlanId = parseInt(formData.vlan_id);
       if (isNaN(vlanId) || vlanId < 1 || vlanId > 4094) {
-        onError('VLAN ID must be between 1 and 4094');
+        onError(t('host.vnicCreateModal.vlanIdRange'));
         return false;
       }
     }
@@ -270,7 +270,7 @@ const VnicCreateModal = ({ server, onClose, onSuccess, onError }) => {
     if (formData.mac_address) {
       const macRegex = /^(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/;
       if (!macRegex.test(formData.mac_address)) {
-        onError('Invalid MAC address format (must be XX:XX:XX:XX:XX:XX)');
+        onError(t('host.vnicCreateModal.invalidMacFormat'));
         return false;
       }
     }
@@ -319,10 +319,10 @@ const VnicCreateModal = ({ server, onClose, onSuccess, onError }) => {
       if (result.success) {
         onSuccess();
       } else {
-        onError(result.message || 'Failed to create VNIC');
+        onError(result.message || t('host.vnicCreateModal.failedToCreateVnic'));
       }
     } catch (err) {
-      onError(`Error creating VNIC: ${err.message}`);
+      onError(t('host.vnicCreateModal.errorCreatingVnic', { message: err.message }));
     } finally {
       setCreating(false);
     }
@@ -333,9 +333,9 @@ const VnicCreateModal = ({ server, onClose, onSuccess, onError }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create VNIC"
+      title={t('host.vnicCreateModal.createVnic')}
       icon="fas fa-plus-circle"
-      submitText="Create VNIC"
+      submitText={t('host.vnicCreateModal.createVnic')}
       submitVariant="is-primary"
       loading={creating}
     >

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import { useMode } from '../contexts/ModeContext';
@@ -17,6 +18,7 @@ import RdpSessionHost from './RdpSessionHost';
  * Full-window is also the geometry the component's fit/full modes like best.
  */
 const StandaloneRdpConsole = () => {
+  const { t } = useTranslation();
   const { agentId, machineName } = useParams();
   const [searchParams] = useSearchParams();
   const { isDirect, ready: modeReady } = useMode();
@@ -40,7 +42,7 @@ const StandaloneRdpConsole = () => {
   if (!agentId || !machine) {
     return (
       <div className="hw-standalone-console hw-standalone-console-error">
-        Invalid console address.
+        {t('console.standaloneRdpConsole.invalidAddress')}
       </div>
     );
   }
@@ -54,7 +56,7 @@ const StandaloneRdpConsole = () => {
       <div className="hw-standalone-console hw-standalone-console-error">
         <div className="text-center">
           <i className="fas fa-spinner fa-pulse fa-2x mb-2" />
-          <p>Connecting to host...</p>
+          <p>{t('console.standaloneRdpConsole.connectingToHost')}</p>
         </div>
       </div>
     );
@@ -63,7 +65,7 @@ const StandaloneRdpConsole = () => {
   if (!server) {
     return (
       <div className="hw-standalone-console hw-standalone-console-error">
-        Unknown host for console (agent {agentId}).
+        {t('console.standaloneRdpConsole.unknownHost', { agentId })}
       </div>
     );
   }
@@ -72,7 +74,10 @@ const StandaloneRdpConsole = () => {
     <div className="hw-standalone-console">
       <div className="bg-dark text-white px-3 py-2 d-flex justify-content-between align-items-center flex-shrink-0">
         <h6 className="fs-6 fw-bold text-white mb-0">
-          {target === 'guest' ? 'RDP' : 'VRDP'} — {machine}
+          {target === 'guest'
+            ? t('console.standaloneRdpConsole.rdpLabel')
+            : t('console.standaloneRdpConsole.vrdpLabel')}{' '}
+          — {machine}
         </h6>
         <div className="d-flex gap-1 m-0">
           <RdpConnectionPanel
@@ -93,7 +98,7 @@ const StandaloneRdpConsole = () => {
               }
             }}
             disabled={phase !== 'connected'}
-            title="Send your clipboard to the guest"
+            title={t('console.standaloneRdpConsole.sendClipboard')}
           >
             <i className="fas fa-paste" />
           </button>
@@ -102,7 +107,7 @@ const StandaloneRdpConsole = () => {
             className="btn btn-sm btn-warning"
             onClick={() => uiRef.current?.ctrlAltDel()}
             disabled={phase !== 'connected'}
-            title="Send Ctrl+Alt+Del to the guest"
+            title={t('console.standaloneRdpConsole.sendCtrlAltDel')}
           >
             <i className="fas fa-keyboard" />
           </button>

@@ -1,8 +1,10 @@
 import { useContext } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { UserSettings } from '../contexts/UserSettingsContext';
 
 const SidebarHeader = () => {
+  const { t } = useTranslation();
   const userContext = useContext(UserSettings);
 
   const handleClick = () => {
@@ -19,17 +21,25 @@ const SidebarHeader = () => {
   const getHeaderContent = () => {
     if (isIconOnly) {
       return (
-        <span title="Expand Sidebar">
-          <img src="/ui/images/hyperweaver-glyph.svg" alt="Hyperweaver" className="logo-lg" />
+        <span title={t('chrome.sidebarHeader.expandSidebar')}>
+          <img
+            src="/ui/images/hyperweaver-glyph.svg"
+            alt={t('chrome.sidebarHeader.hyperweaver')}
+            className="logo-lg"
+          />
         </span>
       );
     }
     return (
       <>
         <span className="flex-grow-0">
-          <img src="/ui/images/hyperweaver-glyph.svg" alt="Hyperweaver" className="logo-lg" />
+          <img
+            src="/ui/images/hyperweaver-glyph.svg"
+            alt={t('chrome.sidebarHeader.hyperweaver')}
+            className="logo-lg"
+          />
         </span>
-        <span>Hyperweaver</span>
+        <span>{t('chrome.sidebarHeader.hyperweaver')}</span>
       </>
     );
   };

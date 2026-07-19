@@ -1,6 +1,7 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import axios from 'axios';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +12,7 @@ import { useMode } from '../contexts/ModeContext';
  * @returns {JSX.Element} Register component
  */
 const Register = () => {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -104,23 +106,23 @@ const Register = () => {
 
     // Basic validation
     if (!username || !email || !password || !confirmPassword) {
-      setMsg('All fields are required');
+      setMsg(t('auth.register.allFieldsRequired'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setMsg('Passwords do not match');
+      setMsg(t('auth.register.passwordsNotMatch'));
       return;
     }
 
     if (password.length < 8) {
-      setMsg('Password must be at least 8 characters long');
+      setMsg(t('auth.register.passwordMinLength'));
       return;
     }
 
     // Organization validation for non-first users
     if (!needsSetup && !inviteCode && !organizationName) {
-      setMsg('Organization name is required');
+      setMsg(t('auth.register.organizationRequired'));
       return;
     }
 
@@ -147,7 +149,7 @@ const Register = () => {
       const result = await register(registrationData);
 
       if (result.success) {
-        setMsg('Registration successful! Please login with your credentials.');
+        setMsg(t('auth.register.successMsg'));
         setTimeout(() => {
           navigate('/login');
         }, 2000);
@@ -156,7 +158,7 @@ const Register = () => {
       }
     } catch (registerErr) {
       console.error('Registration error:', registerErr);
-      setMsg('An unexpected error occurred. Please try again.');
+      setMsg(t('auth.register.unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -164,22 +166,22 @@ const Register = () => {
 
   const getPageTitle = () => {
     if (needsSetup) {
-      return 'Setup Super Admin Account';
+      return t('auth.register.setupAdminTitle');
     }
     if (invitation) {
-      return `Join ${invitation.organizationName}`;
+      return t('auth.register.joinOrgTitle', { orgName: invitation.organizationName });
     }
-    return 'Create Account';
+    return t('auth.register.createAccountTitle');
   };
 
   const getSubmitButtonText = () => {
     if (needsSetup) {
-      return 'Create Super Admin Account';
+      return t('auth.register.createAdminBtn');
     }
     if (invitation) {
-      return `Join ${invitation.organizationName}`;
+      return t('auth.register.joinOrgBtn', { orgName: invitation.organizationName });
     }
-    return 'Create Account & Organization';
+    return t('auth.register.createAccountOrgBtn');
   };
 
   const getNotificationClass = () => {
@@ -197,13 +199,13 @@ const Register = () => {
       return (
         <>
           <p>
-            <strong>Setting up Hyperweaver:</strong>
+            <strong>{t('auth.register.setupHelpTitle')}</strong>
           </p>
           <ul>
-            <li>This is the initial system setup</li>
-            <li>Your account will have super admin privileges</li>
-            <li>You can manage all organizations and users</li>
-            <li>Additional users will need to create or join organizations</li>
+            <li>{t('auth.register.setupHelpItem1')}</li>
+            <li>{t('auth.register.setupHelpItem2')}</li>
+            <li>{t('auth.register.setupHelpItem3')}</li>
+            <li>{t('auth.register.setupHelpItem4')}</li>
           </ul>
         </>
       );
@@ -212,13 +214,13 @@ const Register = () => {
       return (
         <>
           <p>
-            <strong>Joining an organization:</strong>
+            <strong>{t('auth.register.joinHelpTitle')}</strong>
           </p>
           <ul>
-            <li>You&apos;ve been invited to join {invitation.organizationName}</li>
-            <li>Complete the form to accept the invitation</li>
-            <li>You&apos;ll become a member of the organization</li>
-            <li>Contact the person who invited you if you have questions</li>
+            <li>{t('auth.register.joinHelpItem1', { orgName: invitation.organizationName })}</li>
+            <li>{t('auth.register.joinHelpItem2')}</li>
+            <li>{t('auth.register.joinHelpItem3')}</li>
+            <li>{t('auth.register.joinHelpItem4')}</li>
           </ul>
         </>
       );
@@ -226,13 +228,13 @@ const Register = () => {
     return (
       <>
         <p>
-          <strong>Creating a new organization:</strong>
+          <strong>{t('auth.register.createHelpTitle')}</strong>
         </p>
         <ul>
-          <li>Enter a unique organization name</li>
-          <li>You&apos;ll become the admin of this new organization</li>
-          <li>You can invite other users to join your organization</li>
-          <li>If the organization already exists, ask for an invitation</li>
+          <li>{t('auth.register.createHelpItem1')}</li>
+          <li>{t('auth.register.createHelpItem2')}</li>
+          <li>{t('auth.register.createHelpItem3')}</li>
+          <li>{t('auth.register.createHelpItem4')}</li>
         </ul>
       </>
     );
@@ -252,9 +254,9 @@ const Register = () => {
               <div className="card">
                 <div className="card-body text-center p-4">
                   <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
+                    <span className="visually-hidden">{t('auth.register.loading')}</span>
                   </div>
-                  <p className="mt-3 mb-0">Checking system status...</p>
+                  <p className="mt-3 mb-0">{t('auth.register.checkingSystemStatus')}</p>
                 </div>
               </div>
             </div>
@@ -282,9 +284,9 @@ const Register = () => {
                 {invitation && (
                   <div className="alert alert-info">
                     <p className="mb-0">
-                      <strong>🎉 You&apos;re invited!</strong>
+                      <strong>{t('auth.register.invitedAlert')}</strong>
                       <br />
-                      You&apos;ve been invited to join{' '}
+                      {t('auth.register.invitedToJoin')}{' '}
                       <strong>{invitation.organizationName}</strong>
                     </p>
                   </div>
@@ -294,10 +296,9 @@ const Register = () => {
                 {needsSetup && (
                   <div className="alert alert-warning">
                     <p className="mb-0">
-                      <strong>⚡ System Setup</strong>
+                      <strong>{t('auth.register.systemSetupAlert')}</strong>
                       <br />
-                      You&apos;re creating the first user account. This will be the super admin
-                      account with full system access.
+                      {t('auth.register.firstUserDesc')}
                     </p>
                   </div>
                 )}
@@ -310,14 +311,14 @@ const Register = () => {
 
                 <div className="mb-3">
                   <label className="form-label" htmlFor="username">
-                    Username
+                    {t('auth.register.usernameLabel')}
                   </label>
                   <input
                     id="username"
                     type="text"
                     className="form-control"
                     autoComplete="username"
-                    placeholder="Username"
+                    placeholder={t('auth.register.usernamePlaceholder')}
                     value={username}
                     onChange={e => setUsername(e.target.value)}
                     disabled={loading}
@@ -327,14 +328,14 @@ const Register = () => {
 
                 <div className="mb-3">
                   <label className="form-label" htmlFor="email">
-                    Email
+                    {t('auth.register.emailLabel')}
                   </label>
                   <input
                     id="email"
                     type="email"
                     className="form-control"
                     autoComplete="email"
-                    placeholder="Email"
+                    placeholder={t('auth.register.emailPlaceholder')}
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     disabled={loading || !!invitation}
@@ -342,7 +343,7 @@ const Register = () => {
                   />
                   {invitation && (
                     <div className="form-text text-muted">
-                      Email is pre-filled from your invitation
+                      {t('auth.register.emailPrefilledMsg')}
                     </div>
                   )}
                 </div>
@@ -351,35 +352,34 @@ const Register = () => {
                 {!needsSetup && !invitation && (
                   <div className="mb-3">
                     <label className="form-label" htmlFor="organizationName">
-                      Organization Name
+                      {t('auth.register.organizationLabel')}
                     </label>
                     <input
                       id="organizationName"
                       type="text"
                       className="form-control"
-                      placeholder="Enter organization name"
+                      placeholder={t('auth.register.organizationPlaceholder')}
                       value={organizationName}
                       onChange={e => setOrganizationName(e.target.value)}
                       disabled={loading}
                       required
                     />
                     <div className="form-text text-muted">
-                      Enter a new organization name to create, or get an invitation to join an
-                      existing one.
+                      {t('auth.register.organizationHelpText')}
                     </div>
                   </div>
                 )}
 
                 <div className="mb-3">
                   <label className="form-label" htmlFor="password">
-                    Password
+                    {t('auth.register.passwordLabel')}
                   </label>
                   <input
                     id="password"
                     type="password"
                     autoComplete="new-password"
                     className="form-control"
-                    placeholder="Password (min 8 characters)"
+                    placeholder={t('auth.register.passwordPlaceholder')}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     disabled={loading}
@@ -389,14 +389,14 @@ const Register = () => {
 
                 <div className="mb-3">
                   <label className="form-label" htmlFor="confirmPassword">
-                    Confirm Password
+                    {t('auth.register.confirmPasswordLabel')}
                   </label>
                   <input
                     id="confirmPassword"
                     type="password"
                     autoComplete="new-password"
                     className="form-control"
-                    placeholder="Confirm Password"
+                    placeholder={t('auth.register.confirmPasswordPlaceholder')}
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     disabled={loading}
@@ -419,7 +419,8 @@ const Register = () => {
 
                 <div className="text-center mt-3">
                   <p className="mb-0">
-                    Already have an account? <a href="/login">Login here</a>
+                    {t('auth.register.alreadyHaveAccount')}{' '}
+                    <a href="/login">{t('auth.register.loginLink')}</a>
                   </p>
                 </div>
 
@@ -427,7 +428,7 @@ const Register = () => {
                 <div className="text-center mt-4">
                   <details>
                     <summary className="text-muted small cursor-pointer">
-                      Need help? Click here
+                      {t('auth.register.needHelpMsg')}
                     </summary>
                     <div className="small text-start mt-2 p-3">{renderHelpContent()}</div>
                   </details>

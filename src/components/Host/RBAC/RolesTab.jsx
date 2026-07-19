@@ -1,11 +1,13 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const RolesTab = ({ roles, loading, copyToClipboard }) => {
+  const { t } = useTranslation();
   if (loading && roles.length === 0) {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading roles...</p>
+        <p className="mt-2">{t('hostTools.RolesTab.loadingRoles')}</p>
       </div>
     );
   }
@@ -14,7 +16,7 @@ const RolesTab = ({ roles, loading, copyToClipboard }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-user-shield fa-2x text-muted" />
-        <p className="mt-2 text-muted">No roles found</p>
+        <p className="mt-2 text-muted">{t('hostTools.RolesTab.noRolesFound')}</p>
       </div>
     );
   }
@@ -24,9 +26,9 @@ const RolesTab = ({ roles, loading, copyToClipboard }) => {
       <table className="table table-hover">
         <thead>
           <tr>
-            <th>Role Name</th>
-            <th>Description</th>
-            <th>Actions</th>
+            <th>{t('hostTools.RolesTab.headerRoleName')}</th>
+            <th>{t('hostTools.RolesTab.headerDescription')}</th>
+            <th>{t('hostTools.RolesTab.headerActions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -41,14 +43,14 @@ const RolesTab = ({ roles, loading, copyToClipboard }) => {
                 </div>
               </td>
               <td className="small" title={role.description}>
-                {role.description || 'N/A'}
+                {role.description || t('hostTools.RolesTab.naFallback')}
               </td>
               <td>
                 <button
                   type="button"
                   className="btn btn-sm"
                   onClick={() => copyToClipboard(role.name)}
-                  title="Copy to clipboard"
+                  title={t('hostTools.RolesTab.copyToClipboard')}
                 >
                   <i className="fas fa-copy" />
                 </button>

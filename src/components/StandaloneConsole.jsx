@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 
 import { useMode } from '../contexts/ModeContext';
@@ -14,6 +15,7 @@ import VncViewerReact from './VncViewerReact';
  * opening this tab. This tab shares the origin's auth (localStorage token).
  */
 const StandaloneConsole = () => {
+  const { t } = useTranslation();
   const { agentId, machineName } = useParams();
   const { isDirect, ready: modeReady } = useMode();
   const { servers } = useServers();
@@ -22,7 +24,7 @@ const StandaloneConsole = () => {
   if (!agentId || !machine) {
     return (
       <div className="hw-standalone-console hw-standalone-console-error">
-        Invalid console address.
+        {t('console.standaloneConsole.invalidAddress')}
       </div>
     );
   }
@@ -39,7 +41,7 @@ const StandaloneConsole = () => {
       <div className="hw-standalone-console hw-standalone-console-error">
         <div className="text-center">
           <i className="fas fa-spinner fa-pulse fa-2x mb-2" />
-          <p>Connecting to host...</p>
+          <p>{t('console.standaloneConsole.connectingToHost')}</p>
         </div>
       </div>
     );
@@ -48,7 +50,7 @@ const StandaloneConsole = () => {
   if (!server) {
     return (
       <div className="hw-standalone-console hw-standalone-console-error">
-        Unknown host for console (agent {agentId}).
+        {t('console.standaloneConsole.unknownHost', { agentId })}
       </div>
     );
   }

@@ -10,6 +10,7 @@ import {
 } from '@devolutions/iron-remote-desktop-rdp';
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getAgentBasePath, fetchWsTicket } from '../api/serverUtils';
 import { buildWsUrl } from '../utils/websocket';
@@ -61,6 +62,7 @@ const RdpSessionHost = ({
   onPhase = null,
   onReconnect = null,
 }) => {
+  const { t } = useTranslation();
   const containerRef = useRef(null);
   const [phase, setPhaseState] = useState('connecting');
   const [detail, setDetail] = useState('');
@@ -98,7 +100,7 @@ const RdpSessionHost = ({
         }
         if (!ticket || basePath === null) {
           setPhase('failed');
-          setDetail('Could not mint a WebSocket ticket for the bridge.');
+          setDetail(t('console.rdpSessionHost.noWsTicket'));
           return;
         }
         const bridgePath = `${basePath}/machines/${encodeURIComponent(machineName)}/rdp-bridge${
@@ -196,7 +198,7 @@ const RdpSessionHost = ({
       .catch(err => {
         if (!cancelled) {
           setPhase('failed');
-          setDetail(`RDP client failed to load: ${ironErrorText(err)}`);
+          setDetail(t('console.rdpSessionHost.clientFailedToLoad', { error: ironErrorText(err) }));
         }
       });
 
@@ -213,7 +215,7 @@ const RdpSessionHost = ({
         container.removeChild(element);
       }
     };
-  }, [currentServer, machineName, target, connectKey, uiRef, setPhase]);
+  }, [currentServer, machineName, target, connectKey, uiRef, setPhase, t]);
 
   const overlay = phase !== 'connected' && (
     <div className="hw-rdp-overlay">
@@ -221,18 +223,20 @@ const RdpSessionHost = ({
         {phase === 'connecting' && (
           <>
             <i className="fas fa-spinner fa-pulse fa-2x hw-loading-spinner" />
-            <p className="mt-2">Connecting over the RDP bridge...</p>
+            <p className="mt-2">{t('console.rdpSessionHost.connectingOverBridge')}</p>
           </>
         )}
         {phase === 'ended' && (
           <>
-            <div className="fs-6 fw-medium mb-2">RDP session ended</div>
+            <div className="fs-6 fw-medium mb-2">{t('console.rdpSessionHost.sessionEnded')}</div>
             {detail && <div className="small mb-3">{detail}</div>}
           </>
         )}
         {phase === 'failed' && (
           <>
-            <div className="fs-6 fw-medium mb-2">RDP connection failed</div>
+            <div className="fs-6 fw-medium mb-2">
+              {t('console.rdpSessionHost.connectionFailed')}
+            </div>
             {detail && <div className="small mb-2">{detail}</div>}
           </>
         )}
@@ -240,7 +244,7 @@ const RdpSessionHost = ({
           <div className="d-flex gap-2 justify-content-center">
             <button type="button" className="btn btn-sm btn-primary" onClick={onReconnect}>
               <i className="fas fa-redo me-2" />
-              <span>Reconnect</span>
+              <span>{t('console.rdpSessionHost.reconnect')}</span>
             </button>
           </div>
         )}

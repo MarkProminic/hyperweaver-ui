@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { PathInput } from '../common';
 import { humanSize } from '../Host/zfsUtils';
@@ -88,6 +89,7 @@ export const GeneralStep = ({
   advanced,
   loading,
 }) => {
+  const { t } = useTranslation();
   const [overrideName, setOverrideName] = useState(!!name.trim());
   const derivedName = `${settings.server_id ? `${settings.server_id}--` : ''}${settings.hostname || '…'}.${settings.domain || '…'}`;
   const computedName = name.trim() ? name.trim() : derivedName;
@@ -96,14 +98,14 @@ export const GeneralStep = ({
     <div className="row g-3">
       <SettingInput
         id="machine-setting-server_id"
-        label="Server ID"
+        label={t('machineEdit.createWizardSteps.serverId')}
         value={settings.server_id}
         onChange={e => setSetting('server_id', e.target.value)}
         disabled={loading}
       />
       <SettingInput
         id="machine-setting-hostname"
-        label="Hostname"
+        label={t('machineEdit.createWizardSteps.hostname')}
         value={settings.hostname}
         onChange={e => setSetting('hostname', e.target.value)}
         required
@@ -111,7 +113,7 @@ export const GeneralStep = ({
       />
       <SettingInput
         id="machine-setting-domain"
-        label="Domain"
+        label={t('machineEdit.createWizardSteps.domain')}
         value={settings.domain}
         onChange={e => setSetting('domain', e.target.value)}
         required
@@ -119,7 +121,7 @@ export const GeneralStep = ({
       />
       <SettingInput
         id="machine-create-tags"
-        label="Tags (comma separated)"
+        label={t('machineEdit.createWizardSteps.tags')}
         placeholder="e.g. dev, domino"
         value={tagsInput}
         onChange={e => setTagsInput(e.target.value)}
@@ -128,7 +130,7 @@ export const GeneralStep = ({
       {advanced && (
         <div className="col-12 col-md-8">
           <label className="form-label" htmlFor="machine-create-notes">
-            Notes
+            {t('machineEdit.createWizardSteps.notes')}
           </label>
           <textarea
             id="machine-create-notes"
@@ -143,7 +145,7 @@ export const GeneralStep = ({
       {advanced && (
         <div className="col-12 col-md-4">
           <label className="form-label" htmlFor="machine-setting-boot_priority">
-            Boot Priority (orchestration)
+            {t('machineEdit.createWizardSteps.bootPriority')}
           </label>
           <input
             id="machine-setting-boot_priority"
@@ -157,14 +159,14 @@ export const GeneralStep = ({
             disabled={loading}
           />
           <span className="form-text text-muted">
-            1–100 — higher boots first when host-level orchestration is enabled.
+            {t('machineEdit.createWizardSteps.bootPriorityHint')}
           </span>
         </div>
       )}
       <div className="col-12">
         <div className="d-flex align-items-center gap-3 flex-wrap">
           <span className="form-text text-muted mt-0">
-            Computed name: <code>{computedName}</code>
+            {t('machineEdit.createWizardSteps.computedName')} <code>{computedName}</code>
           </span>
           <div className="form-check form-switch mb-0">
             <input
@@ -180,7 +182,7 @@ export const GeneralStep = ({
               disabled={loading}
             />
             <label className="form-check-label small" htmlFor="machine-create-name-override">
-              Override name
+              {t('machineEdit.createWizardSteps.overrideName')}
             </label>
           </div>
         </div>
@@ -190,14 +192,13 @@ export const GeneralStep = ({
               id="machine-create-name"
               className="form-control"
               type="text"
-              aria-label="Machine name"
+              aria-label={t('machineEdit.createWizardSteps.machineNameAria')}
               value={name}
               onChange={e => setName(e.target.value)}
               disabled={loading}
             />
             <span className="form-text text-muted">
-              This exact name is used instead of the computed one; hostname and domain above still
-              feed the guest and ansible.
+              {t('machineEdit.createWizardSteps.overrideNameHint')}
             </span>
           </div>
         )}
@@ -214,7 +215,7 @@ export const GeneralStep = ({
             disabled={loading}
           />
           <label className="form-check-label" htmlFor="machine-create-start-after">
-            Start (and provision) after create
+            {t('machineEdit.createWizardSteps.startAfterCreate')}
           </label>
         </div>
       </div>
@@ -264,6 +265,7 @@ export const BoxStep = ({
   advanced,
   loading,
 }) => {
+  const { t } = useTranslation();
   // ONE merged image list: every registry's catalog UNION the local
   // downloaded templates — a registry outage still lists what's on disk.
   // "Custom…" stays for hand-typed org/name.
@@ -335,7 +337,7 @@ export const BoxStep = ({
   return (
     <div className="row g-3">
       <div className="col-12">
-        <span className="form-label d-block">Boot media</span>
+        <span className="form-label d-block">{t('machineEdit.createWizardSteps.bootMedia')}</span>
         {BOOT_SOURCES.map(source => (
           <div className="form-check" key={source.id}>
             <input
@@ -348,15 +350,17 @@ export const BoxStep = ({
               disabled={loading}
             />
             <label className="form-check-label" htmlFor={`machine-boot-source-${source.id}`}>
-              {source.label} <span className="text-muted small">— {source.hint}</span>
+              {t(`machineEdit.createWizardSteps.bootSource.${source.id}.label`)}{' '}
+              <span className="text-muted small">
+                — {t(`machineEdit.createWizardSteps.bootSource.${source.id}.hint`)}
+              </span>
             </label>
           </div>
         ))}
       </div>
       {bootSource !== 'template' && (
         <p className="form-text text-muted mb-0">
-          No box template rides this create — disk details live on the Disks step; ISOs can attach
-          there too.
+          {t('machineEdit.createWizardSteps.noBoxTemplateHint')}
         </p>
       )}
       {bootSource === 'template' && (
@@ -368,7 +372,7 @@ export const BoxStep = ({
           )}
           <div className="col-12 col-md-4">
             <label className="form-label" htmlFor="machine-box-registry">
-              Registry
+              {t('machineEdit.createWizardSteps.registry')}
             </label>
             <select
               id="machine-box-registry"
@@ -377,7 +381,7 @@ export const BoxStep = ({
               onChange={e => onSourceFilterChange(e.target.value)}
               disabled={loading}
             >
-              <option value="">All registries</option>
+              <option value="">{t('machineEdit.createWizardSteps.allRegistries')}</option>
               {sourceNames.map(name => (
                 <option key={name} value={name}>
                   {name}
@@ -387,7 +391,7 @@ export const BoxStep = ({
           </div>
           <div className="col-12 col-md-8">
             <label className="form-label" htmlFor="machine-setting-box">
-              Image
+              {t('machineEdit.createWizardSteps.image')}
             </label>
             {showBoxSelect ? (
               <VocabularySelect
@@ -395,7 +399,9 @@ export const BoxStep = ({
                 value={catalogEntry ? catalogEntry.key : ''}
                 entries={visibleOptions.map(entry => ({ value: entry.key, label: entry.value }))}
                 blankLabel={
-                  visibleOptions.length > 0 ? 'Select an image…' : 'no images found — use Custom'
+                  visibleOptions.length > 0
+                    ? t('machineEdit.createWizardSteps.selectAnImage')
+                    : t('machineEdit.createWizardSteps.noImagesFound')
                 }
                 onChange={key => handleBoxSelect(key)}
                 onCustom={() => {
@@ -403,7 +409,7 @@ export const BoxStep = ({
                   setSetting('box', '');
                   onBoxPicked(null);
                 }}
-                customLabel="Custom (type org/name)…"
+                customLabel={t('machineEdit.createWizardSteps.customOrgName')}
                 disabled={loading}
               />
             ) : (
@@ -423,7 +429,7 @@ export const BoxStep = ({
                 className="btn btn-link btn-sm p-0"
                 onClick={() => setBoxPickCustom(false)}
               >
-                back to the image list
+                {t('machineEdit.createWizardSteps.backToImageList')}
               </button>
             )}
             {templates.length > 0 && (
@@ -441,7 +447,7 @@ export const BoxStep = ({
           </div>
           <div className="col-12 col-md-6">
             <label className="form-label" htmlFor="machine-setting-box_version">
-              Box Version
+              {t('machineEdit.createWizardSteps.boxVersion')}
             </label>
             {/* The catalog arrives pre-filtered to what this host can
                 install — every listed version is downloadable. Custom picks
@@ -455,7 +461,9 @@ export const BoxStep = ({
                 disabled={loading || !catalogEntry}
               >
                 <option value="">
-                  {catalogEntry ? 'unpinned — resolves locally only' : 'pick an image first'}
+                  {catalogEntry
+                    ? t('machineEdit.createWizardSteps.unpinnedResolvesLocally')
+                    : t('machineEdit.createWizardSteps.pickAnImageFirst')}
                 </option>
                 {(catalogEntry?.versions || []).map(versionNumber => (
                   <option key={versionNumber} value={versionNumber}>
@@ -468,7 +476,7 @@ export const BoxStep = ({
                 id="machine-setting-box_version"
                 className="form-control"
                 type="text"
-                placeholder="specific version for downloads"
+                placeholder={t('machineEdit.createWizardSteps.specificVersionPlaceholder')}
                 value={settings.box_version ?? ''}
                 onChange={e => setSetting('box_version', e.target.value)}
                 disabled={loading}
@@ -479,7 +487,7 @@ export const BoxStep = ({
             <>
               <div className="col-12 col-md-6">
                 <label className="form-label" htmlFor="machine-setting-box_arch">
-                  Box Architecture
+                  {t('machineEdit.createWizardSteps.boxArchitecture')}
                 </label>
                 {catalogEntry && catalogEntry.architectures.length > 0 ? (
                   <select
@@ -489,7 +497,7 @@ export const BoxStep = ({
                     onChange={e => setSetting('box_arch', e.target.value)}
                     disabled={loading}
                   >
-                    <option value="">n/a</option>
+                    <option value="">{t('machineEdit.common.na')}</option>
                     {catalogEntry.architectures.map(arch => (
                       <option key={arch} value={arch}>
                         {arch}
@@ -510,7 +518,7 @@ export const BoxStep = ({
               </div>
               <div className="col-12 col-md-6">
                 <label className="form-label" htmlFor="machine-setting-box_url">
-                  Box Registry URL (blank = configured default)
+                  {t('machineEdit.createWizardSteps.boxRegistryUrl')}
                 </label>
                 <input
                   id="machine-setting-box_url"
@@ -524,8 +532,7 @@ export const BoxStep = ({
             </>
           )}
           <p className="form-text text-muted mb-0">
-            A box missing from the local template registry chains a download before creation — pin a
-            specific version for downloads (&quot;latest&quot; only resolves locally).
+            {t('machineEdit.createWizardSteps.boxDownloadHint')}
           </p>
         </>
       )}
@@ -566,6 +573,7 @@ export const stepMemory = (value, delta) => {
 };
 
 export const ResourcesStep = ({ settings, setSetting, loading }) => {
+  const { t } = useTranslation();
   const vcpus = Number(settings.vcpus) || 0;
   const bumpMemory = delta => {
     const next = stepMemory(settings.memory, delta);
@@ -578,13 +586,13 @@ export const ResourcesStep = ({ settings, setSetting, loading }) => {
     <div className="row g-3">
       <div className="col-12 col-md-4">
         <label className="form-label" htmlFor="machine-setting-vcpus">
-          vCPUs
+          {t('machineEdit.createWizardSteps.vcpus')}
         </label>
         <div className="input-group">
           <button
             type="button"
             className="btn btn-outline-secondary"
-            aria-label="Fewer vCPUs"
+            aria-label={t('machineEdit.createWizardSteps.fewerVcpus')}
             onClick={() => setSetting('vcpus', Math.max(1, vcpus - 1))}
             disabled={loading || vcpus <= 1}
           >
@@ -602,7 +610,7 @@ export const ResourcesStep = ({ settings, setSetting, loading }) => {
           <button
             type="button"
             className="btn btn-outline-secondary"
-            aria-label="More vCPUs"
+            aria-label={t('machineEdit.createWizardSteps.moreVcpus')}
             onClick={() => setSetting('vcpus', Math.max(1, vcpus + 1))}
             disabled={loading}
           >
@@ -612,13 +620,13 @@ export const ResourcesStep = ({ settings, setSetting, loading }) => {
       </div>
       <div className="col-12 col-md-4">
         <label className="form-label" htmlFor="machine-setting-memory">
-          Memory
+          {t('machineEdit.createWizardSteps.memory')}
         </label>
         <div className="input-group">
           <button
             type="button"
             className="btn btn-outline-secondary"
-            aria-label="Less memory"
+            aria-label={t('machineEdit.createWizardSteps.lessMemory')}
             onClick={() => bumpMemory(-1)}
             disabled={loading || !stepMemory(settings.memory, -1)}
           >
@@ -636,7 +644,7 @@ export const ResourcesStep = ({ settings, setSetting, loading }) => {
           <button
             type="button"
             className="btn btn-outline-secondary"
-            aria-label="More memory"
+            aria-label={t('machineEdit.createWizardSteps.moreMemory')}
             onClick={() => bumpMemory(1)}
             disabled={loading || !stepMemory(settings.memory, 1)}
           >
@@ -679,6 +687,7 @@ export const BootOrderEditor = ({
   allowCustom = false,
   loading,
 }) => {
+  const { t } = useTranslation();
   const devices = deviceOptions || BOOT_ORDER_DEVICES;
   const [dragDevice, setDragDevice] = useState(null);
   const [customDevice, setCustomDevice] = useState('');
@@ -726,7 +735,7 @@ export const BootOrderEditor = ({
             <button
               type="button"
               className="btn btn-sm btn-outline-danger py-0 ms-auto"
-              aria-label="Remove boot device"
+              aria-label={t('machineEdit.createWizardSteps.removeBootDevice')}
               onClick={() => setBootOrder(bootOrder.filter(entry => entry !== device))}
               disabled={loading}
             >
@@ -740,12 +749,12 @@ export const BootOrderEditor = ({
           {devices.some(device => !bootOrder.includes(device)) && (
             <select
               className="form-select form-select-sm w-auto"
-              aria-label="Add boot device"
+              aria-label={t('machineEdit.createWizardSteps.addBootDevice')}
               value=""
               onChange={e => e.target.value && setBootOrder([...bootOrder, e.target.value])}
               disabled={loading}
             >
-              <option value="">Add device to boot order…</option>
+              <option value="">{t('machineEdit.createWizardSteps.addDeviceToBootOrder')}</option>
               {devices
                 .filter(device => !bootOrder.includes(device))
                 .map(device => (
@@ -761,7 +770,7 @@ export const BootOrderEditor = ({
                 className="form-control"
                 type="text"
                 placeholder="device — e.g. bootdisk, cdrom0, net0=pxe"
-                aria-label="Boot device token"
+                aria-label={t('machineEdit.createWizardSteps.bootDeviceToken')}
                 value={customDevice}
                 onChange={e => setCustomDevice(e.target.value)}
                 onKeyDown={e => {
@@ -775,7 +784,7 @@ export const BootOrderEditor = ({
               <button
                 type="button"
                 className="btn btn-outline-secondary"
-                title="Add this device to the boot order"
+                title={t('machineEdit.createWizardSteps.addThisDeviceTitle')}
                 onClick={addCustom}
                 disabled={loading || !customDevice.trim()}
               >
@@ -802,19 +811,13 @@ BootOrderEditor.propTypes = {
 // pool-aware on bhyve — target pool holds the template → clone|copy, else
 // copy|localize — and a fixed clone|copy on VirtualBox. copy is legal
 // everywhere and pre-selected; the agent refuses illegal picks itself.
-const CLONE_STRATEGY_LABELS = { clone: 'Clone', copy: 'Copy', localize: 'Localize' };
-const CLONE_STRATEGY_HINTS = {
-  clone: 'thin clone — instant, shares storage with the template',
-  copy: 'full independent copy of the template',
-  localize: 'copies the template onto this pool once, then thin-clones from it',
-};
-
 const CloneStrategySelect = ({ value, strategies, onChange, disabled }) => {
+  const { t } = useTranslation();
   const current = strategies.includes(value) ? value : 'copy';
   return (
     <div className="col-6 col-md-4">
       <label className="form-label" htmlFor="machine-disk-clone-strategy">
-        Clone Strategy
+        {t('machineEdit.createWizardSteps.cloneStrategy')}
       </label>
       <select
         id="machine-disk-clone-strategy"
@@ -825,11 +828,13 @@ const CloneStrategySelect = ({ value, strategies, onChange, disabled }) => {
       >
         {strategies.map(strategy => (
           <option key={strategy} value={strategy}>
-            {CLONE_STRATEGY_LABELS[strategy]}
+            {t(`machineEdit.createWizardSteps.cloneStrategyLabel.${strategy}`)}
           </option>
         ))}
       </select>
-      <span className="form-text text-muted">{CLONE_STRATEGY_HINTS[current]}</span>
+      <span className="form-text text-muted">
+        {t(`machineEdit.createWizardSteps.cloneStrategyHint.${current}`)}
+      </span>
     </div>
   );
 };
@@ -855,6 +860,7 @@ const BootZfsPlacement = ({
   defaultPool,
   loading,
 }) => {
+  const { t } = useTranslation();
   const fallbackPool = defaultPool || 'rpool';
   const poolOptions = zfsPoolOptions(zfsPools);
   const datasetOptions = zfsDatasetOptions(
@@ -875,7 +881,7 @@ const BootZfsPlacement = ({
     <>
       <div className="col-6 col-md-4">
         <label className="form-label" htmlFor="machine-disk-boot-pool">
-          ZFS Pool
+          {t('machineEdit.createWizardSteps.zfsPool')}
         </label>
         <PickOrType
           id="machine-disk-boot-pool"
@@ -883,13 +889,13 @@ const BootZfsPlacement = ({
           onChange={handlePoolChange}
           options={poolOptions}
           blankLabel={fallbackPool}
-          placeholder="pool name"
+          placeholder={t('machineEdit.createWizardSteps.poolNamePlaceholder')}
           disabled={loading}
         />
       </div>
       <div className="col-6 col-md-4">
         <label className="form-label" htmlFor="machine-disk-boot-dataset">
-          Parent Dataset
+          {t('machineEdit.createWizardSteps.parentDataset')}
         </label>
         <PickOrType
           id="machine-disk-boot-dataset"
@@ -901,7 +907,7 @@ const BootZfsPlacement = ({
           disabled={loading}
         />
         <span className="form-text text-muted">
-          The boot zvol lands at pool/dataset/&lt;zone&gt;/&lt;volume&gt;.
+          {t('machineEdit.createWizardSteps.bootZvolLandsHint')}
         </span>
       </div>
       {showClone && (
@@ -945,208 +951,219 @@ const BootDiskSection = ({
   defaultPool,
   advanced,
   loading,
-}) => (
-  <div className="row g-3 mb-3">
-    {/* The TYPE selector — the same state as the OS/Box step's Boot media
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="row g-3 mb-3">
+      {/* The TYPE selector — the same state as the OS/Box step's Boot media
         radios, surfaced HERE too (the disks screen must show its own
         discriminator; Mark's ask). */}
-    <div className="col-12">
-      <div className="btn-group" role="group" aria-label="Boot disk type">
-        {BOOT_SOURCES.map(source => (
-          <button
-            type="button"
-            key={source.id}
-            className={`btn btn-sm ${bootSource === source.id ? 'btn-primary' : 'btn-outline-secondary'}`}
-            title={source.hint}
-            onClick={() => setBootSource(source.id)}
-            disabled={loading}
-          >
-            {source.label}
-          </button>
-        ))}
-      </div>
-    </div>
-    {bootSource === 'none' && (
-      <p className="form-text text-muted mb-0">
-        Diskless — no boot medium rides this create. Attach disks later via Edit.
-      </p>
-    )}
-    {bootSource === 'existing' && (
-      <div className="col-12 col-md-8">
-        <label className="form-label" htmlFor="machine-disk-boot-path">
-          {bhyve ? 'Existing zvol (dataset path)' : 'Existing disk image path (on the agent host)'}
-        </label>
-        {bhyve && (
-          <PickOrType
-            id="machine-disk-boot-path"
-            value={disks.bootPath}
-            onChange={next => setDisks({ bootPath: next })}
-            options={volumeOptions}
-            blankLabel="Select a zvol…"
-            placeholder="e.g. rpool/vms/old-server/root"
-            disabled={loading}
-          />
-        )}
-        {!bhyve && mediaOptions.length > 0 && (
-          <PickOrType
-            id="machine-disk-boot-path"
-            value={disks.bootPath}
-            onChange={next => setDisks({ bootPath: next })}
-            options={mediaOptions}
-            blankLabel="Select a registered disk image…"
-            placeholder="path on the agent host"
-            disabled={loading}
-          />
-        )}
-        {!bhyve && mediaOptions.length === 0 && (
-          <PathInput
-            id="machine-disk-boot-path"
-            value={disks.bootPath}
-            onChange={next => setDisks({ bootPath: next })}
-            server={currentServer}
-            mode="file"
-            pickTitle="Pick the disk image"
-            disabled={loading}
-          />
-        )}
-        <p className="form-text text-muted mb-0">
-          Attached as-is — never created or deleted by the agent.
-        </p>
-      </div>
-    )}
-    {(bootSource === 'template' || bootSource === 'scratch') && (
-      <>
-        <div className="col-12 col-md-4">
-          <label className="form-label" htmlFor="machine-disk-boot-size">
-            {bootSource === 'template' ? 'Disk size (blank = template size)' : 'Disk size'}
-          </label>
-          <input
-            id="machine-disk-boot-size"
-            className="form-control"
-            type="text"
-            placeholder="e.g. 32G"
-            value={disks.bootSize}
-            onChange={e => setDisks({ bootSize: e.target.value })}
-            disabled={loading}
-          />
+      <div className="col-12">
+        <div
+          className="btn-group"
+          role="group"
+          aria-label={t('machineEdit.createWizardSteps.bootDiskType')}
+        >
+          {BOOT_SOURCES.map(source => (
+            <button
+              type="button"
+              key={source.id}
+              className={`btn btn-sm ${bootSource === source.id ? 'btn-primary' : 'btn-outline-secondary'}`}
+              title={t(`machineEdit.createWizardSteps.bootSource.${source.id}.hint`)}
+              onClick={() => setBootSource(source.id)}
+              disabled={loading}
+            >
+              {t(`machineEdit.createWizardSteps.bootSource.${source.id}.label`)}
+            </button>
+          ))}
         </div>
-        {advanced && (
-          <>
-            <div className="col-6 col-md-4">
-              <div className="form-check form-switch mt-4">
+      </div>
+      {bootSource === 'none' && (
+        <p className="form-text text-muted mb-0">
+          {t('machineEdit.createWizardSteps.disklessHint')}
+        </p>
+      )}
+      {bootSource === 'existing' && (
+        <div className="col-12 col-md-8">
+          <label className="form-label" htmlFor="machine-disk-boot-path">
+            {bhyve
+              ? t('machineEdit.createWizardSteps.existingZvolDatasetPath')
+              : t('machineEdit.createWizardSteps.existingDiskImagePath')}
+          </label>
+          {bhyve && (
+            <PickOrType
+              id="machine-disk-boot-path"
+              value={disks.bootPath}
+              onChange={next => setDisks({ bootPath: next })}
+              options={volumeOptions}
+              blankLabel={t('machineEdit.createWizardSteps.selectAZvol')}
+              placeholder="e.g. rpool/vms/old-server/root"
+              disabled={loading}
+            />
+          )}
+          {!bhyve && mediaOptions.length > 0 && (
+            <PickOrType
+              id="machine-disk-boot-path"
+              value={disks.bootPath}
+              onChange={next => setDisks({ bootPath: next })}
+              options={mediaOptions}
+              blankLabel={t('machineEdit.createWizardSteps.selectRegisteredDiskImage')}
+              placeholder={t('machineEdit.createWizardSteps.pathOnAgentHost')}
+              disabled={loading}
+            />
+          )}
+          {!bhyve && mediaOptions.length === 0 && (
+            <PathInput
+              id="machine-disk-boot-path"
+              value={disks.bootPath}
+              onChange={next => setDisks({ bootPath: next })}
+              server={currentServer}
+              mode="file"
+              pickTitle={t('machineEdit.createWizardSteps.pickDiskImage')}
+              disabled={loading}
+            />
+          )}
+          <p className="form-text text-muted mb-0">
+            {t('machineEdit.createWizardSteps.attachedAsIsHint')}
+          </p>
+        </div>
+      )}
+      {(bootSource === 'template' || bootSource === 'scratch') && (
+        <>
+          <div className="col-12 col-md-4">
+            <label className="form-label" htmlFor="machine-disk-boot-size">
+              {bootSource === 'template'
+                ? t('machineEdit.createWizardSteps.diskSizeBlankTemplate')
+                : t('machineEdit.createWizardSteps.diskSize')}
+            </label>
+            <input
+              id="machine-disk-boot-size"
+              className="form-control"
+              type="text"
+              placeholder="e.g. 32G"
+              value={disks.bootSize}
+              onChange={e => setDisks({ bootSize: e.target.value })}
+              disabled={loading}
+            />
+          </div>
+          {advanced && (
+            <>
+              <div className="col-6 col-md-4">
+                <div className="form-check form-switch mt-4">
+                  <input
+                    id="machine-disk-boot-sparse"
+                    className="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    checked={disks.bootSparse}
+                    onChange={e => setDisks({ bootSparse: e.target.checked })}
+                    disabled={loading}
+                  />
+                  <label className="form-check-label" htmlFor="machine-disk-boot-sparse">
+                    {t('machineEdit.createWizardSteps.sparse')}
+                  </label>
+                </div>
+              </div>
+              <div className="col-6 col-md-4">
+                <label className="form-label" htmlFor="machine-disk-boot-volume">
+                  {t('machineEdit.createWizardSteps.volumeName')}
+                </label>
                 <input
-                  id="machine-disk-boot-sparse"
-                  className="form-check-input"
-                  type="checkbox"
-                  role="switch"
-                  checked={disks.bootSparse}
-                  onChange={e => setDisks({ bootSparse: e.target.checked })}
+                  id="machine-disk-boot-volume"
+                  className="form-control"
+                  type="text"
+                  value={disks.bootVolumeName}
+                  onChange={e => setDisks({ bootVolumeName: e.target.value })}
                   disabled={loading}
                 />
-                <label className="form-check-label" htmlFor="machine-disk-boot-sparse">
-                  Sparse
-                </label>
               </div>
-            </div>
-            <div className="col-6 col-md-4">
-              <label className="form-label" htmlFor="machine-disk-boot-volume">
-                Volume name
-              </label>
-              <input
-                id="machine-disk-boot-volume"
-                className="form-control"
-                type="text"
-                value={disks.bootVolumeName}
-                onChange={e => setDisks({ bootVolumeName: e.target.value })}
-                disabled={loading}
-              />
-            </div>
-            {bhyve && (
-              <BootZfsPlacement
-                disks={disks}
-                setDisks={setDisks}
-                zfsPools={zfsPools}
-                zfsDatasets={zfsDatasets}
-                showClone={bootSource === 'template'}
-                availablePools={availablePools}
-                defaultPool={defaultPool}
-                loading={loading}
-              />
-            )}
-            {vbox && bootSource === 'template' && (
-              <CloneStrategySelect
-                value={disks.bootCloneStrategy}
-                strategies={['clone', 'copy']}
-                onChange={next => setDisks({ bootCloneStrategy: next })}
-                disabled={loading}
-              />
-            )}
-          </>
-        )}
-      </>
-    )}
-    {/* VBox FILE placement (frozen addendum): `directory` — where the
+              {bhyve && (
+                <BootZfsPlacement
+                  disks={disks}
+                  setDisks={setDisks}
+                  zfsPools={zfsPools}
+                  zfsDatasets={zfsDatasets}
+                  showClone={bootSource === 'template'}
+                  availablePools={availablePools}
+                  defaultPool={defaultPool}
+                  loading={loading}
+                />
+              )}
+              {vbox && bootSource === 'template' && (
+                <CloneStrategySelect
+                  value={disks.bootCloneStrategy}
+                  strategies={['clone', 'copy']}
+                  onChange={next => setDisks({ bootCloneStrategy: next })}
+                  disabled={loading}
+                />
+              )}
+            </>
+          )}
+        </>
+      )}
+      {/* VBox FILE placement (frozen addendum): `directory` — where the
         CREATED disk file lands, blank/template only; absent = the machine
         folder. Must exist on the agent host — the agent never creates it. */}
-    {vbox && advanced && (bootSource === 'template' || bootSource === 'scratch') && (
-      <div className="col-12 col-md-6">
-        <label className="form-label" htmlFor="machine-disk-boot-directory">
-          Directory (where the created disk file lands)
-        </label>
-        <PathInput
-          id="machine-disk-boot-directory"
-          className="form-control font-monospace"
-          value={disks.bootDirectory}
-          onChange={next => setDisks({ bootDirectory: next })}
-          server={currentServer}
-          mode="directory"
-          pickTitle="Pick the folder for the created disk file"
-          placeholder="machine folder"
-          list="machine-media-dirs"
-          disabled={loading}
-        />
-        <span className="form-text text-muted">
-          Browse, pick a known media folder, or type — must exist on the agent host.
-        </span>
-      </div>
-    )}
-    {/* VBox attachment placement — controller/port ride EVERY entry (the
+      {vbox && advanced && (bootSource === 'template' || bootSource === 'scratch') && (
+        <div className="col-12 col-md-6">
+          <label className="form-label" htmlFor="machine-disk-boot-directory">
+            {t('machineEdit.createWizardSteps.directoryWhereCreatedDiskLands')}
+          </label>
+          <PathInput
+            id="machine-disk-boot-directory"
+            className="form-control font-monospace"
+            value={disks.bootDirectory}
+            onChange={next => setDisks({ bootDirectory: next })}
+            server={currentServer}
+            mode="directory"
+            pickTitle={t('machineEdit.createWizardSteps.pickFolderForCreatedDisk')}
+            placeholder={t('machineEdit.createWizardSteps.machineFolderPlaceholder')}
+            list="machine-media-dirs"
+            disabled={loading}
+          />
+          <span className="form-text text-muted">
+            {t('machineEdit.createWizardSteps.browsePickOrTypeHint')}
+          </span>
+        </div>
+      )}
+      {/* VBox attachment placement — controller/port ride EVERY entry (the
         frozen wire); blank = default controller / next free port. */}
-    {vbox && advanced && bootSource !== 'none' && (
-      <>
-        <div className="col-6 col-md-4">
-          <label className="form-label" htmlFor="machine-disk-boot-controller">
-            Controller
-          </label>
-          <input
-            id="machine-disk-boot-controller"
-            className="form-control"
-            list="machine-controller-names"
-            placeholder="n/a"
-            value={disks.bootController}
-            onChange={e => setDisks({ bootController: e.target.value })}
-            disabled={loading}
-          />
-        </div>
-        <div className="col-6 col-md-2">
-          <label className="form-label" htmlFor="machine-disk-boot-port">
-            Port
-          </label>
-          <input
-            id="machine-disk-boot-port"
-            className="form-control"
-            type="number"
-            min="0"
-            placeholder="next free"
-            value={disks.bootPort}
-            onChange={e => setDisks({ bootPort: e.target.value })}
-            disabled={loading}
-          />
-        </div>
-      </>
-    )}
-  </div>
-);
+      {vbox && advanced && bootSource !== 'none' && (
+        <>
+          <div className="col-6 col-md-4">
+            <label className="form-label" htmlFor="machine-disk-boot-controller">
+              {t('machineEdit.controllerPortFields.controller')}
+            </label>
+            <input
+              id="machine-disk-boot-controller"
+              className="form-control"
+              list="machine-controller-names"
+              placeholder={t('machineEdit.common.na')}
+              value={disks.bootController}
+              onChange={e => setDisks({ bootController: e.target.value })}
+              disabled={loading}
+            />
+          </div>
+          <div className="col-6 col-md-2">
+            <label className="form-label" htmlFor="machine-disk-boot-port">
+              {t('machineEdit.controllerPortFields.port')}
+            </label>
+            <input
+              id="machine-disk-boot-port"
+              className="form-control"
+              type="number"
+              min="0"
+              placeholder={t('machineEdit.createWizardSteps.nextFreePlaceholder')}
+              value={disks.bootPort}
+              onChange={e => setDisks({ bootPort: e.target.value })}
+              disabled={loading}
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 BootDiskSection.propTypes = {
   bootSource: PropTypes.string.isRequired,
@@ -1169,20 +1186,27 @@ BootDiskSection.propTypes = {
 // Volume rows carry in_use_by (machine name | null) — an in-use zvol
 // stays pickable (the agent refuses; `force: true` is the override) but
 // the label says who holds it.
-const buildVolumeOptions = zfsVolumes =>
+const buildVolumeOptions = (zfsVolumes, t) =>
   zfsVolumes.map(volume => ({
     value: volume.name,
-    label: volume.in_use_by ? `${volume.name} — in use by ${volume.in_use_by}` : volume.name,
+    label: volume.in_use_by
+      ? t('machineEdit.createWizardSteps.inUseByLabel', {
+          name: volume.name,
+          user: volume.in_use_by,
+        })
+      : volume.name,
   }));
 
 // GET /media rows (frozen wire): in_use_by is an ARRAY (VBox media can
 // multi-attach); size_bytes numeric.
-const buildMediaOptions = vboxMedia =>
+const buildMediaOptions = (vboxMedia, t) =>
   vboxMedia.map(medium => {
     const size = Number.isFinite(medium.size_bytes) ? ` — ${humanSize(medium.size_bytes)}` : '';
     const holders =
       Array.isArray(medium.in_use_by) && medium.in_use_by.length > 0
-        ? ` · in use by ${medium.in_use_by.join(', ')}`
+        ? t('machineEdit.createWizardSteps.inUseByListSuffix', {
+            list: medium.in_use_by.join(', '),
+          })
         : '';
     return { value: medium.path, label: `${medium.path}${size}${holders}` };
   });
@@ -1201,19 +1225,19 @@ const buildMediaDirs = vboxMedia => [
   ),
 ];
 
-const existingDiskPickerFor = (bhyve, volumeOptions, mediaOptions) => {
+const existingDiskPickerFor = (bhyve, volumeOptions, mediaOptions, t) => {
   if (bhyve) {
     return {
       options: volumeOptions,
-      blankLabel: 'Select a zvol…',
+      blankLabel: t('machineEdit.createWizardSteps.selectAZvol'),
       placeholder: 'e.g. rpool/vols/data',
     };
   }
   return mediaOptions.length > 0
     ? {
         options: mediaOptions,
-        blankLabel: 'Select a registered disk image…',
-        placeholder: 'path on the agent host',
+        blankLabel: t('machineEdit.createWizardSteps.selectRegisteredDiskImage'),
+        placeholder: t('machineEdit.createWizardSteps.pathOnAgentHost'),
       }
     : null;
 };
@@ -1245,15 +1269,16 @@ export const DisksStep = ({
   advanced,
   loading,
 }) => {
+  const { t } = useTranslation();
   const diskifDefault = agentDefaultLabel(agentDefaults, 'diskif');
   const knobValues = agentDefaults?.knob_values || null;
   // The rows share the boot placement's pickers (Mark: same treatment
   // everywhere) — per-row dataset options follow that ROW's pool.
   const poolOptions = zfsPoolOptions(zfsPools);
-  const volumeOptions = buildVolumeOptions(zfsVolumes);
-  const mediaOptions = buildMediaOptions(vboxMedia);
+  const volumeOptions = buildVolumeOptions(zfsVolumes, t);
+  const mediaOptions = buildMediaOptions(vboxMedia, t);
   const mediaDirs = buildMediaDirs(vboxMedia);
-  const existingDiskPicker = existingDiskPickerFor(bhyve, volumeOptions, mediaOptions);
+  const existingDiskPicker = existingDiskPickerFor(bhyve, volumeOptions, mediaOptions, t);
   const diskifOptions = diskifOptionsFrom(knobValues);
   const controllerTypeOptions = controllerTypeOptionsFrom(knobValues);
   const controllerNames = (disks.controllers || []).map(row => row.name.trim()).filter(Boolean);
@@ -1273,7 +1298,7 @@ export const DisksStep = ({
 
   return (
     <>
-      <h6 className="fw-bold">Boot Disk</h6>
+      <h6 className="fw-bold">{t('machineEdit.createWizardSteps.bootDisk')}</h6>
       <BootDiskSection
         bootSource={bootSource}
         setBootSource={setBootSource}
@@ -1307,7 +1332,7 @@ export const DisksStep = ({
         </datalist>
       )}
 
-      <h6 className="fw-bold">Additional Disks</h6>
+      <h6 className="fw-bold">{t('machineEdit.createWizardSteps.additionalDisks')}</h6>
       <div className="d-flex flex-column gap-2 mb-3">
         {disks.additional.map((row, index) => {
           const rowKey = `additional-disk-${index}`;
@@ -1315,11 +1340,15 @@ export const DisksStep = ({
             <div className="row g-2 align-items-end" key={rowKey}>
               <DiskSourceFields
                 idPrefix={rowKey}
-                sourceLabel="Source"
+                sourceLabel={t('machineEdit.createWizardSteps.source')}
                 valueCol="col-6 col-md-5"
-                sizeLabel="Size"
+                sizeLabel={t('machineEdit.createWizardSteps.size')}
                 sizePlaceholder="e.g. 20G"
-                existingLabel={bhyve ? 'Existing zvol' : 'Existing disk image'}
+                existingLabel={
+                  bhyve
+                    ? t('machineEdit.createWizardSteps.existingZvol')
+                    : t('machineEdit.createWizardSteps.existingDiskImage')
+                }
                 row={row}
                 onPatch={patch => setAdditional(index, patch)}
                 picker={existingDiskPicker}
@@ -1338,7 +1367,7 @@ export const DisksStep = ({
               {advanced && vbox && row.mode === 'new' && (
                 <div className="col-4 col-md-3">
                   <label className="form-label small mb-1" htmlFor={`${rowKey}-directory`}>
-                    Directory
+                    {t('machineEdit.createWizardSteps.directory')}
                   </label>
                   <PathInput
                     id={`${rowKey}-directory`}
@@ -1347,8 +1376,8 @@ export const DisksStep = ({
                     onChange={next => setAdditional(index, { directory: next })}
                     server={currentServer}
                     mode="directory"
-                    pickTitle="Pick the folder for the created disk file"
-                    placeholder="machine folder"
+                    pickTitle={t('machineEdit.createWizardSteps.pickFolderForCreatedDisk')}
+                    placeholder={t('machineEdit.createWizardSteps.machineFolderPlaceholder')}
                     list="machine-media-dirs"
                     disabled={loading}
                   />
@@ -1358,7 +1387,7 @@ export const DisksStep = ({
                 <>
                   <div className="col-3 col-md-2">
                     <label className="form-label small mb-1" htmlFor={`${rowKey}-volume`}>
-                      Volume name
+                      {t('machineEdit.createWizardSteps.volumeName')}
                     </label>
                     <input
                       id={`${rowKey}-volume`}
@@ -1372,7 +1401,7 @@ export const DisksStep = ({
                   </div>
                   <div className="col-3 col-md-2">
                     <label className="form-label small mb-1" htmlFor={`${rowKey}-pool`}>
-                      Pool
+                      {t('machineEdit.storageDevicesEditor.pool')}
                     </label>
                     <PickOrType
                       id={`${rowKey}-pool`}
@@ -1387,7 +1416,7 @@ export const DisksStep = ({
                   </div>
                   <div className="col-3 col-md-2">
                     <label className="form-label small mb-1" htmlFor={`${rowKey}-dataset`}>
-                      Dataset
+                      {t('machineEdit.createWizardSteps.dataset')}
                     </label>
                     <PickOrType
                       id={`${rowKey}-dataset`}
@@ -1412,14 +1441,14 @@ export const DisksStep = ({
                         disabled={loading}
                       />
                       <label className="form-check-label small" htmlFor={`${rowKey}-sparse`}>
-                        Sparse
+                        {t('machineEdit.createWizardSteps.sparse')}
                       </label>
                     </div>
                   </div>
                 </>
               )}
               <RemoveRowButton
-                label="Remove disk"
+                label={t('machineEdit.createWizardSteps.removeDisk')}
                 onClick={() =>
                   setDisks({
                     additional: disks.additional
@@ -1456,12 +1485,12 @@ export const DisksStep = ({
             disabled={loading}
           >
             <i className="fas fa-plus me-2" />
-            Add Disk
+            {t('machineEdit.createWizardSteps.addDisk')}
           </button>
         </div>
       </div>
 
-      <h6 className="fw-bold">CD/DVD (ISO)</h6>
+      <h6 className="fw-bold">{t('machineEdit.createWizardSteps.cdDvdIso')}</h6>
       <div className="d-flex flex-column gap-2">
         {disks.cdroms.map((row, index) => {
           const rowKey = `cdrom-${index}`;
@@ -1469,7 +1498,7 @@ export const DisksStep = ({
             <div className="row g-2 align-items-end" key={rowKey}>
               <CdromSourceFields
                 idPrefix={rowKey}
-                sourceLabel="Source"
+                sourceLabel={t('machineEdit.createWizardSteps.source')}
                 sourceCol="col-4 col-md-2"
                 isoCol="col-6 col-md-6"
                 pathCol="col-10 col-md-6"
@@ -1489,7 +1518,7 @@ export const DisksStep = ({
                 />
               )}
               <RemoveRowButton
-                label="Remove ISO"
+                label={t('machineEdit.createWizardSteps.removeIso')}
                 onClick={() =>
                   setDisks({
                     cdroms: disks.cdroms.slice(0, index).concat(disks.cdroms.slice(index + 1)),
@@ -1515,14 +1544,16 @@ export const DisksStep = ({
             disabled={loading}
           >
             <i className="fas fa-plus me-2" />
-            Add ISO
+            {t('machineEdit.createWizardSteps.addIso')}
           </button>
         </div>
       </div>
 
       {bhyve && (
         <>
-          <h6 className="fw-bold mt-3">Filesystems (lofs mounts)</h6>
+          <h6 className="fw-bold mt-3">
+            {t('machineEdit.createWizardSteps.filesystemsLofsMounts')}
+          </h6>
           <div className="d-flex flex-column gap-2">
             {(disks.filesystems || []).map((row, index) => {
               const setRow = patch =>
@@ -1538,7 +1569,7 @@ export const DisksStep = ({
                       className="form-label small mb-1"
                       htmlFor={`create-fs-special-${row.key}`}
                     >
-                      Host dir (special)
+                      {t('machineEdit.filesystemsEditor.hostDir')}
                     </label>
                     <input
                       id={`create-fs-special-${row.key}`}
@@ -1550,7 +1581,7 @@ export const DisksStep = ({
                   </div>
                   <div className="col-6 col-md-3">
                     <label className="form-label small mb-1" htmlFor={`create-fs-dir-${row.key}`}>
-                      Mount point (dir)
+                      {t('machineEdit.filesystemsEditor.mountPoint')}
                     </label>
                     <input
                       id={`create-fs-dir-${row.key}`}
@@ -1562,7 +1593,7 @@ export const DisksStep = ({
                   </div>
                   <div className="col-4 col-md-2">
                     <label className="form-label small mb-1" htmlFor={`create-fs-type-${row.key}`}>
-                      Type
+                      {t('machineEdit.filesystemsEditor.type')}
                     </label>
                     <input
                       id={`create-fs-type-${row.key}`}
@@ -1578,7 +1609,7 @@ export const DisksStep = ({
                       className="form-label small mb-1"
                       htmlFor={`create-fs-options-${row.key}`}
                     >
-                      Options
+                      {t('machineEdit.filesystemsEditor.options')}
                     </label>
                     <input
                       id={`create-fs-options-${row.key}`}
@@ -1590,7 +1621,7 @@ export const DisksStep = ({
                     />
                   </div>
                   <RemoveRowButton
-                    label="Remove mount"
+                    label={t('machineEdit.createWizardSteps.removeMount')}
                     onClick={() =>
                       setDisks({
                         filesystems: disks.filesystems.filter(entry => entry.key !== row.key),
@@ -1616,17 +1647,18 @@ export const DisksStep = ({
                 disabled={loading}
               >
                 <i className="fas fa-plus me-2" />
-                Add Mount
+                {t('machineEdit.filesystemsEditor.addMount')}
               </button>
             </div>
           </div>
         </>
       )}
 
-      <h6 className="fw-bold mt-3">Boot Order</h6>
+      <h6 className="fw-bold mt-3">{t('machineEdit.createWizardSteps.bootOrder')}</h6>
       <p className="form-text text-muted mt-0">
-        Blank = agent default. For an install-from-ISO flow, put <code>dvd</code> before{' '}
-        <code>disk</code> and attach the ISO above.
+        {t('machineEdit.createWizardSteps.bootOrderIsoHintPrefix')} <code>dvd</code>{' '}
+        {t('machineEdit.createWizardSteps.bootOrderIsoHintMiddle')} <code>disk</code>{' '}
+        {t('machineEdit.createWizardSteps.bootOrderIsoHintTail')}
       </p>
       <BootOrderEditor
         bootOrder={bootOrder}
@@ -1641,7 +1673,7 @@ export const DisksStep = ({
             <div className="row g-3 mt-1 mb-3">
               <div className="col-12 col-md-4">
                 <label className="form-label" htmlFor="machine-zones-diskif">
-                  Default Controller Type
+                  {t('machineEdit.createWizardSteps.defaultControllerType')}
                 </label>
                 <VocabularySelect
                   id="machine-zones-diskif"
@@ -1652,8 +1684,7 @@ export const DisksStep = ({
                   disabled={loading}
                 />
                 <span className="form-text text-muted">
-                  The single-controller shape (zones.diskif, bhyve) — on VirtualBox use the
-                  controller rows below instead.
+                  {t('machineEdit.createWizardSteps.singleControllerShapeHint')}
                 </span>
               </div>
             </div>
@@ -1661,11 +1692,10 @@ export const DisksStep = ({
 
           {vbox && (
             <>
-              <h6 className="fw-bold">Storage Controllers (device model)</h6>
+              <h6 className="fw-bold">{t('machineEdit.createWizardSteps.storageControllers')}</h6>
               <p className="form-text text-muted mt-0">
-                VirtualBox&apos;s real storage surface: controllers with ports you attach media to.
-                Leave empty for the default single SATA controller. Media rows can address{' '}
-                <code>controller/port</code> explicitly.
+                {t('machineEdit.createWizardSteps.vboxStorageSurfaceHint')}{' '}
+                <code>controller/port</code> {t('machineEdit.createWizardSteps.explicitlySuffix')}
               </p>
               <div className="d-flex flex-column gap-2 mb-2">
                 {(disks.controllers || []).map((row, index) => (
@@ -1675,7 +1705,7 @@ export const DisksStep = ({
                         className="form-label small mb-1"
                         htmlFor={`controller-type-${row.key}`}
                       >
-                        Type
+                        {t('machineEdit.createWizardSteps.type')}
                       </label>
                       <select
                         id={`controller-type-${row.key}`}
@@ -1696,7 +1726,7 @@ export const DisksStep = ({
                         className="form-label small mb-1"
                         htmlFor={`controller-name-${row.key}`}
                       >
-                        Name (optional)
+                        {t('machineEdit.storageDevicesEditor.nameOptional')}
                       </label>
                       <input
                         id={`controller-name-${row.key}`}
@@ -1711,7 +1741,7 @@ export const DisksStep = ({
                         className="form-label small mb-1"
                         htmlFor={`controller-ports-${row.key}`}
                       >
-                        Ports
+                        {t('machineEdit.createWizardSteps.ports')}
                       </label>
                       <input
                         id={`controller-ports-${row.key}`}
@@ -1738,12 +1768,12 @@ export const DisksStep = ({
                           className="form-check-label small"
                           htmlFor={`controller-bootable-${row.key}`}
                         >
-                          Bootable
+                          {t('machineEdit.createWizardSteps.bootable')}
                         </label>
                       </div>
                     </div>
                     <RemoveRowButton
-                      label="Remove controller"
+                      label={t('machineEdit.createWizardSteps.removeController')}
                       onClick={() =>
                         setDisks({
                           controllers: disks.controllers.filter(entry => entry.key !== row.key),
@@ -1768,7 +1798,7 @@ export const DisksStep = ({
                 disabled={loading}
               >
                 <i className="fas fa-plus me-2" />
-                Add Controller
+                {t('machineEdit.createWizardSteps.addController')}
               </button>
               {controllerNames.length > 0 && (
                 <datalist id="machine-controller-names">
@@ -1913,6 +1943,7 @@ export const SystemStep = ({
   advanced,
   loading,
 }) => {
+  const { t } = useTranslation();
   const defaultLabel = key => agentDefaultLabel(agentDefaults, key);
   const knobValues = agentDefaults?.knob_values || null;
   const cpuTopo = Array.isArray(zones.complex_cpu_conf) ? zones.complex_cpu_conf[0] || {} : {};
@@ -1923,10 +1954,9 @@ export const SystemStep = ({
 
   return (
     <>
-      <h6 className="fw-bold">System</h6>
+      <h6 className="fw-bold">{t('machineEdit.createWizardSteps.system')}</h6>
       <p className="form-text text-muted mt-0">
-        Empty fields keep the default shown (they never ride the request) — the Confirm step shows
-        exactly what is sent.
+        {t('machineEdit.createWizardSteps.emptyFieldsHint')}
       </p>
       <div className="row g-3 mb-3">
         {bhyve &&
@@ -1938,7 +1968,7 @@ export const SystemStep = ({
             return (
               <div className="col-6 col-md-4" key={field.key}>
                 <label className="form-label" htmlFor={`machine-zones-${field.key}`}>
-                  {field.label}
+                  {t(`machineEdit.createWizardSteps.systemField.${field.key}`)}
                 </label>
                 {field.freeText && !vocabulary ? (
                   <>
@@ -1983,16 +2013,16 @@ export const SystemStep = ({
               disabled={loading}
             />
             <label className="form-check-label" htmlFor="machine-zones-guest_agent">
-              QEMU Guest Agent
+              {t('machineEdit.generalSettingsTab.qemuGuestAgent')}
             </label>
           </div>
           <span className="form-text text-muted">
-            Wires the guest-agent channel (live IPs, guest facts) — the guest runs qemu-ga.
+            {t('machineEdit.createWizardSteps.guestAgentChannelHint')}
           </span>
         </div>
         <div className="col-6 col-md-4">
           <label className="form-label" htmlFor="machine-system-firmware">
-            Firmware
+            {t('machineEdit.createWizardSteps.firmware')}
           </label>
           <VocabularySelect
             id="machine-system-firmware"
@@ -2004,14 +2034,14 @@ export const SystemStep = ({
           />
           {bootromLocksUefi && (
             <span className="form-text text-muted">
-              Locked to UEFI — the chosen Boot ROM cannot boot BIOS-style.
+              {t('machineEdit.createWizardSteps.lockedToUefiHint')}
             </span>
           )}
         </div>
         {advanced && bhyve && (
           <div className="col-6 col-md-4">
             <label className="form-label" htmlFor="machine-zones-bootrom">
-              Boot ROM (override)
+              {t('machineEdit.createWizardSteps.bootRomOverride')}
             </label>
             <VocabularySelect
               id="machine-zones-bootrom"
@@ -2027,13 +2057,13 @@ export const SystemStep = ({
               disabled={loading}
             />
             <span className="form-text text-muted">
-              Explicit ROM wins over Firmware. BIOS firmware offers only *_CSM ROMs.
+              {t('machineEdit.createWizardSteps.explicitRomWinsHint')}
             </span>
           </div>
         )}
         <div className="col-6 col-md-4">
           <label className="form-label" htmlFor="machine-setting-os_type">
-            Guest OS Type
+            {t('machineEdit.createWizardSteps.guestOsType')}
           </label>
           {osTypes ? (
             <OsTypeSelect
@@ -2060,10 +2090,12 @@ export const SystemStep = ({
           <>
             <div className="col-12">
               <span className="form-label d-block">
-                Boot Order (blank ={' '}
+                {t('machineEdit.createWizardSteps.bootOrderBlank')}{' '}
                 {agentDefaults?.zones?.bootorder
-                  ? `default ${agentDefaults.zones.bootorder}`
-                  : 'agent default'}
+                  ? t('machineEdit.createWizardSteps.defaultValue', {
+                      value: agentDefaults.zones.bootorder,
+                    })
+                  : t('machineEdit.createWizardSteps.agentDefault')}
                 )
               </span>
               <BootOrderEditor
@@ -2075,13 +2107,12 @@ export const SystemStep = ({
                 loading={loading}
               />
               <span className="form-text text-muted">
-                Device tokens: bootdisk, disk0, cdrom0, net0=pxe|http, path0, boot0, shell — or the
-                compact <code>cd</code>/<code>dc</code> as a single entry.
+                {t('machineEdit.createWizardSteps.deviceTokensHint')}
               </span>
             </div>
             <div className="col-6 col-md-4">
               <label className="form-label" htmlFor="machine-zones-bootnext">
-                Boot Next (one boot only)
+                {t('machineEdit.createWizardSteps.bootNext')}
               </label>
               <input
                 id="machine-zones-bootnext"
@@ -2089,7 +2120,7 @@ export const SystemStep = ({
                 type="text"
                 list={bhyveBootDevices.length > 0 ? 'machine-zones-bootnext-options' : undefined}
                 placeholder="e.g. cdrom0"
-                title="Same syntax as Boot Order — applies to the next boot only"
+                title={t('machineEdit.createWizardSteps.bootNextHint')}
                 value={zones.bootnext ?? ''}
                 onChange={e => setZone('bootnext', e.target.value)}
                 disabled={loading}
@@ -2104,7 +2135,7 @@ export const SystemStep = ({
             </div>
             <div className="col-6 col-md-4">
               <label className="form-label" htmlFor="machine-zones-cpu-config">
-                CPU Topology
+                {t('machineEdit.machineSettings.cpuTopology')}
               </label>
               <select
                 id="machine-zones-cpu-config"
@@ -2123,8 +2154,8 @@ export const SystemStep = ({
                 }}
                 disabled={loading}
               >
-                <option value="">simple - Default</option>
-                <option value="complex">complex (sockets / cores / threads)</option>
+                <option value="">{t('machineEdit.createWizardSteps.simpleDefault')}</option>
+                <option value="complex">{t('machineEdit.machineSettings.complexTopo')}</option>
               </select>
             </div>
             {zones.cpu_configuration === 'complex' && (
@@ -2139,7 +2170,7 @@ export const SystemStep = ({
         )}
       </div>
 
-      <h6 className="fw-bold">Cloud-Init</h6>
+      <h6 className="fw-bold">{t('machineEdit.createWizardSteps.cloudInit')}</h6>
       <div className="row g-3 mb-3">
         <div className="col-12">
           <div className="form-check form-switch">
@@ -2153,7 +2184,7 @@ export const SystemStep = ({
               disabled={loading}
             />
             <label className="form-check-label" htmlFor="machine-cloudinit-enabled">
-              Enable cloud-init
+              {t('machineEdit.createWizardSteps.enableCloudInit')}
             </label>
           </div>
         </div>
@@ -2161,7 +2192,7 @@ export const SystemStep = ({
           <>
             <div className="col-12 col-md-4">
               <label className="form-label" htmlFor="machine-cloudinit-dns">
-                DNS domain
+                {t('machineEdit.generalSettingsTab.dnsDomain')}
               </label>
               <input
                 id="machine-cloudinit-dns"
@@ -2174,7 +2205,7 @@ export const SystemStep = ({
             </div>
             <div className="col-12 col-md-4">
               <label className="form-label" htmlFor="machine-cloudinit-password">
-                Password
+                {t('machineEdit.createWizardSteps.password')}
               </label>
               <input
                 id="machine-cloudinit-password"
@@ -2187,7 +2218,7 @@ export const SystemStep = ({
             </div>
             <div className="col-12 col-md-4">
               <label className="form-label" htmlFor="machine-cloudinit-resolvers">
-                Resolvers (comma separated)
+                {t('machineEdit.createWizardSteps.resolversCommaSeparated')}
               </label>
               <input
                 id="machine-cloudinit-resolvers"
@@ -2201,7 +2232,7 @@ export const SystemStep = ({
             </div>
             <div className="col-12">
               <label className="form-label" htmlFor="machine-cloudinit-sshkey">
-                SSH public key
+                {t('machineEdit.generalSettingsTab.sshPublicKey')}
               </label>
               <textarea
                 id="machine-cloudinit-sshkey"
@@ -2218,29 +2249,33 @@ export const SystemStep = ({
 
       {advanced && vbox && (
         <>
-          <h6 className="fw-bold">Hardware</h6>
+          <h6 className="fw-bold">{t('machineEdit.createWizardSteps.hardware')}</h6>
           <p className="form-text text-muted mt-0">
-            The full hypervisor knob surface — blank = VirtualBox default. Values ride{' '}
-            <code>vbox.&lt;section&gt;.&lt;key&gt;</code> unvalidated; a bad value fails the create
-            with VirtualBox&apos;s own error.
+            {t('machineEdit.createWizardSteps.hypervisorKnobSurfaceHint')}{' '}
+            <code>vbox.&lt;section&gt;.&lt;key&gt;</code>{' '}
+            {t('machineEdit.createWizardSteps.unvalidatedErrorHint')}
           </p>
           {HARDWARE_SECTIONS.map(section => (
             <details className="mb-2" key={section.id}>
-              <summary className="fw-semibold">{section.label}</summary>
+              <summary className="fw-semibold">
+                {t(`machineEdit.hardwareSections.${section.id}`)}
+              </summary>
               <div className="mt-2 mb-2">
                 <HardwareSectionForm
                   section={section}
                   values={hardware[section.id] || {}}
                   onChange={onHardwareChange}
                   knobValues={knobValues}
-                  blankLabel="n/a"
+                  blankLabel={t('machineEdit.common.na')}
                   disabled={loading}
                 />
               </div>
             </details>
           ))}
           <details className="mb-3">
-            <summary className="fw-semibold">Serial / Parallel Ports</summary>
+            <summary className="fw-semibold">
+              {t('machineEdit.createWizardSteps.serialParallelPorts')}
+            </summary>
             <div className="mt-2">
               <SerialPortsEditor
                 rows={serialRows}
@@ -2257,10 +2292,11 @@ export const SystemStep = ({
             </div>
           </details>
 
-          <h6 className="fw-bold">Hypervisor Passthrough (VirtualBox)</h6>
+          <h6 className="fw-bold">
+            {t('machineEdit.createWizardSteps.hypervisorPassthroughVbox')}
+          </h6>
           <label className="form-label" htmlFor="machine-vbox-json">
-            <code>vbox</code> section, raw JSON — passed through verbatim, for exotics the sections
-            above do not carry (teleporter, cpuid-set, tracing, guest-debug, pci-attach)
+            <code>vbox</code> {t('machineEdit.createWizardSteps.vboxSectionRawJsonHint')}
           </label>
           <textarea
             id="machine-vbox-json"
@@ -2328,11 +2364,13 @@ NetworkStep.propTypes = {
   loading: PropTypes.bool,
 };
 
-const removeTransportBlankLabel = value => {
+const removeTransportBlankLabel = (value, t) => {
   if (value === null) {
-    return 'n/a';
+    return t('machineEdit.common.na');
   }
-  return value ? 'remove' : 'keep';
+  return value
+    ? t('machineEdit.networkAdaptersEditor.remove')
+    : t('machineEdit.networkAdaptersEditor.keep');
 };
 
 export const ProvisioningStep = ({
@@ -2365,301 +2403,309 @@ export const ProvisioningStep = ({
   setSafeIdPath,
   advanced,
   loading,
-}) => (
-  <>
-    <div className="row g-3 mb-3">
-      <div className="col-12 col-md-4">
-        <label className="form-label" htmlFor="machine-create-provisioner">
-          Provisioner
-        </label>
-        <select
-          id="machine-create-provisioner"
-          className="form-select"
-          value={familyName}
-          onChange={e => onFamilyChange(e.target.value)}
-          disabled={loading}
-        >
-          <option value="">None — no provisioning</option>
-          {provisioners.map(collection => (
-            <option key={collection.name} value={collection.name}>
-              {collection.metadata?.label || collection.name}
-              {collection.valid ? '' : ' (invalid)'}
-            </option>
-          ))}
-        </select>
+}) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      <div className="row g-3 mb-3">
+        <div className="col-12 col-md-4">
+          <label className="form-label" htmlFor="machine-create-provisioner">
+            {t('machineEdit.createWizardSteps.provisioner')}
+          </label>
+          <select
+            id="machine-create-provisioner"
+            className="form-select"
+            value={familyName}
+            onChange={e => onFamilyChange(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">{t('machineEdit.createWizardSteps.noProvisioning')}</option>
+            {provisioners.map(collection => (
+              <option key={collection.name} value={collection.name}>
+                {collection.metadata?.label || collection.name}
+                {collection.valid ? '' : t('machineEdit.createWizardSteps.invalidSuffix')}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="col-12 col-md-4">
+          <label className="form-label" htmlFor="machine-create-version">
+            {t('machineEdit.createWizardSteps.version')}
+          </label>
+          <select
+            id="machine-create-version"
+            className="form-select"
+            value={versionKey}
+            onChange={e => onVersionChange(e.target.value)}
+            disabled={loading || !family}
+          >
+            <option value="">{t('machineEdit.cdromSourceFields.select')}</option>
+            {(family?.versions || []).map(v => (
+              <option key={v.dir} value={v.version}>
+                {v.version}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="col-12 col-md-4">
+          <label className="form-label" htmlFor="machine-setting-sync-method">
+            {t('machineEdit.createWizardSteps.syncMethod')}
+          </label>
+          <select
+            id="machine-setting-sync-method"
+            className="form-select"
+            value={syncMethod}
+            onChange={e => setSyncMethod(e.target.value)}
+            disabled={loading}
+          >
+            {(syncMethodOptions || ['rsync', 'scp']).map(option => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      <div className="col-12 col-md-4">
-        <label className="form-label" htmlFor="machine-create-version">
-          Version
-        </label>
-        <select
-          id="machine-create-version"
-          className="form-select"
-          value={versionKey}
-          onChange={e => onVersionChange(e.target.value)}
-          disabled={loading || !family}
-        >
-          <option value="">Select…</option>
-          {(family?.versions || []).map(v => (
-            <option key={v.dir} value={v.version}>
-              {v.version}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="col-12 col-md-4">
-        <label className="form-label" htmlFor="machine-setting-sync-method">
-          Sync Method
-        </label>
-        <select
-          id="machine-setting-sync-method"
-          className="form-select"
-          value={syncMethod}
-          onChange={e => setSyncMethod(e.target.value)}
-          disabled={loading}
-        >
-          {(syncMethodOptions || ['rsync', 'scp']).map(option => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-    {version?.description && <p className="form-text text-muted">{version.description}</p>}
+      {version?.description && <p className="form-text text-muted">{version.description}</p>}
 
-    {/* The provisioning-transport removal signal (one per-create key, both
+      {/* The provisioning-transport removal signal (one per-create key, both
         agents fold it into their native transport). Absent = each agent's
         RULED default — keep on VirtualBox (home/dev), remove on zoneweaver
         (datacenter); the effective default shows when the agent serves it. */}
-    {familyName && (
-      <div className="row g-3 mb-3">
-        <div className="col-12 col-md-6">
-          <label className="form-label" htmlFor="machine-create-remove-transport">
-            Remove Provisioning Network After Completion
-          </label>
-          <select
-            id="machine-create-remove-transport"
-            className="form-select"
-            value={removeTransport}
-            onChange={e => setRemoveTransport(e.target.value)}
-            disabled={loading}
-          >
-            <option value="">{removeTransportBlankLabel(removeTransportDefault)}</option>
-            <option value="true">remove — drop the transport NIC after provisioning</option>
-            <option value="false">keep — leave the transport in place (dev access)</option>
-          </select>
-          <span className="form-text text-muted">
-            Removal runs as pipeline steps after the final stamp: transport NIC + its document entry
-            go, then a power cycle — the machine comes up on its real networks only.
-          </span>
+      {familyName && (
+        <div className="row g-3 mb-3">
+          <div className="col-12 col-md-6">
+            <label className="form-label" htmlFor="machine-create-remove-transport">
+              {t('machineEdit.createWizardSteps.removeProvisioningNetwork')}
+            </label>
+            <select
+              id="machine-create-remove-transport"
+              className="form-select"
+              value={removeTransport}
+              onChange={e => setRemoveTransport(e.target.value)}
+              disabled={loading}
+            >
+              <option value="">{removeTransportBlankLabel(removeTransportDefault, t)}</option>
+              <option value="true">
+                {t('machineEdit.createWizardSteps.removeTransportOption')}
+              </option>
+              <option value="false">
+                {t('machineEdit.createWizardSteps.keepTransportOption')}
+              </option>
+            </select>
+            <span className="form-text text-muted">
+              {t('machineEdit.createWizardSteps.removalPipelineHint')}
+            </span>
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
-    {version && fieldConfig && (
-      <div className="mb-3">
-        <DslConfigForm
-          config={fieldConfig}
-          answers={answers}
-          errors={fieldErrors}
-          onChange={onAnswerChange}
-          roles={roles}
-          inventory={inventory}
-          showAdvanced={advanced}
-          idPrefix="prov-field"
-          disabled={loading}
-        />
-      </div>
-    )}
-
-    {version && !fieldConfig && versionPending && (
-      <p className="form-text text-muted">
-        <i className="fas fa-spinner fa-spin me-2" />
-        Loading the version&apos;s configuration…
-      </p>
-    )}
-
-    {version && !fieldConfig && !versionPending && (
-      <p className="form-text text-muted">
-        This package&apos;s manifest predates the field DSL (no{' '}
-        <code>metadata.configuration.groups/fields</code>) — it renders no configuration form.
-        Values still ride the document&apos;s <code>vars</code>.
-      </p>
-    )}
-
-    {(roles.length > 0 || (version && !versionPending)) && (
-      <>
-        <h6 className="fw-bold">Roles</h6>
+      {version && fieldConfig && (
         <div className="mb-3">
-          <RolesEditor
+          <DslConfigForm
+            config={fieldConfig}
+            answers={answers}
+            errors={fieldErrors}
+            onChange={onAnswerChange}
             roles={roles}
-            onRolesChange={onRolesChange}
-            loading={loading}
-            artifacts={artifacts}
+            inventory={inventory}
+            showAdvanced={advanced}
+            idPrefix="prov-field"
+            disabled={loading}
           />
         </div>
-      </>
-    )}
+      )}
 
-    {/* Basic, not Advanced — SHI stars it on the main config page (Mark's
+      {version && !fieldConfig && versionPending && (
+        <p className="form-text text-muted">
+          <i className="fas fa-spinner fa-spin me-2" />
+          {t('machineEdit.createWizardSteps.loadingVersionConfig')}
+        </p>
+      )}
+
+      {version && !fieldConfig && !versionPending && (
+        <p className="form-text text-muted">
+          {t('machineEdit.createWizardSteps.manifestPredatesDslPrefix')}{' '}
+          <code>metadata.configuration.groups/fields</code>
+          {t('machineEdit.createWizardSteps.manifestPredatesDslMiddle')} <code>vars</code>
+          {t('machineEdit.createWizardSteps.manifestPredatesDslTail')}
+        </p>
+      )}
+
+      {(roles.length > 0 || (version && !versionPending)) && (
+        <>
+          <h6 className="fw-bold">{t('machineEdit.createWizardSteps.roles')}</h6>
+          <div className="mb-3">
+            <RolesEditor
+              roles={roles}
+              onRolesChange={onRolesChange}
+              loading={loading}
+              artifacts={artifacts}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Basic, not Advanced — SHI stars it on the main config page (Mark's
         screenshots): domino provisioners can't run without it. Rendered ONLY
         when the picked version's manifest declares id_files (the agents'
         working-copy staging keys) — package-declared need, never a standing
         field; the generic package ships no id files. */}
-    {showSafeId && (
-      <div className="row g-3">
-        <div className="col-12 col-md-8">
-          <label className="form-label" htmlFor="machine-setting-safe-id">
-            Safe ID Path (file on the agent host)
-          </label>
-          <input
-            id="machine-setting-safe-id"
-            className="form-control"
-            type="text"
-            value={safeIdPath}
-            onChange={e => setSafeIdPath(e.target.value)}
-            disabled={loading}
-          />
-        </div>
-      </div>
-    )}
-
-    {/* Package template values are DEFAULTS, never locks (Mark's ruling
-        2026-07-17): the rendered settings become the machine's settings,
-        so anything the template would write must be overridable here.
-        Blank = the package default rides. */}
-    {version && advanced && (
-      <>
-        <h6 className="fw-bold mt-3">Package Setting Overrides</h6>
-        <p className="form-text text-muted mt-0">
-          The {`package's`} template values are defaults — set a field to override it in the
-          rendered document; blank keeps the package default.
-        </p>
+      {showSafeId && (
         <div className="row g-3">
-          <SettingInput
-            id="machine-setting-provider_type"
-            label="Provider Type"
-            placeholder="n/a"
-            value={settings.provider_type}
-            onChange={e => setSetting('provider_type', e.target.value)}
-            disabled={loading}
-          />
-          <SettingInput
-            id="machine-setting-setup_wait"
-            label="Setup Wait (seconds)"
-            type="number"
-            placeholder="n/a"
-            value={settings.setup_wait}
-            onChange={e => setSetting('setup_wait', e.target.value)}
-            disabled={loading}
-          />
-          <div className="col-12 col-md-4">
-            <label className="form-label" htmlFor="machine-setting-show_console">
-              Show Console
-            </label>
-            <select
-              id="machine-setting-show_console"
-              className="form-select"
-              value={settings.show_console ?? ''}
-              onChange={e => setSetting('show_console', e.target.value)}
-              disabled={loading}
-            >
-              <option value="">n/a</option>
-              <option value="true">true</option>
-              <option value="false">false</option>
-            </select>
-          </div>
-          <div className="col-12 col-md-4">
-            <label className="form-label" htmlFor="machine-setting-debug_build">
-              Debug Build
-            </label>
-            <select
-              id="machine-setting-debug_build"
-              className="form-select"
-              value={settings.debug_build ?? ''}
-              onChange={e => setSetting('debug_build', e.target.value)}
-              disabled={loading}
-            >
-              <option value="">n/a</option>
-              <option value="true">true</option>
-              <option value="false">false</option>
-            </select>
-          </div>
-          <div className="col-12 col-md-4">
-            <label className="form-label" htmlFor="machine-setting-post_provision">
-              Post-Provision Triggers
-            </label>
-            <select
-              id="machine-setting-post_provision"
-              className="form-select"
-              value={settings.post_provision ?? ''}
-              onChange={e => setSetting('post_provision', e.target.value)}
-              disabled={loading}
-            >
-              <option value="">n/a</option>
-              <option value="true">true</option>
-              <option value="false">false</option>
-            </select>
-          </div>
-          <SettingInput
-            id="machine-setting-consoleport"
-            label="Console Port"
-            type="number"
-            min={1025}
-            max={65535}
-            placeholder="n/a"
-            value={settings.consoleport}
-            onChange={e => setSetting('consoleport', e.target.value)}
-            disabled={loading}
-          />
-          <SettingInput
-            id="machine-setting-vagrant_user"
-            label="Guest SSH User"
-            placeholder="n/a"
-            value={settings.vagrant_user}
-            onChange={e => setSetting('vagrant_user', e.target.value)}
-            disabled={loading}
-          />
-          <div className="col-12 col-md-4">
-            <label className="form-label" htmlFor="machine-setting-vagrant_user_pass">
-              Guest SSH Password
+          <div className="col-12 col-md-8">
+            <label className="form-label" htmlFor="machine-setting-safe-id">
+              {t('machineEdit.createWizardSteps.safeIdPath')}
             </label>
             <input
-              id="machine-setting-vagrant_user_pass"
+              id="machine-setting-safe-id"
               className="form-control"
-              type="password"
-              autoComplete="new-password"
-              placeholder="n/a"
-              value={settings.vagrant_user_pass ?? ''}
-              onChange={e => setSetting('vagrant_user_pass', e.target.value)}
+              type="text"
+              value={safeIdPath}
+              onChange={e => setSafeIdPath(e.target.value)}
               disabled={loading}
             />
           </div>
-          <div className="col-12 col-md-4">
-            <label className="form-label" htmlFor="machine-setting-vagrant_ssh_insert_key">
-              Rotate SSH Key After Provision
-            </label>
-            <select
-              id="machine-setting-vagrant_ssh_insert_key"
-              className="form-select"
-              value={settings.vagrant_ssh_insert_key ?? ''}
-              onChange={e => setSetting('vagrant_ssh_insert_key', e.target.value)}
-              disabled={loading}
-            >
-              <option value="">n/a</option>
-              <option value="true">true</option>
-              <option value="false">false</option>
-            </select>
-            <span className="form-text text-muted">
-              Swaps the shared bootstrap key for a per-machine key once provisioning completes.
-            </span>
-          </div>
         </div>
-      </>
-    )}
-  </>
-);
+      )}
+
+      {/* Package template values are DEFAULTS, never locks (Mark's ruling
+        2026-07-17): the rendered settings become the machine's settings,
+        so anything the template would write must be overridable here.
+        Blank = the package default rides. */}
+      {version && advanced && (
+        <>
+          <h6 className="fw-bold mt-3">
+            {t('machineEdit.createWizardSteps.packageSettingOverrides')}
+          </h6>
+          <p className="form-text text-muted mt-0">
+            {t('machineEdit.createWizardSteps.packageOverridesHint')}
+          </p>
+          <div className="row g-3">
+            <SettingInput
+              id="machine-setting-provider_type"
+              label={t('machineEdit.createWizardSteps.providerType')}
+              placeholder={t('machineEdit.common.na')}
+              value={settings.provider_type}
+              onChange={e => setSetting('provider_type', e.target.value)}
+              disabled={loading}
+            />
+            <SettingInput
+              id="machine-setting-setup_wait"
+              label={t('machineEdit.createWizardSteps.setupWaitSeconds')}
+              type="number"
+              placeholder={t('machineEdit.common.na')}
+              value={settings.setup_wait}
+              onChange={e => setSetting('setup_wait', e.target.value)}
+              disabled={loading}
+            />
+            <div className="col-12 col-md-4">
+              <label className="form-label" htmlFor="machine-setting-show_console">
+                {t('machineEdit.createWizardSteps.showConsole')}
+              </label>
+              <select
+                id="machine-setting-show_console"
+                className="form-select"
+                value={settings.show_console ?? ''}
+                onChange={e => setSetting('show_console', e.target.value)}
+                disabled={loading}
+              >
+                <option value="">{t('machineEdit.common.na')}</option>
+                <option value="true">{t('machineEdit.createWizardSteps.trueValue')}</option>
+                <option value="false">{t('machineEdit.createWizardSteps.falseValue')}</option>
+              </select>
+            </div>
+            <div className="col-12 col-md-4">
+              <label className="form-label" htmlFor="machine-setting-debug_build">
+                {t('machineEdit.createWizardSteps.debugBuild')}
+              </label>
+              <select
+                id="machine-setting-debug_build"
+                className="form-select"
+                value={settings.debug_build ?? ''}
+                onChange={e => setSetting('debug_build', e.target.value)}
+                disabled={loading}
+              >
+                <option value="">{t('machineEdit.common.na')}</option>
+                <option value="true">{t('machineEdit.createWizardSteps.trueValue')}</option>
+                <option value="false">{t('machineEdit.createWizardSteps.falseValue')}</option>
+              </select>
+            </div>
+            <div className="col-12 col-md-4">
+              <label className="form-label" htmlFor="machine-setting-post_provision">
+                {t('machineEdit.createWizardSteps.postProvisionTriggers')}
+              </label>
+              <select
+                id="machine-setting-post_provision"
+                className="form-select"
+                value={settings.post_provision ?? ''}
+                onChange={e => setSetting('post_provision', e.target.value)}
+                disabled={loading}
+              >
+                <option value="">{t('machineEdit.common.na')}</option>
+                <option value="true">{t('machineEdit.createWizardSteps.trueValue')}</option>
+                <option value="false">{t('machineEdit.createWizardSteps.falseValue')}</option>
+              </select>
+            </div>
+            <SettingInput
+              id="machine-setting-consoleport"
+              label={t('machineEdit.createWizardSteps.consolePort')}
+              type="number"
+              min={1025}
+              max={65535}
+              placeholder={t('machineEdit.common.na')}
+              value={settings.consoleport}
+              onChange={e => setSetting('consoleport', e.target.value)}
+              disabled={loading}
+            />
+            <SettingInput
+              id="machine-setting-vagrant_user"
+              label={t('machineEdit.createWizardSteps.guestSshUser')}
+              placeholder={t('machineEdit.common.na')}
+              value={settings.vagrant_user}
+              onChange={e => setSetting('vagrant_user', e.target.value)}
+              disabled={loading}
+            />
+            <div className="col-12 col-md-4">
+              <label className="form-label" htmlFor="machine-setting-vagrant_user_pass">
+                {t('machineEdit.createWizardSteps.guestSshPassword')}
+              </label>
+              <input
+                id="machine-setting-vagrant_user_pass"
+                className="form-control"
+                type="password"
+                autoComplete="new-password"
+                placeholder={t('machineEdit.common.na')}
+                value={settings.vagrant_user_pass ?? ''}
+                onChange={e => setSetting('vagrant_user_pass', e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div className="col-12 col-md-4">
+              <label className="form-label" htmlFor="machine-setting-vagrant_ssh_insert_key">
+                {t('machineEdit.createWizardSteps.rotateSshKey')}
+              </label>
+              <select
+                id="machine-setting-vagrant_ssh_insert_key"
+                className="form-select"
+                value={settings.vagrant_ssh_insert_key ?? ''}
+                onChange={e => setSetting('vagrant_ssh_insert_key', e.target.value)}
+                disabled={loading}
+              >
+                <option value="">{t('machineEdit.common.na')}</option>
+                <option value="true">{t('machineEdit.createWizardSteps.trueValue')}</option>
+                <option value="false">{t('machineEdit.createWizardSteps.falseValue')}</option>
+              </select>
+              <span className="form-text text-muted">
+                {t('machineEdit.createWizardSteps.rotateSshKeyHint')}
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+};
 
 ProvisioningStep.propTypes = {
   provisioners: PropTypes.array.isRequired,
@@ -2694,84 +2740,123 @@ ProvisioningStep.propTypes = {
 };
 
 /** One-network summary line for the Confirm table. */
-const networkSummary = network =>
+const networkSummary = (network, t) =>
   [
-    network.type || 'net',
-    network.bridge && `on ${network.bridge}`,
-    network.dhcp4 ? 'dhcp' : network.address || 'unaddressed',
-    network.mac && network.mac !== 'auto' && `mac ${network.mac}`,
+    network.type || t('machineEdit.createWizardSteps.netFallback'),
+    network.bridge && t('machineEdit.createWizardSteps.onBridge', { bridge: network.bridge }),
+    network.dhcp4
+      ? t('machineEdit.createWizardSteps.dhcp')
+      : network.address || t('machineEdit.createWizardSteps.unaddressed'),
+    network.mac &&
+      network.mac !== 'auto' &&
+      t('machineEdit.createWizardSteps.macValue', { mac: network.mac }),
   ]
     .filter(Boolean)
     .join(' · ');
 
 /** Boot summary from the assembled spec — mirrors the storage phase's scenarios. */
-const bootSummary = spec => {
+const bootSummary = (spec, t) => {
   if (spec.settings?.box) {
-    return `box template ${spec.settings.box}${spec.disks?.boot?.size ? ` → ${spec.disks.boot.size}` : ''}`;
+    const arrow = spec.disks?.boot?.size
+      ? t('machineEdit.createWizardSteps.arrowSize', { size: spec.disks.boot.size })
+      : '';
+    return `${t('machineEdit.createWizardSteps.bootTemplate', { box: spec.settings.box })}${arrow}`;
   }
   if (spec.disks?.boot?.path) {
-    return `existing image ${spec.disks.boot.path}`;
+    return t('machineEdit.createWizardSteps.bootExisting', { path: spec.disks.boot.path });
   }
   if (spec.disks?.boot?.size) {
-    return `blank disk ${spec.disks.boot.size}`;
+    return t('machineEdit.createWizardSteps.bootBlank', { size: spec.disks.boot.size });
   }
-  return 'diskless (no boot medium)';
+  return t('machineEdit.createWizardSteps.bootDiskless');
 };
 
 export const ConfirmStep = ({ spec }) => {
+  const { t } = useTranslation();
   const rows = [
-    ['Name', spec.name || '(derived from server_id / hostname / domain)'],
     [
-      'Provisioner',
+      t('machineEdit.createWizardSteps.confirmName'),
+      spec.name || t('machineEdit.createWizardSteps.derivedName'),
+    ],
+    [
+      t('machineEdit.createWizardSteps.confirmProvisioner'),
       spec.provisioner?.name
         ? `${spec.provisioner.name}/${spec.provisioner.version}`
-        : '(none — no provisioning)',
+        : t('machineEdit.createWizardSteps.noneNoProvisioning'),
     ],
-    ['Boot', bootSummary(spec)],
+    [t('machineEdit.createWizardSteps.confirmBoot'), bootSummary(spec, t)],
     ...(spec.disks?.additional_disks?.length
       ? [
           [
-            'Additional disks',
+            t('machineEdit.createWizardSteps.confirmAdditionalDisks'),
             spec.disks.additional_disks.map(disk => disk.size || disk.path).join(', '),
           ],
         ]
       : []),
     ...(spec.disks?.cdroms?.length
-      ? [['CD/DVD', spec.disks.cdroms.map(cd => cd.iso || cd.path).join(', ')]]
+      ? [
+          [
+            t('machineEdit.createWizardSteps.confirmCdDvd'),
+            spec.disks.cdroms.map(cd => cd.iso || cd.path).join(', '),
+          ],
+        ]
       : []),
     ...(spec.zones
       ? [
           [
-            'System',
+            t('machineEdit.createWizardSteps.confirmSystem'),
             Object.entries(spec.zones)
               .map(([key, value]) => `${key}: ${value}`)
               .join(' · '),
           ],
         ]
       : []),
-    ...(spec.tags?.length ? [['Tags', spec.tags.join(', ')]] : []),
-    ...(spec.notes ? [['Notes', '(set)']] : []),
-    ...(spec.vbox ? [['VirtualBox (vbox)', Object.keys(spec.vbox).join(', ')]] : []),
-    ...(spec.cloud_init ? [['Cloud-init', 'enabled']] : []),
+    ...(spec.tags?.length
+      ? [[t('machineEdit.createWizardSteps.confirmTags'), spec.tags.join(', ')]]
+      : []),
+    ...(spec.notes
+      ? [
+          [
+            t('machineEdit.createWizardSteps.confirmNotes'),
+            t('machineEdit.createWizardSteps.setValue'),
+          ],
+        ]
+      : []),
+    ...(spec.vbox
+      ? [[t('machineEdit.createWizardSteps.confirmVbox'), Object.keys(spec.vbox).join(', ')]]
+      : []),
+    ...(spec.cloud_init
+      ? [
+          [
+            t('machineEdit.createWizardSteps.confirmCloudInit'),
+            t('machineEdit.createWizardSteps.enabledValue'),
+          ],
+        ]
+      : []),
     ...Object.entries(spec.settings || {}).map(([key, value]) => [key, String(value)]),
     ...(spec.networks || []).map((network, index) => [
-      `network ${index + 1}`,
-      networkSummary(network),
+      t('machineEdit.createWizardSteps.confirmNetwork', { index: index + 1 }),
+      networkSummary(network, t),
     ]),
     [
-      'Roles enabled',
+      t('machineEdit.createWizardSteps.confirmRolesEnabled'),
       (spec.roles || [])
         .filter(role => role?.enabled && role.name)
         .map(role => role.name)
-        .join(', ') || '(none)',
+        .join(', ') || t('machineEdit.createWizardSteps.noneValue'),
     ],
-    ['Sync method', spec.sync_method || 'rsync'],
-    ['Start after create', spec.start_after_create ? 'yes' : 'no'],
+    [t('machineEdit.createWizardSteps.confirmSyncMethod'), spec.sync_method || 'rsync'],
+    [
+      t('machineEdit.createWizardSteps.confirmStartAfterCreate'),
+      spec.start_after_create
+        ? t('machineEdit.createWizardSteps.yesValue')
+        : t('machineEdit.createWizardSteps.noValue'),
+    ],
   ];
   return (
     <>
       <p className="form-text text-muted">
-        This is exactly what will be sent — use Back to change anything.
+        {t('machineEdit.createWizardSteps.exactlyWhatWillBeSent')}
       </p>
       <div className="table-responsive">
         <table className="table table-striped table-sm small">
@@ -2790,7 +2875,7 @@ export const ConfirmStep = ({ spec }) => {
         </table>
       </div>
       <details>
-        <summary className="small">Full request body</summary>
+        <summary className="small">{t('machineEdit.createWizardSteps.fullRequestBody')}</summary>
         <pre className="small mt-2">{JSON.stringify(spec, null, 2)}</pre>
       </details>
     </>

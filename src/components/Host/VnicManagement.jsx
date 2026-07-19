@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { ConfirmModal } from '../common';
@@ -9,6 +10,7 @@ import VnicDetailsModal from './VnicDetailsModal';
 import VnicTable from './VnicTable';
 
 const VnicManagement = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [vnics, setVnics] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedVnic, setSelectedVnic] = useState(null);
@@ -103,16 +105,16 @@ const VnicManagement = ({ server, onError }) => {
         );
         setVnics(uniqueVnics);
       } else {
-        onError(result.message || 'Failed to load VNICs');
+        onError(result.message || t('host.vnicManagement.failedToLoadVnics'));
         setVnics([]);
       }
     } catch (err) {
-      onError(`Error loading VNICs: ${err.message}`);
+      onError(t('host.vnicManagement.errorLoadingVnics', { message: err.message }));
       setVnics([]);
     } finally {
       setLoading(false);
     }
-  }, [server, makeAgentRequest, filters, onError]);
+  }, [server, makeAgentRequest, filters, onError, t]);
 
   // Load VNICs on component mount and when filters change
   useEffect(() => {
@@ -151,10 +153,17 @@ const VnicManagement = ({ server, onError }) => {
         // Refresh VNICs list after deletion
         await loadVnics();
       } else {
-        onError(result.message || `Failed to delete VNIC "${vnicToDelete}"`);
+        onError(
+          result.message || t('host.vnicManagement.failedToDeleteVnic', { vnicName: vnicToDelete })
+        );
       }
     } catch (err) {
-      onError(`Error deleting VNIC "${vnicToDelete}": ${err.message}`);
+      onError(
+        t('host.vnicManagement.errorDeletingVnic', {
+          vnicName: vnicToDelete,
+          message: err.message,
+        })
+      );
     } finally {
       setDeleting(false);
       setVnicToDelete(null);
@@ -182,10 +191,10 @@ const VnicManagement = ({ server, onError }) => {
         setSelectedVnic({ ...vnic, details: result.data });
         setShowDetailsModal(true);
       } else {
-        onError(result.message || 'Failed to load VNIC details');
+        onError(result.message || t('host.vnicManagement.failedToLoadVnicDetails'));
       }
     } catch (err) {
-      onError(`Error loading VNIC details: ${err.message}`);
+      onError(t('host.vnicManagement.errorLoadingVnicDetails', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -209,9 +218,10 @@ const VnicManagement = ({ server, onError }) => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">VNIC Management</h2>
+        <h2 className="fs-5 fw-bold">{t('host.vnicManagement.vnicManagement')}</h2>
         <p>
-          Manage Virtual Network Interface Cards (VNICs) on <strong>{server.hostname}</strong>.
+          {t('host.vnicManagement.manageVnicsIntroPrefix')} <strong>{server.hostname}</strong>
+          {t('host.vnicManagement.manageVnicsIntroSuffix')}
         </p>
       </div>
 
@@ -222,7 +232,7 @@ const VnicManagement = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-over">
-                  Filter by Physical Link
+                  {t('host.vnicManagement.filterByPhysicalLink')}
                 </label>
                 <select
                   id="filter-over"
@@ -230,7 +240,7 @@ const VnicManagement = ({ server, onError }) => {
                   value={filters.over}
                   onChange={e => handleFilterChange('over', e.target.value)}
                 >
-                  <option value="">All Physical Links</option>
+                  <option value="">{t('host.vnicManagement.allPhysicalLinks')}</option>
                   {availableLinks.map(link => (
                     <option key={link} value={link}>
                       {link}
@@ -242,7 +252,7 @@ const VnicManagement = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-zone">
-                  Filter by Zone
+                  {t('host.vnicManagement.filterByZone')}
                 </label>
                 <select
                   id="filter-zone"
@@ -250,7 +260,7 @@ const VnicManagement = ({ server, onError }) => {
                   value={filters.zone}
                   onChange={e => handleFilterChange('zone', e.target.value)}
                 >
-                  <option value="">All Zones</option>
+                  <option value="">{t('host.vnicManagement.allZones')}</option>
                   {availableZones.map(zone => (
                     <option key={zone} value={zone}>
                       {zone}
@@ -262,7 +272,7 @@ const VnicManagement = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-state">
-                  Filter by State
+                  {t('host.vnicManagement.filterByState')}
                 </label>
                 <select
                   id="filter-state"
@@ -270,10 +280,10 @@ const VnicManagement = ({ server, onError }) => {
                   value={filters.state}
                   onChange={e => handleFilterChange('state', e.target.value)}
                 >
-                  <option value="">All States</option>
-                  <option value="up">Up</option>
-                  <option value="down">Down</option>
-                  <option value="unknown">Unknown</option>
+                  <option value="">{t('host.vnicManagement.allStates')}</option>
+                  <option value="up">{t('host.vnicManagement.up')}</option>
+                  <option value="down">{t('host.vnicManagement.down')}</option>
+                  <option value="unknown">{t('host.vnicManagement.unknown')}</option>
                 </select>
               </div>
             </div>
@@ -287,7 +297,7 @@ const VnicManagement = ({ server, onError }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-sync-alt me-2" />
-                  <span>Refresh</span>
+                  <span>{t('host.vnicManagement.refresh')}</span>
                 </button>
               </div>
             </div>
@@ -301,7 +311,7 @@ const VnicManagement = ({ server, onError }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-times me-2" />
-                  <span>Clear</span>
+                  <span>{t('host.vnicManagement.clear')}</span>
                 </button>
               </div>
             </div>
@@ -315,7 +325,7 @@ const VnicManagement = ({ server, onError }) => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center gap-2">
               <h3 className="fs-6 fw-bold mb-0">
-                VNICs ({vnics.length})
+                {t('host.vnicManagement.vnicsHeading', { count: vnics.length })}
                 {loading && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin" />
@@ -331,7 +341,7 @@ const VnicManagement = ({ server, onError }) => {
                 disabled={loading}
               >
                 <i className="fas fa-plus me-2" />
-                <span>Create VNIC</span>
+                <span>{t('host.vnicManagement.createVnic')}</span>
               </button>
             </div>
           </div>
@@ -375,9 +385,9 @@ const VnicManagement = ({ server, onError }) => {
           isOpen={!!vnicToDelete}
           onClose={() => setVnicToDelete(null)}
           onConfirm={confirmDeleteVnic}
-          title="Delete VNIC"
-          message={`Are you sure you want to delete VNIC "${vnicToDelete}"? This action cannot be undone.`}
-          confirmText="Delete"
+          title={t('host.vnicManagement.deleteVnicTitle')}
+          message={t('host.vnicManagement.deleteVnicConfirm', { vnicName: vnicToDelete })}
+          confirmText={t('host.vnicManagement.delete')}
           confirmVariant="is-danger"
           loading={deleting}
         />

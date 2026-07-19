@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { modifyInfrastructure } from '../../api/provisioningAPI';
 import { createZfsSnapshot, getZfsDataset, setZfsDatasetProperties } from '../../api/zfsAPI';
@@ -93,108 +94,127 @@ const computeBar = (disk, properties, pools, target, overprovision) => {
 };
 
 /** The agent's per-disk resize outcome — the honest take-effect story. */
-const resizeOutcome = data => {
+const resizeOutcome = (data, t) => {
   const rows = Array.isArray(data?.resized_disks) ? data.resized_disks : [];
   if (rows.length === 0) {
-    return data?.message || 'Resize applied.';
+    return data?.message || t('machine.zvolManageModal.resizeAppliedFallback');
   }
   return rows
     .map(row => {
-      const base = `${row.name} → ${row.resized_to}${row.shrunk ? ' (shrunk)' : ''}`;
+      const base = `${row.name} → ${row.resized_to}${
+        row.shrunk ? ` ${t('machine.zvolManageModal.shrunkSuffix')}` : ''
+      }`;
       return row.requires_restart
-        ? `${base} — the guest sees it after a power cycle (${row.diskif}).`
-        : `${base} — the guest sees it now (${row.diskif}).`;
+        ? `${base} ${t('machine.zvolManageModal.restartNote', { diskif: row.diskif })}`
+        : `${base} ${t('machine.zvolManageModal.liveNote', { diskif: row.diskif })}`;
     })
     .join(' ');
 };
 
-const summaryLine = (bar, disk) =>
+const summaryLine = (bar, disk, t) =>
   [
-    `${humanSize(bar.currentBytes) || disk.size || '—'} allocated`,
-    bar.usedBytes !== null ? `${humanSize(bar.usedBytes)} used` : null,
-    bar.blockSize ? `${humanSize(bar.blockSize)} block` : null,
-    bar.sparse ? 'sparse' : `${humanSize(bar.refreservation)} reserved`,
+    `${humanSize(bar.currentBytes) || disk.size || '—'} ${t('machine.zvolManageModal.allocatedSuffix')}`,
+    bar.usedBytes !== null
+      ? `${humanSize(bar.usedBytes)} ${t('machine.zvolManageModal.usedSuffix')}`
+      : null,
+    bar.blockSize
+      ? `${humanSize(bar.blockSize)} ${t('machine.zvolManageModal.blockSuffix')}`
+      : null,
+    bar.sparse
+      ? t('machine.zvolManageModal.sparseLabel')
+      : `${humanSize(bar.refreservation)} ${t('machine.zvolManageModal.reservedSuffix')}`,
   ]
     .filter(Boolean)
     .join(' · ');
 
 /** The gparted-style bar: layered pool zones with a draggable size thumb. */
-const CapacityBar = ({ bar, overprovision, busy, shrinking, onValue }) => (
-  <>
-    <div className="d-flex justify-content-between align-items-baseline">
-      <label className="fw-bold mb-0" htmlFor="zvol-size-range">
-        Size
-      </label>
-      <span className="small text-muted">
-        {humanSize(bar.currentBytes)}
-        {bar.delta !== 0 && (
-          <>
-            {' → '}
-            <span className={`fw-bold ${shrinking ? 'text-warning' : 'text-primary'}`}>
-              {humanSize(bar.targetBytes)}
-            </span>{' '}
-            ({bar.delta > 0 ? '+' : '−'}
-            {humanSize(Math.abs(bar.delta))})
-          </>
-        )}
-      </span>
-    </div>
-
-    <div className="hw-zvol">
-      <div className="hw-zvol-track">
-        {bar.usedBytes !== null && (
-          <div
-            className="hw-zvol-seg hw-zvol-used"
-            style={{ left: 0, width: `${bar.pctUsed}%` }}
-            title={`${humanSize(bar.usedBytes)} in use`}
-          />
-        )}
-        <div
-          className="hw-zvol-seg hw-zvol-alloc"
-          style={{ left: `${bar.pctUsed}%`, width: `${clampPct(bar.pctCurrent - bar.pctUsed)}%` }}
-        />
-        {bar.pctCap !== null && (
-          <div
-            className="hw-zvol-seg hw-zvol-free"
-            style={{
-              left: `${bar.pctCurrent}%`,
-              width: `${clampPct(bar.pctCap - bar.pctCurrent)}%`,
-            }}
-            title={`${humanSize(bar.poolFreeBytes)} free on ${bar.poolName}`}
-          />
-        )}
-        {overprovision && bar.pctCap !== null && (
-          <div
-            className="hw-zvol-seg hw-zvol-over"
-            style={{ left: `${bar.pctCap}%`, width: `${clampPct(100 - bar.pctCap)}%` }}
-            title="Over-provisioned (thin) — past what the pool can back"
-          />
-        )}
-        <div className="hw-zvol-mark hw-zvol-mark-current" style={{ left: `${bar.pctCurrent}%` }} />
-        {bar.pctCap !== null && bar.capBytes < bar.sliderMax && (
-          <div
-            className="hw-zvol-mark hw-zvol-mark-cap"
-            style={{ left: `${bar.pctCap}%` }}
-            title={`Pool ceiling — ${humanSize(bar.capBytes)}`}
-          />
-        )}
-        <div className="hw-zvol-mark hw-zvol-mark-target" style={{ left: `${bar.pctTarget}%` }} />
+const CapacityBar = ({ bar, overprovision, busy, shrinking, onValue }) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      <div className="d-flex justify-content-between align-items-baseline">
+        <label className="fw-bold mb-0" htmlFor="zvol-size-range">
+          {t('machine.zvolManageModal.sizeLabel')}
+        </label>
+        <span className="small text-muted">
+          {humanSize(bar.currentBytes)}
+          {bar.delta !== 0 && (
+            <>
+              {' → '}
+              <span className={`fw-bold ${shrinking ? 'text-warning' : 'text-primary'}`}>
+                {humanSize(bar.targetBytes)}
+              </span>{' '}
+              ({bar.delta > 0 ? '+' : '−'}
+              {humanSize(Math.abs(bar.delta))})
+            </>
+          )}
+        </span>
       </div>
-      <input
-        id="zvol-size-range"
-        className="hw-zvol-range"
-        type="range"
-        min={0}
-        max={bar.sliderMax}
-        step={bar.step}
-        value={Math.min(Math.max(bar.targetBytes, 0), bar.sliderMax)}
-        onChange={e => onValue(Number(e.target.value))}
-        disabled={busy}
-        aria-label="Drag to set the new size"
-      />
-    </div>
-  </>
-);
+
+      <div className="hw-zvol">
+        <div className="hw-zvol-track">
+          {bar.usedBytes !== null && (
+            <div
+              className="hw-zvol-seg hw-zvol-used"
+              style={{ left: 0, width: `${bar.pctUsed}%` }}
+              title={t('machine.zvolManageModal.inUseTooltip', { size: humanSize(bar.usedBytes) })}
+            />
+          )}
+          <div
+            className="hw-zvol-seg hw-zvol-alloc"
+            style={{ left: `${bar.pctUsed}%`, width: `${clampPct(bar.pctCurrent - bar.pctUsed)}%` }}
+          />
+          {bar.pctCap !== null && (
+            <div
+              className="hw-zvol-seg hw-zvol-free"
+              style={{
+                left: `${bar.pctCurrent}%`,
+                width: `${clampPct(bar.pctCap - bar.pctCurrent)}%`,
+              }}
+              title={t('machine.zvolManageModal.freeOnPoolTooltip', {
+                size: humanSize(bar.poolFreeBytes),
+                poolName: bar.poolName,
+              })}
+            />
+          )}
+          {overprovision && bar.pctCap !== null && (
+            <div
+              className="hw-zvol-seg hw-zvol-over"
+              style={{ left: `${bar.pctCap}%`, width: `${clampPct(100 - bar.pctCap)}%` }}
+              title={t('machine.zvolManageModal.overProvisionedTooltip')}
+            />
+          )}
+          <div
+            className="hw-zvol-mark hw-zvol-mark-current"
+            style={{ left: `${bar.pctCurrent}%` }}
+          />
+          {bar.pctCap !== null && bar.capBytes < bar.sliderMax && (
+            <div
+              className="hw-zvol-mark hw-zvol-mark-cap"
+              style={{ left: `${bar.pctCap}%` }}
+              title={t('machine.zvolManageModal.poolCeilingTooltip', {
+                size: humanSize(bar.capBytes),
+              })}
+            />
+          )}
+          <div className="hw-zvol-mark hw-zvol-mark-target" style={{ left: `${bar.pctTarget}%` }} />
+        </div>
+        <input
+          id="zvol-size-range"
+          className="hw-zvol-range"
+          type="range"
+          min={0}
+          max={bar.sliderMax}
+          step={bar.step}
+          value={Math.min(Math.max(bar.targetBytes, 0), bar.sliderMax)}
+          onChange={e => onValue(Number(e.target.value))}
+          disabled={busy}
+          aria-label={t('machine.zvolManageModal.dragAriaLabel')}
+        />
+      </div>
+    </>
+  );
+};
 
 CapacityBar.propTypes = {
   bar: PropTypes.object.isRequired,
@@ -205,43 +225,46 @@ CapacityBar.propTypes = {
 };
 
 /** The ZFS-properties drawer — populated when the dataset query answered. */
-const PropertiesDrawer = ({ properties, propsError, edits, onEdit, onApply, busy }) => (
-  <details>
-    <summary className="fw-bold">ZFS properties</summary>
-    {properties === null && (
-      <p className="text-muted mb-0 mt-1">
-        <i className="fas fa-spinner fa-pulse me-2" />
-        Loading…
-      </p>
-    )}
-    {propsError && (
-      <p className="form-text text-muted mt-1">
-        Properties unavailable — the dataset query returned 404 for this zvol.
-      </p>
-    )}
-    {properties !== null && !propsError && (
-      <>
-        <p className="form-text text-muted mt-1">
-          Applies immediately (compression, dedup, logbias…). Read-only properties display as-is.
+const PropertiesDrawer = ({ properties, propsError, edits, onEdit, onApply, busy }) => {
+  const { t } = useTranslation();
+  return (
+    <details>
+      <summary className="fw-bold">{t('machine.zvolManageModal.zfsPropertiesSummary')}</summary>
+      {properties === null && (
+        <p className="text-muted mb-0 mt-1">
+          <i className="fas fa-spinner fa-pulse me-2" />
+          {t('machine.zvolManageModal.loading')}
         </p>
-        <ZfsPropertiesEditor
-          properties={properties}
-          edits={edits}
-          onEdit={onEdit}
-          disabled={busy}
-        />
-        <button
-          type="button"
-          className="btn btn-primary btn-sm mt-2"
-          onClick={onApply}
-          disabled={busy}
-        >
-          Apply changed properties
-        </button>
-      </>
-    )}
-  </details>
-);
+      )}
+      {propsError && (
+        <p className="form-text text-muted mt-1">
+          {t('machine.zvolManageModal.propertiesUnavailable')}
+        </p>
+      )}
+      {properties !== null && !propsError && (
+        <>
+          <p className="form-text text-muted mt-1">
+            {t('machine.zvolManageModal.appliesImmediatelyNote')}
+          </p>
+          <ZfsPropertiesEditor
+            properties={properties}
+            edits={edits}
+            onEdit={onEdit}
+            disabled={busy}
+          />
+          <button
+            type="button"
+            className="btn btn-primary btn-sm mt-2"
+            onClick={onApply}
+            disabled={busy}
+          >
+            {t('machine.zvolManageModal.applyPropertiesButton')}
+          </button>
+        </>
+      )}
+    </details>
+  );
+};
 
 PropertiesDrawer.propTypes = {
   properties: PropTypes.object,
@@ -262,6 +285,7 @@ const ZvolManageModal = ({
   pools = [],
   onResized,
 }) => {
+  const { t } = useTranslation();
   const [properties, setProperties] = useState(null);
   const [propsError, setPropsError] = useState(false);
   const [error, setError] = useState('');
@@ -341,12 +365,12 @@ const ZvolManageModal = ({
       // still gets the deliberate-thin nudge the old flow gave.
       setError(
         !overprovision && bar.delta > 0
-          ? `${result.message} — if the pool can't back this, tick Over-provision to force a thin size.`
+          ? `${result.message} ${t('machine.zvolManageModal.overprovisionHint')}`
           : result.message
       );
       return;
     }
-    setNotice(resizeOutcome(result.data));
+    setNotice(resizeOutcome(result.data, t));
     setTarget('');
     load();
     if (onResized) {
@@ -370,14 +394,21 @@ const ZvolManageModal = ({
       setError(result.message);
       return;
     }
-    setNotice(queuedMessage(result, `Snapshot queued — ${dataset}@${snapName.trim()}.`));
+    setNotice(
+      queuedMessage(
+        result,
+        t('machine.zvolManageModal.snapshotQueuedFallback', {
+          handle: `${dataset}@${snapName.trim()}`,
+        })
+      )
+    );
     setSnapName('');
   };
 
   const handleProperties = async () => {
     const props = propertyEdits(properties || {}, edits);
     if (Object.keys(props).length === 0) {
-      setError('Nothing changed — edit a property value first.');
+      setError(t('machine.zvolManageModal.nothingChanged'));
       return;
     }
     setBusy(true);
@@ -395,34 +426,37 @@ const ZvolManageModal = ({
       setError(result.message);
       return;
     }
-    setNotice(queuedMessage(result, `Property update queued for ${dataset}.`));
+    setNotice(
+      queuedMessage(result, t('machine.zvolManageModal.propertyUpdateQueuedFallback', { dataset }))
+    );
     load();
   };
 
   const shrinkNote = shrinking
-    ? 'Shrink the filesystem and partition INSIDE the guest first — a zvol set below the written size loses everything past it.'
-    : 'Grow is non-destructive; extend the partition and filesystem inside the guest afterwards.';
-  const runningNote = isRunning
-    ? ' The machine is running — the resize applies NOW; virtio/NVMe guests see it live, ahci/ide guests after a power cycle (the result says which). Shrinks additionally need the machine powered off.'
-    : '';
+    ? t('machine.zvolManageModal.shrinkNote')
+    : t('machine.zvolManageModal.growNote');
+  const runningNote = isRunning ? ` ${t('machine.zvolManageModal.runningNote')}` : '';
 
   return (
     <ContentModal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Manage ${disk.name}`}
+      title={t('machine.zvolManageModal.manageTitle', { diskName: disk.name })}
       icon="fas fa-hard-drive"
     >
       <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
         <i className="fas fa-hdd text-muted" />
         <code className="text-break">{dataset}</code>
         {disk.boot && (
-          <span className="badge text-bg-light border" title="The zone's boot medium">
-            boot
+          <span
+            className="badge text-bg-light border"
+            title={t('machine.zvolManageModal.bootMediumTooltip')}
+          >
+            {t('machine.zvolManageModal.bootBadge')}
           </span>
         )}
       </div>
-      <div className="text-muted small mb-3">{summaryLine(bar, disk)}</div>
+      <div className="text-muted small mb-3">{summaryLine(bar, disk, t)}</div>
 
       {error && <div className="alert alert-danger py-2">{error}</div>}
       {notice && <div className="alert alert-success py-2">{notice}</div>}
@@ -441,12 +475,12 @@ const ZvolManageModal = ({
             className="form-control"
             type="text"
             placeholder={bytesToInput(bar.currentBytes)}
-            aria-label="Exact size"
+            aria-label={t('machine.zvolManageModal.exactSizeAriaLabel')}
             value={target}
             onChange={e => setTarget(e.target.value)}
             disabled={busy}
           />
-          <span className="input-group-text">size</span>
+          <span className="input-group-text">{t('machine.zvolManageModal.sizeUnitLabel')}</span>
         </div>
         <div className="form-check form-switch mb-0">
           <input
@@ -459,7 +493,7 @@ const ZvolManageModal = ({
             disabled={busy}
           />
           <label className="form-check-label small" htmlFor="zvol-overprovision">
-            Over-provision (thin — allow a size past pool free)
+            {t('machine.zvolManageModal.overprovisionCheckboxLabel')}
           </label>
         </div>
         <button
@@ -468,14 +502,22 @@ const ZvolManageModal = ({
           onClick={runResize}
           disabled={applyBlocked}
         >
-          {shrinking ? 'Shrink' : 'Grow'} to {target.trim() ? humanSize(bar.targetBytes) : '—'}
+          {shrinking
+            ? t('machine.zvolManageModal.shrinkTo', {
+                size: target.trim() ? humanSize(bar.targetBytes) : '—',
+              })
+            : t('machine.zvolManageModal.growTo', {
+                size: target.trim() ? humanSize(bar.targetBytes) : '—',
+              })}
         </button>
       </div>
 
       {bar.pastCap && !overprovision && (
         <p className="form-text text-warning mt-0">
-          {humanSize(bar.targetBytes)} is past the {humanSize(bar.capBytes)} the pool can back —
-          tick Over-provision to allow it (thin; the guest can corrupt if the pool later fills).
+          {t('machine.zvolManageModal.pastCapWarning', {
+            target: humanSize(bar.targetBytes),
+            cap: humanSize(bar.capBytes),
+          })}
         </p>
       )}
       <p className="form-text text-muted mt-0">{`${shrinkNote}${runningNote}`}</p>
@@ -486,8 +528,8 @@ const ZvolManageModal = ({
         <input
           className="form-control"
           type="text"
-          placeholder="snapshot before resizing (optional)"
-          aria-label="Snapshot name"
+          placeholder={t('machine.zvolManageModal.snapshotNamePlaceholder')}
+          aria-label={t('machine.zvolManageModal.snapshotNameAriaLabel')}
           value={snapName}
           onChange={e => setSnapName(e.target.value)}
           disabled={busy}
@@ -498,7 +540,7 @@ const ZvolManageModal = ({
           onClick={handleSnapshot}
           disabled={busy || !snapName.trim()}
         >
-          Snapshot
+          {t('machine.zvolManageModal.snapshotButton')}
         </button>
       </div>
 

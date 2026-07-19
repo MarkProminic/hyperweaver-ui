@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useRef, useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { VncScreen } from 'react-vnc';
 
 import { getAgentBasePath, fetchWsTicket } from '../api/serverUtils';
@@ -14,22 +15,25 @@ import { buildWsUrl } from '../utils/websocket';
 /**
  * Error Display Component
  */
-const VncErrorDisplay = ({ className, style, message, onRetry }) => (
-  <div className={`vnc-viewer-error ${className}`} style={style}>
-    <div className="alert alert-danger">
-      <h4 className="fs-5 fw-bold">VNC Console Error</h4>
-      <p>{message}</p>
-      {onRetry && (
-        <div className="d-flex gap-2 mt-3">
-          <button type="button" className="btn btn-primary" onClick={onRetry}>
-            <i className="fas fa-redo me-2" />
-            <span>Retry</span>
-          </button>
-        </div>
-      )}
+const VncErrorDisplay = ({ className, style, message, onRetry }) => {
+  const { t } = useTranslation();
+  return (
+    <div className={`vnc-viewer-error ${className}`} style={style}>
+      <div className="alert alert-danger">
+        <h4 className="fs-5 fw-bold">{t('console.vncErrorDisplay.title')}</h4>
+        <p>{message}</p>
+        {onRetry && (
+          <div className="d-flex gap-2 mt-3">
+            <button type="button" className="btn btn-primary" onClick={onRetry}>
+              <i className="fas fa-redo me-2" />
+              <span>{t('console.vncErrorDisplay.retry')}</span>
+            </button>
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 VncErrorDisplay.propTypes = {
   className: PropTypes.string,
@@ -48,51 +52,58 @@ const VncControls = ({
   onCtrlAltDel,
   onConnect,
   onDisconnect,
-}) => (
-  <div className="vnc-controls hw-vnc-controls">
-    <div className="vnc-status">
-      <i className={`fas fa-circle ${getStatusColorClass(connected, connecting)}`} />
-      <span className="ms-1">
-        {connected && 'Connected'}
-        {connecting && !connected && 'Connecting...'}
-        {!connected && !connecting && 'Disconnected'}
-        {connected && ` • ${machineName}`}
-      </span>
-    </div>
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="vnc-controls hw-vnc-controls">
+      <div className="vnc-status">
+        <i className={`fas fa-circle ${getStatusColorClass(connected, connecting)}`} />
+        <span className="ms-1">
+          {connected && t('console.vncControls.connected')}
+          {connecting && !connected && t('console.vncControls.connecting')}
+          {!connected && !connecting && t('console.vncControls.disconnected')}
+          {connected && t('console.vncControls.machineNameSuffix', { machineName })}
+        </span>
+      </div>
 
-    <div className="vnc-actions">
-      <div className="d-flex gap-1 m-0">
-        {/* Ctrl+Alt+Del Button */}
-        <button
-          type="button"
-          className="btn btn-sm btn-warning"
-          onClick={onCtrlAltDel}
-          disabled={!connected}
-          title="Send Ctrl+Alt+Del to guest system"
-        >
-          <i className="fas fa-keyboard me-2" />
-          <span>Ctrl+Alt+Del</span>
-        </button>
+      <div className="vnc-actions">
+        <div className="d-flex gap-1 m-0">
+          {/* Ctrl+Alt+Del Button */}
+          <button
+            type="button"
+            className="btn btn-sm btn-warning"
+            onClick={onCtrlAltDel}
+            disabled={!connected}
+            title={t('console.vncControls.sendCtrlAltDel')}
+          >
+            <i className="fas fa-keyboard me-2" />
+            <span>{t('console.vncControls.ctrlAltDel')}</span>
+          </button>
 
-        {/* Connect/Disconnect Button */}
-        <button
-          type="button"
-          className={`btn btn-sm ${connected ? 'btn-danger' : 'btn-success'}`}
-          onClick={connected ? onDisconnect : onConnect}
-          disabled={connecting}
-          title={connected ? 'Disconnect from VNC' : 'Connect to VNC'}
-        >
-          <i className={`fas ${connected ? 'fa-plug' : 'fa-play'} me-2`} />
-          <span>
-            {connected && 'Disconnect'}
-            {connecting && !connected && 'Connecting...'}
-            {!connected && !connecting && 'Connect'}
-          </span>
-        </button>
+          {/* Connect/Disconnect Button */}
+          <button
+            type="button"
+            className={`btn btn-sm ${connected ? 'btn-danger' : 'btn-success'}`}
+            onClick={connected ? onDisconnect : onConnect}
+            disabled={connecting}
+            title={
+              connected
+                ? t('console.vncControls.disconnectFromVnc')
+                : t('console.vncControls.connectToVnc')
+            }
+          >
+            <i className={`fas ${connected ? 'fa-plug' : 'fa-play'} me-2`} />
+            <span>
+              {connected && t('console.vncControls.disconnect')}
+              {connecting && !connected && t('console.vncControls.connecting')}
+              {!connected && !connecting && t('console.vncControls.connect')}
+            </span>
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 VncControls.propTypes = {
   connected: PropTypes.bool.isRequired,
@@ -106,15 +117,18 @@ VncControls.propTypes = {
 /**
  * Connecting Overlay Component
  */
-const VncConnectingOverlay = () => (
-  <div className="has-z-index-overlay hw-vnc-connecting-overlay">
-    <div className="text-center">
-      <i className="fas fa-spinner fa-pulse fa-2x hw-loading-spinner" />
-      <p className="mt-2">Connecting to VNC...</p>
-      <p className="small text-muted mt-1">Using react-vnc • Single WebSocket</p>
+const VncConnectingOverlay = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="has-z-index-overlay hw-vnc-connecting-overlay">
+      <div className="text-center">
+        <i className="fas fa-spinner fa-pulse fa-2x hw-loading-spinner" />
+        <p className="mt-2">{t('console.vncConnectingOverlay.connecting')}</p>
+        <p className="small text-muted mt-1">{t('console.vncConnectingOverlay.usingReactVnc')}</p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /**
  * Enhanced VNC Viewer Component - Uses react-vnc for native React integration
@@ -143,6 +157,7 @@ const VncViewerReact = forwardRef(
     },
     ref
   ) => {
+    const { t } = useTranslation();
     const vncRef = useRef(null);
     const [connected, setConnected] = useState(false);
     const [connecting, setConnecting] = useState(false);
@@ -246,12 +261,12 @@ const VncViewerReact = forwardRef(
     };
 
     const handleCredentialsRequired = () => {
-      setError('VNC authentication required - this should not happen with zadm vnc');
+      setError(t('console.vncViewerReact.authenticationRequired'));
     };
 
     const handleSecurityFailure = event => {
       console.error(`🔒 REACT-VNC: Security failure for ${machineName}:`, event);
-      setError('VNC security failure - check server configuration');
+      setError(t('console.vncViewerReact.securityFailure'));
       setConnecting(false);
     };
 
@@ -312,7 +327,7 @@ const VncViewerReact = forwardRef(
         <VncErrorDisplay
           className={className}
           style={style}
-          message="Missing required parameters: server and machineName"
+          message={t('console.vncViewerReact.missingParameters')}
         />
       );
     }

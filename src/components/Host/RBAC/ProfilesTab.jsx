@@ -1,11 +1,13 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const ProfilesTab = ({ profiles, loading, copyToClipboard }) => {
+  const { t } = useTranslation();
   if (loading && profiles.length === 0) {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading profiles...</p>
+        <p className="mt-2">{t('hostTools.ProfilesTab.loadingProfiles')}</p>
       </div>
     );
   }
@@ -14,7 +16,7 @@ const ProfilesTab = ({ profiles, loading, copyToClipboard }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-id-card fa-2x text-muted" />
-        <p className="mt-2 text-muted">No profiles found</p>
+        <p className="mt-2 text-muted">{t('hostTools.ProfilesTab.noProfilesFound')}</p>
       </div>
     );
   }
@@ -24,9 +26,9 @@ const ProfilesTab = ({ profiles, loading, copyToClipboard }) => {
       <table className="table table-hover">
         <thead>
           <tr>
-            <th>Profile Name</th>
-            <th>Description</th>
-            <th>Actions</th>
+            <th>{t('hostTools.ProfilesTab.headerProfileName')}</th>
+            <th>{t('hostTools.ProfilesTab.headerDescription')}</th>
+            <th>{t('hostTools.ProfilesTab.headerActions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -36,14 +38,14 @@ const ProfilesTab = ({ profiles, loading, copyToClipboard }) => {
                 <strong>{profile.name}</strong>
               </td>
               <td className="small" title={profile.description}>
-                {profile.description || 'N/A'}
+                {profile.description || t('hostTools.ProfilesTab.naFallback')}
               </td>
               <td>
                 <button
                   type="button"
                   className="btn btn-sm"
                   onClick={() => copyToClipboard(profile.name)}
-                  title="Copy to clipboard"
+                  title={t('hostTools.ProfilesTab.copyToClipboard')}
                 >
                   <i className="fas fa-copy" />
                 </button>

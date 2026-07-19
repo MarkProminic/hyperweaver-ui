@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   getHostUsbDevices,
@@ -33,15 +34,16 @@ const emptyFilter = () => ({
 });
 
 const FILTER_FIELDS = [
-  ['name', 'Name'],
-  ['vendor_id', 'Vendor ID'],
-  ['product_id', 'Product ID'],
-  ['manufacturer', 'Manufacturer'],
-  ['product', 'Product'],
-  ['serial_number', 'Serial'],
+  ['name', 'machine.usbPanel.filterFieldName'],
+  ['vendor_id', 'machine.usbPanel.filterFieldVendorId'],
+  ['product_id', 'machine.usbPanel.filterFieldProductId'],
+  ['manufacturer', 'machine.usbPanel.filterFieldManufacturer'],
+  ['product', 'machine.usbPanel.filterFieldProduct'],
+  ['serial_number', 'machine.usbPanel.filterFieldSerial'],
 ];
 
 const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
+  const { t } = useTranslation();
   const [devices, setDevices] = useState([]);
   const [filters, setFilters] = useState([]);
   const [filterForm, setFilterForm] = useState(emptyFilter);
@@ -79,10 +81,10 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
         : []
     );
     if (!deviceResult.success) {
-      report(`Host USB list failed: ${deviceResult.message}`, 'danger');
+      report(t('machine.usbPanel.listFailed', { message: deviceResult.message }), 'danger');
     }
     setLoading(false);
-  }, [currentServer, machineName]);
+  }, [currentServer, machineName, t]);
 
   useEffect(() => {
     setMsg('');
@@ -103,8 +105,8 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
     setLoading(false);
     report(
       result.success
-        ? result.data?.message || `USB ${kind} done.`
-        : `USB ${kind} failed: ${result.message}`,
+        ? result.data?.message || t('machine.usbPanel.actionDone', { action: kind })
+        : t('machine.usbPanel.actionFailed', { action: kind, message: result.message }),
       result.success ? 'success' : 'danger'
     );
   };
@@ -126,10 +128,10 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
     setLoading(false);
     if (result.success) {
       setFilterForm(emptyFilter());
-      report(result.data?.message || 'Filter added.', 'success');
+      report(result.data?.message || t('machine.usbPanel.filterAdded'), 'success');
       load();
     } else {
-      report(`Add filter failed: ${result.message}`, 'danger');
+      report(t('machine.usbPanel.addFilterFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -144,10 +146,10 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
     );
     setLoading(false);
     if (result.success) {
-      report(result.data?.message || 'Filter removed.', 'success');
+      report(result.data?.message || t('machine.usbPanel.filterRemoved'), 'success');
       load();
     } else {
-      report(`Delete filter failed: ${result.message}`, 'danger');
+      report(t('machine.usbPanel.deleteFilterFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -166,7 +168,7 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
       {msg && <div className={`alert alert-${msgVariant} py-2`}>{msg}</div>}
 
       <div className="d-flex justify-content-between align-items-center mb-2">
-        <h6 className="fw-bold mb-0">Host USB Devices</h6>
+        <h6 className="fw-bold mb-0">{t('machine.usbPanel.hostDevicesHeading')}</h6>
         <button
           type="button"
           className="btn btn-sm btn-outline-secondary"
@@ -174,15 +176,17 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
           disabled={loading}
         >
           <i className="fas fa-sync-alt me-2" />
-          Refresh
+          {t('machine.usbPanel.refreshButton')}
         </button>
       </div>
       {!isRunning && (
         <p className="form-text text-warning mt-0">
-          Live attach/detach needs {machineName} running — persistent filters below work anytime.
+          {t('machine.usbPanel.liveAttachWarning', { machineName })}
         </p>
       )}
-      {devices.length === 0 && <p className="text-muted small">No host USB devices reported.</p>}
+      {devices.length === 0 && (
+        <p className="text-muted small">{t('machine.usbPanel.noDevices')}</p>
+      )}
       <div className="d-flex flex-column gap-1 mb-3">
         {devices.map(device => (
           <div
@@ -196,7 +200,7 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
                 className="btn btn-sm btn-outline-success"
                 onClick={() => handleLive('attach', device)}
                 disabled={disabled || loading || !isRunning}
-                title="Attach to the running machine"
+                title={t('machine.usbPanel.attachTooltip')}
               >
                 <i className="fas fa-plug" />
               </button>
@@ -205,7 +209,7 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
                 className="btn btn-sm btn-outline-danger"
                 onClick={() => handleLive('detach', device)}
                 disabled={disabled || loading || !isRunning}
-                title="Detach from the running machine"
+                title={t('machine.usbPanel.detachTooltip')}
               >
                 <i className="fas fa-plug-circle-xmark" />
               </button>
@@ -214,7 +218,7 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
                 className="btn btn-sm btn-outline-secondary"
                 onClick={() => prefillFromDevice(device)}
                 disabled={disabled || loading}
-                title="Prefill a capture filter from this device"
+                title={t('machine.usbPanel.prefillTooltip')}
               >
                 <i className="fas fa-filter" />
               </button>
@@ -223,12 +227,11 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
         ))}
       </div>
 
-      <h6 className="fw-bold">Capture Filters</h6>
-      <p className="form-text text-muted mt-0">
-        Persistent — matching devices auto-capture whenever the machine starts. Empty fields match
-        anything.
-      </p>
-      {filters.length === 0 && <p className="text-muted small">No filters.</p>}
+      <h6 className="fw-bold">{t('machine.usbPanel.captureFiltersHeading')}</h6>
+      <p className="form-text text-muted mt-0">{t('machine.usbPanel.captureFiltersNote')}</p>
+      {filters.length === 0 && (
+        <p className="text-muted small">{t('machine.usbPanel.noFilters')}</p>
+      )}
       <div className="d-flex flex-column gap-1 mb-2">
         {filters.map((filter, index) => (
           <div
@@ -236,16 +239,16 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
             key={FILTER_FIELDS.map(([key]) => `${filter[key] ?? ''}`).join('|') || index}
           >
             <span className="small">
-              {FILTER_FIELDS.filter(([key]) => filter[key]).map(([key, label]) => (
+              {FILTER_FIELDS.filter(([key]) => filter[key]).map(([key, labelKey]) => (
                 <span className="me-2" key={key}>
-                  {label}: <code>{String(filter[key])}</code>
+                  {t(labelKey)}: <code>{String(filter[key])}</code>
                 </span>
               ))}
             </span>
             <button
               type="button"
               className="btn btn-sm btn-outline-danger"
-              aria-label="Delete filter"
+              aria-label={t('machine.usbPanel.deleteFilterAriaLabel')}
               onClick={() => handleDeleteFilter(filter.index ?? index)}
               disabled={disabled || loading}
             >
@@ -256,10 +259,10 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
       </div>
 
       <div className="row g-2 align-items-end">
-        {FILTER_FIELDS.map(([key, label]) => (
+        {FILTER_FIELDS.map(([key, labelKey]) => (
           <div className="col-6 col-md-2" key={key}>
             <label className="form-label small mb-1" htmlFor={`usb-filter-${key}`}>
-              {label}
+              {t(labelKey)}
             </label>
             <input
               id={`usb-filter-${key}`}
@@ -279,7 +282,7 @@ const UsbPanel = ({ currentServer, machineName, isRunning, disabled }) => {
             disabled={disabled || loading}
           >
             <i className="fas fa-plus me-2" />
-            Add Filter
+            {t('machine.usbPanel.addFilterButton')}
           </button>
         </div>
       </div>

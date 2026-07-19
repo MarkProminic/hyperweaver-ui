@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 
@@ -8,6 +9,7 @@ import TimeSyncStatus from './TimeSync/Status';
 import TimezoneSettings from './TimezoneSettings';
 
 const TimeNTPManagement = ({ server }) => {
+  const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState('status');
   const [error, setError] = useState('');
 
@@ -16,15 +18,15 @@ const TimeNTPManagement = ({ server }) => {
   if (!server || !makeAgentRequest) {
     return (
       <div className="alert alert-info">
-        <p>Please select a server to manage time synchronization.</p>
+        <p>{t('host.timeNTPManagement.selectServerMessage')}</p>
       </div>
     );
   }
 
   const sections = [
-    { key: 'status', label: 'Time Sync Status', icon: 'fa-clock' },
-    { key: 'config', label: 'NTP Configuration', icon: 'fa-cog' },
-    { key: 'timezone', label: 'Timezone', icon: 'fa-globe' },
+    { key: 'status', label: t('host.timeNTPManagement.timeSyncStatus'), icon: 'fa-clock' },
+    { key: 'config', label: t('host.timeNTPManagement.ntpConfiguration'), icon: 'fa-cog' },
+    { key: 'timezone', label: t('host.timeNTPManagement.timezone'), icon: 'fa-globe' },
   ];
 
   return (

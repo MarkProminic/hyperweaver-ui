@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   cloneZfsSnapshot,
@@ -23,15 +24,15 @@ import { parsePropertyLines, queuedMessage } from './zfsUtils';
 const DATASET_TYPE_CARDS = [
   {
     value: 'filesystem',
-    label: 'Filesystem',
+    label: 'host.createDatasetModal.filesystemLabel',
     icon: 'fa-folder',
-    note: 'a mountable dataset — files, quotas, compression',
+    note: 'host.createDatasetModal.filesystemNote',
   },
   {
     value: 'volume',
-    label: 'Volume (zvol)',
+    label: 'host.createDatasetModal.volumeLabel',
     icon: 'fa-hard-drive',
-    note: 'a fixed-size block device — VM disks, iSCSI',
+    note: 'host.createDatasetModal.volumeNote',
   },
 ];
 
@@ -43,6 +44,7 @@ export const CreateDatasetModal = ({
   initialName = '',
   onQueued,
 }) => {
+  const { t } = useTranslation();
   // "Create child…" hands a `parent/` prefix — it locks, only the leaf types.
   const parentPrefix = initialName.endsWith('/') ? initialName : '';
   const [leaf, setLeaf] = useState('');
@@ -70,11 +72,15 @@ export const CreateDatasetModal = ({
 
   const handleSubmit = async () => {
     if (!leaf.trim() || (!parentPrefix && pools.length > 0 && !pool)) {
-      setError(parentPrefix ? 'Name the new dataset.' : 'Pick the pool and name the new dataset.');
+      setError(
+        parentPrefix
+          ? t('host.createDatasetModal.errorNameRequired')
+          : t('host.createDatasetModal.errorPoolAndNameRequired')
+      );
       return;
     }
     if (type === 'volume' && !volsize.trim()) {
-      setError('A volume needs a size.');
+      setError(t('host.createDatasetModal.errorVolumeSizeRequired'));
       return;
     }
     const properties = {
@@ -93,7 +99,7 @@ export const CreateDatasetModal = ({
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Creation queued for ${fullName}.`));
+    onQueued(queuedMessage(result, t('host.createDatasetModal.queuedMessage', { name: fullName })));
     onClose();
   };
 
@@ -102,16 +108,20 @@ export const CreateDatasetModal = ({
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={parentPrefix ? `Create under ${parentPrefix}` : 'Create dataset'}
+      title={
+        parentPrefix
+          ? t('host.createDatasetModal.titleWithParent', { parent: parentPrefix })
+          : t('host.createDatasetModal.title')
+      }
       icon="fas fa-folder-tree"
-      submitText="Create"
+      submitText={t('host.createDatasetModal.submit')}
       submitIcon="fas fa-plus"
       loading={loading}
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
 
-      <span className="form-label d-block">Type</span>
+      <span className="form-label d-block">{t('host.createDatasetModal.typeLabel')}</span>
       <div className="row g-2 mb-3">
         {DATASET_TYPE_CARDS.map(card => (
           <div className="col-6" key={card.value}>
@@ -125,10 +135,10 @@ export const CreateDatasetModal = ({
             >
               <div className="d-flex align-items-center gap-2">
                 <i className={`fas ${card.icon} text-muted`} />
-                <strong className="small">{card.label}</strong>
+                <strong className="small">{t(card.label)}</strong>
                 {type === card.value && <i className="fas fa-circle-check text-primary ms-auto" />}
               </div>
-              <span className="form-text d-block">{card.note}</span>
+              <span className="form-text d-block">{t(card.note)}</span>
             </button>
           </div>
         ))}
@@ -138,7 +148,7 @@ export const CreateDatasetModal = ({
         {!parentPrefix && pools.length > 0 && (
           <div className="col-12 col-md-4">
             <label className="form-label" htmlFor="zfs-create-pool">
-              Pool <span className="text-danger">*</span>
+              {t('host.createDatasetModal.poolLabel')} <span className="text-danger">*</span>
             </label>
             <select
               id="zfs-create-pool"
@@ -147,7 +157,7 @@ export const CreateDatasetModal = ({
               onChange={e => setPool(e.target.value)}
               disabled={loading}
             >
-              <option value="">Select a pool…</option>
+              <option value="">{t('host.createDatasetModal.poolPlaceholder')}</option>
               {pools.map(entry => (
                 <option key={entry} value={entry}>
                   {entry}
@@ -158,7 +168,7 @@ export const CreateDatasetModal = ({
         )}
         <div className="col-12 col-md-8">
           <label className="form-label" htmlFor="zfs-create-name">
-            Name <span className="text-danger">*</span>
+            {t('host.createDatasetModal.nameLabel')} <span className="text-danger">*</span>
           </label>
           <div className="input-group">
             {prefix && <span className="input-group-text font-monospace">{prefix}</span>}
@@ -166,7 +176,11 @@ export const CreateDatasetModal = ({
               id="zfs-create-name"
               className="form-control font-monospace"
               type="text"
-              placeholder={type === 'volume' ? 'e.g. vm-disk1' : 'e.g. data or data/projects'}
+              placeholder={
+                type === 'volume'
+                  ? t('host.createDatasetModal.namePlaceholderVolume')
+                  : t('host.createDatasetModal.namePlaceholderFilesystem')
+              }
               value={leaf}
               onChange={e => setLeaf(e.target.value)}
               disabled={loading}
@@ -176,13 +190,13 @@ export const CreateDatasetModal = ({
         {type === 'volume' && (
           <div className="col-6 col-md-4">
             <label className="form-label" htmlFor="zfs-create-volsize">
-              Size <span className="text-danger">*</span>
+              {t('host.createDatasetModal.volsizeLabel')} <span className="text-danger">*</span>
             </label>
             <input
               id="zfs-create-volsize"
               className="form-control"
               type="text"
-              placeholder="e.g. 10G"
+              placeholder={t('host.createDatasetModal.volsizePlaceholder')}
               value={volsize}
               onChange={e => setVolsize(e.target.value)}
               disabled={loading}
@@ -193,21 +207,23 @@ export const CreateDatasetModal = ({
 
       {leaf.trim() && (prefix || parentPrefix) && (
         <p className="form-text mt-2 mb-0">
-          Creates {type} <code>{fullName}</code>
+          {t('host.createDatasetModal.createsText', { type })} <code>{fullName}</code>
           {type === 'volume' && volsize.trim() ? ` — ${volsize.trim()}` : ''}
         </p>
       )}
 
       <details className="mt-3">
-        <summary className="small text-muted">Advanced properties</summary>
+        <summary className="small text-muted">
+          {t('host.createDatasetModal.advancedPropertiesLabel')}
+        </summary>
         <label className="form-label small mt-2" htmlFor="zfs-create-props">
-          Properties (key=value, one per line)
+          {t('host.createDatasetModal.propertiesLabelDataset')}
         </label>
         <textarea
           id="zfs-create-props"
           className="form-control font-monospace"
           rows={2}
-          placeholder={'e.g.\ncompression=lz4\nquota=50G'}
+          placeholder={t('host.createDatasetModal.propertiesPlaceholderDataset')}
           value={propLines}
           onChange={e => setPropLines(e.target.value)}
           disabled={loading}
@@ -227,6 +243,7 @@ CreateDatasetModal.propTypes = {
 };
 
 export const SnapshotCreateModal = ({ isOpen, onClose, server, dataset, onQueued }) => {
+  const { t } = useTranslation();
   const [snapName, setSnapName] = useState('');
   const [recursive, setRecursive] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -242,7 +259,7 @@ export const SnapshotCreateModal = ({ isOpen, onClose, server, dataset, onQueued
 
   const handleSubmit = async () => {
     if (!snapName.trim()) {
-      setError('A snapshot name is required.');
+      setError(t('host.snapshotCreateModal.errorNameRequired'));
       return;
     }
     setLoading(true);
@@ -256,7 +273,12 @@ export const SnapshotCreateModal = ({ isOpen, onClose, server, dataset, onQueued
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Snapshot queued: ${dataset}@${snapName.trim()}.`));
+    onQueued(
+      queuedMessage(
+        result,
+        t('host.snapshotCreateModal.queuedMessage', { dataset, name: snapName.trim() })
+      )
+    );
     onClose();
   };
 
@@ -265,16 +287,16 @@ export const SnapshotCreateModal = ({ isOpen, onClose, server, dataset, onQueued
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Snapshot — ${dataset || ''}`}
+      title={t('host.snapshotCreateModal.title', { dataset: dataset || '' })}
       icon="fas fa-camera"
-      submitText="Snapshot"
+      submitText={t('host.snapshotCreateModal.submit')}
       submitIcon="fas fa-camera"
       loading={loading}
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
       <label className="form-label" htmlFor="zfs-snap-name">
-        Snapshot name <span className="text-danger">*</span>
+        {t('host.snapshotCreateModal.nameLabel')} <span className="text-danger">*</span>
       </label>
       <div className="input-group">
         <span className="input-group-text font-monospace">{dataset}@</span>
@@ -282,7 +304,7 @@ export const SnapshotCreateModal = ({ isOpen, onClose, server, dataset, onQueued
           id="zfs-snap-name"
           className="form-control font-monospace"
           type="text"
-          placeholder="e.g. before-upgrade"
+          placeholder={t('host.snapshotCreateModal.namePlaceholderSnap')}
           value={snapName}
           onChange={e => setSnapName(e.target.value)}
           disabled={loading}
@@ -298,7 +320,7 @@ export const SnapshotCreateModal = ({ isOpen, onClose, server, dataset, onQueued
           disabled={loading}
         />
         <label className="form-check-label" htmlFor="zfs-snap-recursive">
-          Recursive (snapshot every descendant dataset too)
+          {t('host.snapshotCreateModal.recursiveLabel')}
         </label>
       </div>
     </FormModal>
@@ -314,6 +336,7 @@ SnapshotCreateModal.propTypes = {
 };
 
 export const RenameDatasetModal = ({ isOpen, onClose, server, dataset, onQueued }) => {
+  const { t } = useTranslation();
   const [newName, setNewName] = useState('');
   const [recursive, setRecursive] = useState(false);
   const [force, setForce] = useState(false);
@@ -331,7 +354,7 @@ export const RenameDatasetModal = ({ isOpen, onClose, server, dataset, onQueued 
 
   const handleSubmit = async () => {
     if (!newName.trim() || newName.trim() === dataset) {
-      setError('Enter a different name.');
+      setError(t('host.renameDatasetModal.errorDifferentNameRequired'));
       return;
     }
     setLoading(true);
@@ -346,7 +369,12 @@ export const RenameDatasetModal = ({ isOpen, onClose, server, dataset, onQueued 
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Rename queued: ${dataset} → ${newName.trim()}.`));
+    onQueued(
+      queuedMessage(
+        result,
+        t('host.renameDatasetModal.queuedMessage', { dataset, newName: newName.trim() })
+      )
+    );
     onClose();
   };
 
@@ -355,16 +383,16 @@ export const RenameDatasetModal = ({ isOpen, onClose, server, dataset, onQueued 
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Rename — ${dataset || ''}`}
+      title={t('host.renameDatasetModal.title', { dataset: dataset || '' })}
       icon="fas fa-i-cursor"
-      submitText="Rename"
+      submitText={t('host.renameDatasetModal.submit')}
       submitIcon="fas fa-check"
       loading={loading}
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
       <label className="form-label" htmlFor="zfs-rename-name">
-        New name <span className="text-danger">*</span>
+        {t('host.renameDatasetModal.newNameLabel')} <span className="text-danger">*</span>
       </label>
       <input
         id="zfs-rename-name"
@@ -384,7 +412,7 @@ export const RenameDatasetModal = ({ isOpen, onClose, server, dataset, onQueued 
           disabled={loading}
         />
         <label className="form-check-label" htmlFor="zfs-rename-recursive">
-          Recursive (rename descendant snapshots too)
+          {t('host.renameDatasetModal.recursiveLabel')}
         </label>
       </div>
       <div className="form-check">
@@ -397,7 +425,7 @@ export const RenameDatasetModal = ({ isOpen, onClose, server, dataset, onQueued 
           disabled={loading}
         />
         <label className="form-check-label" htmlFor="zfs-rename-force">
-          Force (unmount first if busy)
+          {t('host.renameDatasetModal.forceLabel')}
         </label>
       </div>
     </FormModal>
@@ -413,6 +441,7 @@ RenameDatasetModal.propTypes = {
 };
 
 export const CloneSnapshotModal = ({ isOpen, onClose, server, snapshot, onQueued }) => {
+  const { t } = useTranslation();
   const [target, setTarget] = useState('');
   const [propLines, setPropLines] = useState('');
   const [loading, setLoading] = useState(false);
@@ -428,7 +457,7 @@ export const CloneSnapshotModal = ({ isOpen, onClose, server, snapshot, onQueued
 
   const handleSubmit = async () => {
     if (!target.trim()) {
-      setError('A target dataset name is required.');
+      setError(t('host.cloneSnapshotModal.errorTargetRequired'));
       return;
     }
     const properties = parsePropertyLines(propLines);
@@ -443,7 +472,12 @@ export const CloneSnapshotModal = ({ isOpen, onClose, server, snapshot, onQueued
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Clone queued: ${snapshot} → ${target.trim()}.`));
+    onQueued(
+      queuedMessage(
+        result,
+        t('host.cloneSnapshotModal.queuedMessage', { snapshot, target: target.trim() })
+      )
+    );
     onClose();
   };
 
@@ -452,28 +486,28 @@ export const CloneSnapshotModal = ({ isOpen, onClose, server, snapshot, onQueued
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Clone — ${snapshot || ''}`}
+      title={t('host.cloneSnapshotModal.title', { snapshot: snapshot || '' })}
       icon="fas fa-clone"
-      submitText="Clone"
+      submitText={t('host.cloneSnapshotModal.submit')}
       submitIcon="fas fa-clone"
       loading={loading}
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
       <label className="form-label" htmlFor="zfs-clone-target">
-        Target dataset <span className="text-danger">*</span>
+        {t('host.cloneSnapshotModal.targetLabel')} <span className="text-danger">*</span>
       </label>
       <input
         id="zfs-clone-target"
         className="form-control font-monospace"
         type="text"
-        placeholder="pool/path for the new clone"
+        placeholder={t('host.cloneSnapshotModal.targetPlaceholder')}
         value={target}
         onChange={e => setTarget(e.target.value)}
         disabled={loading}
       />
       <label className="form-label mt-3" htmlFor="zfs-clone-props">
-        Properties (key=value, one per line)
+        {t('host.cloneSnapshotModal.propertiesLabelClone')}
       </label>
       <textarea
         id="zfs-clone-props"
@@ -483,9 +517,7 @@ export const CloneSnapshotModal = ({ isOpen, onClose, server, snapshot, onQueued
         onChange={e => setPropLines(e.target.value)}
         disabled={loading}
       />
-      <p className="form-text mb-0 mt-2">
-        A clone stays dependent on its origin snapshot until you promote it.
-      </p>
+      <p className="form-text mb-0 mt-2">{t('host.cloneSnapshotModal.helpText')}</p>
     </FormModal>
   );
 };
@@ -499,6 +531,7 @@ CloneSnapshotModal.propTypes = {
 };
 
 export const RollbackSnapshotModal = ({ isOpen, onClose, server, snapshot, onQueued }) => {
+  const { t } = useTranslation();
   const [recursive, setRecursive] = useState(false);
   const [force, setForce] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -530,7 +563,7 @@ export const RollbackSnapshotModal = ({ isOpen, onClose, server, snapshot, onQue
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Rollback queued to ${snapshot}.`));
+    onQueued(queuedMessage(result, t('host.rollbackSnapshotModal.queuedMessage', { snapshot })));
     onClose();
   };
 
@@ -539,19 +572,16 @@ export const RollbackSnapshotModal = ({ isOpen, onClose, server, snapshot, onQue
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Roll back — ${snapshot || ''}`}
+      title={t('host.rollbackSnapshotModal.title', { snapshot: snapshot || '' })}
       icon="fas fa-clock-rotate-left"
-      submitText="Roll back"
+      submitText={t('host.rollbackSnapshotModal.submit')}
       submitVariant="danger"
       submitIcon="fas fa-clock-rotate-left"
       loading={loading}
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
-      <div className="alert alert-warning">
-        Rolling back DISCARDS every change made to the dataset after this snapshot — including any
-        snapshots taken since (they must be destroyed by the rollback).
-      </div>
+      <div className="alert alert-warning">{t('host.rollbackSnapshotModal.warningText')}</div>
       <div className="form-check">
         <input
           id="zfs-rollback-recursive"
@@ -562,7 +592,7 @@ export const RollbackSnapshotModal = ({ isOpen, onClose, server, snapshot, onQue
           disabled={loading}
         />
         <label className="form-check-label" htmlFor="zfs-rollback-recursive">
-          Recursive (destroy the newer snapshots in the way)
+          {t('host.rollbackSnapshotModal.recursiveLabel')}
         </label>
       </div>
       <div className="form-check">
@@ -575,7 +605,7 @@ export const RollbackSnapshotModal = ({ isOpen, onClose, server, snapshot, onQue
           disabled={loading}
         />
         <label className="form-check-label" htmlFor="zfs-rollback-force">
-          Force (unmount clones in the way)
+          {t('host.rollbackSnapshotModal.forceLabel')}
         </label>
       </div>
     </FormModal>
@@ -591,6 +621,7 @@ RollbackSnapshotModal.propTypes = {
 };
 
 export const SnapshotHoldsModal = ({ isOpen, onClose, server, snapshot, onQueued }) => {
+  const { t } = useTranslation();
   const [holds, setHolds] = useState(null);
   const [tag, setTag] = useState('');
   const [loading, setLoading] = useState(false);
@@ -622,7 +653,7 @@ export const SnapshotHoldsModal = ({ isOpen, onClose, server, snapshot, onQueued
 
   const handleSubmit = async () => {
     if (!tag.trim()) {
-      setError('A hold tag is required.');
+      setError(t('host.snapshotHoldsModal.errorTagRequired'));
       return;
     }
     setLoading(true);
@@ -635,7 +666,12 @@ export const SnapshotHoldsModal = ({ isOpen, onClose, server, snapshot, onQueued
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Hold '${tag.trim()}' queued on ${snapshot}.`));
+    onQueued(
+      queuedMessage(
+        result,
+        t('host.snapshotHoldsModal.holdQueuedMessage', { tag: tag.trim(), snapshot })
+      )
+    );
     setTag('');
     // The hold lands via the task — give it a moment, then re-list.
     setTimeout(loadHolds, 2000);
@@ -656,7 +692,12 @@ export const SnapshotHoldsModal = ({ isOpen, onClose, server, snapshot, onQueued
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Release of '${holdTag}' queued on ${snapshot}.`));
+    onQueued(
+      queuedMessage(
+        result,
+        t('host.snapshotHoldsModal.releaseQueuedMessage', { tag: holdTag, snapshot })
+      )
+    );
     setTimeout(loadHolds, 2000);
   };
 
@@ -665,32 +706,36 @@ export const SnapshotHoldsModal = ({ isOpen, onClose, server, snapshot, onQueued
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Holds — ${snapshot || ''}`}
+      title={t('host.snapshotHoldsModal.title', { snapshot: snapshot || '' })}
       icon="fas fa-lock"
-      submitText="Add hold"
+      submitText={t('host.snapshotHoldsModal.submit')}
       submitIcon="fas fa-lock"
       loading={loading}
       showCancelButton
-      cancelText="Close"
+      cancelText={t('host.snapshotHoldsModal.cancelText')}
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
-      <p className="form-text mt-0">
-        A held snapshot cannot be destroyed until every hold tag is released.
-      </p>
+      <p className="form-text mt-0">{t('host.snapshotHoldsModal.helpText')}</p>
       {holds === null && (
         <p className="text-muted">
           <i className="fas fa-spinner fa-pulse me-2" />
-          Loading…
+          {t('host.snapshotHoldsModal.loading')}
         </p>
       )}
-      {holds !== null && holds.length === 0 && <p className="text-muted">No holds.</p>}
+      {holds !== null && holds.length === 0 && (
+        <p className="text-muted">{t('host.snapshotHoldsModal.noHolds')}</p>
+      )}
       {holds !== null && holds.length > 0 && (
         <table className="table table-sm align-middle">
           <thead>
             <tr>
-              <th scope="col">Tag</th>
-              <th scope="col">Since</th>
-              <th scope="col" className="text-end" aria-label="Actions" />
+              <th scope="col">{t('host.snapshotHoldsModal.tagHeader')}</th>
+              <th scope="col">{t('host.snapshotHoldsModal.sinceHeader')}</th>
+              <th
+                scope="col"
+                className="text-end"
+                aria-label={t('host.snapshotHoldsModal.actionsLabel')}
+              />
             </tr>
           </thead>
           <tbody>
@@ -706,7 +751,7 @@ export const SnapshotHoldsModal = ({ isOpen, onClose, server, snapshot, onQueued
                     className="btn btn-sm btn-outline-danger"
                     onClick={() => release(hold.tag)}
                     disabled={loading}
-                    title="Release this hold"
+                    title={t('host.snapshotHoldsModal.releaseTitle')}
                   >
                     <i className="fas fa-lock-open" />
                   </button>
@@ -717,13 +762,13 @@ export const SnapshotHoldsModal = ({ isOpen, onClose, server, snapshot, onQueued
         </table>
       )}
       <label className="form-label" htmlFor="zfs-hold-tag">
-        New hold tag
+        {t('host.snapshotHoldsModal.newHoldLabel')}
       </label>
       <input
         id="zfs-hold-tag"
         className="form-control"
         type="text"
-        placeholder="e.g. keep-for-audit"
+        placeholder={t('host.snapshotHoldsModal.holdPlaceholder')}
         value={tag}
         onChange={e => setTag(e.target.value)}
         disabled={loading}
@@ -741,6 +786,7 @@ SnapshotHoldsModal.propTypes = {
 };
 
 export const DatasetPropertiesModal = ({ isOpen, onClose, server, dataset, onQueued }) => {
+  const { t } = useTranslation();
   const [properties, setProperties] = useState(null);
   const [edits, setEdits] = useState({});
   const [loading, setLoading] = useState(false);
@@ -758,16 +804,20 @@ export const DatasetPropertiesModal = ({ isOpen, onClose, server, dataset, onQue
         setProperties(result.data?.properties || {});
       } else {
         setError(
-          `GET storage/datasets/${dataset} failed (${result.status ?? '?'}): ${result.message}`
+          t('host.datasetPropertiesModal.errorFetchFailed', {
+            dataset,
+            status: result.status ?? '?',
+            message: result.message,
+          })
         );
       }
     });
-  }, [isOpen, server, dataset]);
+  }, [isOpen, server, dataset, t]);
 
   const handleSubmit = async () => {
     const props = propertyEdits(properties || {}, edits);
     if (Object.keys(props).length === 0) {
-      setError('Nothing changed — edit a value first.');
+      setError(t('host.datasetPropertiesModal.errorNothingChanged'));
       return;
     }
     setLoading(true);
@@ -784,7 +834,7 @@ export const DatasetPropertiesModal = ({ isOpen, onClose, server, dataset, onQue
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Property update queued for ${dataset}.`));
+    onQueued(queuedMessage(result, t('host.datasetPropertiesModal.queuedMessage', { dataset })));
     onClose();
   };
 
@@ -793,22 +843,19 @@ export const DatasetPropertiesModal = ({ isOpen, onClose, server, dataset, onQue
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Properties — ${dataset || ''}`}
+      title={t('host.datasetPropertiesModal.title', { dataset: dataset || '' })}
       icon="fas fa-sliders"
-      submitText="Apply changed properties"
+      submitText={t('host.datasetPropertiesModal.submit')}
       submitIcon="fas fa-check"
       loading={loading}
       showCancelButton
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
-      <p className="form-text mt-0">
-        Edit a value and Apply — only changed properties ride the update. Read-only properties
-        (source <code>-</code>) display as-is.
-      </p>
+      <p className="form-text mt-0">{t('host.datasetPropertiesModal.helpText', { dash: '-' })}</p>
       {properties === null && !error && (
         <p className="text-muted mb-0">
           <i className="fas fa-spinner fa-pulse me-2" />
-          Loading…
+          {t('host.datasetPropertiesModal.loading')}
         </p>
       )}
       {properties !== null && (
@@ -832,6 +879,7 @@ DatasetPropertiesModal.propTypes = {
 };
 
 export const DestroyDatasetModal = ({ isOpen, onClose, server, name, isSnapshot, onQueued }) => {
+  const { t } = useTranslation();
   const [recursive, setRecursive] = useState(false);
   const [flag, setFlag] = useState(false); // force (dataset) | defer (snapshot)
   const [loading, setLoading] = useState(false);
@@ -860,7 +908,7 @@ export const DestroyDatasetModal = ({ isOpen, onClose, server, name, isSnapshot,
       setError(result.message);
       return;
     }
-    onQueued(queuedMessage(result, `Destruction queued for ${name}.`));
+    onQueued(queuedMessage(result, t('host.destroyDatasetModal.queuedMessage', { name })));
     onClose();
   };
 
@@ -869,9 +917,9 @@ export const DestroyDatasetModal = ({ isOpen, onClose, server, name, isSnapshot,
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Destroy — ${name || ''}`}
+      title={t('host.destroyDatasetModal.title', { name: name || '' })}
       icon="fas fa-trash"
-      submitText="Destroy"
+      submitText={t('host.destroyDatasetModal.submit')}
       submitVariant="danger"
       submitIcon="fas fa-trash"
       loading={loading}
@@ -879,8 +927,9 @@ export const DestroyDatasetModal = ({ isOpen, onClose, server, name, isSnapshot,
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
       <div className="alert alert-danger">
-        This permanently destroys <strong>{name}</strong>
-        {isSnapshot ? '.' : ' and its data. There is no undo.'}
+        {isSnapshot
+          ? t('host.destroyDatasetModal.warningText', { name })
+          : t('host.destroyDatasetModal.warningTextWithData', { name })}
       </div>
       <div className="form-check">
         <input
@@ -893,8 +942,8 @@ export const DestroyDatasetModal = ({ isOpen, onClose, server, name, isSnapshot,
         />
         <label className="form-check-label" htmlFor="zfs-destroy-recursive">
           {isSnapshot
-            ? 'Recursive (destroy same-name snapshots of descendants too)'
-            : 'Recursive (destroy descendants and their snapshots too)'}
+            ? t('host.destroyDatasetModal.recursiveSnapshot')
+            : t('host.destroyDatasetModal.recursiveDataset')}
         </label>
       </div>
       <div className="form-check">
@@ -908,8 +957,8 @@ export const DestroyDatasetModal = ({ isOpen, onClose, server, name, isSnapshot,
         />
         <label className="form-check-label" htmlFor="zfs-destroy-flag">
           {isSnapshot
-            ? 'Defer (destroy when the last hold/clone goes away)'
-            : 'Force (unmount first if busy)'}
+            ? t('host.destroyDatasetModal.deferSnapshot')
+            : t('host.destroyDatasetModal.forceDataset')}
         </label>
       </div>
     </FormModal>

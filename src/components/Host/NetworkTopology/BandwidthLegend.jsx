@@ -1,27 +1,61 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const BandwidthLegend = ({ horizontal = false }) => {
+  const { t } = useTranslation();
   const bandwidthRanges = [
-    { label: '< 25%', color: '#48c78e', description: 'Light load' },
-    { label: '25-50%', color: '#ffdd57', description: 'Moderate load' },
-    { label: '50-75%', color: '#ff9f43', description: 'Heavy load' },
-    { label: '75-90%', color: '#f14668', description: 'Critical load' },
-    { label: '> 90%', color: '#e74c3c', description: 'Overloaded' },
+    {
+      label: t('hostTools.BandwidthLegend.lightLoadLabel'),
+      color: '#48c78e',
+      description: t('hostTools.BandwidthLegend.lightLoadDescription'),
+    },
+    {
+      label: t('hostTools.BandwidthLegend.moderateLoadLabel'),
+      color: '#ffdd57',
+      description: t('hostTools.BandwidthLegend.moderateLoadDescription'),
+    },
+    {
+      label: t('hostTools.BandwidthLegend.heavyLoadLabel'),
+      color: '#ff9f43',
+      description: t('hostTools.BandwidthLegend.heavyLoadDescription'),
+    },
+    {
+      label: t('hostTools.BandwidthLegend.criticalLoadLabel'),
+      color: '#f14668',
+      description: t('hostTools.BandwidthLegend.criticalLoadDescription'),
+    },
+    {
+      label: t('hostTools.BandwidthLegend.overloadedLabel'),
+      color: '#e74c3c',
+      description: t('hostTools.BandwidthLegend.overloadedDescription'),
+    },
   ];
 
   const nodeTypes = [
-    { label: 'Physical NIC', color: '#48c78e', icon: 'fa-ethernet' },
-    { label: 'Aggregate', color: '#3273dc', icon: 'fa-link' },
-    { label: 'Etherstub', color: '#ffdd57', icon: 'fa-sitemap' },
-    { label: 'VNIC', color: '#ff9f43', icon: 'fa-network-wired' },
-    { label: 'Zone', color: '#f14668', icon: 'fa-server' },
+    {
+      label: t('hostTools.BandwidthLegend.physicalNicLabel'),
+      color: '#48c78e',
+      icon: 'fa-ethernet',
+    },
+    { label: t('hostTools.BandwidthLegend.aggregateLabel'), color: '#3273dc', icon: 'fa-link' },
+    { label: t('hostTools.BandwidthLegend.etherstubLabel'), color: '#ffdd57', icon: 'fa-sitemap' },
+    { label: t('hostTools.BandwidthLegend.vnicLabel'), color: '#ff9f43', icon: 'fa-network-wired' },
+    { label: t('hostTools.BandwidthLegend.zoneLabel'), color: '#f14668', icon: 'fa-server' },
   ];
 
   const trafficIndicators = [
-    { label: 'RX Traffic', color: '#48c78e', symbol: '↓' },
-    { label: 'TX Traffic', color: '#3273dc', symbol: '↑' },
-    { label: 'VLAN Tagged', style: 'dashed', description: 'Dashed line' },
-    { label: 'LACP Bond', style: 'thick', description: 'Thick line' },
+    { label: t('hostTools.BandwidthLegend.rxTrafficLabel'), color: '#48c78e', symbol: '↓' },
+    { label: t('hostTools.BandwidthLegend.txTrafficLabel'), color: '#3273dc', symbol: '↑' },
+    {
+      label: t('hostTools.BandwidthLegend.vlanTaggedLabel'),
+      style: 'dashed',
+      description: t('hostTools.BandwidthLegend.vlanTaggedDescription'),
+    },
+    {
+      label: t('hostTools.BandwidthLegend.lacpBondLabel'),
+      style: 'thick',
+      description: t('hostTools.BandwidthLegend.lacpBondDescription'),
+    },
   ];
 
   if (horizontal) {
@@ -31,13 +65,15 @@ const BandwidthLegend = ({ horizontal = false }) => {
         <div className="card-body p-3">
           <h6 className="fs-6 fw-bold mb-3 text-center">
             <i className="fas fa-info-circle me-2" />
-            <span>Network Legend</span>
+            <span>{t('hostTools.BandwidthLegend.networkLegendHeading')}</span>
           </h6>
 
           <div className="row g-3">
             {/* Bandwidth Saturation */}
             <div className="col-12 col-md-4">
-              <p className="fw-bold small mb-2">Bandwidth Saturation</p>
+              <p className="fw-bold small mb-2">
+                {t('hostTools.BandwidthLegend.bandwidthSaturationHeading')}
+              </p>
               <div className="d-flex flex-wrap gap-2">
                 {bandwidthRanges.map(range => (
                   <span
@@ -56,7 +92,9 @@ const BandwidthLegend = ({ horizontal = false }) => {
 
             {/* Node Types */}
             <div className="col-12 col-md-4">
-              <p className="fw-bold small mb-2">Node Types</p>
+              <p className="fw-bold small mb-2">
+                {t('hostTools.BandwidthLegend.nodeTypesHeading')}
+              </p>
               <div className="d-flex flex-wrap gap-2">
                 {nodeTypes.map(type => (
                   <span
@@ -72,7 +110,9 @@ const BandwidthLegend = ({ horizontal = false }) => {
 
             {/* Traffic Flow */}
             <div className="col-12 col-md-4">
-              <p className="fw-bold small mb-2">Traffic Flow</p>
+              <p className="fw-bold small mb-2">
+                {t('hostTools.BandwidthLegend.trafficFlowHeading')}
+              </p>
               <div className="d-flex flex-wrap gap-2">
                 {trafficIndicators.map(indicator => (
                   <span
@@ -105,7 +145,7 @@ const BandwidthLegend = ({ horizontal = false }) => {
                 ))}
                 <span className="badge text-bg-light d-inline-flex align-items-center gap-1">
                   <i className="fas fa-circle hw-status-success " />
-                  <span className="small">Live Traffic</span>
+                  <span className="small">{t('hostTools.BandwidthLegend.liveTrafficLabel')}</span>
                 </span>
               </div>
             </div>
@@ -121,12 +161,14 @@ const BandwidthLegend = ({ horizontal = false }) => {
       <div className="card-body p-3">
         <h6 className="fs-6 fw-bold mb-3">
           <i className="fas fa-info-circle me-2" />
-          <span>Network Legend</span>
+          <span>{t('hostTools.BandwidthLegend.networkLegendHeading')}</span>
         </h6>
 
         {/* Bandwidth Saturation */}
         <div className="mb-3">
-          <p className="fw-bold small mb-2">Bandwidth Saturation</p>
+          <p className="fw-bold small mb-2">
+            {t('hostTools.BandwidthLegend.bandwidthSaturationHeading')}
+          </p>
           <div>
             {bandwidthRanges.map(range => (
               <div
@@ -153,7 +195,7 @@ const BandwidthLegend = ({ horizontal = false }) => {
 
         {/* Node Types */}
         <div className="mb-3">
-          <p className="fw-bold small mb-2">Node Types</p>
+          <p className="fw-bold small mb-2">{t('hostTools.BandwidthLegend.nodeTypesHeading')}</p>
           <div>
             {nodeTypes.map(type => (
               <div key={type.label} className="d-flex align-items-center mb-1">
@@ -166,7 +208,7 @@ const BandwidthLegend = ({ horizontal = false }) => {
 
         {/* Traffic Flow */}
         <div className="mb-3">
-          <p className="fw-bold small mb-2">Traffic Flow</p>
+          <p className="fw-bold small mb-2">{t('hostTools.BandwidthLegend.trafficFlowHeading')}</p>
           <div>
             {trafficIndicators.map(indicator => (
               <div key={indicator.label} className="d-flex align-items-center mb-1">
@@ -202,11 +244,15 @@ const BandwidthLegend = ({ horizontal = false }) => {
           <div className="alert p-2">
             <div className="d-flex align-items-center mb-1">
               <i className="fas fa-circle hw-status-success " />
-              <span className="ms-2 small">Animated particles show live traffic</span>
+              <span className="ms-2 small">
+                {t('hostTools.BandwidthLegend.animatedParticlesText')}
+              </span>
             </div>
             <div className="d-flex align-items-center">
               <i className="fas fa-bolt hw-status-warning " />
-              <span className="ms-2 small">Faster animation = higher traffic</span>
+              <span className="ms-2 small">
+                {t('hostTools.BandwidthLegend.fasterAnimationText')}
+              </span>
             </div>
           </div>
         </div>

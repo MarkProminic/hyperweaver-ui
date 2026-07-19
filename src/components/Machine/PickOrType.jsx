@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Select-with-custom — the Image picker's "Custom…" switcher pattern,
@@ -7,12 +8,15 @@ import { useState } from 'react';
  * A value the list doesn't know keeps the text input showing.
  */
 const PickOrType = ({ id, value, onChange, options, blankLabel, placeholder, small, disabled }) => {
+  const { t } = useTranslation();
   const [custom, setCustom] = useState(false);
   const visibleOptions = options.filter(
     option => String(option.value) !== blankLabel && String(option.label) !== blankLabel
   );
   const blankText =
-    visibleOptions.length === options.length ? blankLabel : `${blankLabel} - Default`;
+    visibleOptions.length === options.length
+      ? blankLabel
+      : t('machineEdit.common.blankLabelDefault', { label: blankLabel });
   const known = visibleOptions.some(option => option.value === value);
   if (custom || (value && !known)) {
     return (
@@ -34,7 +38,7 @@ const PickOrType = ({ id, value, onChange, options, blankLabel, placeholder, sma
             onChange('');
           }}
         >
-          back to the list
+          {t('machineEdit.pickOrType.backToList')}
         </button>
       </>
     );
@@ -60,7 +64,7 @@ const PickOrType = ({ id, value, onChange, options, blankLabel, placeholder, sma
           {option.label}
         </option>
       ))}
-      <option value="__custom__">Custom…</option>
+      <option value="__custom__">{t('machineEdit.pickOrType.custom')}</option>
     </select>
   );
 };

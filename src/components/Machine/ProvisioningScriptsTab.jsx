@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import StepCardList from './ProvisioningStepList';
 
@@ -13,33 +14,43 @@ import StepCardList from './ProvisioningStepList';
  * provisioning methods.
  */
 
-const ScriptTitle = ({ row }) => (
-  <>
-    <span className="hw-rc-role font-monospace">{row.script || '—'}</span>
-    <span className="hw-chip hw-chip-tag">runs every walk</span>
-  </>
-);
+const ScriptTitle = ({ row }) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      <span className="hw-rc-role font-monospace">{row.script || '—'}</span>
+      <span className="hw-chip hw-chip-tag">
+        {t('provisioning.provisioningScriptsTab.runsEveryWalk')}
+      </span>
+    </>
+  );
+};
 
 ScriptTitle.propTypes = {
   row: PropTypes.object.isRequired,
 };
 
-const ScriptBody = ({ row, patch, disabled }) => (
-  <div className="hw-rc-fields">
-    <span className="hw-field">
-      <label htmlFor={`script-path-${row._ui_id}`}>script</label>
-      <input
-        id={`script-path-${row._ui_id}`}
-        className="form-control form-control-sm font-monospace hw-field-wide"
-        type="text"
-        placeholder="./scripts/aliases.sh"
-        value={row.script ?? ''}
-        disabled={disabled}
-        onChange={e => patch({ script: e.target.value })}
-      />
-    </span>
-  </div>
-);
+const ScriptBody = ({ row, patch, disabled }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="hw-rc-fields">
+      <span className="hw-field">
+        <label htmlFor={`script-path-${row._ui_id}`}>
+          {t('provisioning.provisioningScriptsTab.scriptLabel')}
+        </label>
+        <input
+          id={`script-path-${row._ui_id}`}
+          className="form-control form-control-sm font-monospace hw-field-wide"
+          type="text"
+          placeholder="./scripts/aliases.sh"
+          value={row.script ?? ''}
+          disabled={disabled}
+          onChange={e => patch({ script: e.target.value })}
+        />
+      </span>
+    </div>
+  );
+};
 
 ScriptBody.propTypes = {
   row: PropTypes.object.isRequired,
@@ -48,15 +59,15 @@ ScriptBody.propTypes = {
 };
 
 const ProvisioningScriptsTab = ({ shell, onChange, makeRow, disabled }) => {
+  const { t } = useTranslation();
   const scripts = Array.isArray(shell?.scripts) ? shell.scripts : [];
   return (
     <div>
       <p className="form-text text-muted mt-0 mb-2">
-        Shell scripts run top to bottom — drag to reorder. Paths are package-relative (like{' '}
-        <code>./scripts/aliases.sh</code>); any script type, the shebang decides the interpreter;
-        each entry runs on every walk. WHEN they run is where <code>shell</code> sits among this
-        document&apos;s provisioning methods. Document <code>vars</code> reach scripts as
-        environment variables under their exact names.
+        {t('provisioning.provisioningScriptsTab.intro1')} <code>./scripts/aliases.sh</code>{' '}
+        {t('provisioning.provisioningScriptsTab.intro2')} <code>shell</code>{' '}
+        {t('provisioning.provisioningScriptsTab.intro3')} <code>vars</code>{' '}
+        {t('provisioning.provisioningScriptsTab.intro4')}
       </p>
       <div className="form-check form-switch mb-2">
         <input
@@ -69,14 +80,14 @@ const ProvisioningScriptsTab = ({ shell, onChange, makeRow, disabled }) => {
           onChange={e => onChange({ ...(shell || {}), enabled: e.target.checked })}
         />
         <label className="form-check-label" htmlFor="prov-shell-enabled">
-          Enabled
+          {t('provisioning.provisioningScriptsTab.enabledLabel')}
         </label>
       </div>
       <StepCardList
         rows={scripts}
         onChange={next => onChange({ ...(shell || {}), scripts: next })}
         disabled={disabled}
-        addLabel="Add Script"
+        addLabel={t('provisioning.provisioningScriptsTab.addScript')}
         makeRow={makeRow}
         renderTitle={row => <ScriptTitle row={row} />}
         renderBody={(row, patch) => <ScriptBody row={row} patch={patch} disabled={disabled} />}

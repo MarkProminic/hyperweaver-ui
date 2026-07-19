@@ -1,11 +1,13 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 
 import NTPConfirmActionModal from './NTPConfirmActionModal';
 
 const TimezoneSettings = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [timezoneInfo, setTimezoneInfo] = useState(null);
   const [availableTimezones, setAvailableTimezones] = useState([]);
   const [filteredTimezones, setFilteredTimezones] = useState([]);
@@ -211,7 +213,7 @@ const TimezoneSettings = ({ server, onError }) => {
         <span>
           <i className="fas fa-spinner fa-spin fa-2x" />
         </span>
-        <p className="mt-2">Loading timezone information...</p>
+        <p className="mt-2">{t('host.timezoneSettings.loadingTimezoneInfo')}</p>
       </div>
     );
   }

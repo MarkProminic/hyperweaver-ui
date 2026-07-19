@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const ConfigEditor = ({
   configContent,
@@ -7,49 +8,52 @@ const ConfigEditor = ({
   setBackupConfig,
   isConfigValid,
   saving,
-}) => (
-  <div className="card mb-4">
-    <div className="card-body">
-      <h3 className="fs-6 fw-bold">Configuration Editor</h3>
+}) => {
+  const { t } = useTranslation();
 
-      <div className="mb-3">
-        <textarea
-          className={`form-control font-monospace ${!isConfigValid && configContent ? 'is-invalid' : ''}`}
-          rows="15"
-          placeholder="Enter NTP configuration..."
-          value={configContent}
-          onChange={e => setConfigContent(e.target.value)}
-          disabled={saving}
-        />
-        {configContent && !isConfigValid && (
-          <p className="form-text text-danger">
-            Configuration appears to be invalid. Make sure to include at least one server or pool
-            directive.
-          </p>
-        )}
-      </div>
+  return (
+    <div className="card mb-4">
+      <div className="card-body">
+        <h3 className="fs-6 fw-bold">{t('hostTime.timeSyncConfigEditor.heading')}</h3>
 
-      <div className="mb-3">
-        <div className="form-check">
-          <input
-            id="timesync-backup-config"
-            className="form-check-input"
-            type="checkbox"
-            checked={backupConfig}
-            onChange={e => setBackupConfig(e.target.checked)}
+        <div className="mb-3">
+          <textarea
+            className={`form-control font-monospace ${!isConfigValid && configContent ? 'is-invalid' : ''}`}
+            rows="15"
+            placeholder={t('hostTime.timeSyncConfigEditor.placeholder')}
+            value={configContent}
+            onChange={e => setConfigContent(e.target.value)}
             disabled={saving}
           />
-          <label className="form-check-label" htmlFor="timesync-backup-config">
-            Create backup of existing configuration
-          </label>
+          {configContent && !isConfigValid && (
+            <p className="form-text text-danger">
+              {t('hostTime.timeSyncConfigEditor.invalidConfigError')}
+            </p>
+          )}
         </div>
-        <p className="form-text text-muted">
-          Recommended: Create a backup copy before making changes to allow easy recovery.
-        </p>
+
+        <div className="mb-3">
+          <div className="form-check">
+            <input
+              id="timesync-backup-config"
+              className="form-check-input"
+              type="checkbox"
+              checked={backupConfig}
+              onChange={e => setBackupConfig(e.target.checked)}
+              disabled={saving}
+            />
+            <label className="form-check-label" htmlFor="timesync-backup-config">
+              {t('hostTime.timeSyncConfigEditor.backupCheckbox')}
+            </label>
+          </div>
+          <p className="form-text text-muted">
+            {t('hostTime.timeSyncConfigEditor.backupRecommendation')}
+          </p>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 ConfigEditor.propTypes = {
   configContent: PropTypes.string.isRequired,

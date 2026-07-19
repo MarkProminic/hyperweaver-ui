@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * zlogin Console Actions Dropdown
@@ -16,6 +17,7 @@ const ZloginActionsDropdown = ({
   disabled = false,
   className = '',
 }) => {
+  const { t } = useTranslation();
   const [isActive, setIsActive] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -56,10 +58,18 @@ const ZloginActionsDropdown = ({
           <button
             {...itemProps}
             onClick={() => handleAction(onToggleReadOnly)}
-            title={isReadOnly ? 'Enable interactive mode' : 'Enable read-only mode'}
+            title={
+              isReadOnly
+                ? t('console.zloginActionsDropdown.enableInteractiveMode')
+                : t('console.zloginActionsDropdown.enableReadOnlyMode')
+            }
           >
             <i className={`fas ${isReadOnly ? 'fa-edit' : 'fa-eye'} me-2`} />
-            <span>{isReadOnly ? 'Enable Interactive' : 'Set Read-Only'}</span>
+            <span>
+              {isReadOnly
+                ? t('console.zloginActionsDropdown.enableInteractive')
+                : t('console.zloginActionsDropdown.setReadOnly')}
+            </span>
           </button>
           <hr className="dropdown-divider" />
         </>
@@ -67,7 +77,7 @@ const ZloginActionsDropdown = ({
 
       <div className="dropdown-item fw-semibold text-secondary">
         <i className="fas fa-tools me-2" />
-        <span>Actions</span>
+        <span>{t('console.zloginActionsDropdown.actions')}</span>
       </div>
       <hr className="dropdown-divider" />
 
@@ -75,10 +85,10 @@ const ZloginActionsDropdown = ({
         <button
           {...itemProps}
           onClick={() => handleAction(onScreenshot)}
-          title="Capture terminal output as text"
+          title={t('console.zloginActionsDropdown.captureOutputHint')}
         >
           <i className="fas fa-camera me-2" />
-          <span>Capture Output</span>
+          <span>{t('console.zloginActionsDropdown.captureOutput')}</span>
         </button>
       )}
 
@@ -89,10 +99,10 @@ const ZloginActionsDropdown = ({
             {...itemProps}
             className="dropdown-item text-danger"
             onClick={() => handleAction(onKillSession)}
-            title="Terminate zlogin session"
+            title={t('console.zloginActionsDropdown.terminateSession')}
           >
             <i className="fas fa-skull me-2" />
-            <span>Kill zlogin Session</span>
+            <span>{t('console.zloginActionsDropdown.killSession')}</span>
           </button>
         </>
       )}
@@ -109,7 +119,7 @@ const ZloginActionsDropdown = ({
           aria-controls="zlogin-dropdown-menu"
           onClick={() => setIsActive(!isActive)}
           disabled={disabled}
-          title="zlogin Console Actions"
+          title={t('console.zloginActionsDropdown.consoleActions')}
         >
           <i className="fas fa-ellipsis-v" />
         </button>
@@ -142,7 +152,7 @@ const ZloginActionsDropdown = ({
         role="button"
         tabIndex={disabled ? -1 : 0}
       >
-        zlogin Actions
+        {t('console.zloginActionsDropdown.zloginActions')}
         <i className="fas fa-angle-down ms-1" aria-hidden="true" />
       </span>
       <div

@@ -2,6 +2,8 @@ import axios from 'axios';
 import PropTypes from 'prop-types';
 import { forwardRef, useContext, useEffect, useState } from 'react';
 import Dropdown from 'react-bootstrap/Dropdown';
+import CountryFlag from 'react-country-flag';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -9,8 +11,38 @@ import { useMode } from '../contexts/ModeContext.jsx';
 import { useServers } from '../contexts/ServerContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import { UserSettings } from '../contexts/UserSettingsContext.jsx';
+import { supportedLanguages } from '../i18n';
 
+import { ContentModal } from './common';
 import GravatarImage from './GravatarImage.jsx';
+
+// Language identity helpers (the BoxVault navbar pattern): the flag comes from
+// the locale's region via Intl.Locale (maximize() infers e.g. en → US), the
+// display name from Intl.DisplayNames in the language's OWN locale.
+const getLanguageFlag = languageCode => {
+  const code = languageCode || 'en';
+  try {
+    const locale = new Intl.Locale(code);
+    const region = locale.region || locale.maximize().region;
+    if (region) {
+      return <CountryFlag countryCode={region} svg title={region} />;
+    }
+  } catch {
+    return '🌐';
+  }
+  return '🌐';
+};
+
+const getLanguageDisplayName = languageCode => {
+  const code = languageCode || 'en';
+  try {
+    const displayNames = new Intl.DisplayNames([code], { type: 'language' });
+    const name = displayNames.of(code);
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  } catch {
+    return code.toUpperCase();
+  }
+};
 
 // Custom dropdown toggle: the profile avatar (plus username when expanded) opens the menu,
 // with no Bootstrap caret/button chrome. react-bootstrap supplies onClick + ref. When the
@@ -59,11 +91,14 @@ const LogoutItem = ({
   onToggleKey,
   onLogout,
 }) => {
-  let label = 'Log Out';
+  const { t } = useTranslation();
+  let label = t('chrome.sidebarFooter.logOut');
   if (isOidc) {
     label = logoutEverywhere
-      ? `Log out of ${providerLabel || 'your identity provider'}`
-      : 'Log out of Hyperweaver only';
+      ? t('chrome.sidebarFooter.logOutEverywhere', {
+          providerLabel: providerLabel || t('chrome.sidebarFooter.logOutProviderDefault'),
+        })
+      : t('chrome.sidebarFooter.logOutLocalOnly');
   }
   return (
     <Dropdown.Item
@@ -79,8 +114,10 @@ const LogoutItem = ({
           className="cursor-pointer d-inline-flex"
           title={
             logoutEverywhere
-              ? 'Logging out everywhere — click to log out of Hyperweaver only'
-              : `Logging out of Hyperweaver only — click to also end your ${providerLabel || 'identity provider'} session`
+              ? t('chrome.sidebarFooter.logOutEverywhereTitle')
+              : t('chrome.sidebarFooter.logOutLocalOnlyTitle', {
+                  providerLabel: providerLabel || t('chrome.sidebarFooter.logOutProviderDefault'),
+                })
           }
           onClick={onToggle}
           onKeyDown={onToggleKey}
@@ -105,7 +142,13 @@ LogoutItem.propTypes = {
 };
 
 const SidebarFooter = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const changeLanguage = async lang => {
+    await i18n.changeLanguage(lang);
+    setShowLanguageModal(false);
+  };
   const userContext = useContext(UserSettings);
   const { user, logout } = useAuth();
   const { isDirect } = useMode();
@@ -240,7 +283,9 @@ const SidebarFooter = () => {
           <GravatarImage />
           {!isMinimized && (
             <span className="d-flex flex-column text-start lh-sm ms-1 hw-profile-id">
-              <span className="fw-semibold text-truncate">{user?.username || 'User'}</span>
+              <span className="fw-semibold text-truncate">
+                {user?.username || t('chrome.sidebarFooter.userDefault')}
+              </span>
               {user?.email && (
                 <span className="small text-body-secondary text-truncate">{user.email}</span>
               )}
@@ -255,7 +300,7 @@ const SidebarFooter = () => {
             className="d-flex align-items-center gap-2"
           >
             <i className="fas fa-book" />
-            <span>Documentation</span>
+            <span>{t('chrome.sidebarFooter.documentation')}</span>
           </Dropdown.Item>
 
           {/* API Reference — mode-aware (relocated from the sidebar, contract §2). Direct: this
@@ -268,7 +313,7 @@ const SidebarFooter = () => {
               className="d-flex align-items-center gap-2"
             >
               <i className="fas fa-code" />
-              <span>API Reference</span>
+              <span>{t('chrome.sidebarFooter.apiReference')}</span>
             </Dropdown.Item>
           ) : (
             <>
@@ -279,7 +324,7 @@ const SidebarFooter = () => {
                 className="d-flex align-items-center gap-2"
               >
                 <i className="fas fa-code" />
-                <span>Server API</span>
+                <span>{t('chrome.sidebarFooter.serverApi')}</span>
               </Dropdown.Item>
               {currentServer?.id && (
                 <Dropdown.Item
@@ -289,7 +334,7 @@ const SidebarFooter = () => {
                   className="d-flex align-items-center gap-2"
                 >
                   <i className="fas fa-code" />
-                  <span>Agent API</span>
+                  <span>{t('chrome.sidebarFooter.agentApi')}</span>
                 </Dropdown.Item>
               )}
             </>
@@ -302,7 +347,19 @@ const SidebarFooter = () => {
             className="d-flex align-items-center gap-2"
           >
             <i className="fas fa-palette" />
-            <span>Theme: {getThemeDisplay().replace(/\s*\([^)]*\)/g, '')}</span>
+            <span>
+              {t('chrome.sidebarFooter.theme')}: {getThemeDisplay().replace(/\s*\([^)]*\)/g, '')}
+            </span>
+          </Dropdown.Item>
+
+          <Dropdown.Item
+            as="button"
+            type="button"
+            onClick={() => setShowLanguageModal(true)}
+            className="d-flex align-items-center gap-2"
+          >
+            <span className="d-inline-flex">{getLanguageFlag(i18n.language)}</span>
+            <span>{getLanguageDisplayName(i18n.language)}</span>
           </Dropdown.Item>
 
           {/* Profile — a Server user concept (not in Direct). OIDC users go to their IdP profile
@@ -316,12 +373,12 @@ const SidebarFooter = () => {
                 className="d-flex align-items-center gap-2"
               >
                 <i className="fas fa-id-badge" />
-                <span>Profile</span>
+                <span>{t('chrome.sidebarFooter.profile')}</span>
               </Dropdown.Item>
             ) : (
               <Dropdown.Item as={Link} to="/ui/profile" className="d-flex align-items-center gap-2">
                 <i className="fas fa-user" />
-                <span>Profile</span>
+                <span>{t('chrome.sidebarFooter.profile')}</span>
               </Dropdown.Item>
             ))}
 
@@ -329,7 +386,7 @@ const SidebarFooter = () => {
           {!isDirect && isAdmin && (
             <Dropdown.Item as={Link} to="/ui/accounts" className="d-flex align-items-center gap-2">
               <i className="fas fa-id-card" />
-              <span>Accounts</span>
+              <span>{t('chrome.sidebarFooter.accounts')}</span>
             </Dropdown.Item>
           )}
           {!isDirect && user?.role === 'super-admin' && (
@@ -339,7 +396,7 @@ const SidebarFooter = () => {
               className="d-flex align-items-center gap-2"
             >
               <i className="fas fa-cogs" />
-              <span>Hyperweaver Settings</span>
+              <span>{t('chrome.sidebarFooter.hyperweaverSettings')}</span>
             </Dropdown.Item>
           )}
 
@@ -349,11 +406,11 @@ const SidebarFooter = () => {
               as="button"
               type="button"
               disabled
-              title="Enroll this node with a Hyperweaver Server — available in a future release"
+              title={t('chrome.sidebarFooter.enrollNode')}
               className="d-flex align-items-center gap-2"
             >
               <i className="fas fa-link" />
-              <span>Join a Hyperweaver Server</span>
+              <span>{t('chrome.sidebarFooter.joinServer')}</span>
             </Dropdown.Item>
           )}
 
@@ -361,7 +418,7 @@ const SidebarFooter = () => {
           {favoriteApps.length > 0 && (
             <>
               <Dropdown.Divider />
-              <Dropdown.Header>Favorites</Dropdown.Header>
+              <Dropdown.Header>{t('chrome.sidebarFooter.favorites')}</Dropdown.Header>
               {[...favoriteApps]
                 .sort((a, b) => (a.order || 0) - (b.order || 0))
                 .map(app => (
@@ -389,7 +446,7 @@ const SidebarFooter = () => {
               className="d-flex align-items-center gap-2"
             >
               <i className="fas fa-ticket" />
-              <span>Help &amp; Support</span>
+              <span>{t('chrome.sidebarFooter.helpSupport')}</span>
             </Dropdown.Item>
           )}
 
@@ -404,6 +461,32 @@ const SidebarFooter = () => {
           />
         </Dropdown.Menu>
       </Dropdown>
+
+      <ContentModal
+        isOpen={showLanguageModal}
+        onClose={() => setShowLanguageModal(false)}
+        title={t('chrome.languageModal.title')}
+        icon="fas fa-globe"
+      >
+        <div className="list-group">
+          {supportedLanguages.map(lang => (
+            <button
+              key={lang}
+              type="button"
+              className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${
+                i18n.language === lang ? 'border-primary border-2' : ''
+              }`}
+              onClick={() => changeLanguage(lang)}
+            >
+              <span className="d-inline-flex align-items-center gap-2">
+                <span className="d-inline-flex fs-5">{getLanguageFlag(lang)}</span>
+                <span>{getLanguageDisplayName(lang)}</span>
+              </span>
+              {i18n.language === lang && <i className="fas fa-check-circle text-success" />}
+            </button>
+          ))}
+        </div>
+      </ContentModal>
     </div>
   );
 };

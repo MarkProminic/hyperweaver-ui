@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../../../contexts/ServerContext';
 import FormModal from '../../../../common/FormModal';
 
 const ArtifactDownloadModal = ({ server, storagePaths, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     url: '',
     storage_path_id: '',
@@ -34,21 +36,21 @@ const ArtifactDownloadModal = ({ server, storagePaths, onClose, onSuccess, onErr
     const newErrors = {};
 
     if (!formData.url.trim()) {
-      newErrors.url = 'URL is required';
+      newErrors.url = t('artifacts.artifactDownloadModal.urlRequired');
     } else {
       try {
         new URL(formData.url.trim());
       } catch {
-        newErrors.url = 'Please enter a valid URL';
+        newErrors.url = t('artifacts.artifactDownloadModal.invalidUrl');
       }
     }
 
     if (!formData.storage_path_id) {
-      newErrors.storage_path_id = 'Storage location is required';
+      newErrors.storage_path_id = t('artifacts.artifactDownloadModal.storageLocationRequired');
     }
 
     if (formData.checksum.trim() && !formData.checksum_algorithm) {
-      newErrors.checksum_algorithm = 'Checksum algorithm is required when checksum is provided';
+      newErrors.checksum_algorithm = t('artifacts.artifactDownloadModal.checksumAlgorithmRequired');
     }
 
     setErrors(newErrors);
@@ -147,19 +149,14 @@ const ArtifactDownloadModal = ({ server, storagePaths, onClose, onSuccess, onErr
       <FormModal
         isOpen
         onClose={onClose}
-        title="Download from URL"
+        title={t('artifacts.artifactDownloadModal.title')}
         icon="fas fa-download"
-        submitText="Close"
+        submitText={t('artifacts.artifactDownloadModal.closeButton')}
         submitVariant="is-info"
       >
         <div className="alert alert-warning">
-          <p>
-            <strong>No enabled storage locations available.</strong>
-          </p>
-          <p>
-            You need at least one enabled storage location before you can download artifacts. Please
-            create or enable a storage location first.
-          </p>
+          <p>{t('artifacts.artifactDownloadModal.noEnabledLocations')}</p>
+          <p>{t('artifacts.artifactDownloadModal.enableLocationsFirstMessage')}</p>
         </div>
       </FormModal>
     );
@@ -170,9 +167,9 @@ const ArtifactDownloadModal = ({ server, storagePaths, onClose, onSuccess, onErr
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Download from URL"
+      title={t('artifacts.artifactDownloadModal.title')}
       icon="fas fa-download"
-      submitText="Start Download"
+      submitText={t('artifacts.artifactDownloadModal.startButton')}
       submitVariant="is-success"
       submitIcon="fas fa-download"
       loading={loading}
@@ -180,24 +177,24 @@ const ArtifactDownloadModal = ({ server, storagePaths, onClose, onSuccess, onErr
     >
       <div className="mb-3">
         <label htmlFor="download-url" className="form-label">
-          URL
+          {t('artifacts.artifactDownloadModal.urlLabel')}
         </label>
         <input
           id="download-url"
           className={`form-control ${errors.url ? 'is-invalid' : ''}`}
           type="url"
-          placeholder="https://example.com/file.iso"
+          placeholder={t('artifacts.artifactDownloadModal.urlPlaceholder')}
           value={formData.url}
           onChange={e => handleUrlChange(e.target.value)}
           disabled={loading}
         />
         {errors.url && <p className="form-text text-danger">{errors.url}</p>}
-        <p className="form-text text-muted">URL of the file to download</p>
+        <p className="form-text text-muted">{t('artifacts.artifactDownloadModal.urlHelper')}</p>
       </div>
 
       <div className="mb-3">
         <label htmlFor="download-storage-location" className="form-label">
-          Storage Location
+          {t('artifacts.artifactDownloadModal.storageLocationLabel')}
         </label>
         <select
           id="download-storage-location"
@@ -206,7 +203,7 @@ const ArtifactDownloadModal = ({ server, storagePaths, onClose, onSuccess, onErr
           disabled={loading}
           className={`form-select ${errors.storage_path_id ? 'is-invalid' : ''}`}
         >
-          <option value="">Select storage location...</option>
+          <option value="">{t('artifacts.artifactDownloadModal.selectStorageLocation')}</option>
           {enabledStoragePaths.map(path => (
             <option key={path.id} value={path.id}>
               {path.name} ({path.type}) - {path.path}
@@ -216,32 +213,36 @@ const ArtifactDownloadModal = ({ server, storagePaths, onClose, onSuccess, onErr
         {errors.storage_path_id && (
           <p className="form-text text-danger">{errors.storage_path_id}</p>
         )}
-        <p className="form-text text-muted">Where to store the downloaded file</p>
+        <p className="form-text text-muted">
+          {t('artifacts.artifactDownloadModal.storageLocationHelper')}
+        </p>
       </div>
 
       <div className="mb-3">
         <label htmlFor="download-filename" className="form-label">
-          Filename (Optional)
+          {t('artifacts.artifactDownloadModal.filenameLabel')}
         </label>
         <input
           id="download-filename"
           className="form-control"
           type="text"
-          placeholder="Leave blank to use original filename"
+          placeholder={t('artifacts.artifactDownloadModal.filenamePlaceholder')}
           value={formData.filename}
           onChange={e => handleInputChange('filename', e.target.value)}
           disabled={loading}
         />
-        <p className="form-text text-muted">Custom filename for the downloaded file</p>
+        <p className="form-text text-muted">
+          {t('artifacts.artifactDownloadModal.filenameHelper')}
+        </p>
       </div>
 
       <div className="mb-3">
-        <span className="form-label">Checksum (Optional)</span>
+        <span className="form-label">{t('artifacts.artifactDownloadModal.checksumLabel')}</span>
         <div className="input-group">
           <input
             className="form-control"
             type="text"
-            placeholder="Expected checksum for verification"
+            placeholder={t('artifacts.artifactDownloadModal.checksumPlaceholder')}
             value={formData.checksum}
             onChange={e => handleInputChange('checksum', e.target.value)}
             disabled={loading}
@@ -257,7 +258,9 @@ const ArtifactDownloadModal = ({ server, storagePaths, onClose, onSuccess, onErr
             <option value="sha256">SHA256</option>
           </select>
         </div>
-        <p className="form-text text-muted">Optional checksum for file integrity verification</p>
+        <p className="form-text text-muted">
+          {t('artifacts.artifactDownloadModal.checksumHelper')}
+        </p>
       </div>
 
       <div className="mb-3">
@@ -271,32 +274,32 @@ const ArtifactDownloadModal = ({ server, storagePaths, onClose, onSuccess, onErr
             disabled={loading}
           />
           <label className="form-check-label" htmlFor="download-overwrite-existing">
-            Overwrite existing files
+            {t('artifacts.artifactDownloadModal.overwriteLabel')}
           </label>
         </div>
         <p className="form-text text-muted">
-          Replace existing files with the same name in the storage location
+          {t('artifacts.artifactDownloadModal.overwriteHelper')}
         </p>
       </div>
 
       {selectedStoragePath && (
         <div className="alert alert-info">
           <div>
-            <p>
-              <strong>Selected Storage Location:</strong>
-            </p>
+            <p>{t('artifacts.artifactDownloadModal.selectedStorageLocationHeading')}</p>
             <ul>
               <li>
-                <strong>Name:</strong> {selectedStoragePath.name}
+                {t('artifacts.artifactDownloadModal.nameField')}: {selectedStoragePath.name}
               </li>
               <li>
-                <strong>Path:</strong> {selectedStoragePath.path}
+                {t('artifacts.artifactDownloadModal.pathField')}: {selectedStoragePath.path}
               </li>
               <li>
-                <strong>Type:</strong> {selectedStoragePath.type.toUpperCase()}
+                {t('artifacts.artifactDownloadModal.typeField')}:{' '}
+                {selectedStoragePath.type.toUpperCase()}
               </li>
               <li>
-                <strong>Available Files:</strong> {selectedStoragePath.file_count || 0}
+                {t('artifacts.artifactDownloadModal.availableFilesField')}:{' '}
+                {selectedStoragePath.file_count || 0}
               </li>
             </ul>
           </div>
@@ -305,14 +308,12 @@ const ArtifactDownloadModal = ({ server, storagePaths, onClose, onSuccess, onErr
 
       <div className="alert alert-secondary">
         <div>
-          <p>
-            <strong>Download Process:</strong>
-          </p>
+          <p>{t('artifacts.artifactDownloadModal.downloadProcessHeading')}</p>
           <ol>
-            <li>Download task will be created and queued</li>
-            <li>File will be downloaded to the selected storage location</li>
-            <li>Checksum verification will be performed if provided</li>
-            <li>The artifact will be registered in the system upon completion</li>
+            <li>{t('artifacts.artifactDownloadModal.downloadProcessStep1')}</li>
+            <li>{t('artifacts.artifactDownloadModal.downloadProcessStep2')}</li>
+            <li>{t('artifacts.artifactDownloadModal.downloadProcessStep3')}</li>
+            <li>{t('artifacts.artifactDownloadModal.downloadProcessStep4')}</li>
           </ol>
         </div>
       </div>

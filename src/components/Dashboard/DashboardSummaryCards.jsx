@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { hasMachines } from '../../utils/capabilities';
@@ -10,6 +11,7 @@ import { bytesToSize } from './dashboardUtils';
  * Infrastructure summary cards — servers, machines, memory, health status.
  */
 const DashboardSummaryCards = ({ summary, onShowHealthModal }) => {
+  const { t } = useTranslation();
   const { servers } = useServers();
   const machinesLabel = resourceLabel(servers);
   const machinesAvailable = servers.some(hasMachines);
@@ -19,15 +21,21 @@ const DashboardSummaryCards = ({ summary, onShowHealthModal }) => {
       <div className="col-12 col-sm-6 col-xl-3">
         <div className="card h-100">
           <div className="card-body text-center">
-            <div className="text-uppercase small fw-semibold text-muted">Total Servers</div>
+            <div className="text-uppercase small fw-semibold text-muted">
+              {t('dashboard.summaryCards.totalServers')}
+            </div>
             <div className="fs-2 fw-bold text-info">{summary.totalServers}</div>
             <div className="d-flex justify-content-around mt-2">
               <div className="text-center">
-                <div className="text-uppercase small fw-semibold text-success">Online</div>
+                <div className="text-uppercase small fw-semibold text-success">
+                  {t('dashboard.summaryCards.online')}
+                </div>
                 <div className="fs-6 fw-bold">{summary.onlineServers}</div>
               </div>
               <div className="text-center">
-                <div className="text-uppercase small fw-semibold text-danger">Offline</div>
+                <div className="text-uppercase small fw-semibold text-danger">
+                  {t('dashboard.summaryCards.offline')}
+                </div>
                 <div className="fs-6 fw-bold">{summary.offlineServers}</div>
               </div>
             </div>
@@ -40,16 +48,20 @@ const DashboardSummaryCards = ({ summary, onShowHealthModal }) => {
           <div className="card h-100">
             <div className="card-body text-center">
               <div className="text-uppercase small fw-semibold text-muted">
-                Total {machinesLabel}
+                {t('dashboard.summaryCards.totalMachines', { label: machinesLabel })}
               </div>
               <div className="fs-2 fw-bold text-primary">{summary.totalZones}</div>
               <div className="d-flex justify-content-around mt-2">
                 <div className="text-center">
-                  <div className="text-uppercase small fw-semibold text-success">Running</div>
+                  <div className="text-uppercase small fw-semibold text-success">
+                    {t('dashboard.summaryCards.running')}
+                  </div>
                   <div className="fs-6 fw-bold">{summary.runningZones}</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-uppercase small fw-semibold text-warning">Stopped</div>
+                  <div className="text-uppercase small fw-semibold text-warning">
+                    {t('dashboard.summaryCards.stopped')}
+                  </div>
                   <div className="fs-6 fw-bold">{summary.stoppedZones}</div>
                 </div>
               </div>
@@ -61,17 +73,19 @@ const DashboardSummaryCards = ({ summary, onShowHealthModal }) => {
       <div className="col-12 col-sm-6 col-xl-3">
         <div className="card h-100">
           <div className="card-body text-center">
-            <div className="text-uppercase small fw-semibold text-muted">Memory Usage</div>
+            <div className="text-uppercase small fw-semibold text-muted">
+              {t('dashboard.summaryCards.memoryUsage')}
+            </div>
             <div className="fs-2 fw-bold text-info">
               {summary.totalMemory > 0
                 ? `${Math.round((summary.usedMemory / summary.totalMemory) * 100)}%`
-                : 'N/A'}
+                : t('dashboard.summaryCards.notAvailable')}
             </div>
             <div className="mt-2">
               <div className="text-uppercase small fw-semibold text-muted">
                 {summary.totalMemory > 0
                   ? `${bytesToSize(summary.usedMemory)} / ${bytesToSize(summary.totalMemory)}`
-                  : 'No data available'}
+                  : t('dashboard.summaryCards.noDataAvailable')}
               </div>
               {summary.totalMemory > 0 && (
                 <div
@@ -104,22 +118,28 @@ const DashboardSummaryCards = ({ summary, onShowHealthModal }) => {
               onShowHealthModal();
             }
           }}
-          title={summary.totalIssues > 0 ? 'Click to view details' : ''}
+          title={summary.totalIssues > 0 ? t('dashboard.summaryCards.clickToViewDetails') : ''}
           style={{
             cursor: summary.totalIssues > 0 ? 'pointer' : 'default',
           }}
           disabled={summary.totalIssues === 0}
         >
           <div className="card-body text-center">
-            <div className="text-uppercase small fw-semibold text-muted">Health Status</div>
+            <div className="text-uppercase small fw-semibold text-muted">
+              {t('dashboard.summaryCards.healthStatus')}
+            </div>
             <div className="fs-2 fw-bold text-success">{summary.healthyServers}</div>
             <div className="d-flex justify-content-around mt-2">
               <div className="text-center">
-                <div className="text-uppercase small fw-semibold text-success">Healthy</div>
+                <div className="text-uppercase small fw-semibold text-success">
+                  {t('dashboard.summaryCards.healthy')}
+                </div>
                 <div className="fs-6 fw-bold">{summary.healthyServers}</div>
               </div>
               <div className="text-center">
-                <div className="text-uppercase small fw-semibold text-warning">Issues</div>
+                <div className="text-uppercase small fw-semibold text-warning">
+                  {t('dashboard.summaryCards.issues')}
+                </div>
                 <div className="fs-6 fw-bold">{summary.totalIssues}</div>
               </div>
             </div>

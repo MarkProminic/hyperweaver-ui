@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { makeAgentRequest } from '../../api/serverUtils';
 
@@ -32,6 +33,7 @@ const emptySeries = () => ({
 const num = value => (value === null || value === undefined ? null : Number(value));
 
 const VboxResourceCharts = ({ currentServer, machineName }) => {
+  const { t } = useTranslation();
   const [series, setSeries] = useState(emptySeries);
   const [last, setLast] = useState(null);
   const [error, setError] = useState('');
@@ -48,7 +50,7 @@ const VboxResourceCharts = ({ currentServer, machineName }) => {
       { machine_name: machineName, limit: 1 }
     );
     if (!result.success) {
-      setError(`Machine metrics failed (GET monitoring/machines/usage): ${result.message}`);
+      setError(t('machine.vboxResourceCharts.metricsFailed', { message: result.message }));
       return;
     }
     setError('');
@@ -78,7 +80,7 @@ const VboxResourceCharts = ({ currentServer, machineName }) => {
         num(row.disk_write_bps) === null ? null : Number(row.disk_write_bps) / MB
       ),
     }));
-  }, [currentServer, machineName]);
+  }, [currentServer, machineName, t]);
 
   useEffect(() => {
     lastTsRef.current = 0;
@@ -98,20 +100,31 @@ const VboxResourceCharts = ({ currentServer, machineName }) => {
 
   const cpuBadges =
     last && num(last.cpu_pct) !== null ? (
-      <span className="badge text-bg-light border" title="Guest + VMM, % of total host CPU">
-        {Number(last.cpu_pct).toFixed(1)}% of host
+      <span
+        className="badge text-bg-light border"
+        title={t('machine.vboxResourceCharts.cpuTooltip')}
+      >
+        {t('machine.vboxResourceCharts.pctOfHost', { value: Number(last.cpu_pct).toFixed(1) })}
       </span>
     ) : null;
 
   const memoryBadges =
     last && num(last.ram_total_bytes) !== null ? (
-      <span className="badge text-bg-light border" title="Guest RAM total">
-        of {(Number(last.ram_total_bytes) / GB).toFixed(1)} GB
+      <span
+        className="badge text-bg-light border"
+        title={t('machine.vboxResourceCharts.ramTotalTooltip')}
+      >
+        {t('machine.vboxResourceCharts.ofTotalGb', {
+          value: (Number(last.ram_total_bytes) / GB).toFixed(1),
+        })}
       </span>
     ) : null;
 
   const netBadges = (
-    <span className="badge text-bg-light border" title="Latest RX / TX">
+    <span
+      className="badge text-bg-light border"
+      title={t('machine.vboxResourceCharts.rxTxTooltip')}
+    >
       {latest(series.netRx).toFixed(2)} / {latest(series.netTx).toFixed(2)} MB/s
     </span>
   );
@@ -128,7 +141,7 @@ const VboxResourceCharts = ({ currentServer, machineName }) => {
         <div className="col-12">
           <p className="text-muted small mb-0">
             <i className="fas fa-spinner fa-pulse me-2" />
-            Waiting for the first resource sample — a stopped machine reports none…
+            {t('machine.vboxResourceCharts.waitingForSample')}
           </p>
         </div>
       )}
@@ -136,11 +149,19 @@ const VboxResourceCharts = ({ currentServer, machineName }) => {
       {hasCpu && (
         <ChartCard
           icon="fa-microchip"
-          title="CPU"
+          title={t('machine.vboxResourceCharts.cpuTitle')}
           badges={cpuBadges}
           options={chartOptions('%', [
-            { name: 'Guest', data: series.cpuGuest, color: '#4caf50' },
-            { name: 'VMM', data: series.cpuVmm, color: '#9575cd' },
+            {
+              name: t('machine.vboxResourceCharts.guestSeries'),
+              data: series.cpuGuest,
+              color: '#4caf50',
+            },
+            {
+              name: t('machine.vboxResourceCharts.vmmSeries'),
+              data: series.cpuVmm,
+              color: '#9575cd',
+            },
           ])}
         />
       )}
@@ -151,12 +172,10 @@ const VboxResourceCharts = ({ currentServer, machineName }) => {
             <div className="card-body">
               <h4 className="fs-6 fw-bold mb-2">
                 <i className="fas fa-memory me-2 text-muted" />
-                Memory
+                {t('machine.vboxResourceCharts.memoryTitle')}
               </h4>
               <div className="alert alert-info mb-0">
-                <p className="mb-0">
-                  RAM metrics require Guest Additions running inside the guest.
-                </p>
+                <p className="mb-0">{t('machine.vboxResourceCharts.additionsRequiredNote')}</p>
               </div>
             </div>
           </div>
@@ -166,20 +185,34 @@ const VboxResourceCharts = ({ currentServer, machineName }) => {
       {!noAdditions && series.ram.length > 0 && (
         <ChartCard
           icon="fa-memory"
-          title="Memory"
+          title={t('machine.vboxResourceCharts.memoryTitle')}
           badges={memoryBadges}
-          options={chartOptions('GB', [{ name: 'Used', data: series.ram, color: '#64b5f6' }])}
+          options={chartOptions('GB', [
+            {
+              name: t('machine.vboxResourceCharts.usedSeries'),
+              data: series.ram,
+              color: '#64b5f6',
+            },
+          ])}
         />
       )}
 
       {(series.netRx.length > 0 || series.netTx.length > 0) && (
         <ChartCard
           icon="fa-ethernet"
-          title="Network"
+          title={t('machine.vboxResourceCharts.networkTitle')}
           badges={netBadges}
           options={chartOptions('MB/s', [
-            { name: 'RX', data: series.netRx, color: '#64b5f6' },
-            { name: 'TX', data: series.netTx, color: '#ff9800' },
+            {
+              name: t('machine.vboxResourceCharts.rxSeries'),
+              data: series.netRx,
+              color: '#64b5f6',
+            },
+            {
+              name: t('machine.vboxResourceCharts.txSeries'),
+              data: series.netTx,
+              color: '#ff9800',
+            },
           ])}
         />
       )}
@@ -187,10 +220,18 @@ const VboxResourceCharts = ({ currentServer, machineName }) => {
       {(series.diskRead.length > 0 || series.diskWrite.length > 0) && (
         <ChartCard
           icon="fa-hdd"
-          title="Disk"
+          title={t('machine.vboxResourceCharts.diskTitle')}
           options={chartOptions('MB/s', [
-            { name: 'Read', data: series.diskRead, color: '#64b5f6' },
-            { name: 'Write', data: series.diskWrite, color: '#ff9800' },
+            {
+              name: t('machine.vboxResourceCharts.readSeries'),
+              data: series.diskRead,
+              color: '#64b5f6',
+            },
+            {
+              name: t('machine.vboxResourceCharts.writeSeries'),
+              data: series.diskWrite,
+              color: '#ff9800',
+            },
           ])}
         />
       )}

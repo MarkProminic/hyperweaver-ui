@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { PathInput } from './common';
 
@@ -76,6 +77,7 @@ export const schemaNodeForPath = (schema, path) => {
 // stringify to "[object Object]"). The raw text is held locally so the user can
 // type freely; the value is only committed to settings when the JSON parses.
 const JsonField = ({ fieldId, label, value, onChange, description }) => {
+  const { t } = useTranslation();
   const [text, setText] = useState(() => JSON.stringify(value, null, 2));
   const [error, setError] = useState('');
 
@@ -122,11 +124,11 @@ const JsonField = ({ fieldId, label, value, onChange, description }) => {
         />
         {error ? (
           <div className="invalid-feedback">
-            Invalid JSON — changes won&apos;t be saved until corrected.
+            {t('agentSettings.agentSettingsFields.invalidJson')}
           </div>
         ) : (
           <p className="form-text text-muted">
-            {description || 'Structured value, edited as JSON.'}
+            {description || t('agentSettings.agentSettingsFields.structuredValueDefault')}
           </p>
         )}
       </div>

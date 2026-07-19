@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { ContentModal } from '../../../common';
 import ExpandedNetworkChart from '../Network';
@@ -28,23 +29,25 @@ const ExpandedChartModal = ({
   cpuChartData,
   memoryChartData,
 }) => {
+  const { t } = useTranslation();
+
   if (!expandedChart) {
     return null;
   }
 
   // Get modal title based on chart type
   const getModalTitle = () => {
-    let baseTitle = 'Performance';
+    let baseTitle = t('hostCharts.expandedModal.performanceTitle');
     if (expandedChartType === 'storage-io') {
-      baseTitle = 'Storage I/O Performance';
+      baseTitle = t('hostCharts.expandedModal.storageIOTitle');
     } else if (expandedChartType === 'arc') {
-      baseTitle = 'ZFS ARC Performance';
+      baseTitle = t('hostCharts.expandedModal.arcTitle');
     } else if (expandedChartType === 'network') {
-      baseTitle = 'Network Performance';
+      baseTitle = t('hostCharts.expandedModal.networkTitle');
     } else if (expandedChartType === 'cpu') {
-      baseTitle = 'CPU Performance';
+      baseTitle = t('hostCharts.expandedModal.cpuTitle');
     } else if (expandedChartType === 'memory') {
-      baseTitle = 'Memory Performance';
+      baseTitle = t('hostCharts.expandedModal.memoryTitle');
     }
     return `${baseTitle} - ${currentServer?.hostname}`;
   };
@@ -105,24 +108,24 @@ const ExpandedChartModal = ({
 
   const renderControls = () => {
     const storageLabels = {
-      read: { label: 'Read', className: 'btn-info' },
-      write: { label: 'Write', className: 'btn-warning' },
-      total: { label: 'Total', className: 'btn-success' },
+      read: { label: t('hostCharts.expandedModal.readLabel'), className: 'btn-info' },
+      write: { label: t('hostCharts.expandedModal.writeLabel'), className: 'btn-warning' },
+      total: { label: t('hostCharts.expandedModal.totalLabel'), className: 'btn-success' },
     };
     const networkLabels = {
-      read: { label: 'RX', className: 'btn-info' },
-      write: { label: 'TX', className: 'btn-warning' },
-      total: { label: 'Total', className: 'btn-success' },
+      read: { label: t('hostCharts.expandedModal.rxLabel'), className: 'btn-info' },
+      write: { label: t('hostCharts.expandedModal.txLabel'), className: 'btn-warning' },
+      total: { label: t('hostCharts.expandedModal.totalLabel'), className: 'btn-success' },
     };
     const cpuLabels = {
-      overall: { label: 'Avg', className: 'btn-info' },
-      cores: { label: 'Cores', className: 'btn-info' },
-      load: { label: 'Load', className: 'btn-info' },
+      overall: { label: t('hostCharts.expandedModal.avgLabel'), className: 'btn-info' },
+      cores: { label: t('hostCharts.expandedModal.coresLabel'), className: 'btn-info' },
+      load: { label: t('hostCharts.expandedModal.loadLabel'), className: 'btn-info' },
     };
     const memoryLabels = {
-      used: { label: 'Used', className: 'btn-info' },
-      free: { label: 'Free', className: 'btn-success' },
-      cached: { label: 'Cached', className: 'btn-warning' },
+      used: { label: t('hostCharts.expandedModal.usedLabel'), className: 'btn-info' },
+      free: { label: t('hostCharts.expandedModal.freeLabel'), className: 'btn-success' },
+      cached: { label: t('hostCharts.expandedModal.cachedLabel'), className: 'btn-warning' },
     };
 
     switch (expandedChartType) {

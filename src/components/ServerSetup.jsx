@@ -1,5 +1,6 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -10,6 +11,7 @@ import { useServers } from '../contexts/ServerContext';
  * @returns {JSX.Element} ServerSetup component
  */
 const ServerSetup = () => {
+  const { t } = useTranslation();
   const [hostname, setHostname] = useState('');
   const [port, setPort] = useState('5001');
   const [protocol, setProtocol] = useState('https');
@@ -28,12 +30,12 @@ const ServerSetup = () => {
     e.preventDefault();
 
     if (!hostname || !port || !protocol || !entityName) {
-      setMsg('All fields are required');
+      setMsg(t('auth.serverSetup.allFieldsRequired'));
       return;
     }
 
     if (!isAuthenticated) {
-      setMsg('Please login first to bootstrap a server');
+      setMsg(t('auth.serverSetup.loginFirstBootstrap'));
       return;
     }
 
@@ -50,7 +52,7 @@ const ServerSetup = () => {
       });
 
       if (result.success) {
-        setMsg('Server bootstrapped successfully! Testing connection...');
+        setMsg(t('auth.serverSetup.bootstrapSuccessMsg'));
 
         // Test the connection
         const testResult = await testServer({
@@ -60,7 +62,7 @@ const ServerSetup = () => {
         });
 
         if (testResult.success) {
-          setMsg('Bootstrap successful and connection verified! Refreshing servers...');
+          setMsg(t('auth.serverSetup.bootstrapVerifiedMsg'));
 
           // Refresh servers context
           await refreshServers();
@@ -76,7 +78,7 @@ const ServerSetup = () => {
       }
     } catch (bootstrapErr) {
       console.error('Bootstrap error:', bootstrapErr);
-      setMsg('An unexpected error occurred. Please try again.');
+      setMsg(t('auth.serverSetup.unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -87,18 +89,18 @@ const ServerSetup = () => {
    */
   const handleTestConnection = async () => {
     if (!hostname || !port || !protocol) {
-      setMsg('Please fill in hostname, port, and protocol first');
+      setMsg(t('auth.serverSetup.fillFieldsFirst'));
       return;
     }
 
     if (!isAuthenticated) {
-      setMsg('Please login first to test connection');
+      setMsg(t('auth.serverSetup.loginFirstTest'));
       return;
     }
 
     try {
       setLoading(true);
-      setMsg('Testing connection...');
+      setMsg(t('auth.serverSetup.testingConnection'));
 
       const result = await testServer({
         hostname,
@@ -107,13 +109,13 @@ const ServerSetup = () => {
       });
 
       if (result.success) {
-        setMsg('Connection test successful! Server is reachable and ready for bootstrap.');
+        setMsg(t('auth.serverSetup.testSuccessMsg'));
       } else {
         setMsg(`Connection test failed: ${result.message}`);
       }
     } catch (testErr) {
       console.error('Test connection error:', testErr);
-      setMsg('Connection test failed. Please check your server details.');
+      setMsg(t('auth.serverSetup.testFailedCheckDetails'));
     } finally {
       setLoading(false);
     }
@@ -141,17 +143,19 @@ const ServerSetup = () => {
           <div className="col-12 col-lg-6">
             <form onSubmit={handleBootstrap} className="card">
               <div className="card-body p-4">
-                <h1 className="h3 text-center mb-1">Server Setup</h1>
+                <h1 className="h3 text-center mb-1">{t('auth.serverSetup.serverSetupTitle')}</h1>
                 <p className="text-muted text-center mb-4">
-                  Bootstrap a new Server for machine management
+                  {t('auth.serverSetup.bootstrapNewServerDesc')}
                 </p>
 
                 {user && (
                   <div className="alert alert-info">
                     <p className="mb-1">
-                      <strong>Welcome, {user.username}!</strong>
+                      <strong>
+                        {t('auth.serverSetup.welcomeMsg', { username: user.username })}
+                      </strong>
                     </p>
-                    <p className="mb-0">You can now add Servers to manage your machines.</p>
+                    <p className="mb-0">{t('auth.serverSetup.canAddServersMsg')}</p>
                   </div>
                 )}
 
@@ -165,7 +169,7 @@ const ServerSetup = () => {
                   <div className="col-12 col-md-3">
                     <div className="mb-3">
                       <label className="form-label" htmlFor="protocol">
-                        Protocol
+                        {t('auth.serverSetup.protocolLabel')}
                       </label>
                       <select
                         id="protocol"
@@ -182,13 +186,13 @@ const ServerSetup = () => {
                   <div className="col-12 col-md-6">
                     <div className="mb-3">
                       <label className="form-label" htmlFor="hostname">
-                        Server Hostname
+                        {t('auth.serverSetup.hostnameLabel')}
                       </label>
                       <input
                         id="hostname"
                         type="text"
                         className="form-control"
-                        placeholder="agent.example.com"
+                        placeholder={t('auth.serverSetup.hostnamePlaceholder')}
                         value={hostname}
                         onChange={e => setHostname(e.target.value)}
                         disabled={loading}
@@ -198,13 +202,13 @@ const ServerSetup = () => {
                   <div className="col-12 col-md-3">
                     <div className="mb-3">
                       <label className="form-label" htmlFor="port">
-                        Port
+                        {t('auth.serverSetup.portLabel')}
                       </label>
                       <input
                         id="port"
                         type="number"
                         className="form-control"
-                        placeholder="5001"
+                        placeholder={t('auth.serverSetup.portPlaceholder')}
                         value={port}
                         onChange={e => setPort(e.target.value)}
                         disabled={loading}
@@ -215,19 +219,19 @@ const ServerSetup = () => {
 
                 <div className="mb-3">
                   <label className="form-label" htmlFor="entityName">
-                    Entity Name
+                    {t('auth.serverSetup.entityNameLabel')}
                   </label>
                   <input
                     id="entityName"
                     type="text"
                     className="form-control"
-                    placeholder="Hyperweaver-Production"
+                    placeholder={t('auth.serverSetup.entityNamePlaceholder')}
                     value={entityName}
                     onChange={e => setEntityName(e.target.value)}
                     disabled={loading}
                   />
                   <div className="form-text text-muted">
-                    This name will identify this Hyperweaver instance on the Server
+                    {t('auth.serverSetup.entityNameHelpText')}
                   </div>
                 </div>
 
@@ -245,7 +249,7 @@ const ServerSetup = () => {
                         aria-hidden="true"
                       />
                     )}
-                    Test Connection
+                    {t('auth.serverSetup.testConnectionBtn')}
                   </button>
                   <button type="submit" className="btn btn-primary flex-fill" disabled={loading}>
                     {loading && (
@@ -255,20 +259,19 @@ const ServerSetup = () => {
                         aria-hidden="true"
                       />
                     )}
-                    Bootstrap Server
+                    {t('auth.serverSetup.bootstrapServerBtn')}
                   </button>
                 </div>
 
                 <div className="text-center mt-4">
                   <p className="form-text text-muted">
-                    <strong>Note:</strong> The bootstrap endpoint will be automatically disabled
-                    after first use for security.
+                    <strong>{t('auth.serverSetup.bootstrapNote')}</strong>
                   </p>
                 </div>
 
                 <div className="text-center mt-3">
                   <a href="/ui" className="btn btn-link">
-                    Skip Setup (Go to Dashboard)
+                    {t('auth.serverSetup.skipSetupLink')}
                   </a>
                 </div>
               </div>

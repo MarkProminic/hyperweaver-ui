@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../../../contexts/ServerContext';
 import FormModal from '../../../../common/FormModal';
 
 const ArtifactMoveModal = ({ server, artifact, storagePaths, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [destinationStoragePathId, setDestinationStoragePathId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +22,7 @@ const ArtifactMoveModal = ({ server, artifact, storagePaths, onClose, onSuccess,
     setError('');
 
     if (!destinationStoragePathId) {
-      setError('Please select a destination storage location.');
+      setError(t('artifacts.artifactMoveModal.selectDestinationError'));
       return;
     }
 
@@ -55,9 +57,9 @@ const ArtifactMoveModal = ({ server, artifact, storagePaths, onClose, onSuccess,
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Move Artifact"
+      title={t('artifacts.artifactMoveModal.title')}
       icon="fas fa-truck"
-      submitText="Move Artifact"
+      submitText={t('artifacts.artifactMoveModal.submitButton')}
       submitVariant="is-primary"
       loading={loading}
       showCancelButton
@@ -71,7 +73,7 @@ const ArtifactMoveModal = ({ server, artifact, storagePaths, onClose, onSuccess,
 
       <div className="mb-3">
         <label htmlFor="move-artifact-name" className="form-label">
-          Artifact
+          {t('artifacts.artifactMoveModal.artifactLabel')}
         </label>
         <input
           id="move-artifact-name"
@@ -84,7 +86,7 @@ const ArtifactMoveModal = ({ server, artifact, storagePaths, onClose, onSuccess,
 
       <div className="mb-3">
         <label htmlFor="move-current-location" className="form-label">
-          Current Storage Location
+          {t('artifacts.artifactMoveModal.currentLocationLabel')}
         </label>
         <input
           id="move-current-location"
@@ -97,7 +99,7 @@ const ArtifactMoveModal = ({ server, artifact, storagePaths, onClose, onSuccess,
 
       <div className="mb-3">
         <label htmlFor="move-destination-location" className="form-label">
-          Destination Storage Location
+          {t('artifacts.artifactMoveModal.destinationLocationLabel')}
         </label>
         <select
           id="move-destination-location"
@@ -106,7 +108,7 @@ const ArtifactMoveModal = ({ server, artifact, storagePaths, onClose, onSuccess,
           onChange={e => setDestinationStoragePathId(e.target.value)}
           disabled={loading}
         >
-          <option value="">Select a destination</option>
+          <option value="">{t('artifacts.artifactMoveModal.selectDestination')}</option>
           {availableStoragePaths.map(path => (
             <option key={path.id} value={path.id}>
               {path.name} ({path.path})

@@ -1,53 +1,57 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
-const VnicBasicFields = ({ name, link, availableLinks, loadingLinks, onChange, disabled }) => (
-  <div className="row">
-    <div className="col">
-      <div className="mb-3">
-        <label className="form-label" htmlFor="vnic-create-name">
-          VNIC Name *
-        </label>
-        <input
-          id="vnic-create-name"
-          className="form-control"
-          type="text"
-          placeholder="Auto-generated based on link"
-          value={name}
-          onChange={e => onChange('name', e.target.value)}
-          disabled={disabled}
-          required
-        />
-        <p className="form-text text-muted">
-          Auto-generated when you select a link. Must start with a letter.
-        </p>
+const VnicBasicFields = ({ name, link, availableLinks, loadingLinks, onChange, disabled }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="row">
+      <div className="col">
+        <div className="mb-3">
+          <label className="form-label" htmlFor="vnic-create-name">
+            {t('hostTools.VnicBasicFields.vnicNameLabel')}
+          </label>
+          <input
+            id="vnic-create-name"
+            className="form-control"
+            type="text"
+            placeholder={t('hostTools.VnicBasicFields.vnicNamePlaceholder')}
+            value={name}
+            onChange={e => onChange('name', e.target.value)}
+            disabled={disabled}
+            required
+          />
+          <p className="form-text text-muted">{t('hostTools.VnicBasicFields.vnicNameHelp')}</p>
+        </div>
       </div>
-    </div>
-    <div className="col">
-      <div className="mb-3">
-        <label className="form-label" htmlFor="vnic-create-link">
-          Physical Link *
-        </label>
-        <select
-          id="vnic-create-link"
-          className="form-select"
-          value={link}
-          onChange={e => onChange('link', e.target.value)}
-          disabled={disabled || loadingLinks}
-          required
-        >
-          <option value="">
-            {loadingLinks ? 'Loading available links...' : 'Select a link to attach VNIC to'}
-          </option>
-          {availableLinks.map(l => (
-            <option key={l.name} value={l.name}>
-              {l.name} ({l.type}, {l.state}, {l.speed})
+      <div className="col">
+        <div className="mb-3">
+          <label className="form-label" htmlFor="vnic-create-link">
+            {t('hostTools.VnicBasicFields.physicalLinkLabel')}
+          </label>
+          <select
+            id="vnic-create-link"
+            className="form-select"
+            value={link}
+            onChange={e => onChange('link', e.target.value)}
+            disabled={disabled || loadingLinks}
+            required
+          >
+            <option value="">
+              {loadingLinks
+                ? t('hostTools.VnicBasicFields.loadingAvailableLinks')
+                : t('hostTools.VnicBasicFields.selectLinkOption')}
             </option>
-          ))}
-        </select>
+            {availableLinks.map(l => (
+              <option key={l.name} value={l.name}>
+                {l.name} ({l.type}, {l.state}, {l.speed})
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 VnicBasicFields.propTypes = {
   name: PropTypes.string.isRequired,

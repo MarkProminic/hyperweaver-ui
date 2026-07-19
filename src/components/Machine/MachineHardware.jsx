@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { HardwareDeviceTree } from './CurrentHardware';
 
@@ -9,13 +10,14 @@ import { HardwareDeviceTree } from './CurrentHardware';
  * device tree alone; the flat showvminfo map renders elsewhere.
  */
 
-const renderStatusBadge = (value, trueCondition, onLabel = 'Enabled', offLabel = 'Disabled') => (
+const renderStatusBadge = (value, trueCondition, onLabel, offLabel) => (
   <span className={`fw-semibold ${value === trueCondition ? 'text-success' : 'text-danger'}`}>
     {value === trueCondition ? onLabel : offLabel}
   </span>
 );
 
 const MachineHardware = ({ machineDetails, currentHardware, colClass = 'col-12' }) => {
+  const { t } = useTranslation();
   const configuration = machineDetails?.configuration;
   const isZone = !!configuration?.zonename;
   const hasDevices = !!(
@@ -38,8 +40,11 @@ const MachineHardware = ({ machineDetails, currentHardware, colClass = 'col-12' 
       return (
         <>
           <span className="text-muted font-monospace">{pinned}</span>
-          <span className="badge text-bg-secondary ms-2" title="Pinned by the consoleport attr">
-            pinned
+          <span
+            className="badge text-bg-secondary ms-2"
+            title={t('machine.machineHardware.pinnedTooltip')}
+          >
+            {t('machine.machineHardware.pinnedBadge')}
           </span>
         </>
       );
@@ -51,12 +56,14 @@ const MachineHardware = ({ machineDetails, currentHardware, colClass = 'col-12' 
       return (
         <>
           <span className="text-muted font-monospace">{livePort}</span>
-          <span className="text-muted small ms-2">(this session)</span>
+          <span className="text-muted small ms-2">{t('machine.machineHardware.thisSession')}</span>
         </>
       );
     }
 
-    return <span className="fw-semibold text-success">Auto (agent pool)</span>;
+    return (
+      <span className="fw-semibold text-success">{t('machine.machineHardware.autoAgentPool')}</span>
+    );
   };
 
   return (
@@ -65,7 +72,7 @@ const MachineHardware = ({ machineDetails, currentHardware, colClass = 'col-12' 
         <div className="card-body">
           <h4 className="fs-6 fw-bold mb-3">
             <i className="fas fa-microchip me-2" />
-            Hardware
+            {t('machine.machineHardware.heading')}
           </h4>
 
           {isZone && (
@@ -74,109 +81,145 @@ const MachineHardware = ({ machineDetails, currentHardware, colClass = 'col-12' 
                 <tbody>
                   <tr>
                     <td className="px-3 py-2">
-                      <strong>RAM</strong>
+                      <strong>{t('machine.machineHardware.ramLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">{configuration.ram}</td>
                     <td className="px-3 py-2">
-                      <strong>ACPI</strong>
+                      <strong>{t('machine.machineHardware.acpiLabel')}</strong>
                     </td>
-                    <td className="px-3 py-2">{renderStatusBadge(configuration.acpi, 'true')}</td>
+                    <td className="px-3 py-2">
+                      {renderStatusBadge(
+                        configuration.acpi,
+                        'true',
+                        t('machine.machineHardware.enabledLabel'),
+                        t('machine.machineHardware.disabledLabel')
+                      )}
+                    </td>
                   </tr>
                   <tr>
                     <td className="px-3 py-2">
-                      <strong>vCPUs</strong>
+                      <strong>{t('machine.machineHardware.vcpusLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">{configuration.vcpus}</td>
                     <td className="px-3 py-2">
-                      <strong>Auto Boot</strong>
+                      <strong>{t('machine.machineHardware.autoBootLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">
-                      {renderStatusBadge(configuration.autoboot, 'true')}
+                      {renderStatusBadge(
+                        configuration.autoboot,
+                        'true',
+                        t('machine.machineHardware.enabledLabel'),
+                        t('machine.machineHardware.disabledLabel')
+                      )}
                     </td>
                   </tr>
                   <tr>
                     <td className="px-3 py-2">
-                      <strong>Boot ROM</strong>
+                      <strong>{t('machine.machineHardware.bootromLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">
                       <span className="text-muted font-monospace">{configuration.bootrom}</span>
                     </td>
                     <td className="px-3 py-2">
-                      <strong>UEFI Vars</strong>
+                      <strong>{t('machine.machineHardware.uefiVarsLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">
-                      {renderStatusBadge(configuration.uefivars, 'on', 'On', 'Off')}
+                      {renderStatusBadge(
+                        configuration.uefivars,
+                        'on',
+                        t('machine.machineHardware.onLabel'),
+                        t('machine.machineHardware.offLabel')
+                      )}
                     </td>
                   </tr>
                   <tr>
                     <td className="px-3 py-2">
-                      <strong>Host Bridge</strong>
+                      <strong>{t('machine.machineHardware.hostBridgeLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">
                       <span className="text-muted font-monospace">{configuration.hostbridge}</span>
                     </td>
                     <td className="px-3 py-2">
-                      <strong>xHCI</strong>
+                      <strong>{t('machine.machineHardware.xhciLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">
-                      {renderStatusBadge(configuration.xhci, 'on', 'On', 'Off')}
+                      {renderStatusBadge(
+                        configuration.xhci,
+                        'on',
+                        t('machine.machineHardware.onLabel'),
+                        t('machine.machineHardware.offLabel')
+                      )}
                     </td>
                   </tr>
                   <tr>
                     <td className="px-3 py-2">
-                      <strong>Brand</strong>
+                      <strong>{t('machine.machineHardware.brandLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">
                       <span className="text-muted font-monospace">{configuration.brand}</span>
                     </td>
                     <td className="px-3 py-2">
-                      <strong>RNG</strong>
+                      <strong>{t('machine.machineHardware.rngLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">
-                      {renderStatusBadge(configuration.rng, 'on', 'On', 'Off')}
+                      {renderStatusBadge(
+                        configuration.rng,
+                        'on',
+                        t('machine.machineHardware.onLabel'),
+                        t('machine.machineHardware.offLabel')
+                      )}
                     </td>
                   </tr>
                   <tr>
                     <td className="px-3 py-2">
-                      <strong>Type</strong>
+                      <strong>{t('machine.machineHardware.typeLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">
                       <span className="text-muted font-monospace">
-                        {configuration.type || 'N/A'}
+                        {configuration.type || t('machine.machineHardware.notApplicable')}
                       </span>
                     </td>
                     <td className="px-3 py-2">
-                      <strong>Cloud Init</strong>
+                      <strong>{t('machine.machineHardware.cloudInitLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">
-                      {renderStatusBadge(configuration['cloud-init'], 'on', 'On', 'Off')}
+                      {renderStatusBadge(
+                        configuration['cloud-init'],
+                        'on',
+                        t('machine.machineHardware.onLabel'),
+                        t('machine.machineHardware.offLabel')
+                      )}
                     </td>
                   </tr>
                   <tr>
                     <td className="px-3 py-2">
-                      <strong>VNC Console</strong>
+                      <strong>{t('machine.machineHardware.vncConsoleLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">
                       <span
                         className={`fw-semibold ${machineDetails.vnc_session_info ? 'text-success' : 'text-danger'}`}
                       >
-                        {machineDetails.vnc_session_info ? 'Active' : 'Inactive'}
+                        {machineDetails.vnc_session_info
+                          ? t('machine.machineHardware.activeStatus')
+                          : t('machine.machineHardware.inactiveStatus')}
                       </span>
                     </td>
                     <td className="px-3 py-2">
-                      <strong>VNC Port</strong>
+                      <strong>{t('machine.machineHardware.vncPortLabel')}</strong>
                     </td>
                     <td className="px-3 py-2">{renderVncPort()}</td>
                   </tr>
                   <tr>
                     <td className="px-3 py-2">
-                      <strong>zlogin</strong>
+                      <strong>{t('machine.machineHardware.zloginLabel')}</strong>
                     </td>
                     <td className="px-3 py-2" colSpan={3}>
                       <span
                         className={`fw-semibold ${machineDetails.zlogin_session ? 'text-success' : 'text-danger'}`}
                       >
-                        {machineDetails.zlogin_session ? 'Active' : 'Inactive'}
+                        {machineDetails.zlogin_session
+                          ? t('machine.machineHardware.activeStatus')
+                          : t('machine.machineHardware.inactiveStatus')}
                       </span>
                     </td>
                   </tr>

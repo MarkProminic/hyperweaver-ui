@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
 import Dropdown from 'react-bootstrap/Dropdown';
+import { useTranslation } from 'react-i18next';
 
 import {
   destroyZfsSnapshot,
@@ -90,6 +91,7 @@ const typeIcon = (row, depth) => {
 };
 
 const UsageBar = ({ row }) => {
+  const { t } = useTranslation();
   const percent = usedPercent(row.used, row.avail);
   if (percent === null) {
     return null;
@@ -99,11 +101,11 @@ const UsageBar = ({ row }) => {
       className="progress flex-shrink-0"
       style={{ width: '90px', height: '0.5rem' }}
       role="progressbar"
-      aria-label={`${row.name} usage`}
+      aria-label={t('host.usageBar.ariaLabel', { name: row.name })}
       aria-valuenow={percent}
       aria-valuemin={0}
       aria-valuemax={100}
-      title={`${percent}% used (${row.used} used, ${row.avail} available)`}
+      title={t('host.usageBar.title', { percent, used: row.used, avail: row.avail })}
     >
       <div
         className={`progress-bar bg-${capacityVariant(percent)}`}
@@ -127,112 +129,127 @@ const DatasetRow = ({
   onToggle,
   onModal,
   onPromote,
-}) => (
-  <div
-    className="d-flex align-items-center gap-2 border-bottom py-1"
-    style={{ paddingLeft: `${depth * 1.5}rem` }}
-  >
-    {hasContent ? (
-      <button
-        type="button"
-        className="btn btn-sm btn-link p-0 text-decoration-none"
-        style={{ width: '1.25rem' }}
-        aria-label={isCollapsed ? `Expand ${node.name}` : `Collapse ${node.name}`}
-        onClick={() => onToggle(node.name)}
-      >
-        <i className={`fas ${isCollapsed ? 'fa-caret-right' : 'fa-caret-down'}`} />
-      </button>
-    ) : (
-      <span style={{ width: '1.25rem' }} />
-    )}
-    <i className={`fas ${typeIcon(node.row, depth)} text-muted`} />
-    <span className={depth === 0 ? 'fw-bold' : 'fw-semibold'} title={node.name}>
-      {node.label}
-    </span>
-    {node.row.type === 'volume' && <span className="badge text-bg-info">volume</span>}
-    {showSnapshots && node.snapshots.length > 0 && (
-      <span className="badge text-bg-secondary" title={`${node.snapshots.length} snapshots`}>
-        <i className="fas fa-camera me-1" />
-        {node.snapshots.length}
-      </span>
-    )}
-    <span className="ms-auto d-flex align-items-center gap-2">
-      <UsageBar row={node.row} />
-      <span className="text-muted small text-nowrap" title="used / available / referenced">
-        {humanSize(node.row.used)} / {humanSize(node.row.avail)} / {humanSize(node.row.refer)}
-      </span>
-      {node.row.mountpoint && node.row.mountpoint !== '-' && (
-        <code className="small text-muted d-none d-lg-inline" title="Mountpoint">
-          {node.row.mountpoint}
-        </code>
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="d-flex align-items-center gap-2 border-bottom py-1"
+      style={{ paddingLeft: `${depth * 1.5}rem` }}
+    >
+      {hasContent ? (
+        <button
+          type="button"
+          className="btn btn-sm btn-link p-0 text-decoration-none"
+          style={{ width: '1.25rem' }}
+          aria-label={
+            isCollapsed
+              ? t('host.datasetRow.expandDataset', { name: node.name })
+              : t('host.datasetRow.collapseDataset', { name: node.name })
+          }
+          onClick={() => onToggle(node.name)}
+        >
+          <i className={`fas ${isCollapsed ? 'fa-caret-right' : 'fa-caret-down'}`} />
+        </button>
+      ) : (
+        <span style={{ width: '1.25rem' }} />
       )}
-      <button
-        type="button"
-        className="btn btn-sm btn-outline-primary py-0"
-        title="Take a snapshot"
-        onClick={() => onModal({ kind: 'snapshot', name: node.name })}
-        disabled={busy}
-      >
-        <i className="fas fa-camera" />
-      </button>
-      <Dropdown align="end">
-        <Dropdown.Toggle
-          variant="outline-secondary"
-          size="sm"
-          className="py-0"
-          title="More actions"
+      <i className={`fas ${typeIcon(node.row, depth)} text-muted`} />
+      <span className={depth === 0 ? 'fw-bold' : 'fw-semibold'} title={node.name}>
+        {node.label}
+      </span>
+      {node.row.type === 'volume' && (
+        <span className="badge text-bg-info">{t('host.datasetRow.volume')}</span>
+      )}
+      {showSnapshots && node.snapshots.length > 0 && (
+        <span
+          className="badge text-bg-secondary"
+          title={t('host.datasetRow.snapshotsCountLabel', { count: node.snapshots.length })}
+        >
+          <i className="fas fa-camera me-1" />
+          {node.snapshots.length}
+        </span>
+      )}
+      <span className="ms-auto d-flex align-items-center gap-2">
+        <UsageBar row={node.row} />
+        <span className="text-muted small text-nowrap" title={t('host.datasetRow.usageInfo')}>
+          {humanSize(node.row.used)} / {humanSize(node.row.avail)} / {humanSize(node.row.refer)}
+        </span>
+        {node.row.mountpoint && node.row.mountpoint !== '-' && (
+          <code
+            className="small text-muted d-none d-lg-inline"
+            title={t('host.datasetRow.mountpointTitle')}
+          >
+            {node.row.mountpoint}
+          </code>
+        )}
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-primary py-0"
+          title={t('host.datasetRow.snapshotButton')}
+          onClick={() => onModal({ kind: 'snapshot', name: node.name })}
           disabled={busy}
         >
-          <i className="fas fa-gear" />
-        </Dropdown.Toggle>
-        <Dropdown.Menu>
-          <Dropdown.Item
-            as="button"
-            type="button"
-            onClick={() => onModal({ kind: 'create', name: `${node.name}/` })}
+          <i className="fas fa-camera" />
+        </button>
+        <Dropdown align="end">
+          <Dropdown.Toggle
+            variant="outline-secondary"
+            size="sm"
+            className="py-0"
+            title={t('host.datasetRow.moreActionsTitle')}
+            disabled={busy}
           >
-            <i className="fas fa-plus me-2" />
-            Create child dataset…
-          </Dropdown.Item>
-          <Dropdown.Item
-            as="button"
-            type="button"
-            onClick={() => onModal({ kind: 'properties', name: node.name })}
-          >
-            <i className="fas fa-sliders me-2" />
-            Properties…
-          </Dropdown.Item>
-          <Dropdown.Item
-            as="button"
-            type="button"
-            onClick={() => onModal({ kind: 'rename', name: node.name })}
-          >
-            <i className="fas fa-i-cursor me-2" />
-            Rename…
-          </Dropdown.Item>
-          <Dropdown.Item
-            as="button"
-            type="button"
-            title="Make this clone independent of its origin snapshot"
-            onClick={() => onPromote(node.name)}
-          >
-            <i className="fas fa-arrow-up me-2" />
-            Promote clone
-          </Dropdown.Item>
-          <Dropdown.Divider />
-          <Dropdown.Item
-            as="button"
-            type="button"
-            onClick={() => onModal({ kind: 'destroy', name: node.name, isSnapshot: false })}
-          >
-            <i className="fas fa-trash text-danger me-2" />
-            Destroy…
-          </Dropdown.Item>
-        </Dropdown.Menu>
-      </Dropdown>
-    </span>
-  </div>
-);
+            <i className="fas fa-gear" />
+          </Dropdown.Toggle>
+          <Dropdown.Menu>
+            <Dropdown.Item
+              as="button"
+              type="button"
+              onClick={() => onModal({ kind: 'create', name: `${node.name}/` })}
+            >
+              <i className="fas fa-plus me-2" />
+              {t('host.datasetRow.createChildDataset')}
+            </Dropdown.Item>
+            <Dropdown.Item
+              as="button"
+              type="button"
+              onClick={() => onModal({ kind: 'properties', name: node.name })}
+            >
+              <i className="fas fa-sliders me-2" />
+              {t('host.datasetRow.datasetProperties')}
+            </Dropdown.Item>
+            <Dropdown.Item
+              as="button"
+              type="button"
+              onClick={() => onModal({ kind: 'rename', name: node.name })}
+            >
+              <i className="fas fa-i-cursor me-2" />
+              {t('host.datasetRow.renameDataset')}
+            </Dropdown.Item>
+            <Dropdown.Item
+              as="button"
+              type="button"
+              title={t('host.datasetRow.promoteCloneTitle')}
+              onClick={() => onPromote(node.name)}
+            >
+              <i className="fas fa-arrow-up me-2" />
+              {t('host.datasetRow.promoteClone')}
+            </Dropdown.Item>
+            <Dropdown.Divider />
+            <Dropdown.Item
+              as="button"
+              type="button"
+              onClick={() => onModal({ kind: 'destroy', name: node.name, isSnapshot: false })}
+            >
+              <i className="fas fa-trash text-danger me-2" />
+              {t('host.datasetRow.destroyDataset')}
+            </Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
+      </span>
+    </div>
+  );
+};
 
 DatasetRow.propTypes = {
   node: PropTypes.object.isRequired,
@@ -246,78 +263,81 @@ DatasetRow.propTypes = {
   onPromote: PropTypes.func.isRequired,
 };
 
-const SnapshotRow = ({ snap, depth, busy, isSelected, onSelect, onModal }) => (
-  <div
-    className="d-flex align-items-center gap-2 border-bottom py-1"
-    style={{ paddingLeft: `${depth * 1.5}rem` }}
-  >
-    <span style={{ width: '1.25rem' }} />
-    <input
-      type="checkbox"
-      className="form-check-input flex-shrink-0 mt-0"
-      checked={isSelected}
-      onChange={() => onSelect(snap.name)}
-      disabled={busy}
-      aria-label={`Select ${snap.name}`}
-    />
-    <i className="fas fa-camera text-muted" />
-    <code className="small" title={snap.name}>
-      @{snap.name.split('@')[1] || snap.name}
-    </code>
-    <span className="ms-auto d-flex align-items-center gap-2">
-      <span className="text-muted small text-nowrap" title="used / referenced">
-        {humanSize(snap.used)} / {humanSize(snap.refer)}
-      </span>
-      <button
-        type="button"
-        className="btn btn-sm btn-outline-warning py-0"
-        title="Roll the dataset back to this snapshot"
-        onClick={() => onModal({ kind: 'rollback', name: snap.name })}
+const SnapshotRow = ({ snap, depth, busy, isSelected, onSelect, onModal }) => {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="d-flex align-items-center gap-2 border-bottom py-1"
+      style={{ paddingLeft: `${depth * 1.5}rem` }}
+    >
+      <span style={{ width: '1.25rem' }} />
+      <input
+        type="checkbox"
+        className="form-check-input flex-shrink-0 mt-0"
+        checked={isSelected}
+        onChange={() => onSelect(snap.name)}
         disabled={busy}
-      >
-        <i className="fas fa-clock-rotate-left" />
-      </button>
-      <Dropdown align="end">
-        <Dropdown.Toggle
-          variant="outline-secondary"
-          size="sm"
-          className="py-0"
-          title="More actions"
+        aria-label={t('host.snapshotRow.selectSnapshot', { name: snap.name })}
+      />
+      <i className="fas fa-camera text-muted" />
+      <code className="small" title={snap.name}>
+        @{snap.name.split('@')[1] || snap.name}
+      </code>
+      <span className="ms-auto d-flex align-items-center gap-2">
+        <span className="text-muted small text-nowrap" title={t('host.snapshotRow.usageInfoSnap')}>
+          {humanSize(snap.used)} / {humanSize(snap.refer)}
+        </span>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-warning py-0"
+          title={t('host.snapshotRow.rollbackTitle')}
+          onClick={() => onModal({ kind: 'rollback', name: snap.name })}
           disabled={busy}
         >
-          <i className="fas fa-gear" />
-        </Dropdown.Toggle>
-        <Dropdown.Menu>
-          <Dropdown.Item
-            as="button"
-            type="button"
-            onClick={() => onModal({ kind: 'clone', name: snap.name })}
+          <i className="fas fa-clock-rotate-left" />
+        </button>
+        <Dropdown align="end">
+          <Dropdown.Toggle
+            variant="outline-secondary"
+            size="sm"
+            className="py-0"
+            title={t('host.datasetRow.moreActionsTitle')}
+            disabled={busy}
           >
-            <i className="fas fa-clone me-2" />
-            Clone…
-          </Dropdown.Item>
-          <Dropdown.Item
-            as="button"
-            type="button"
-            onClick={() => onModal({ kind: 'holds', name: snap.name })}
-          >
-            <i className="fas fa-lock me-2" />
-            Holds…
-          </Dropdown.Item>
-          <Dropdown.Divider />
-          <Dropdown.Item
-            as="button"
-            type="button"
-            onClick={() => onModal({ kind: 'destroy', name: snap.name, isSnapshot: true })}
-          >
-            <i className="fas fa-trash text-danger me-2" />
-            Destroy…
-          </Dropdown.Item>
-        </Dropdown.Menu>
-      </Dropdown>
-    </span>
-  </div>
-);
+            <i className="fas fa-gear" />
+          </Dropdown.Toggle>
+          <Dropdown.Menu>
+            <Dropdown.Item
+              as="button"
+              type="button"
+              onClick={() => onModal({ kind: 'clone', name: snap.name })}
+            >
+              <i className="fas fa-clone me-2" />
+              {t('host.snapshotRow.cloneSnapshot')}
+            </Dropdown.Item>
+            <Dropdown.Item
+              as="button"
+              type="button"
+              onClick={() => onModal({ kind: 'holds', name: snap.name })}
+            >
+              <i className="fas fa-lock me-2" />
+              {t('host.snapshotRow.snapshotHolds')}
+            </Dropdown.Item>
+            <Dropdown.Divider />
+            <Dropdown.Item
+              as="button"
+              type="button"
+              onClick={() => onModal({ kind: 'destroy', name: snap.name, isSnapshot: true })}
+            >
+              <i className="fas fa-trash text-danger me-2" />
+              {t('host.snapshotRow.destroySnapshot')}
+            </Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
+      </span>
+    </div>
+  );
+};
 
 SnapshotRow.propTypes = {
   snap: PropTypes.object.isRequired,
@@ -339,6 +359,7 @@ const TreeNode = ({
   selected,
   handlers,
 }) => {
+  const { t } = useTranslation();
   if (!nodeMatches(node, needle, show)) {
     return null;
   }
@@ -371,14 +392,18 @@ const TreeNode = ({
             type="button"
             className="btn btn-sm btn-link p-0 text-decoration-none"
             style={{ width: '1.25rem' }}
-            aria-label={`${snapsVisible ? 'Collapse' : 'Expand'} snapshots of ${node.name}`}
+            aria-label={
+              snapsVisible
+                ? t('host.treeNode.collapseSnapshots', { name: node.name })
+                : t('host.treeNode.expandSnapshots', { name: node.name })
+            }
             onClick={() => handlers.onToggleSnaps(node.name)}
           >
             <i className={`fas ${snapsVisible ? 'fa-caret-down' : 'fa-caret-right'}`} />
           </button>
           <i className="fas fa-camera text-muted" />
           <span className="text-muted small">
-            {node.snapshots.length} snapshot{node.snapshots.length === 1 ? '' : 's'}
+            {t('host.treeNode.snapshotCountLabel', { count: node.snapshots.length })}
           </span>
         </div>
       )}
@@ -428,9 +453,9 @@ TreeNode.propTypes = {
 };
 
 const TYPE_TOGGLES = [
-  { key: 'filesystem', label: 'Filesystems', icon: 'fa-folder' },
-  { key: 'volume', label: 'Volumes', icon: 'fa-hard-drive' },
-  { key: 'snapshot', label: 'Snapshots', icon: 'fa-camera' },
+  { key: 'filesystem', label: 'host.zfsDatasetsPanel.filesystemToggle', icon: 'fa-folder' },
+  { key: 'volume', label: 'host.zfsDatasetsPanel.volumeToggle', icon: 'fa-hard-drive' },
+  { key: 'snapshot', label: 'host.zfsDatasetsPanel.snapshotToggle', icon: 'fa-camera' },
 ];
 
 const toggleIn = (set, name) => {
@@ -447,80 +472,83 @@ const allNodeNames = nodes => nodes.flatMap(node => [node.name, ...allNodeNames(
 
 /** The whole modal stack — one open at a time, keyed on modal.kind. Split out
  *  of the panel purely for the complexity budget; behavior is identical. */
-const DatasetModals = ({ modal, onClose, server, pools, busy, onQueued, onPromote }) => (
-  <>
-    <CreateDatasetModal
-      isOpen={modal?.kind === 'create'}
-      onClose={onClose}
-      server={server}
-      pools={pools}
-      initialName={modal?.kind === 'create' ? modal?.name || '' : ''}
-      onQueued={onQueued}
-    />
-    <SnapshotCreateModal
-      isOpen={modal?.kind === 'snapshot'}
-      onClose={onClose}
-      server={server}
-      dataset={modal?.name}
-      onQueued={onQueued}
-    />
-    <RenameDatasetModal
-      isOpen={modal?.kind === 'rename'}
-      onClose={onClose}
-      server={server}
-      dataset={modal?.name}
-      onQueued={onQueued}
-    />
-    <CloneSnapshotModal
-      isOpen={modal?.kind === 'clone'}
-      onClose={onClose}
-      server={server}
-      snapshot={modal?.name}
-      onQueued={onQueued}
-    />
-    <RollbackSnapshotModal
-      isOpen={modal?.kind === 'rollback'}
-      onClose={onClose}
-      server={server}
-      snapshot={modal?.name}
-      onQueued={onQueued}
-    />
-    <SnapshotHoldsModal
-      isOpen={modal?.kind === 'holds'}
-      onClose={onClose}
-      server={server}
-      snapshot={modal?.name}
-      onQueued={onQueued}
-    />
-    <DatasetPropertiesModal
-      isOpen={modal?.kind === 'properties'}
-      onClose={onClose}
-      server={server}
-      dataset={modal?.name}
-      onQueued={onQueued}
-    />
-    <DestroyDatasetModal
-      isOpen={modal?.kind === 'destroy'}
-      onClose={onClose}
-      server={server}
-      name={modal?.name}
-      isSnapshot={modal?.isSnapshot}
-      onQueued={onQueued}
-    />
-    {modal?.kind === 'promote' && (
-      <ConfirmModal
-        isOpen
+const DatasetModals = ({ modal, onClose, server, pools, busy, onQueued, onPromote }) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      <CreateDatasetModal
+        isOpen={modal?.kind === 'create'}
         onClose={onClose}
-        onConfirm={() => onPromote(modal.name)}
-        title="Promote clone"
-        message={`Promote ${modal.name} to an independent dataset? It stops depending on its origin snapshot and takes over that snapshot's space accounting — the origin becomes deletable. Only valid on a CLONE; the agent refuses anything else.`}
-        confirmText="Promote"
-        confirmVariant="is-primary"
-        loading={busy}
+        server={server}
+        pools={pools}
+        initialName={modal?.kind === 'create' ? modal?.name || '' : ''}
+        onQueued={onQueued}
       />
-    )}
-  </>
-);
+      <SnapshotCreateModal
+        isOpen={modal?.kind === 'snapshot'}
+        onClose={onClose}
+        server={server}
+        dataset={modal?.name}
+        onQueued={onQueued}
+      />
+      <RenameDatasetModal
+        isOpen={modal?.kind === 'rename'}
+        onClose={onClose}
+        server={server}
+        dataset={modal?.name}
+        onQueued={onQueued}
+      />
+      <CloneSnapshotModal
+        isOpen={modal?.kind === 'clone'}
+        onClose={onClose}
+        server={server}
+        snapshot={modal?.name}
+        onQueued={onQueued}
+      />
+      <RollbackSnapshotModal
+        isOpen={modal?.kind === 'rollback'}
+        onClose={onClose}
+        server={server}
+        snapshot={modal?.name}
+        onQueued={onQueued}
+      />
+      <SnapshotHoldsModal
+        isOpen={modal?.kind === 'holds'}
+        onClose={onClose}
+        server={server}
+        snapshot={modal?.name}
+        onQueued={onQueued}
+      />
+      <DatasetPropertiesModal
+        isOpen={modal?.kind === 'properties'}
+        onClose={onClose}
+        server={server}
+        dataset={modal?.name}
+        onQueued={onQueued}
+      />
+      <DestroyDatasetModal
+        isOpen={modal?.kind === 'destroy'}
+        onClose={onClose}
+        server={server}
+        name={modal?.name}
+        isSnapshot={modal?.isSnapshot}
+        onQueued={onQueued}
+      />
+      {modal?.kind === 'promote' && (
+        <ConfirmModal
+          isOpen
+          onClose={onClose}
+          onConfirm={() => onPromote(modal.name)}
+          title={t('host.promoteConfirmModal.title')}
+          message={t('host.promoteConfirmModal.message', { name: modal.name })}
+          confirmText={t('host.promoteConfirmModal.confirmText')}
+          confirmVariant="is-primary"
+          loading={busy}
+        />
+      )}
+    </>
+  );
+};
 
 DatasetModals.propTypes = {
   modal: PropTypes.object,
@@ -533,6 +561,7 @@ DatasetModals.propTypes = {
 };
 
 const ZfsDatasetsPanel = ({ server }) => {
+  const { t } = useTranslation();
   const [tree, setTree] = useState([]);
   const [pools, setPools] = useState([]);
   const [poolFilter, setPoolFilter] = useState('');
@@ -572,12 +601,18 @@ const ZfsDatasetsPanel = ({ server }) => {
       }),
     ]);
     if (!datasetsResult.success) {
-      report(`Failed to load datasets: ${datasetsResult.message}`, 'danger');
+      report(
+        t('host.zfsDatasetsPanel.errorLoadDatasets', { message: datasetsResult.message }),
+        'danger'
+      );
       setLoading(false);
       return;
     }
     if (!snapshotsResult.success) {
-      report(`Failed to list snapshots: ${snapshotsResult.message}`, 'danger');
+      report(
+        t('host.zfsDatasetsPanel.errorListSnapshots', { message: snapshotsResult.message }),
+        'danger'
+      );
     }
     const merged = new Map();
     [
@@ -587,7 +622,7 @@ const ZfsDatasetsPanel = ({ server }) => {
     setTree(buildTree([...merged.values()]));
     setSelected(prev => new Set([...prev].filter(name => merged.has(name))));
     setLoading(false);
-  }, [server, poolFilter]);
+  }, [server, poolFilter, t]);
 
   useEffect(() => {
     setMsg('');
@@ -619,10 +654,13 @@ const ZfsDatasetsPanel = ({ server }) => {
     const result = await promoteZfsDataset(server.hostname, server.port, server.protocol, name);
     setBusy(false);
     if (!result.success) {
-      report(`Promote failed on ${name}: ${result.message}`, 'danger');
+      report(
+        t('host.zfsDatasetsPanel.errorPromoteFailed', { name, message: result.message }),
+        'danger'
+      );
       return;
     }
-    onQueued(queuedMessage(result, `Promote queued for ${name}.`));
+    onQueued(queuedMessage(result, t('host.zfsDatasetsPanel.promoteQueuedMessage', { name })));
   };
 
   const runBulkDestroy = async () => {
@@ -648,10 +686,16 @@ const ZfsDatasetsPanel = ({ server }) => {
     setBulkOpen(false);
     setSelected(new Set());
     if (failures.length > 0) {
-      report(`${failures.length} failed — ${failures.join('; ')}`, 'danger');
+      report(
+        t('host.zfsDatasetsPanel.bulkFailuresMessage', {
+          count: failures.length,
+          list: failures.join('; '),
+        }),
+        'danger'
+      );
     } else {
       report(
-        `Destroy queued for ${targets.length} snapshot${targets.length === 1 ? '' : 's'}.`,
+        t('host.zfsDatasetsPanel.bulkDestroyQueuedMessage', { count: targets.length }),
         'success'
       );
     }
@@ -675,23 +719,23 @@ const ZfsDatasetsPanel = ({ server }) => {
       <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h3 className="fs-6 fw-bold mb-0">
           <i className="fas fa-folder-tree me-2" />
-          Datasets
+          {t('host.zfsDatasetsPanel.datasetsHeading')}
         </h3>
         <div className="d-flex gap-2 align-items-center">
           <button
             type="button"
             className="btn btn-sm btn-outline-danger"
-            title="Destroy every ticked snapshot"
+            title={t('host.zfsDatasetsPanel.destroySelectedTitle')}
             onClick={() => setBulkOpen(true)}
             disabled={loading || busy || selected.size === 0}
           >
             <i className="fas fa-trash me-2" />
-            Destroy selected snapshots ({selected.size})
+            {t('host.zfsDatasetsPanel.destroySelectedCount', { count: selected.size })}
           </button>
           <button
             type="button"
             className="btn btn-sm btn-outline-secondary"
-            title="Expand every dataset"
+            title={t('host.zfsDatasetsPanel.expandAllTitle')}
             onClick={() => setCollapsed(new Set())}
           >
             <i className="fas fa-angles-down" />
@@ -699,7 +743,7 @@ const ZfsDatasetsPanel = ({ server }) => {
           <button
             type="button"
             className="btn btn-sm btn-outline-secondary"
-            title="Collapse to the pools"
+            title={t('host.zfsDatasetsPanel.collapseAllTitle')}
             onClick={() => {
               setCollapsed(new Set(allNodeNames(tree)));
               setSnapsOpen(new Set());
@@ -714,7 +758,7 @@ const ZfsDatasetsPanel = ({ server }) => {
             disabled={loading || busy}
           >
             <i className={`fas fa-sync-alt me-2 ${loading ? 'fa-spin' : ''}`} />
-            Refresh
+            {t('host.zfsDatasetsPanel.refresh')}
           </button>
           <button
             type="button"
@@ -723,7 +767,7 @@ const ZfsDatasetsPanel = ({ server }) => {
             disabled={loading || busy}
           >
             <i className="fas fa-plus me-2" />
-            Create dataset…
+            {t('host.zfsDatasetsPanel.createDataset')}
           </button>
         </div>
       </div>
@@ -733,8 +777,8 @@ const ZfsDatasetsPanel = ({ server }) => {
           <input
             className="form-control form-control-sm"
             type="search"
-            placeholder="Search datasets and snapshots…"
-            aria-label="Search datasets"
+            placeholder={t('host.zfsDatasetsPanel.searchPlaceholder')}
+            aria-label={t('host.zfsDatasetsPanel.searchLabel')}
             value={nameFilter}
             onChange={e => setNameFilter(e.target.value)}
           />
@@ -742,11 +786,11 @@ const ZfsDatasetsPanel = ({ server }) => {
         <div className="col-12 col-md-3">
           <select
             className="form-select form-select-sm"
-            aria-label="Filter by pool"
+            aria-label={t('host.zfsDatasetsPanel.filterLabel')}
             value={poolFilter}
             onChange={e => setPoolFilter(e.target.value)}
           >
-            <option value="">All pools</option>
+            <option value="">{t('host.zfsDatasetsPanel.allPoolsOption')}</option>
             {pools.map(pool => (
               <option key={pool} value={pool}>
                 {pool}
@@ -755,20 +799,31 @@ const ZfsDatasetsPanel = ({ server }) => {
           </select>
         </div>
         <div className="col-12 col-md-4">
-          <div className="btn-group btn-group-sm w-100" role="group" aria-label="Show types">
-            {TYPE_TOGGLES.map(toggle => (
-              <button
-                type="button"
-                key={toggle.key}
-                className={`btn ${show[toggle.key] ? 'btn-primary' : 'btn-outline-secondary'}`}
-                aria-pressed={show[toggle.key]}
-                title={`${show[toggle.key] ? 'Hide' : 'Show'} ${toggle.label.toLowerCase()}`}
-                onClick={() => setShow(prev => ({ ...prev, [toggle.key]: !prev[toggle.key] }))}
-              >
-                <i className={`fas ${toggle.icon} me-1`} />
-                {toggle.label}
-              </button>
-            ))}
+          <div
+            className="btn-group btn-group-sm w-100"
+            role="group"
+            aria-label={t('host.zfsDatasetsPanel.showTypesLabel')}
+          >
+            {TYPE_TOGGLES.map(toggle => {
+              const label = t(toggle.label);
+              return (
+                <button
+                  type="button"
+                  key={toggle.key}
+                  className={`btn ${show[toggle.key] ? 'btn-primary' : 'btn-outline-secondary'}`}
+                  aria-pressed={show[toggle.key]}
+                  title={
+                    show[toggle.key]
+                      ? t('host.zfsDatasetsPanel.hideTypeTitle', { label: label.toLowerCase() })
+                      : t('host.zfsDatasetsPanel.showTypeTitle', { label: label.toLowerCase() })
+                  }
+                  onClick={() => setShow(prev => ({ ...prev, [toggle.key]: !prev[toggle.key] }))}
+                >
+                  <i className={`fas ${toggle.icon} me-1`} />
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -776,7 +831,9 @@ const ZfsDatasetsPanel = ({ server }) => {
       {msg && <div className={`alert alert-${msgVariant} py-2`}>{msg}</div>}
       {!loading && visibleRoots.length === 0 && (
         <p className="text-muted mb-0">
-          {tree.length === 0 ? 'No datasets reported on this host.' : 'Nothing matches the search.'}
+          {tree.length === 0
+            ? t('host.zfsDatasetsPanel.noDatasetsText')
+            : t('host.zfsDatasetsPanel.noMatchText')}
         </p>
       )}
 
@@ -817,9 +874,11 @@ const ZfsDatasetsPanel = ({ server }) => {
           isOpen={bulkOpen}
           onClose={() => setBulkOpen(false)}
           onConfirm={runBulkDestroy}
-          title={`Destroy ${selected.size} snapshot${selected.size === 1 ? '' : 's'}`}
-          message={`Destroy ${[...selected].join(', ')}? This cannot be undone.`}
-          confirmText={`Destroy ${selected.size}`}
+          title={t('host.zfsDatasetsPanel.bulkDestroyTitle', { count: selected.size })}
+          message={t('host.zfsDatasetsPanel.bulkDestroyMessage', {
+            names: [...selected].join(', '),
+          })}
+          confirmText={t('host.zfsDatasetsPanel.bulkDestroyConfirm', { count: selected.size })}
           confirmVariant="is-danger"
           loading={busy}
         />

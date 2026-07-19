@@ -1,7 +1,9 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const ServiceTable = ({ services, loading, onAction, onViewDetails, onViewProperties }) => {
+  const { t } = useTranslation();
   const [actionLoading, setActionLoading] = useState({});
 
   const handleAction = async (service, action) => {
@@ -56,20 +58,20 @@ const ServiceTable = ({ services, loading, onAction, onViewDetails, onViewProper
     if (lowerState === 'disabled') {
       actions.push({
         key: 'enable',
-        label: 'Enable',
+        label: t('host.serviceTable.actions.enable'),
         icon: 'fa-play',
         class: 'btn-success',
       });
     } else if (lowerState === 'online') {
       actions.push({
         key: 'disable',
-        label: 'Disable',
+        label: t('host.serviceTable.actions.disable'),
         icon: 'fa-stop',
         class: 'btn-warning',
       });
       actions.push({
         key: 'restart',
-        label: 'Restart',
+        label: t('host.serviceTable.actions.restart'),
         icon: 'fa-redo',
         class: 'btn-info',
       });
@@ -79,7 +81,7 @@ const ServiceTable = ({ services, loading, onAction, onViewDetails, onViewProper
     if (!['legacy_run'].includes(lowerState)) {
       actions.push({
         key: 'refresh',
-        label: 'Refresh',
+        label: t('host.serviceTable.actions.refresh'),
         icon: 'fa-sync',
         class: 'btn-light',
       });
@@ -104,7 +106,7 @@ const ServiceTable = ({ services, loading, onAction, onViewDetails, onViewProper
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading services...</p>
+        <p className="mt-2">{t('host.serviceTable.loading')}</p>
       </div>
     );
   }
@@ -113,7 +115,7 @@ const ServiceTable = ({ services, loading, onAction, onViewDetails, onViewProper
     return (
       <div className="text-center p-4">
         <i className="fas fa-cogs fa-2x text-muted" />
-        <p className="mt-2 text-muted">No services found</p>
+        <p className="mt-2 text-muted">{t('host.serviceTable.empty')}</p>
       </div>
     );
   }
@@ -123,11 +125,11 @@ const ServiceTable = ({ services, loading, onAction, onViewDetails, onViewProper
       <table className="table table-hover">
         <thead>
           <tr>
-            <th>Service</th>
-            <th>FMRI</th>
-            <th>State</th>
-            <th>Start Time</th>
-            <th width="280">Actions</th>
+            <th>{t('host.serviceTable.columns.service')}</th>
+            <th>{t('host.serviceTable.columns.fmri')}</th>
+            <th>{t('host.serviceTable.columns.state')}</th>
+            <th>{t('host.serviceTable.columns.startTime')}</th>
+            <th width="280">{t('host.serviceTable.columns.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -151,7 +153,9 @@ const ServiceTable = ({ services, loading, onAction, onViewDetails, onViewProper
                 </td>
                 <td>{getStateTag(service.state)}</td>
                 <td>
-                  <span className="small">{service.stime || 'N/A'}</span>
+                  <span className="small">
+                    {service.stime || t('host.serviceTable.notAvailable')}
+                  </span>
                 </td>
                 <td>
                   <div className="d-flex gap-1">
@@ -187,7 +191,7 @@ const ServiceTable = ({ services, loading, onAction, onViewDetails, onViewProper
                       className="btn btn-sm btn-secondary"
                       onClick={() => onViewDetails(service)}
                       disabled={loading}
-                      title="View Details"
+                      title={t('host.serviceTable.viewDetails')}
                     >
                       <i className="fas fa-info-circle" />
                     </button>
@@ -199,7 +203,7 @@ const ServiceTable = ({ services, loading, onAction, onViewDetails, onViewProper
                         className="btn btn-sm btn-secondary"
                         onClick={() => onViewProperties(service)}
                         disabled={loading}
-                        title="View Properties"
+                        title={t('host.serviceTable.viewProperties')}
                       >
                         <i className="fas fa-list" />
                       </button>

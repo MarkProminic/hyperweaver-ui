@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useLocation, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -22,12 +23,27 @@ import { resourceLabel } from '../../utils/resourceLabel';
  * tokens (vnics/zfs) — hidden on agents that don't advertise them (e.g. a VirtualBox agent).
  */
 const HOST_TABS = [
-  { to: '/ui/hosts', label: 'Overview', icon: 'fas fa-gauge', end: true },
-  { to: '/ui/host-manage', label: 'Manage', icon: 'fas fa-gear' },
-  { to: '/ui/host-networking', label: 'Networking', icon: 'fas fa-sitemap', feature: 'vnics' },
-  { to: '/ui/host-devices', label: 'Devices', icon: 'fab fa-usb', feature: 'devices' },
-  { to: '/ui/host-storage', label: 'Storage', icon: 'fas fa-hard-drive', feature: 'zfs' },
-  { to: '/ui/settings/agent', label: 'Agent', icon: 'fas fa-database' },
+  { to: '/ui/hosts', labelKey: 'navbar.contextTabs.overview', icon: 'fas fa-gauge', end: true },
+  { to: '/ui/host-manage', labelKey: 'navbar.contextTabs.manage', icon: 'fas fa-gear' },
+  {
+    to: '/ui/host-networking',
+    labelKey: 'navbar.contextTabs.networking',
+    icon: 'fas fa-sitemap',
+    feature: 'vnics',
+  },
+  {
+    to: '/ui/host-devices',
+    labelKey: 'navbar.contextTabs.devices',
+    icon: 'fab fa-usb',
+    feature: 'devices',
+  },
+  {
+    to: '/ui/host-storage',
+    labelKey: 'navbar.contextTabs.storage',
+    icon: 'fas fa-hard-drive',
+    feature: 'zfs',
+  },
+  { to: '/ui/settings/agent', labelKey: 'navbar.contextTabs.agent', icon: 'fas fa-database' },
 ];
 
 const linkClass = ({ isActive }) => (isActive ? 'nav-link active' : 'nav-link');
@@ -37,6 +53,7 @@ const linkClass = ({ isActive }) => (isActive ? 'nav-link active' : 'nav-link');
 const tabClass = active => (active ? 'nav-link active' : 'nav-link');
 
 const ContextTabs = () => {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const { currentServer, currentMachine } = useServers();
@@ -55,14 +72,14 @@ const ContextTabs = () => {
         <li className="nav-item">
           <Link to="/ui/machines" className={tabClass(!activeTab)}>
             <i className="fas fa-circle-info me-1" />
-            {machineLabel} Overview
+            {t('navbar.contextTabs.machineOverview', { noun: machineLabel })}
           </Link>
         </li>
         {settingsAvailable && (
           <li className="nav-item">
             <Link to="/ui/machines?tab=settings" className={tabClass(activeTab === 'settings')}>
               <i className="fas fa-sliders me-1" />
-              Settings
+              {t('navbar.contextTabs.settings')}
             </Link>
           </li>
         )}
@@ -70,7 +87,7 @@ const ContextTabs = () => {
           <li className="nav-item">
             <Link to="/ui/machines?tab=snapshots" className={tabClass(activeTab === 'snapshots')}>
               <i className="fas fa-camera me-1" />
-              Snapshots
+              {t('navbar.contextTabs.snapshots')}
             </Link>
           </li>
         )}
@@ -81,7 +98,7 @@ const ContextTabs = () => {
               className={tabClass(activeTab === 'provisioning')}
             >
               <i className="fas fa-cubes me-1" />
-              Provisioning
+              {t('navbar.contextTabs.provisioning')}
             </Link>
           </li>
         )}
@@ -108,7 +125,7 @@ const ContextTabs = () => {
         <li className="nav-item" key={tab.to}>
           <NavLink to={tab.to} className={linkClass} end={tab.end}>
             <i className={`${tab.icon} me-1`} />
-            {tab.label}
+            {t(tab.labelKey)}
           </NavLink>
         </li>
       ))}

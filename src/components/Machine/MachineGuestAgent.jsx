@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getGuestAgentNetwork, getGuestAgentOsInfo, setupGuestAgent } from '../../api/machineAPI';
 import { ContentModal } from '../common';
@@ -10,45 +11,49 @@ import { ContentModal } from '../common';
  * (osinfo once, the full interface table behind "More").
  */
 
-const GuestNetworkTable = ({ interfaces }) => (
-  <table className="table table-sm small mb-0 align-middle">
-    <thead>
-      <tr>
-        <th scope="col">Name</th>
-        <th scope="col">MAC address</th>
-        <th scope="col" className="text-end">
-          IP address
-        </th>
-      </tr>
-    </thead>
-    <tbody>
-      {interfaces.map(iface => (
-        <tr key={iface.name}>
-          <td>{iface.name}</td>
-          <td>
-            <code className="small">{iface['hardware-address'] || '—'}</code>
-          </td>
-          <td className="text-end">
-            {(iface['ip-addresses'] || []).length === 0 && <span className="text-muted">—</span>}
-            {(iface['ip-addresses'] || []).map(entry => (
-              <div key={`${entry['ip-address']}/${entry.prefix}`}>
-                <code className="small">
-                  {entry['ip-address']}/{entry.prefix}
-                </code>
-              </div>
-            ))}
-          </td>
+const GuestNetworkTable = ({ interfaces }) => {
+  const { t } = useTranslation();
+  return (
+    <table className="table table-sm small mb-0 align-middle">
+      <thead>
+        <tr>
+          <th scope="col">{t('machine.machineGuestAgent.nameHeader')}</th>
+          <th scope="col">{t('machine.machineGuestAgent.macHeader')}</th>
+          <th scope="col" className="text-end">
+            {t('machine.machineGuestAgent.ipHeader')}
+          </th>
         </tr>
-      ))}
-    </tbody>
-  </table>
-);
+      </thead>
+      <tbody>
+        {interfaces.map(iface => (
+          <tr key={iface.name}>
+            <td>{iface.name}</td>
+            <td>
+              <code className="small">{iface['hardware-address'] || '—'}</code>
+            </td>
+            <td className="text-end">
+              {(iface['ip-addresses'] || []).length === 0 && <span className="text-muted">—</span>}
+              {(iface['ip-addresses'] || []).map(entry => (
+                <div key={`${entry['ip-address']}/${entry.prefix}`}>
+                  <code className="small">
+                    {entry['ip-address']}/{entry.prefix}
+                  </code>
+                </div>
+              ))}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
 
 GuestNetworkTable.propTypes = {
   interfaces: PropTypes.array.isRequired,
 };
 
 const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = 'col-12' }) => {
+  const { t } = useTranslation();
   const [osinfo, setOsinfo] = useState(null);
   const [showNetwork, setShowNetwork] = useState(false);
   const [interfaces, setInterfaces] = useState([]);
@@ -72,8 +77,10 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = '
     setBusy(false);
     setActionMsg(
       result.success
-        ? `${result.data?.message || 'Guest-agent channel configured'}${
-            result.data?.requires_restart ? ' — takes effect on the next boot.' : ''
+        ? `${result.data?.message || t('machine.machineGuestAgent.channelConfiguredFallback')}${
+            result.data?.requires_restart
+              ? ` ${t('machine.machineGuestAgent.requiresRestartNote')}`
+              : ''
           }`
         : result.message
     );
@@ -128,11 +135,13 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = '
           <div className="d-flex justify-content-between align-items-center mb-2">
             <h4 className="fs-6 fw-bold mb-0">
               <i className="fas fa-satellite-dish me-2" />
-              Guest Agent
+              {t('machine.machineGuestAgent.heading')}
             </h4>
             {guestInfo.checked_at && (
               <span className="text-muted small">
-                checked {new Date(guestInfo.checked_at).toLocaleTimeString()}
+                {t('machine.machineGuestAgent.checkedAt', {
+                  time: new Date(guestInfo.checked_at).toLocaleTimeString(),
+                })}
               </span>
             )}
           </div>
@@ -140,18 +149,17 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = '
           {!ready && (
             <>
               <p className="text-muted small mb-2">
-                The guest-agent channel is not responding — either the guest is not running qemu-ga,
-                or the channel device is not wired yet.
+                {t('machine.machineGuestAgent.channelNotResponding')}
               </p>
               <button
                 type="button"
                 className="btn btn-sm btn-outline-primary"
                 onClick={runSetup}
                 disabled={busy}
-                title="Wire the guest-agent channel device onto this machine — takes effect on the next boot"
+                title={t('machine.machineGuestAgent.setupChannelTooltip')}
               >
                 <i className={`fas ${busy ? 'fa-spinner fa-pulse' : 'fa-plug'} me-2`} />
-                Set up channel
+                {t('machine.machineGuestAgent.setupChannelButton')}
               </button>
               {actionMsg && (
                 <div className="alert alert-info py-1 px-2 small mt-2 mb-0">{actionMsg}</div>
@@ -163,8 +171,14 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = '
             <>
               {osinfo && (
                 <div className="mb-2">
-                  <span className="text-muted small me-2">OS</span>
-                  <span className="small">{osinfo['pretty-name'] || osinfo.name || 'Unknown'}</span>
+                  <span className="text-muted small me-2">
+                    {t('machine.machineGuestAgent.osLabel')}
+                  </span>
+                  <span className="small">
+                    {osinfo['pretty-name'] ||
+                      osinfo.name ||
+                      t('machine.machineGuestAgent.unknownOs')}
+                  </span>
                   {osinfo['kernel-release'] && (
                     <span className="text-muted small ms-2">({osinfo['kernel-release']})</span>
                   )}
@@ -179,11 +193,18 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = '
                     </div>
                   ))}
                   <span className="text-muted small">
-                    via {guestInfo.source === 'additions' ? 'Guest Additions' : 'guest agent'}
+                    {t('machine.machineGuestAgent.viaSource', {
+                      source:
+                        guestInfo.source === 'additions'
+                          ? t('machine.machineGuestAgent.guestAdditionsSource')
+                          : t('machine.machineGuestAgent.guestAgentSource'),
+                    })}
                   </span>
                 </div>
               ) : (
-                <p className="text-muted small mb-2">No addresses observed.</p>
+                <p className="text-muted small mb-2">
+                  {t('machine.machineGuestAgent.noAddresses')}
+                </p>
               )}
 
               <div className="d-flex flex-wrap gap-1">
@@ -193,7 +214,7 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = '
                     className="btn btn-sm btn-outline-secondary"
                     onClick={handleShowNetwork}
                   >
-                    More
+                    {t('machine.machineGuestAgent.moreButton')}
                   </button>
                 )}
               </div>
@@ -206,7 +227,7 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = '
           <ContentModal
             isOpen={showNetwork}
             onClose={() => setShowNetwork(false)}
-            title="Guest Agent Network Information"
+            title={t('machine.machineGuestAgent.networkModalTitle')}
             icon="fas fa-network-wired"
           >
             {netLoading && (

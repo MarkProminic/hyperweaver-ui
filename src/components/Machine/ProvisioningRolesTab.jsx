@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { VarRowList, ROLE_NAME_PATTERN, applyPatch } from './ProvisioningVarRows';
 
@@ -15,8 +16,6 @@ import { VarRowList, ROLE_NAME_PATTERN, applyPatch } from './ProvisioningVarRows
  * variables with spec autocomplete. Globals live on the Variables tab, never
  * here. depends_on hints from provisioner.yml are advisories, never blocks.
  */
-
-const ROLE_NAME_RULE = 'Role names: letters, numbers, underscores — segments joined by dots.';
 
 const bareName = name =>
   String(name || '')
@@ -70,6 +69,7 @@ const dependencyWarnings = (roles, hints, index) => {
  * COMMENTS, so legacy documents arrive without them.
  */
 const PackagePicker = ({ packages, packageName, packageVersion, disabled, onPicked }) => {
+  const { t } = useTranslation();
   const family = packages.find(entry => entry.name === packageName) || null;
   const versions = family?.versions || [];
   const versionKnown = versions.some(entry => entry.version === packageVersion);
@@ -78,7 +78,7 @@ const PackagePicker = ({ packages, packageName, packageVersion, disabled, onPick
     <div className="hw-cat-picker">
       <select
         className="form-select form-select-sm"
-        aria-label="Catalog package"
+        aria-label={t('provisioning.provisioningRolesTab.catalogPackageAriaLabel')}
         value={packageName || ''}
         disabled={disabled || emptyRegistry}
         onChange={e => {
@@ -88,11 +88,13 @@ const PackagePicker = ({ packages, packageName, packageVersion, disabled, onPick
       >
         <option value="">
           {emptyRegistry
-            ? 'Catalog: registry is empty — import a package (Host → Provisioners)'
-            : 'Catalog: no package'}
+            ? t('provisioning.provisioningRolesTab.catalogRegistryEmpty')
+            : t('provisioning.provisioningRolesTab.catalogNoPackage')}
         </option>
         {packageName && !family && (
-          <option value={packageName}>{packageName} (not in this host&apos;s registry)</option>
+          <option value={packageName}>
+            {t('provisioning.provisioningRolesTab.packageNotInRegistry', { packageName })}
+          </option>
         )}
         {packages.map(entry => (
           <option key={entry.name} value={entry.name}>
@@ -103,13 +105,15 @@ const PackagePicker = ({ packages, packageName, packageVersion, disabled, onPick
       {family && (
         <select
           className="form-select form-select-sm w-auto"
-          aria-label="Catalog package version"
+          aria-label={t('provisioning.provisioningRolesTab.catalogVersionAriaLabel')}
           value={packageVersion || ''}
           disabled={disabled}
           onChange={e => onPicked(packageName, e.target.value)}
         >
           {packageVersion && !versionKnown && (
-            <option value={packageVersion}>{packageVersion} (not in registry)</option>
+            <option value={packageVersion}>
+              {t('provisioning.provisioningRolesTab.versionNotInRegistry', { packageVersion })}
+            </option>
           )}
           {versions.map(entry => (
             <option key={entry.dir || entry.version} value={entry.version}>
@@ -132,6 +136,7 @@ PackagePicker.propTypes = {
 
 /** The catalog pane: collections → roles, searchable, click or drag to add. */
 const RoleCatalog = ({ specs, disabled, onAdd, onDragNew }) => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState(() => new Set());
 
@@ -185,7 +190,7 @@ const RoleCatalog = ({ specs, disabled, onAdd, onDragNew }) => {
           <div className="hw-cat-name">{bare}</div>
           <div className="hw-cat-desc">{spec.short_description || ''}</div>
         </div>
-        <span className="hw-cat-add" title="Add to the run">
+        <span className="hw-cat-add" title={t('provisioning.provisioningRolesTab.addToRunTitle')}>
           <i className="fas fa-plus" />
         </span>
       </div>
@@ -198,8 +203,8 @@ const RoleCatalog = ({ specs, disabled, onAdd, onDragNew }) => {
         <input
           className="form-control form-control-sm"
           type="search"
-          placeholder="Search roles…"
-          aria-label="Search roles"
+          placeholder={t('provisioning.provisioningRolesTab.searchRolesPlaceholder')}
+          aria-label={t('provisioning.provisioningRolesTab.searchRolesAriaLabel')}
           value={query}
           onChange={e => setQuery(e.target.value)}
         />
@@ -239,23 +244,40 @@ RoleCatalog.propTypes = {
 
 /** The collapsed head's glance chips. */
 const RoleChips = ({ role }) => {
+  const { t } = useTranslation();
   const varCount = Object.keys(role.vars || {}).length;
   const envCount = Object.keys(role.environment || {}).length;
+  const becomeChip = () => {
+    if (!role.become) {
+      return t('provisioning.provisioningRolesTab.becomeNoChip');
+    }
+    return role.become_user
+      ? t('provisioning.provisioningRolesTab.becomeUserChip', { user: role.become_user })
+      : t('provisioning.provisioningRolesTab.becomeChip');
+  };
   return (
     <>
-      {role.tags && <span className="hw-chip hw-chip-tag">tags: {String(role.tags)}</span>}
-      {role.when && <span className="hw-chip hw-chip-when">when: {String(role.when)}</span>}
+      {role.tags && (
+        <span className="hw-chip hw-chip-tag">
+          {t('provisioning.provisioningRolesTab.tagsChip', { tags: String(role.tags) })}
+        </span>
+      )}
+      {role.when && (
+        <span className="hw-chip hw-chip-when">
+          {t('provisioning.provisioningRolesTab.whenChip', { when: String(role.when) })}
+        </span>
+      )}
       {varCount > 0 && (
         <span className="hw-chip hw-chip-vars">
-          {varCount} var{varCount > 1 ? 's' : ''}
+          {t('provisioning.provisioningRolesTab.varCountChip', { count: varCount })}
         </span>
       )}
-      {role.become !== undefined && (
+      {role.become !== undefined && <span className="hw-chip">{becomeChip()}</span>}
+      {envCount > 0 && (
         <span className="hw-chip">
-          {role.become ? `become${role.become_user ? ` → ${role.become_user}` : ''}` : 'become: no'}
+          {t('provisioning.provisioningRolesTab.envCountChip', { count: envCount })}
         </span>
       )}
-      {envCount > 0 && <span className="hw-chip">env: {envCount}</span>}
     </>
   );
 };
@@ -267,50 +289,63 @@ RoleChips.propTypes = {
 /** The per-role Ansible keyword fields (become / as user / delegate to) —
     preserved verbatim in the document; the package templates decide what
     renders into the generated playbook. */
-const RoleKeywordFields = ({ role, uiId, disabled, onPatch }) => (
-  <>
-    <span className="hw-field">
-      <label htmlFor={`role-become-${uiId}`}>become</label>
-      <select
-        id={`role-become-${uiId}`}
-        className="form-select form-select-sm w-auto"
-        value={role.become === undefined ? '' : String(role.become)}
-        disabled={disabled}
-        onChange={e =>
-          onPatch({ become: e.target.value === '' ? undefined : e.target.value === 'true' })
-        }
-      >
-        <option value="">not set</option>
-        <option value="true">yes</option>
-        <option value="false">no</option>
-      </select>
-    </span>
-    <span className="hw-field">
-      <label htmlFor={`role-become-user-${uiId}`}>as user</label>
-      <input
-        id={`role-become-user-${uiId}`}
-        className="form-control form-control-sm hw-field-short"
-        type="text"
-        placeholder="root"
-        value={role.become_user ?? ''}
-        disabled={disabled}
-        onChange={e => onPatch({ become_user: e.target.value === '' ? undefined : e.target.value })}
-      />
-    </span>
-    <span className="hw-field">
-      <label htmlFor={`role-delegate-${uiId}`}>delegate to</label>
-      <input
-        id={`role-delegate-${uiId}`}
-        className="form-control form-control-sm hw-field-short"
-        type="text"
-        placeholder="this machine"
-        value={role.delegate_to ?? ''}
-        disabled={disabled}
-        onChange={e => onPatch({ delegate_to: e.target.value === '' ? undefined : e.target.value })}
-      />
-    </span>
-  </>
-);
+const RoleKeywordFields = ({ role, uiId, disabled, onPatch }) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      <span className="hw-field">
+        <label htmlFor={`role-become-${uiId}`}>
+          {t('provisioning.provisioningRolesTab.becomeLabel')}
+        </label>
+        <select
+          id={`role-become-${uiId}`}
+          className="form-select form-select-sm w-auto"
+          value={role.become === undefined ? '' : String(role.become)}
+          disabled={disabled}
+          onChange={e =>
+            onPatch({ become: e.target.value === '' ? undefined : e.target.value === 'true' })
+          }
+        >
+          <option value="">{t('provisioning.provisioningRolesTab.notSetOption')}</option>
+          <option value="true">{t('provisioning.provisioningRolesTab.yesOption')}</option>
+          <option value="false">{t('provisioning.provisioningRolesTab.noOption')}</option>
+        </select>
+      </span>
+      <span className="hw-field">
+        <label htmlFor={`role-become-user-${uiId}`}>
+          {t('provisioning.provisioningRolesTab.asUserLabel')}
+        </label>
+        <input
+          id={`role-become-user-${uiId}`}
+          className="form-control form-control-sm hw-field-short"
+          type="text"
+          placeholder={t('provisioning.provisioningRolesTab.asUserPlaceholder')}
+          value={role.become_user ?? ''}
+          disabled={disabled}
+          onChange={e =>
+            onPatch({ become_user: e.target.value === '' ? undefined : e.target.value })
+          }
+        />
+      </span>
+      <span className="hw-field">
+        <label htmlFor={`role-delegate-${uiId}`}>
+          {t('provisioning.provisioningRolesTab.delegateToLabel')}
+        </label>
+        <input
+          id={`role-delegate-${uiId}`}
+          className="form-control form-control-sm hw-field-short"
+          type="text"
+          placeholder={t('provisioning.provisioningRolesTab.delegateToPlaceholder')}
+          value={role.delegate_to ?? ''}
+          disabled={disabled}
+          onChange={e =>
+            onPatch({ delegate_to: e.target.value === '' ? undefined : e.target.value })
+          }
+        />
+      </span>
+    </>
+  );
+};
 
 RoleKeywordFields.propTypes = {
   role: PropTypes.object.isRequired,
@@ -320,56 +355,63 @@ RoleKeywordFields.propTypes = {
 };
 
 /** One expanded card body: description, when/tags/keywords, vars, environment. */
-const RoleCardBody = ({ role, spec, disabled, onPatch }) => (
-  <div className="hw-rc-body">
-    {spec?.short_description && <p className="hw-rc-desc">{spec.short_description}</p>}
-    <div className="hw-rc-fields">
-      <span className="hw-field">
-        <label htmlFor={`role-tags-${role._ui_id}`}>tags</label>
-        <input
-          id={`role-tags-${role._ui_id}`}
-          className="form-control form-control-sm hw-field-short"
-          type="text"
-          placeholder="—"
-          value={role.tags ?? ''}
-          disabled={disabled}
-          onChange={e => onPatch({ tags: e.target.value === '' ? undefined : e.target.value })}
-        />
-      </span>
-      <span className="hw-field">
-        <label htmlFor={`role-when-${role._ui_id}`}>when:</label>
-        <input
-          id={`role-when-${role._ui_id}`}
-          className="form-control form-control-sm font-monospace hw-field-when"
-          type="text"
-          placeholder="always"
-          value={role.when ?? ''}
-          disabled={disabled}
-          onChange={e => onPatch({ when: e.target.value === '' ? undefined : e.target.value })}
-        />
-      </span>
-      <RoleKeywordFields role={role} uiId={role._ui_id} disabled={disabled} onPatch={onPatch} />
+const RoleCardBody = ({ role, spec, disabled, onPatch }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="hw-rc-body">
+      {spec?.short_description && <p className="hw-rc-desc">{spec.short_description}</p>}
+      <div className="hw-rc-fields">
+        <span className="hw-field">
+          <label htmlFor={`role-tags-${role._ui_id}`}>
+            {t('provisioning.provisioningRolesTab.tagsLabel')}
+          </label>
+          <input
+            id={`role-tags-${role._ui_id}`}
+            className="form-control form-control-sm hw-field-short"
+            type="text"
+            placeholder="—"
+            value={role.tags ?? ''}
+            disabled={disabled}
+            onChange={e => onPatch({ tags: e.target.value === '' ? undefined : e.target.value })}
+          />
+        </span>
+        <span className="hw-field">
+          <label htmlFor={`role-when-${role._ui_id}`}>
+            {t('provisioning.provisioningRolesTab.whenLabel')}
+          </label>
+          <input
+            id={`role-when-${role._ui_id}`}
+            className="form-control form-control-sm font-monospace hw-field-when"
+            type="text"
+            placeholder={t('provisioning.provisioningRolesTab.whenPlaceholder')}
+            value={role.when ?? ''}
+            disabled={disabled}
+            onChange={e => onPatch({ when: e.target.value === '' ? undefined : e.target.value })}
+          />
+        </span>
+        <RoleKeywordFields role={role} uiId={role._ui_id} disabled={disabled} onPatch={onPatch} />
+      </div>
+      <div className="hw-rc-sub">{t('provisioning.provisioningRolesTab.variablesHeading')}</div>
+      <VarRowList
+        idPrefix={`role-${role._ui_id}`}
+        entries={role.vars || {}}
+        specOptions={spec?.options || null}
+        disabled={disabled}
+        addLabel={t('provisioning.provisioningRolesTab.addVariable')}
+        onChange={next => onPatch({ vars: Object.keys(next).length > 0 ? next : undefined })}
+      />
+      <div className="hw-rc-sub">{t('provisioning.provisioningRolesTab.environmentHeading')}</div>
+      <VarRowList
+        idPrefix={`role-env-${role._ui_id}`}
+        entries={role.environment || {}}
+        specOptions={null}
+        disabled={disabled}
+        addLabel={t('provisioning.provisioningRolesTab.addEnvVar')}
+        onChange={next => onPatch({ environment: Object.keys(next).length > 0 ? next : undefined })}
+      />
     </div>
-    <div className="hw-rc-sub">Variables</div>
-    <VarRowList
-      idPrefix={`role-${role._ui_id}`}
-      entries={role.vars || {}}
-      specOptions={spec?.options || null}
-      disabled={disabled}
-      addLabel="Add Variable"
-      onChange={next => onPatch({ vars: Object.keys(next).length > 0 ? next : undefined })}
-    />
-    <div className="hw-rc-sub">Environment</div>
-    <VarRowList
-      idPrefix={`role-env-${role._ui_id}`}
-      entries={role.environment || {}}
-      specOptions={null}
-      disabled={disabled}
-      addLabel="Add Env Var"
-      onChange={next => onPatch({ environment: Object.keys(next).length > 0 ? next : undefined })}
-    />
-  </div>
-);
+  );
+};
 
 RoleCardBody.propTypes = {
   role: PropTypes.object.isRequired,
@@ -392,6 +434,7 @@ const ProvisioningRolesTab = ({
 }) => {
   // Drag state: {kind: 'move', id} reorders live; {kind: 'new', name} inserts
   // a catalog role at the drop target.
+  const { t } = useTranslation();
   const [drag, setDrag] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [expanded, setExpanded] = useState(() => new Set());
@@ -436,7 +479,9 @@ const ProvisioningRolesTab = ({
   return (
     <div className="hw-prov-grid">
       <div>
-        <p className="hw-prov-pane-title">Available roles</p>
+        <p className="hw-prov-pane-title">
+          {t('provisioning.provisioningRolesTab.availableRolesHeading')}
+        </p>
         <div className="hw-prov-catalog">
           {(packages !== null || packageName) && (
             <PackagePicker
@@ -460,10 +505,8 @@ const ProvisioningRolesTab = ({
           ) : (
             <p className="hw-cat-empty">
               {packages === null
-                ? 'No role catalog — this host has no provisioner registry (older agent build ' +
-                  'or the surface is disabled). Roles add by name below.'
-                : 'No role catalog — pick a provisioner package above to load its roles, or ' +
-                  'add roles by name below.'}
+                ? t('provisioning.provisioningRolesTab.noCatalogNoRegistry')
+                : t('provisioning.provisioningRolesTab.noCatalogPickPackage')}
             </p>
           )}
           <CustomRoleAdd disabled={disabled} onAdd={name => insertAt(name, roles.length)} />
@@ -472,13 +515,12 @@ const ProvisioningRolesTab = ({
 
       <div>
         <p className="hw-prov-pane-title">
-          Execution order — {roles.length} role{roles.length === 1 ? '' : 's'}
+          {t('provisioning.provisioningRolesTab.executionOrderHeading', { count: roles.length })}
         </p>
         <p className="form-text text-muted mt-0 mb-2">
-          Runs top to bottom — drag to reorder. Duplicate an entry to run a role again (Ansible runs
-          each entry when its variables differ; identical entries need <code>allow_duplicates</code>{' '}
-          in the role&apos;s meta). Variables here apply to that entry only and beat globals; shared
-          values live on the Variables tab.
+          {t('provisioning.provisioningRolesTab.executionOrderIntro1')}{' '}
+          <code>allow_duplicates</code>{' '}
+          {t('provisioning.provisioningRolesTab.executionOrderIntro2')}
         </p>
         <div className="d-flex flex-column gap-2" role="list">
           {roles.map((role, index) => {
@@ -519,7 +561,7 @@ const ProvisioningRolesTab = ({
                     className="btn btn-link p-0 text-muted"
                     draggable={!disabled}
                     style={{ cursor: 'grab' }}
-                    title="Drag to reorder"
+                    title={t('provisioning.provisioningRolesTab.dragToReorder')}
                     onDragStart={() => setDrag({ kind: 'move', id: role._ui_id })}
                     onDragEnd={() => setDrag(null)}
                   >
@@ -536,7 +578,7 @@ const ProvisioningRolesTab = ({
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-secondary"
-                      title="Duplicate this entry (runs the role again)"
+                      title={t('provisioning.provisioningRolesTab.duplicateTitle')}
                       disabled={disabled}
                       onClick={() => {
                         const next = [...roles];
@@ -549,7 +591,7 @@ const ProvisioningRolesTab = ({
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-secondary hw-expander"
-                      title="Details"
+                      title={t('provisioning.provisioningRolesTab.detailsTitle')}
                       aria-expanded={isExpanded}
                       disabled={disabled}
                       onClick={() => toggleExpanded(role._ui_id)}
@@ -559,8 +601,8 @@ const ProvisioningRolesTab = ({
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-danger"
-                      aria-label="Remove from the run"
-                      title="Remove from the run"
+                      aria-label={t('provisioning.provisioningRolesTab.removeFromRun')}
+                      title={t('provisioning.provisioningRolesTab.removeFromRun')}
                       disabled={disabled}
                       onClick={() => onChange(roles.filter(row => row._ui_id !== role._ui_id))}
                     >
@@ -571,8 +613,11 @@ const ProvisioningRolesTab = ({
                 {warnings.map(warning => (
                   <div className="hw-dep-warning" key={warning.dep}>
                     <i className="fas fa-triangle-exclamation me-1" />
-                    needs <code>{warning.dep}</code>
-                    {warning.kind === 'absent' ? ' — not in the run' : ' — it runs BELOW this role'}
+                    {t('provisioning.provisioningRolesTab.needsDependency')}{' '}
+                    <code>{warning.dep}</code>{' '}
+                    {warning.kind === 'absent'
+                      ? t('provisioning.provisioningRolesTab.dependencyAbsent')
+                      : t('provisioning.provisioningRolesTab.dependencyBelow')}
                   </div>
                 ))}
                 {isExpanded && (
@@ -598,7 +643,7 @@ const ProvisioningRolesTab = ({
                 setDropTarget(null);
               }}
             >
-              Drop here to add at the end
+              {t('provisioning.provisioningRolesTab.dropHereToAdd')}
             </div>
           )}
         </div>
@@ -626,6 +671,7 @@ ProvisioningRolesTab.propTypes = {
 /** Catalog-known entries show the bare name + collection; unknown ones edit
     free-typed with role-name validation. */
 const RoleCardName = ({ role, spec, disabled, onPatch }) => {
+  const { t } = useTranslation();
   if (spec) {
     return (
       <div className="hw-rc-name">
@@ -643,13 +689,17 @@ const RoleCardName = ({ role, spec, disabled, onPatch }) => {
         className={`form-control form-control-sm font-monospace hw-rc-name-input ${badName ? 'is-invalid' : ''}`}
         type="text"
         placeholder="namespace.collection.role"
-        aria-label="Role name"
+        aria-label={t('provisioning.provisioningRolesTab.roleNameAriaLabel')}
         value={name}
         disabled={disabled}
         onChange={e => onPatch({ name: e.target.value })}
       />
       <RoleChips role={role} />
-      {badName && <div className="hw-invalid-msg w-100">{ROLE_NAME_RULE}</div>}
+      {badName && (
+        <div className="hw-invalid-msg w-100">
+          {t('provisioning.provisioningRolesTab.roleNameRule')}
+        </div>
+      )}
     </div>
   );
 };
@@ -663,6 +713,7 @@ RoleCardName.propTypes = {
 
 /** Free-typed add for specless packages and out-of-catalog roles. */
 const CustomRoleAdd = ({ disabled, onAdd }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const add = () => {
     onAdd(name.trim());
@@ -674,7 +725,7 @@ const CustomRoleAdd = ({ disabled, onAdd }) => {
         className="form-control form-control-sm font-monospace"
         type="text"
         placeholder="namespace.collection.role"
-        aria-label="Custom role name"
+        aria-label={t('provisioning.provisioningRolesTab.customRoleNameAriaLabel')}
         value={name}
         disabled={disabled}
         onChange={e => setName(e.target.value)}
@@ -692,7 +743,7 @@ const CustomRoleAdd = ({ disabled, onAdd }) => {
         onClick={add}
       >
         <i className="fas fa-plus me-1" />
-        Add
+        {t('provisioning.provisioningRolesTab.addButton')}
       </button>
     </div>
   );

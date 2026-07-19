@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getHostsYml, putHostsYml } from '../../api/provisioningAPI';
 import { FormModal } from '../common';
@@ -8,13 +9,6 @@ import { FormModal } from '../common';
 // the editor actually opens, never with the page (the RDP-viewer pattern).
 const HostsYmlEditor = lazy(() => import('./HostsYmlEditor'));
 
-const editorLoadingFallback = (
-  <div className="d-flex align-items-center justify-content-center py-5 text-muted">
-    <i className="fas fa-spinner fa-pulse me-2" />
-    <span>Loading the editor…</span>
-  </div>
-);
-
 /**
  * Raw Hosts.yml editor (frozen hosts-yml contract) — the emergency hatch:
  * the WHOLE stored document as YAML, saved verbatim with key order
@@ -22,6 +16,7 @@ const editorLoadingFallback = (
  * offending line; warnings are advisory and never block the save.
  */
 const HostsYmlModal = ({ isOpen, onClose, currentServer, machineName, onSaved }) => {
+  const { t } = useTranslation();
   const [yaml, setYaml] = useState('');
   const [original, setOriginal] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,12 +47,19 @@ const HostsYmlModal = ({ isOpen, onClose, currentServer, machineName, onSaved })
         setYaml(text);
         setOriginal(text);
       } else {
-        setError(`Failed to load the document: ${result.message}`);
+        setError(t('provisioning.hostsYmlModal.failedToLoad', { message: result.message }));
       }
     });
-  }, [isOpen, currentServer, machineName]);
+  }, [isOpen, currentServer, machineName, t]);
 
   const dirty = yaml !== original;
+
+  const editorFallback = (
+    <div className="d-flex align-items-center justify-content-center py-5 text-muted">
+      <i className="fas fa-spinner fa-pulse me-2" />
+      <span>{t('provisioning.hostsYmlModal.loadingEditor')}</span>
+    </div>
+  );
 
   const handleSave = async () => {
     setLoading(true);
@@ -75,17 +77,23 @@ const HostsYmlModal = ({ isOpen, onClose, currentServer, machineName, onSaved })
     if (!result.success) {
       const line = result.data?.line;
       const column = result.data?.column;
-      const position = line ? ` (line ${line}${column ? `, column ${column}` : ''})` : '';
+      const position = line
+        ? ` ${
+            column
+              ? t('provisioning.hostsYmlModal.lineColumnSuffix', { line, column })
+              : t('provisioning.hostsYmlModal.lineSuffix', { line })
+          }`
+        : '';
       setError(`${result.data?.error || result.message}${position}`);
       editorRef.current?.jumpTo(line, column);
       return;
     }
     setOriginal(yaml);
     const advisories = Array.isArray(result.data?.warnings) ? result.data.warnings : [];
-    onSaved(`Document saved for ${machineName}.`);
+    onSaved(t('provisioning.hostsYmlModal.documentSaved', { machineName }));
     if (advisories.length > 0) {
       setWarnings(advisories);
-      setSavedNote('Saved — with advisories:');
+      setSavedNote(t('provisioning.hostsYmlModal.savedWithAdvisories'));
       return;
     }
     onClose();
@@ -96,9 +104,9 @@ const HostsYmlModal = ({ isOpen, onClose, currentServer, machineName, onSaved })
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSave}
-      title={`Hosts.yml — ${machineName}`}
+      title={t('provisioning.hostsYmlModal.modalTitle', { machineName })}
       icon="fas fa-file-code"
-      submitText="Save"
+      submitText={t('provisioning.hostsYmlModal.saveButton')}
       loading={loading}
       showCancelButton
     >
@@ -115,20 +123,18 @@ const HostsYmlModal = ({ isOpen, onClose, currentServer, machineName, onSaved })
       )}
       {dirty && (
         <p className="mb-2">
-          <span className="badge text-bg-warning">unsaved changes</span>
+          <span className="badge text-bg-warning">
+            {t('provisioning.hostsYmlModal.unsavedChanges')}
+          </span>
         </p>
       )}
       <div className="border rounded overflow-hidden">
-        <Suspense fallback={editorLoadingFallback}>
+        <Suspense fallback={editorFallback}>
           <HostsYmlEditor ref={editorRef} value={yaml} onChange={setYaml} disabled={loading} />
         </Suspense>
       </div>
       <p className="form-text text-muted mb-0">
-        This YAML IS the whole document — removing a section DELETES it (sections: settings, zones,
-        networks, disks, provisioner, metadata). Saved verbatim, key order kept, comments not
-        preserved. The agent refuses unparseable YAML, impossible section shapes, bookkeeping keys,
-        and unknown top-level keys; anything else questionable comes back as a non-blocking
-        advisory.
+        {t('provisioning.hostsYmlModal.footerExplanation')}
       </p>
     </FormModal>
   );

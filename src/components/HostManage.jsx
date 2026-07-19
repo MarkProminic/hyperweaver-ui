@@ -1,5 +1,6 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -30,40 +31,50 @@ import UserGroupManagement from './Host/UserGroupManagement';
 // (sync-file ACK 2026-07-05) — `services` is newly minted and zoneweaver-agent
 // advertises it from its next session; the rest already exist.
 const TABS = [
-  { id: 'services', label: 'Services', icon: 'fas fa-cogs', feature: 'services' },
+  { id: 'services', labelKey: 'tabServices', icon: 'fas fa-cogs', feature: 'services' },
   // ONE Network tab for every agent (Mark's ruling: same components
   // everywhere, never per-agent UIs) — it shows when ANY of its sections'
   // tokens is live; the sections inside gate individually.
   {
     id: 'network',
-    label: 'Network',
+    labelKey: 'tabNetwork',
     icon: 'fas fa-network-wired',
     featuresAny: ['vnics', 'hosts-file'],
   },
-  { id: 'packages', label: 'Package Management', icon: 'fas fa-box', feature: 'packages' },
+  { id: 'packages', labelKey: 'tabPackages', icon: 'fas fa-box', feature: 'packages' },
   {
     id: 'boot-environments',
-    label: 'Boot Environments',
+    labelKey: 'tabBootEnvironments',
     icon: 'fas fa-layer-group',
     feature: 'boot-environments',
   },
-  { id: 'storage', label: 'Storage', icon: 'fas fa-database', feature: 'zfs' },
-  { id: 'time-ntp', label: 'Time', icon: 'fas fa-clock', feature: 'time-sync' },
-  { id: 'processes', label: 'Processes', icon: 'fas fa-tasks', feature: 'processes' },
+  { id: 'storage', labelKey: 'tabStorage', icon: 'fas fa-database', feature: 'zfs' },
+  { id: 'time-ntp', labelKey: 'tabTime', icon: 'fas fa-clock', feature: 'time-sync' },
+  { id: 'processes', labelKey: 'tabProcesses', icon: 'fas fa-tasks', feature: 'processes' },
   {
     id: 'fault-management',
-    label: 'Fault Management',
+    labelKey: 'tabFaultManagement',
     icon: 'fas fa-exclamation-triangle',
     feature: 'fault-management',
   },
-  { id: 'file-manager', label: 'File Manager', icon: 'fas fa-folder', feature: 'file-browser' },
-  { id: 'user-group', label: 'User and Groups', icon: 'fas fa-users', feature: 'system-users' },
+  {
+    id: 'file-manager',
+    labelKey: 'tabFileManager',
+    icon: 'fas fa-folder',
+    feature: 'file-browser',
+  },
+  {
+    id: 'user-group',
+    labelKey: 'tabUserGroups',
+    icon: 'fas fa-users',
+    feature: 'system-users',
+  },
   // Token regate (Mark's option-(a) word): the registry surface rides its
   // own `provisioner-registry` token — zoneweaver's always-on `provisioning`
   // names its pipeline, not a registry, and gains this token at parity.
   {
     id: 'provisioning',
-    label: 'Provisioners',
+    labelKey: 'tabProvisioners',
     icon: 'fas fa-cubes',
     feature: 'provisioner-registry',
   },
@@ -71,7 +82,7 @@ const TABS = [
   // ruling) — rides the existing `provisioning` token, no gate of its own.
   {
     id: 'provisioning-network',
-    label: 'Provisioning Network',
+    labelKey: 'tabProvisioningNetwork',
     icon: 'fas fa-diagram-project',
     feature: 'provisioning',
   },
@@ -79,16 +90,21 @@ const TABS = [
   // scoped per its sync entry; no token exists), never shown on vbox hosts.
   {
     id: 'recipes',
-    label: 'Recipes',
+    labelKey: 'tabRecipes',
     icon: 'fas fa-scroll',
     feature: 'provisioning',
     bhyveOnly: true,
   },
-  { id: 'templates', label: 'Templates', icon: 'fas fa-compact-disc', feature: 'templates' },
+  {
+    id: 'templates',
+    labelKey: 'tabTemplates',
+    icon: 'fas fa-compact-disc',
+    feature: 'templates',
+  },
   // Host-level ordered boot/shutdown (catalog §8) — rides `machines`.
   {
     id: 'orchestration',
-    label: 'Orchestration',
+    labelKey: 'tabOrchestration',
     icon: 'fas fa-arrow-down-1-9',
     feature: 'machines',
   },
@@ -97,15 +113,16 @@ const TABS = [
   // registry ships too — the agreed convergence gate.
   {
     id: 'installer-files',
-    label: 'Installer Files',
+    labelKey: 'tabInstallerFiles',
     icon: 'fas fa-box-archive',
     features: ['artifacts', 'provisioner-registry'],
   },
   // Agent database maintenance — /database/* ships ungated on both agents.
-  { id: 'database', label: 'Database', icon: 'fas fa-database' },
+  { id: 'database', labelKey: 'tabDatabase', icon: 'fas fa-database' },
 ];
 
 const HostManage = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('services');
 
   const { user } = useAuth();
@@ -135,10 +152,10 @@ const HostManage = () => {
       <div className="hw-page-content-scrollable">
         <Helmet>
           <meta charSet="utf-8" />
-          <title>Access Denied - Hyperweaver</title>
+          <title>{t('pages.hostManage.titleAccessDenied')}</title>
         </Helmet>
         <div className="container-fluid m-2">
-          <div className="alert alert-danger">Admin privileges are required to manage servers.</div>
+          <div className="alert alert-danger">{t('pages.hostManage.adminRequired')}</div>
         </div>
       </div>
     );
@@ -150,23 +167,23 @@ const HostManage = () => {
       <div className="hw-page-content-scrollable">
         <Helmet>
           <meta charSet="utf-8" />
-          <title>No Server Selected - Hyperweaver</title>
+          <title>{t('pages.hostManage.titleNoServerSelected')}</title>
         </Helmet>
         <div className="container-fluid p-0">
           <div className="card">
-            <HostPageHeader title="Host Management">
+            <HostPageHeader title={t('pages.hostManage.pageTitle')}>
               <button
                 type="button"
                 className="btn btn-sm btn-info"
                 onClick={() => navigate('/ui/hosts')}
               >
                 <i className="fas fa-arrow-left me-2" />
-                <span>Back to Hosts</span>
+                <span>{t('pages.hostManage.backToHosts')}</span>
               </button>
             </HostPageHeader>
             <div className="px-4">
               <div className="alert alert-info">
-                <p>Please select a server from the navbar to manage its services.</p>
+                <p>{t('pages.hostManage.selectServerPrompt')}</p>
               </div>
             </div>
           </div>
@@ -179,11 +196,11 @@ const HostManage = () => {
     <div className="hw-page-content-scrollable">
       <Helmet>
         <meta charSet="utf-8" />
-        <title>{`Manage ${currentServer.hostname} - Hyperweaver`}</title>
+        <title>{t('pages.hostManage.titleManageHost', { hostname: currentServer.hostname })}</title>
       </Helmet>
       <div className="container-fluid p-0">
         <div className="card">
-          <HostPageHeader title="Host Management" />
+          <HostPageHeader title={t('pages.hostManage.pageTitle')} />
 
           {/* Tab Navigation */}
           <div className="mb-0">
@@ -207,7 +224,7 @@ const HostManage = () => {
                     <span className="me-1">
                       <i className={tab.icon} />
                     </span>
-                    <span>{tab.label}</span>
+                    <span>{t(`pages.hostManage.${tab.labelKey}`)}</span>
                   </a>
                 </li>
               ))}
@@ -220,8 +237,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Manage OmniOS services on <strong>{currentServer.hostname}</strong>. You can
-                    view, start, stop, restart, and refresh services running on this host.
+                    {t('pages.hostManage.descServicesPre')}{' '}
+                    <strong>{currentServer.hostname}</strong>.{' '}
+                    {t('pages.hostManage.descServicesPost')}
                   </p>
                 </div>
 
@@ -234,9 +252,8 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Manage network configuration and hostname settings on{' '}
-                    <strong>{currentServer.hostname}</strong>. Configure VNICs, IP addresses, link
-                    aggregates, and system hostname.
+                    {t('pages.hostManage.descNetworkPre')} <strong>{currentServer.hostname}</strong>
+                    . {t('pages.hostManage.descNetworkPost')}
                   </p>
                 </div>
 
@@ -249,9 +266,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Manage packages, repositories, and system updates on{' '}
-                    <strong>{currentServer.hostname}</strong>. Install, uninstall, and search for
-                    packages, manage publishers and repositories.
+                    {t('pages.hostManage.descPackagesPre')}{' '}
+                    <strong>{currentServer.hostname}</strong>.{' '}
+                    {t('pages.hostManage.descPackagesPost')}
                   </p>
                 </div>
 
@@ -264,9 +281,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Manage boot environments on <strong>{currentServer.hostname}</strong>. Create,
-                    activate, mount, and delete boot environments for system administration and
-                    recovery.
+                    {t('pages.hostManage.descBootEnvironmentsPre')}{' '}
+                    <strong>{currentServer.hostname}</strong>.{' '}
+                    {t('pages.hostManage.descBootEnvironmentsPost')}
                   </p>
                 </div>
 
@@ -279,8 +296,8 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Manage ZFS storage configuration on <strong>{currentServer.hostname}</strong>.
-                    Configure ZFS ARC settings, manage pools, datasets, and storage resources.
+                    {t('pages.hostManage.descStoragePre')} <strong>{currentServer.hostname}</strong>
+                    . {t('pages.hostManage.descStoragePost')}
                   </p>
                 </div>
 
@@ -293,9 +310,8 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Manage time synchronization services, NTP configuration, and timezone settings
-                    on <strong>{currentServer.hostname}</strong>. Monitor time server peers,
-                    configure NTP servers, and manage system timezone.
+                    {t('pages.hostManage.descTimeNtpPre')} <strong>{currentServer.hostname}</strong>
+                    . {t('pages.hostManage.descTimeNtpPost')}
                   </p>
                 </div>
 
@@ -308,9 +324,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Monitor and manage system processes on <strong>{currentServer.hostname}</strong>
-                    . View running processes, send signals, terminate processes, and analyze process
-                    details including open files and resource usage.
+                    {t('pages.hostManage.descProcessesPre')}{' '}
+                    <strong>{currentServer.hostname}</strong>.{' '}
+                    {t('pages.hostManage.descProcessesPost')}
                   </p>
                 </div>
 
@@ -323,9 +339,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Monitor and manage system faults on <strong>{currentServer.hostname}</strong>.
-                    View active faults, review system logs, manage fault resolution, and monitor
-                    system health.
+                    {t('pages.hostManage.descFaultManagementPre')}{' '}
+                    <strong>{currentServer.hostname}</strong>.{' '}
+                    {t('pages.hostManage.descFaultManagementPost')}
                   </p>
                 </div>
 
@@ -338,10 +354,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Browse and manage files on <strong>{currentServer.hostname}</strong>. Upload,
-                    download, create folders, edit text files, and perform file operations with
-                    drag-and-drop, keyboard shortcuts, and advanced features including archive
-                    support.
+                    {t('pages.hostManage.descFileManagerPre')}{' '}
+                    <strong>{currentServer.hostname}</strong>.{' '}
+                    {t('pages.hostManage.descFileManagerPost')}
                   </p>
                 </div>
 
@@ -354,10 +369,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Manage provisioner packages on <strong>{currentServer.hostname}</strong>. Import
-                    package families from a folder, archive, or git repository; delete versions no
-                    machine references. Machine creation builds its forms from these packages&apos;
-                    metadata.
+                    {t('pages.hostManage.descProvisioningPre')}{' '}
+                    <strong>{currentServer.hostname}</strong>.{' '}
+                    {t('pages.hostManage.descProvisioningPost')}
                   </p>
                 </div>
 
@@ -370,11 +384,13 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Each host has <strong>one</strong> provisioning network — a host-side interface
-                    and DHCP server machines can use during provisioning, defined by the
-                    agent&apos;s <code>provisioning.network</code> settings (subnet, host IP, DHCP
-                    range). This page controls that one network&apos;s lifecycle on{' '}
-                    <strong>{currentServer.hostname}</strong>; it is dormant by default.
+                    {t('pages.hostManage.descProvisioningNetworkSeg1')}{' '}
+                    <strong>{t('pages.hostManage.descProvisioningNetworkOne')}</strong>{' '}
+                    {t('pages.hostManage.descProvisioningNetworkSeg2')}{' '}
+                    <code>provisioning.network</code>{' '}
+                    {t('pages.hostManage.descProvisioningNetworkSeg3')}{' '}
+                    <strong>{currentServer.hostname}</strong>
+                    {t('pages.hostManage.descProvisioningNetworkSeg4')}
                   </p>
                 </div>
 
@@ -387,9 +403,10 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    zlogin console recipes on <strong>{currentServer.hostname}</strong> — early-boot
-                    guest automation the <code>zone_setup</code> step runs over the console before
-                    SSH answers. The default recipe per OS family and brand is what setup picks.
+                    {t('pages.hostManage.descRecipesSeg1')}{' '}
+                    <strong>{currentServer.hostname}</strong>{' '}
+                    {t('pages.hostManage.descRecipesSeg2')} <code>zone_setup</code>{' '}
+                    {t('pages.hostManage.descRecipesSeg3')}
                   </p>
                 </div>
 
@@ -402,9 +419,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Ordered machine boot and shutdown on <strong>{currentServer.hostname}</strong>.
-                    When enabled, autostart machines boot highest-priority-first at agent start;
-                    shutdown at agent exit runs lowest first. Priority edits apply immediately.
+                    {t('pages.hostManage.descOrchestrationPre')}{' '}
+                    <strong>{currentServer.hostname}</strong>.{' '}
+                    {t('pages.hostManage.descOrchestrationPost')}
                   </p>
                 </div>
 
@@ -417,9 +434,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    The local template registry on <strong>{currentServer.hostname}</strong> — the
-                    base boxes machine creation clones from. Pull boxes here ahead of time, or let
-                    creation chain the download automatically.
+                    {t('pages.hostManage.descTemplatesPre')}{' '}
+                    <strong>{currentServer.hostname}</strong>{' '}
+                    {t('pages.hostManage.descTemplatesPost')}
                   </p>
                 </div>
 
@@ -432,10 +449,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    The hash-verified file cache on <strong>{currentServer.hostname}</strong> —
-                    installers, fixpacks, and hotfixes that machine creation mounts into working
-                    directories. References that are absent, unhashed, or hash-mismatched fail the
-                    machine start.
+                    {t('pages.hostManage.descInstallerFilesPre')}{' '}
+                    <strong>{currentServer.hostname}</strong>{' '}
+                    {t('pages.hostManage.descInstallerFilesPost')}
                   </p>
                 </div>
 
@@ -448,9 +464,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    The agent&apos;s own storage on <strong>{currentServer.hostname}</strong> —
-                    per-database file sizes and row counts, with vacuum, analyze, and retention
-                    cleanup maintenance.
+                    {t('pages.hostManage.descDatabasePre')}{' '}
+                    <strong>{currentServer.hostname}</strong>{' '}
+                    {t('pages.hostManage.descDatabasePost')}
                   </p>
                 </div>
 
@@ -463,10 +479,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    Manage system users, groups, and roles on{' '}
-                    <strong>{currentServer.hostname}</strong>. Create, modify, and delete user
-                    accounts, manage group memberships, configure RBAC roles, and set user
-                    permissions and authorizations.
+                    {t('pages.hostManage.descUserGroupPre')}{' '}
+                    <strong>{currentServer.hostname}</strong>.{' '}
+                    {t('pages.hostManage.descUserGroupPost')}
                   </p>
                 </div>
 

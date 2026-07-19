@@ -1,8 +1,10 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import ContentModal from '../common/ContentModal';
 
 const UserDetailsModal = ({ user, onClose }) => {
+  const { t } = useTranslation();
   const formatValue = value => {
     if (value === null || value === undefined || value === '') {
       return <span className="text-muted">N/A</span>;
@@ -15,9 +17,9 @@ const UserDetailsModal = ({ user, onClose }) => {
 
   const getUserType = () => {
     if (user.uid < 100 && !user.comment?.includes('User')) {
-      return { type: 'System User', class: 'text-bg-info' };
+      return { type: t('host.userDetailsModal.systemUser'), class: 'text-bg-info' };
     }
-    return { type: 'Regular User', class: 'text-bg-success' };
+    return { type: t('host.userDetailsModal.regularUser'), class: 'text-bg-success' };
   };
 
   const userType = getUserType();
@@ -55,7 +57,7 @@ const UserDetailsModal = ({ user, onClose }) => {
         <div className="col">
           <h4 className="fs-5 fw-bold">
             <i className="fas fa-info-circle me-2" />
-            <span>Basic Information</span>
+            <span>{t('host.userDetailsModal.basicInformation')}</span>
           </h4>
 
           <div className="table-responsive">
@@ -114,7 +116,7 @@ const UserDetailsModal = ({ user, onClose }) => {
         <div className="col">
           <h4 className="fs-5 fw-bold">
             <i className="fas fa-shield-alt me-2" />
-            <span>RBAC Attributes</span>
+            <span>{t('host.userDetailsModal.rbacAttributes')}</span>
           </h4>
 
           {user.attributes ? (

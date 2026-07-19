@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import Chart from '../Chart';
 import Highcharts from '../Highcharts';
@@ -15,6 +16,7 @@ const BandwidthCharts = ({
   summaryChartRefs,
   chartRefs,
 }) => {
+  const { t } = useTranslation();
   if (Object.keys(chartData).length === 0) {
     return null;
   }
@@ -29,7 +31,7 @@ const BandwidthCharts = ({
                 <span className="me-2">
                   <i className="fas fa-chart-area" />
                 </span>
-                <span>Real-Time Bandwidth Charts</span>
+                <span>{t('host.bandwidthCharts.title')}</span>
               </span>
             </h4>
           </div>
@@ -41,19 +43,23 @@ const BandwidthCharts = ({
                   value={chartSortBy}
                   onChange={e => setChartSortBy(e.target.value)}
                   disabled={loading}
-                  title="Sort individual charts by"
+                  title={t('host.bandwidthCharts.sortTooltip')}
                 >
-                  <option value="bandwidth">Most Bandwidth</option>
-                  <option value="name">Interface Name</option>
-                  <option value="rx">RX Bandwidth</option>
-                  <option value="tx">TX Bandwidth</option>
+                  <option value="bandwidth">{t('host.bandwidthCharts.sortBandwidth')}</option>
+                  <option value="name">{t('host.bandwidthCharts.sortName')}</option>
+                  <option value="rx">{t('host.bandwidthCharts.sortRx')}</option>
+                  <option value="tx">{t('host.bandwidthCharts.sortTx')}</option>
                 </select>
               </div>
               <div>
                 <button
                   className="btn btn-sm btn-link"
                   onClick={() => toggleSection('charts')}
-                  title={sectionsCollapsed.charts ? 'Expand section' : 'Collapse section'}
+                  title={
+                    sectionsCollapsed.charts
+                      ? t('host.bandwidthCharts.expand')
+                      : t('host.bandwidthCharts.collapse')
+                  }
                 >
                   <span>
                     <i
@@ -74,7 +80,7 @@ const BandwidthCharts = ({
                   <span className="me-2">
                     <i className="fas fa-layer-group" />
                   </span>
-                  <span>All Interfaces Summary</span>
+                  <span>{t('host.bandwidthCharts.allInterfacesSummary')}</span>
                 </span>
               </h5>
               <div className="row">
@@ -84,7 +90,7 @@ const BandwidthCharts = ({
                     <button
                       className="btn btn-sm btn-light is-chart-expand-button"
                       onClick={() => expandChart('summary-rx', 'summary-rx')}
-                      title="Expand chart to full size"
+                      title={t('host.bandwidthCharts.expandChart')}
                     >
                       <span>
                         <i className="fas fa-expand" />
@@ -114,7 +120,7 @@ const BandwidthCharts = ({
                           useUTC: false,
                         },
                         title: {
-                          text: 'RX Bandwidth (Download)',
+                          text: t('host.bandwidthCharts.rxBandwidth'),
                           style: {
                             fontSize: '14px',
                             fontWeight: 'bold',
@@ -204,7 +210,7 @@ const BandwidthCharts = ({
                     <button
                       className="btn btn-sm btn-light is-chart-expand-button"
                       onClick={() => expandChart('summary-tx', 'summary-tx')}
-                      title="Expand chart to full size"
+                      title={t('host.bandwidthCharts.expandChart')}
                     >
                       <span>
                         <i className="fas fa-expand" />
@@ -234,7 +240,7 @@ const BandwidthCharts = ({
                           useUTC: false,
                         },
                         title: {
-                          text: 'TX Bandwidth (Upload)',
+                          text: t('host.bandwidthCharts.txBandwidth'),
                           style: {
                             fontSize: '14px',
                             fontWeight: 'bold',
@@ -324,7 +330,7 @@ const BandwidthCharts = ({
                     <button
                       className="btn btn-sm btn-light is-chart-expand-button"
                       onClick={() => expandChart('summary-total', 'summary-total')}
-                      title="Expand chart to full size"
+                      title={t('host.bandwidthCharts.expandChart')}
                     >
                       <span>
                         <i className="fas fa-expand" />
@@ -354,7 +360,7 @@ const BandwidthCharts = ({
                           useUTC: false,
                         },
                         title: {
-                          text: 'Total Bandwidth (Combined)',
+                          text: t('host.bandwidthCharts.totalBandwidth'),
                           style: {
                             fontSize: '14px',
                             fontWeight: 'bold',
@@ -447,7 +453,7 @@ const BandwidthCharts = ({
                   <span className="me-2">
                     <i className="fas fa-chart-line" />
                   </span>
-                  <span>Individual Interface Charts</span>
+                  <span>{t('host.bandwidthCharts.individualCharts')}</span>
                 </span>
               </h5>
               <div className="row">
@@ -566,7 +572,7 @@ const BandwidthCharts = ({
                         <button
                           className="btn btn-sm btn-light is-chart-expand-button"
                           onClick={() => expandChart(interfaceName, 'individual')}
-                          title="Expand chart to full size"
+                          title={t('host.bandwidthCharts.expandChart')}
                         >
                           <span>
                             <i className="fas fa-expand" />
@@ -591,10 +597,7 @@ const BandwidthCharts = ({
         )}
         {!sectionsCollapsed.charts && Object.keys(chartData).length === 0 && (
           <div className="alert alert-info">
-            <p>
-              No chart data available yet. Data will appear as the system collects bandwidth
-              measurements.
-            </p>
+            <p>{t('host.bandwidthCharts.noData')}</p>
           </div>
         )}
       </div>

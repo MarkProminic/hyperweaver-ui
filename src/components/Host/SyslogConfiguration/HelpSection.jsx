@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { getServiceType } from './syslogUtils';
 
@@ -6,6 +7,7 @@ import { getServiceType } from './syslogUtils';
  * Syslog configuration help section with service-specific examples and notes
  */
 const HelpSection = ({ config }) => {
+  const { t } = useTranslation();
   const serviceType = getServiceType(config);
 
   return (
@@ -13,57 +15,66 @@ const HelpSection = ({ config }) => {
       <div className="card-body">
         <h4 className="fs-6 fw-bold mb-3">
           <i className="fas fa-question-circle me-2" />
-          <span>{serviceType.display} Configuration Help</span>
+          <span>{t('hostTime.syslogHelpSection.heading', { service: serviceType.display })}</span>
         </h4>
 
         <div className="small">
           <div className="row g-3">
             <div className="col">
               <p>
-                <strong>Common Examples:</strong>
+                <strong>{t('hostTime.syslogHelpSection.commonExamplesLabel')}</strong>
               </p>
               <ul>
                 <li>
-                  <code>*.notice /var/adm/messages</code> - All notices to messages
+                  <code>*.notice /var/adm/messages</code> -{' '}
+                  {t('hostTime.syslogHelpSection.exampleNotices')}
                 </li>
                 <li>
-                  <code>mail.* /var/log/maillog</code> - All mail logs to maillog
+                  <code>mail.* /var/log/maillog</code> -{' '}
+                  {t('hostTime.syslogHelpSection.exampleMailLogs')}
                 </li>
                 <li>
-                  <code>kern.err @loghost</code> - Kernel errors to remote host
+                  <code>kern.err @loghost</code> -{' '}
+                  {t('hostTime.syslogHelpSection.exampleKernelErrors')}
                 </li>
                 <li>
-                  <code>*.emerg *</code> - Emergency messages to all users
+                  <code>*.emerg *</code> - {t('hostTime.syslogHelpSection.exampleEmergency')}
                 </li>
                 {serviceType.name === 'syslog' && (
                   <li>
-                    <code>ifdef(`LOGHOST&apos;, action1, action2)</code> - Conditional m4 macro
+                    <code>ifdef(`LOGHOST&apos;, action1, action2)</code> -{' '}
+                    {t('hostTime.syslogHelpSection.exampleConditionalMacro')}
                   </li>
                 )}
               </ul>
             </div>
             <div className="col">
               <p>
-                <strong>Service Information:</strong>
+                <strong>{t('hostTime.syslogHelpSection.serviceInfoLabel')}</strong>
               </p>
               <ul>
                 <li>
-                  <strong>Service:</strong> {serviceType.display}
+                  <strong>{t('hostTime.syslogHelpSection.serviceField')}</strong>{' '}
+                  {serviceType.display}
                 </li>
                 <li>
-                  <strong>Config File:</strong> {config?.config_file || 'Unknown'}
+                  <strong>{t('hostTime.syslogHelpSection.configFileField')}</strong>{' '}
+                  {config?.config_file || t('hostTime.syslogHelpSection.unknown')}
                 </li>
                 <li>
-                  <strong>FMRI:</strong> {config?.service_fmri || 'Unknown'}
+                  <strong>{t('hostTime.syslogHelpSection.fmriField')}</strong>{' '}
+                  {config?.service_fmri || t('hostTime.syslogHelpSection.unknown')}
                 </li>
                 {serviceType.name === 'rsyslog' && (
                   <li>
-                    <strong>Features:</strong> Advanced filtering, modules, templates
+                    <strong>{t('hostTime.syslogHelpSection.featuresField')}</strong>{' '}
+                    {t('hostTime.syslogHelpSection.rsyslogFeatures')}
                   </li>
                 )}
                 {serviceType.name === 'syslog' && (
                   <li>
-                    <strong>Features:</strong> m4 macros, conditional processing
+                    <strong>{t('hostTime.syslogHelpSection.featuresField')}</strong>{' '}
+                    {t('hostTime.syslogHelpSection.syslogFeatures')}
                   </li>
                 )}
               </ul>
@@ -74,9 +85,8 @@ const HelpSection = ({ config }) => {
           {serviceType.name === 'rsyslog' && (
             <div className="alert alert-info mt-3">
               <p className="small mb-0">
-                <strong>rsyslog Notes:</strong> Modern syslog implementation with advanced features
-                like modules, templates, and enhanced filtering. Supports both traditional syslog
-                syntax and extended rsyslog directives.
+                <strong>{t('hostTime.syslogHelpSection.rsyslogNotesTitle')}</strong>{' '}
+                {t('hostTime.syslogHelpSection.rsyslogNotesBody')}
               </p>
             </div>
           )}
@@ -84,9 +94,8 @@ const HelpSection = ({ config }) => {
           {serviceType.name === 'syslog' && (
             <div className="alert alert-info mt-3">
               <p className="small mb-0">
-                <strong>Traditional Syslog Notes:</strong> Classic syslog implementation with m4
-                macro preprocessing. Supports conditional statements using ifdef() and backtick
-                syntax for complex rule logic.
+                <strong>{t('hostTime.syslogHelpSection.syslogNotesTitle')}</strong>{' '}
+                {t('hostTime.syslogHelpSection.syslogNotesBody')}
               </p>
             </div>
           )}

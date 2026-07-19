@@ -1,48 +1,51 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const TimeSyncPeerTable = ({ peers, loading }) => {
+  const { t } = useTranslation();
+
   const getPeerStatusIndicator = indicator => {
     switch (indicator) {
       case '*':
         return {
           icon: '⭐',
-          description: 'Primary server (selected for synchronization)',
+          description: t('hostTime.timeSyncPeerTable.statusPrimary'),
           color: 'text-success',
         };
       case '+':
         return {
           icon: '✅',
-          description: 'Backup server (good candidate)',
+          description: t('hostTime.timeSyncPeerTable.statusBackup'),
           color: 'text-info',
         };
       case '-':
         return {
           icon: '❌',
-          description: 'Rejected server (unreliable)',
+          description: t('hostTime.timeSyncPeerTable.statusRejected'),
           color: 'text-danger',
         };
       case 'x':
         return {
           icon: '⚠️',
-          description: 'False ticker (bad time)',
+          description: t('hostTime.timeSyncPeerTable.statusFalseTicker'),
           color: 'text-warning',
         };
       case '.':
         return {
           icon: '⚪',
-          description: 'Excess peer (not used)',
+          description: t('hostTime.timeSyncPeerTable.statusExcess'),
           color: 'text-muted',
         };
       case ' ':
         return {
           icon: '⚠️',
-          description: 'Candidate server (being evaluated)',
+          description: t('hostTime.timeSyncPeerTable.statusCandidate'),
           color: 'text-warning',
         };
       default:
         return {
           icon: '❓',
-          description: 'Unknown status',
+          description: t('hostTime.timeSyncPeerTable.statusUnknown'),
           color: 'text-muted',
         };
     }
@@ -50,21 +53,21 @@ const TimeSyncPeerTable = ({ peers, loading }) => {
 
   const formatOffset = offset => {
     if (typeof offset !== 'number') {
-      return 'N/A';
+      return t('hostTime.timeSyncPeerTable.notAvailable');
     }
     return `${offset >= 0 ? '+' : ''}${offset.toFixed(1)}ms`;
   };
 
   const formatDelay = delay => {
     if (typeof delay !== 'number') {
-      return 'N/A';
+      return t('hostTime.timeSyncPeerTable.notAvailable');
     }
     return `${delay.toFixed(1)}ms`;
   };
 
   const formatJitter = jitter => {
     if (typeof jitter !== 'number') {
-      return 'N/A';
+      return t('hostTime.timeSyncPeerTable.notAvailable');
     }
     return `${jitter.toFixed(1)}ms`;
   };
@@ -86,7 +89,7 @@ const TimeSyncPeerTable = ({ peers, loading }) => {
     <div className="card mb-4">
       <div className="card-body">
         <h3 className="fs-6 fw-bold">
-          Time Server Peers ({peers.length})
+          {t('hostTime.timeSyncPeerTable.heading', { count: peers.length })}
           {loading && (
             <span className="ms-2">
               <i className="fas fa-spinner fa-spin" />
@@ -98,13 +101,13 @@ const TimeSyncPeerTable = ({ peers, loading }) => {
           <table className="table table-striped">
             <thead>
               <tr>
-                <th>Status</th>
-                <th>Server</th>
-                <th>Stratum</th>
-                <th>Delay</th>
-                <th>Offset</th>
-                <th>Jitter</th>
-                <th>Reach %</th>
+                <th>{t('hostTime.timeSyncPeerTable.columnStatus')}</th>
+                <th>{t('hostTime.timeSyncPeerTable.columnServer')}</th>
+                <th>{t('hostTime.timeSyncPeerTable.columnStratum')}</th>
+                <th>{t('hostTime.timeSyncPeerTable.columnDelay')}</th>
+                <th>{t('hostTime.timeSyncPeerTable.columnOffset')}</th>
+                <th>{t('hostTime.timeSyncPeerTable.columnJitter')}</th>
+                <th>{t('hostTime.timeSyncPeerTable.columnReach')}</th>
               </tr>
             </thead>
             <tbody>
@@ -116,12 +119,14 @@ const TimeSyncPeerTable = ({ peers, loading }) => {
                       <span className={statusDetails.color} title={statusDetails.description}>
                         {statusDetails.icon}
                       </span>
-                      <span className="small ms-1">{peer.status || 'Unknown'}</span>
+                      <span className="small ms-1">
+                        {peer.status || t('hostTime.timeSyncPeerTable.statusUnknownLabel')}
+                      </span>
                     </td>
                     <td className="font-monospace">
-                      {peer.remote || peer.name || 'Unknown Server'}
+                      {peer.remote || peer.name || t('hostTime.timeSyncPeerTable.unknownServer')}
                     </td>
-                    <td>{peer.stratum || 'N/A'}</td>
+                    <td>{peer.stratum || t('hostTime.timeSyncPeerTable.notAvailable')}</td>
                     <td
                       className={getHealthColor(peer.delay, {
                         good: 50,
@@ -154,7 +159,7 @@ const TimeSyncPeerTable = ({ peers, loading }) => {
                     >
                       {peer.reachability_percent !== undefined
                         ? `${peer.reachability_percent}%`
-                        : 'N/A'}
+                        : t('hostTime.timeSyncPeerTable.notAvailable')}
                     </td>
                   </tr>
                 );
@@ -165,16 +170,14 @@ const TimeSyncPeerTable = ({ peers, loading }) => {
 
         <div className="small mt-3">
           <p>
-            <strong>Status Indicators:</strong>
+            <strong>{t('hostTime.timeSyncPeerTable.statusIndicatorsLabel')}</strong>
           </p>
+          <p>{t('hostTime.timeSyncPeerTable.statusIndicatorsDesc')}</p>
           <p>
-            ⭐ Primary server (active) • ✅ Backup server • ❌ Rejected server • ⚠️
-            Candidate/Problem • ⚪ Excess peer
-          </p>
-          <p>
-            <strong>Health Colors:</strong> <span className="text-success">Green (good)</span> •{' '}
-            <span className="text-warning">Yellow (warning)</span> •{' '}
-            <span className="text-danger">Red (problem)</span>
+            <strong>{t('hostTime.timeSyncPeerTable.healthColorsLabel')}</strong>{' '}
+            <span className="text-success">{t('hostTime.timeSyncPeerTable.colorGood')}</span> •{' '}
+            <span className="text-warning">{t('hostTime.timeSyncPeerTable.colorWarning')}</span> •{' '}
+            <span className="text-danger">{t('hostTime.timeSyncPeerTable.colorProblem')}</span>
           </p>
         </div>
       </div>

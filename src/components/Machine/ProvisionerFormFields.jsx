@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Provisioner ROLES form pieces. The manifest FIELD form moved to the field
@@ -13,19 +14,19 @@ import PropTypes from 'prop-types';
 // group's first key doubles as the artifact `file_type` its picker queries.
 const ROLE_FILE_GROUPS = [
   [
-    ['installer', 'Installer'],
-    ['installer_hash', 'Installer SHA-256'],
-    ['installer_version', 'Installer Version'],
+    ['installer', 'provisioning.provisionerFormFields.installerLabel'],
+    ['installer_hash', 'provisioning.provisionerFormFields.installerHashLabel'],
+    ['installer_version', 'provisioning.provisionerFormFields.installerVersionLabel'],
   ],
   [
-    ['fixpack', 'Fixpack'],
-    ['fixpack_hash', 'Fixpack SHA-256'],
-    ['fixpack_version', 'Fixpack Version'],
+    ['fixpack', 'provisioning.provisionerFormFields.fixpackLabel'],
+    ['fixpack_hash', 'provisioning.provisionerFormFields.fixpackHashLabel'],
+    ['fixpack_version', 'provisioning.provisionerFormFields.fixpackVersionLabel'],
   ],
   [
-    ['hotfix', 'Hotfix'],
-    ['hotfix_hash', 'Hotfix SHA-256'],
-    ['hotfix_version', 'Hotfix Version'],
+    ['hotfix', 'provisioning.provisionerFormFields.hotfixLabel'],
+    ['hotfix_hash', 'provisioning.provisionerFormFields.hotfixHashLabel'],
+    ['hotfix_version', 'provisioning.provisionerFormFields.hotfixVersionLabel'],
   ],
 ];
 
@@ -86,6 +87,7 @@ RoleFileInput.propTypes = {
 };
 
 export const RolesEditor = ({ roles, onRolesChange, loading, artifacts }) => {
+  const { t } = useTranslation();
   const setRole = (index, patch) => {
     onRolesChange(roles.map((role, i) => (i === index ? { ...role, ...patch } : role)));
   };
@@ -111,7 +113,9 @@ export const RolesEditor = ({ roles, onRolesChange, loading, artifacts }) => {
   };
 
   if (roles.length === 0) {
-    return <p className="text-muted mb-0">This provisioner version declares no roles.</p>;
+    return (
+      <p className="text-muted mb-0">{t('provisioning.provisionerFormFields.noRolesDeclared')}</p>
+    );
   }
 
   return (
@@ -138,12 +142,12 @@ export const RolesEditor = ({ roles, onRolesChange, loading, artifacts }) => {
                 const [[kind]] = group;
                 return (
                   <div className="row g-2 mb-1" key={kind}>
-                    {group.map(([fileKey, label]) => (
+                    {group.map(([fileKey, labelKey]) => (
                       <RoleFileInput
                         key={fileKey}
                         roleName={role.name}
                         fileKey={fileKey}
-                        label={label}
+                        label={t(labelKey)}
                         value={role.files?.[fileKey]}
                         onChange={(key, value) =>
                           key === kind
@@ -164,8 +168,7 @@ export const RolesEditor = ({ roles, onRolesChange, loading, artifacts }) => {
       {artifacts !== null && (
         <p className="form-text text-warning mb-0">
           <i className="fas fa-triangle-exclamation me-1" />
-          File references resolve against the host&apos;s file cache at start — absent, unhashed, or
-          hash-mismatched files FAIL the machine start.
+          {t('provisioning.provisionerFormFields.fileCacheWarning')}
         </p>
       )}
     </div>

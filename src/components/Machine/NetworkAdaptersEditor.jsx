@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { Fragment, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { markButtonClass, markIconClass, nicSummary } from './CurrentHardware';
 import { VocabularySelect } from './HardwareEditor';
@@ -16,12 +17,17 @@ const randomMac = () => {
 
 /** One-click copy for the live values (MACs, vnic names). */
 const CopyButton = ({ value, label }) => {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   return (
     <button
       type="button"
       className="btn btn-link p-0"
-      title={copied ? 'Copied' : `Copy ${label}`}
+      title={
+        copied
+          ? t('machineEdit.networkAdaptersEditor.copied')
+          : t('machineEdit.networkAdaptersEditor.copyLabel', { label })
+      }
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(value);
@@ -129,9 +135,7 @@ const ZONE_NIC_EDIT_FIELDS = [
 
 // Enabling promiscphys is known to break host→VM traffic on this platform
 // (illumos-omnios#1039, still open) — never let anyone flip it blind.
-const PROP_WARNINGS = {
-  promiscphys: 'Known to BREAK host→VM traffic on this platform (illumos-omnios#1039, still open).',
-};
+const PROP_WARNING_KEYS = new Set(['promiscphys']);
 
 // Legal zonecfg net props bhyve does not document consuming — the agent
 // deliberately serves no default for them (may be no-ops), so the blank
@@ -159,6 +163,7 @@ const NicPropsEditor = ({
   onChange,
   disabled,
 }) => {
+  const { t } = useTranslation();
   const applicable = propsByNetif?.[netif] || null;
   if (!applicable || applicable.length === 0) {
     return null;
@@ -167,7 +172,8 @@ const NicPropsEditor = ({
     <div className="hw-device-row hw-device-child hw-device-child-form">
       <details className="w-100">
         <summary className="small fw-semibold">
-          Brand net properties{netif ? ` — ${netif}` : ''}
+          {t('machineEdit.networkAdaptersEditor.brandNetProperties')}
+          {netif ? ` — ${netif}` : ''}
         </summary>
         <div className="row g-2 align-items-end mt-0">
           {applicable.map(key => {
@@ -177,13 +183,15 @@ const NicPropsEditor = ({
             const current = currentProps[key];
             // Set → show it; unset → the default it actually runs with —
             // except the props bhyve doesn't document, which say so honestly.
-            let blankLabel = fallback === undefined ? 'n/a' : String(fallback);
+            let blankLabel = fallback === undefined ? t('machineEdit.common.na') : String(fallback);
             if (current !== undefined && current !== '') {
               blankLabel = String(current);
             } else if (fallback === undefined && UNDOCUMENTED_PROPS.has(key)) {
-              blankLabel = 'undocumented — may be a bhyve no-op';
+              blankLabel = t('machineEdit.networkAdaptersEditor.undocumentedProp');
             }
-            const warning = PROP_WARNINGS[key];
+            const warning = PROP_WARNING_KEYS.has(key)
+              ? t(`machineEdit.networkAdaptersEditor.propWarning.${key}`)
+              : undefined;
             return (
               <div className="col-6 col-md-3" key={key}>
                 <label className="form-label small mb-1 text-capitalize" htmlFor={inputId}>
@@ -249,20 +257,24 @@ NicPropsEditor.propTypes = {
   disabled: PropTypes.bool,
 };
 
-const removeOnCompletionLabel = current => {
+const removeOnCompletionLabel = (current, t) => {
   if (current?.remove_on_completion === undefined) {
-    return 'n/a';
+    return t('machineEdit.common.na');
   }
-  return current.remove_on_completion ? 'remove' : 'keep';
+  return current.remove_on_completion
+    ? t('machineEdit.networkAdaptersEditor.remove')
+    : t('machineEdit.networkAdaptersEditor.keep');
 };
 
-const zoneNicPlaceholder = (field, nic, live) => {
+const zoneNicPlaceholder = (field, nic, live, t) => {
   const current = field.currentOf(nic);
   if (current) {
     return current;
   }
   const liveValue = field.liveOf(live);
-  return liveValue ? `unset — live: ${liveValue}` : 'unset';
+  return liveValue
+    ? t('machineEdit.networkAdaptersEditor.unsetLive', { live: liveValue })
+    : t('machineEdit.networkAdaptersEditor.unset');
 };
 
 const liveSpeed = speed => {
@@ -275,40 +287,65 @@ const liveSpeed = speed => {
 /** The dladm layer's truth for one zone NIC — over-link, live MAC, VID,
  *  state — shown beside the zonecfg fields it backs. */
 const LiveVnicLine = ({ live }) => {
+  const { t } = useTranslation();
   if (!live) {
     return (
-      <span className="text-muted small">no live VNIC record — the vnic may not exist yet</span>
+      <span className="text-muted small">
+        {t('machineEdit.networkAdaptersEditor.noLiveVnicRecord')}
+      </span>
     );
   }
   return (
     <span className="d-inline-flex flex-wrap gap-1 align-items-center small">
       <span
         className={`badge ${live.state === 'up' ? 'text-bg-success' : 'text-bg-secondary'}`}
-        title="Link state"
+        title={t('machineEdit.networkAdaptersEditor.linkState')}
       >
-        {live.state || 'unknown'}
+        {live.state || t('machineEdit.networkAdaptersEditor.unknown')}
       </span>
       {live.over && (
-        <span className="badge text-bg-secondary" title="Physical link the VNIC rides">
-          over {live.over}
+        <span
+          className="badge text-bg-secondary"
+          title={t('machineEdit.networkAdaptersEditor.physicalLinkTitle')}
+        >
+          {t('machineEdit.networkAdaptersEditor.over', { over: live.over })}
         </span>
       )}
       {liveSpeed(live.speed) && (
-        <span className="badge text-bg-info" title="Link speed">
+        <span
+          className="badge text-bg-info"
+          title={t('machineEdit.networkAdaptersEditor.linkSpeed')}
+        >
           {liveSpeed(live.speed)}
         </span>
       )}
-      <code className="small" title={`Live MAC (${live.macaddrtype || 'unknown type'})`}>
+      <code
+        className="small"
+        title={t('machineEdit.networkAdaptersEditor.liveMacTitle', {
+          type: live.macaddrtype || t('machineEdit.networkAdaptersEditor.unknownType'),
+        })}
+      >
         {live.macaddress}
       </code>
-      {live.macaddress && <CopyButton value={live.macaddress} label="live MAC" />}
+      {live.macaddress && (
+        <CopyButton
+          value={live.macaddress}
+          label={t('machineEdit.networkAdaptersEditor.liveMac')}
+        />
+      )}
       {live.macaddrtype && <span className="text-muted">({live.macaddrtype})</span>}
-      <span className="badge text-bg-light border" title="VLAN id">
-        VID {live.vid ?? 0}
+      <span
+        className="badge text-bg-light border"
+        title={t('machineEdit.networkAdaptersEditor.vlanId')}
+      >
+        {t('machineEdit.networkAdaptersEditor.vid', { vid: live.vid ?? 0 })}
       </span>
       {live.mtu && (
-        <span className="badge text-bg-light border" title="MTU">
-          MTU {live.mtu}
+        <span
+          className="badge text-bg-light border"
+          title={t('machineEdit.networkAdaptersEditor.mtu')}
+        >
+          {t('machineEdit.networkAdaptersEditor.mtuValue', { mtu: live.mtu })}
         </span>
       )}
     </span>
@@ -333,16 +370,23 @@ export const blankNicRow = adapter => ({
 });
 
 const NicTuningField = ({ inputId, field, value, nicEnums, onChange, disabled }) => {
-  const vocabulary =
-    field.options ||
-    (field.enumKey ? nicEnums?.[`nics.${field.enumKey}`] || FALLBACK_ENUMS[field.enumKey] : null);
+  const { t } = useTranslation();
+  let vocabulary = null;
+  if (field.options) {
+    vocabulary = field.options.map(option => ({
+      ...option,
+      label: t(`machineEdit.networkAdaptersEditor.tuningOption.${field.key}.${option.value}`),
+    }));
+  } else if (field.enumKey) {
+    vocabulary = nicEnums?.[`nics.${field.enumKey}`] || FALLBACK_ENUMS[field.enumKey];
+  }
   if (vocabulary) {
     return (
       <VocabularySelect
         id={inputId}
         value={value}
         entries={vocabulary}
-        blankLabel="n/a"
+        blankLabel={t('machineEdit.common.na')}
         small
         onChange={onChange}
         disabled={disabled}
@@ -354,7 +398,7 @@ const NicTuningField = ({ inputId, field, value, nicEnums, onChange, disabled })
       id={inputId}
       className="form-control form-control-sm"
       type={field.type || 'text'}
-      placeholder="n/a"
+      placeholder={t('machineEdit.common.na')}
       value={value}
       onChange={e => onChange(e.target.value)}
       disabled={disabled}
@@ -395,6 +439,7 @@ const NetworkAdaptersEditor = ({
   currentServer = null,
   formDisabled = false,
 }) => {
+  const { t } = useTranslation();
   // Zone NICs remove by their PHYSICAL vnic name (agent-confirmed wire) —
   // zone detach only, the host VNIC survives. The per-adapter tuning grid
   // hides on zones: those keys are VirtualBox modifyvm vocabulary.
@@ -415,7 +460,7 @@ const NetworkAdaptersEditor = ({
     <div className="hw-device-tree">
       <div className="hw-device-tree-head">
         <i className="fas fa-network-wired" />
-        <span>Network Adapters</span>
+        <span>{t('machineEdit.networkAdaptersEditor.networkAdapters')}</span>
       </div>
 
       {isZone &&
@@ -440,16 +485,19 @@ const NetworkAdaptersEditor = ({
                 {nic.physical && (
                   <>
                     <code className="small">{nic.physical}</code>
-                    <CopyButton value={nic.physical} label="VNIC name" />
+                    <CopyButton
+                      value={nic.physical}
+                      label={t('machineEdit.networkAdaptersEditor.vnicName')}
+                    />
                   </>
                 )}
                 {isProvisional && (
                   <span
                     className="badge text-bg-warning"
-                    title="Agent-attached provisioning transport — the pipeline's DHCP control network. Locked here; it is managed (and later removed) by the agent."
+                    title={t('machineEdit.networkAdaptersEditor.provisionalTitle')}
                   >
                     <i className="fas fa-cubes me-1" />
-                    provisional
+                    {t('machineEdit.networkAdaptersEditor.provisional')}
                   </span>
                 )}
                 {nic.allowedAddress && (
@@ -464,8 +512,8 @@ const NetworkAdaptersEditor = ({
                       className={`btn btn-sm py-0 ${markButtonClass(isMarked)}`}
                       title={
                         isMarked
-                          ? 'Unmark'
-                          : 'Detach this NIC from the zone — the host VNIC survives'
+                          ? t('machineEdit.networkAdaptersEditor.unmark')
+                          : t('machineEdit.networkAdaptersEditor.detachZoneNicTitle')
                       }
                       onClick={() => onToggleZoneNic(nic.physical)}
                       disabled={formDisabled}
@@ -476,7 +524,10 @@ const NetworkAdaptersEditor = ({
                 )}
               </div>
               <div className="hw-device-row hw-device-child">
-                <i className="fas fa-wave-square text-muted" title="Live dladm state" />
+                <i
+                  className="fas fa-wave-square text-muted"
+                  title={t('machineEdit.networkAdaptersEditor.liveDladmState')}
+                />
                 <LiveVnicLine live={live} />
               </div>
               {!isMarked && nic.physical && (
@@ -490,7 +541,7 @@ const NetworkAdaptersEditor = ({
                         className="form-label small mb-1"
                         htmlFor={`zone-nic-${nic.physical}-roc`}
                       >
-                        Remove on completion
+                        {t('machineEdit.networkAdaptersEditor.removeOnCompletion')}
                       </label>
                       <select
                         id={`zone-nic-${nic.physical}-roc`}
@@ -501,9 +552,11 @@ const NetworkAdaptersEditor = ({
                         }
                         disabled={formDisabled}
                       >
-                        <option value="">{removeOnCompletionLabel(current)}</option>
-                        <option value="true">remove</option>
-                        <option value="false">keep</option>
+                        <option value="">{removeOnCompletionLabel(current, t)}</option>
+                        <option value="true">
+                          {t('machineEdit.networkAdaptersEditor.remove')}
+                        </option>
+                        <option value="false">{t('machineEdit.networkAdaptersEditor.keep')}</option>
                       </select>
                     </div>
                     {ZONE_NIC_EDIT_FIELDS.map(field => {
@@ -518,11 +571,11 @@ const NetworkAdaptersEditor = ({
                           list={
                             isBridge && bridgeOptions.length > 0 ? `${inputId}-options` : undefined
                           }
-                          placeholder={zoneNicPlaceholder(field, nic, live)}
+                          placeholder={zoneNicPlaceholder(field, nic, live, t)}
                           title={
                             isProvisional
-                              ? 'Locked — the provisioning transport is agent-managed'
-                              : 'Blank = keep the current value; clearing a property needs detach + re-add'
+                              ? t('machineEdit.networkAdaptersEditor.lockedProvisioning')
+                              : t('machineEdit.networkAdaptersEditor.blankKeepsCurrent')
                           }
                           value={edits[field.key] ?? ''}
                           onChange={e => onZoneNicEdit(nic.physical, field.key, e.target.value)}
@@ -532,7 +585,7 @@ const NetworkAdaptersEditor = ({
                       return (
                         <div className="col-6 col-md-3" key={field.key}>
                           <label className="form-label small mb-1" htmlFor={inputId}>
-                            {field.label}
+                            {t(`machineEdit.networkAdaptersEditor.zoneNicField.${field.key}`)}
                           </label>
                           {isMac ? (
                             <div className="input-group input-group-sm">
@@ -540,7 +593,7 @@ const NetworkAdaptersEditor = ({
                               <button
                                 type="button"
                                 className="btn btn-outline-secondary"
-                                title="Generate a random locally-administered MAC"
+                                title={t('machineEdit.networkAdaptersEditor.generateRandomMac')}
                                 onClick={() => onZoneNicEdit(nic.physical, field.key, randomMac())}
                                 disabled={formDisabled}
                               >
@@ -588,14 +641,14 @@ const NetworkAdaptersEditor = ({
         })}
       {isZone && (
         <div className="hw-device-row hw-device-meta">
-          Edits apply IN PLACE (blank = keep current; clearing a property needs detach + re-add).
-          Detached NICs keep their host VNIC. Changes queue on Apply; a running zone accrues them
-          for the next power cycle.
+          {t('machineEdit.networkAdaptersEditor.editsApplyInPlace')}
         </div>
       )}
 
       {!isZone && nics.length === 0 && addNics.length === 0 && (
-        <div className="hw-device-row hw-device-meta">No network adapters reported.</div>
+        <div className="hw-device-row hw-device-meta">
+          {t('machineEdit.networkAdaptersEditor.noAdaptersReported')}
+        </div>
       )}
 
       {nics.map(nic => {
@@ -605,21 +658,27 @@ const NetworkAdaptersEditor = ({
           <Fragment key={nic.adapter}>
             <div className={`hw-device-row hw-device-group ${isMarked ? 'hw-device-removed' : ''}`}>
               <i className="fas fa-ethernet text-muted" />
-              <span>Adapter {nic.adapter}</span>
+              <span>
+                {t('machineEdit.networkAdaptersEditor.adapter', { adapter: nic.adapter })}
+              </span>
               <span className="hw-device-meta">{nicSummary(nic)}</span>
               {nic.adapter === 1 && (
                 <span
                   className="badge text-bg-light"
-                  title="Adapter 1 is the provisioning NAT on agent-created machines"
+                  title={t('machineEdit.networkAdaptersEditor.provisioningNatTitle')}
                 >
-                  provisioning NAT
+                  {t('machineEdit.networkAdaptersEditor.provisioningNat')}
                 </span>
               )}
               <div className="hw-device-actions">
                 <button
                   type="button"
                   className={`btn btn-sm py-0 ${markButtonClass(isMarked)}`}
-                  title={isMarked ? 'Unmark' : 'Mark this adapter for removal'}
+                  title={
+                    isMarked
+                      ? t('machineEdit.networkAdaptersEditor.unmark')
+                      : t('machineEdit.networkAdaptersEditor.markAdapterForRemoval')
+                  }
                   onClick={() => onToggleNic(nic.adapter)}
                   disabled={formDisabled}
                 >
@@ -635,7 +694,7 @@ const NetworkAdaptersEditor = ({
                     return (
                       <div className="col-6 col-md-2" key={field.key}>
                         <label className="form-label small mb-1" htmlFor={inputId}>
-                          {field.label}
+                          {t(`machineEdit.networkAdaptersEditor.tuningField.${field.key}`)}
                         </label>
                         <NicTuningField
                           inputId={inputId}
@@ -659,13 +718,15 @@ const NetworkAdaptersEditor = ({
         <Fragment key={row.key}>
           <div className="hw-device-row hw-device-group">
             <i className="fas fa-plus text-success" />
-            <span>New adapter</span>
-            <span className="hw-device-meta">bridged — the agent assigns the next free slot</span>
+            <span>{t('machineEdit.networkAdaptersEditor.newAdapter')}</span>
+            <span className="hw-device-meta">
+              {t('machineEdit.networkAdaptersEditor.bridgedHint')}
+            </span>
             <div className="hw-device-actions">
               <button
                 type="button"
                 className="btn btn-sm py-0 btn-outline-danger"
-                aria-label="Drop this new adapter"
+                aria-label={t('machineEdit.networkAdaptersEditor.dropNewAdapter')}
                 onClick={() => onAddNicsChange(addNics.filter(entry => entry.key !== row.key))}
                 disabled={formDisabled}
               >
@@ -677,7 +738,7 @@ const NetworkAdaptersEditor = ({
             <div className="row g-2 align-items-end">
               <div className="col-6 col-md-4">
                 <label className="form-label small mb-1" htmlFor={`add-nic-bridge-${row.key}`}>
-                  Bridge interface
+                  {t('machineEdit.networkAdaptersEditor.bridgeInterface')}
                 </label>
                 <input
                   id={`add-nic-bridge-${row.key}`}
@@ -697,7 +758,7 @@ const NetworkAdaptersEditor = ({
               </div>
               <div className="col-6 col-md-3">
                 <label className="form-label small mb-1" htmlFor={`add-nic-mac-${row.key}`}>
-                  MAC (blank = auto)
+                  {t('machineEdit.networkAdaptersEditor.macBlankAuto')}
                 </label>
                 <div className="input-group input-group-sm">
                   <input
@@ -710,7 +771,7 @@ const NetworkAdaptersEditor = ({
                   <button
                     type="button"
                     className="btn btn-outline-secondary"
-                    title="Generate a random locally-administered MAC"
+                    title={t('machineEdit.networkAdaptersEditor.generateRandomMac')}
                     onClick={() => patchAddNic(row.key, { mac: randomMac() })}
                     disabled={formDisabled}
                   >
@@ -722,7 +783,7 @@ const NetworkAdaptersEditor = ({
                 <>
                   <div className="col-6 col-md-2">
                     <label className="form-label small mb-1" htmlFor={`add-nic-vlan-${row.key}`}>
-                      VLAN id
+                      {t('machineEdit.networkAdaptersEditor.zoneNicField.vlan_id')}
                     </label>
                     <input
                       id={`add-nic-vlan-${row.key}`}
@@ -737,7 +798,7 @@ const NetworkAdaptersEditor = ({
                   </div>
                   <div className="col-6 col-md-3">
                     <label className="form-label small mb-1" htmlFor={`add-nic-allowed-${row.key}`}>
-                      Allowed address
+                      {t('machineEdit.networkAdaptersEditor.zoneNicField.allowed_address')}
                     </label>
                     <input
                       id={`add-nic-allowed-${row.key}`}
@@ -753,7 +814,7 @@ const NetworkAdaptersEditor = ({
                       className="form-label small mb-1"
                       htmlFor={`add-nic-physical-${row.key}`}
                     >
-                      VNIC name / HW nic (blank = auto)
+                      {t('machineEdit.networkAdaptersEditor.vnicNameOrHwNic')}
                     </label>
                     <input
                       id={`add-nic-physical-${row.key}`}
@@ -766,7 +827,7 @@ const NetworkAdaptersEditor = ({
                   </div>
                   <div className="col-6 col-md-3">
                     <label className="form-label small mb-1" htmlFor={`add-nic-address-${row.key}`}>
-                      IP address (shared-IP)
+                      {t('machineEdit.networkAdaptersEditor.zoneNicField.address')}
                     </label>
                     <input
                       id={`add-nic-address-${row.key}`}
@@ -782,7 +843,7 @@ const NetworkAdaptersEditor = ({
                       className="form-label small mb-1"
                       htmlFor={`add-nic-defrouter-${row.key}`}
                     >
-                      Default router
+                      {t('machineEdit.networkAdaptersEditor.zoneNicField.defrouter')}
                     </label>
                     <input
                       id={`add-nic-defrouter-${row.key}`}
@@ -822,7 +883,7 @@ const NetworkAdaptersEditor = ({
                   return (
                     <div className="col-6 col-md-2" key={field.key}>
                       <label className="form-label small mb-1" htmlFor={inputId}>
-                        {field.label}
+                        {t(`machineEdit.networkAdaptersEditor.tuningField.${field.key}`)}
                       </label>
                       <NicTuningField
                         inputId={inputId}
@@ -849,7 +910,7 @@ const NetworkAdaptersEditor = ({
           disabled={formDisabled}
         >
           <i className="fas fa-plus me-1" />
-          Adapter
+          {t('machineEdit.networkAdaptersEditor.adapterButton')}
         </button>
       </div>
     </div>

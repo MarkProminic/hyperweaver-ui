@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { detectUnattendedIso, startUnattendedInstall } from '../../api/machineAPI';
 import { getIsoArtifacts } from '../../api/provisioningAPI';
@@ -28,6 +29,7 @@ const UnattendedInstallModal = ({
   isRunning,
   onDone,
 }) => {
+  const { t } = useTranslation();
   const [form, setForm] = useState(emptyForm);
   const [isoOptions, setIsoOptions] = useState([]);
   const [probe, setProbe] = useState(null);
@@ -70,21 +72,21 @@ const UnattendedInstallModal = ({
     if (result.success) {
       setProbe(result.data || {});
     } else {
-      setError(`ISO probe failed: ${result.message}`);
+      setError(t('machine.unattendedInstallModal.probeFailed', { message: result.message }));
     }
   };
 
   const handleSubmit = async () => {
     if (form.source === 'iso' && !form.iso) {
-      setError('Pick a cached ISO.');
+      setError(t('machine.unattendedInstallModal.isoRequired'));
       return;
     }
     if (form.source === 'path' && !form.path.trim()) {
-      setError('Enter the ISO path on the agent host.');
+      setError(t('machine.unattendedInstallModal.pathRequired'));
       return;
     }
     if (!form.user.trim() || !form.password) {
-      setError('User and password are required — the installer creates this account.');
+      setError(t('machine.unattendedInstallModal.credentialsRequired'));
       return;
     }
     setLoading(true);
@@ -115,7 +117,7 @@ const UnattendedInstallModal = ({
     }
     const taskId = result.data?.task_id || result.data?.parent_task_id;
     onDone({
-      text: `${result.data?.message || `Unattended install queued for ${machineName}`}${taskId ? ` (task ${taskId})` : ''} — watch progress on the console screenshot.`,
+      text: `${result.data?.message || t('machine.unattendedInstallModal.queuedFallback', { machineName })}${taskId ? ` ${t('machine.unattendedInstallModal.taskSuffix', { taskId })}` : ''} ${t('machine.unattendedInstallModal.watchProgressNote')}`,
       warning: false,
     });
     onClose();
@@ -126,16 +128,16 @@ const UnattendedInstallModal = ({
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Install an OS — ${machineName}`}
+      title={t('machine.unattendedInstallModal.title', { machineName })}
       icon="fas fa-compact-disc"
-      submitText="Install"
+      submitText={t('machine.unattendedInstallModal.submit')}
       submitIcon="fas fa-play"
       loading={loading}
       showCancelButton
     >
       {isRunning && (
         <div className="alert alert-warning py-2">
-          {machineName} is running — the installer needs it powered off; the agent will refuse.
+          {t('machine.unattendedInstallModal.runningWarning', { machineName })}
         </div>
       )}
       {error && <div className="alert alert-danger py-2">{error}</div>}
@@ -144,7 +146,7 @@ const UnattendedInstallModal = ({
         {isoOptions.length > 0 && (
           <div className="col-12 col-md-4">
             <label className="form-label" htmlFor="unattended-source">
-              ISO source
+              {t('machine.unattendedInstallModal.sourceLabel')}
             </label>
             <select
               id="unattended-source"
@@ -153,15 +155,15 @@ const UnattendedInstallModal = ({
               onChange={e => patch({ source: e.target.value })}
               disabled={loading}
             >
-              <option value="iso">Cached ISO</option>
-              <option value="path">Agent path</option>
+              <option value="iso">{t('machine.unattendedInstallModal.cachedIsoOption')}</option>
+              <option value="path">{t('machine.unattendedInstallModal.agentPathOption')}</option>
             </select>
           </div>
         )}
         {form.source === 'iso' && isoOptions.length > 0 ? (
           <div className="col-12 col-md-8">
             <label className="form-label" htmlFor="unattended-iso">
-              Cached ISO
+              {t('machine.unattendedInstallModal.cachedIsoLabel')}
             </label>
             <select
               id="unattended-iso"
@@ -170,7 +172,7 @@ const UnattendedInstallModal = ({
               onChange={e => patch({ iso: e.target.value })}
               disabled={loading}
             >
-              <option value="">Select…</option>
+              <option value="">{t('machine.unattendedInstallModal.selectOption')}</option>
               {isoOptions.map(row => (
                 <option key={row.filename} value={row.filename}>
                   {row.filename}
@@ -181,7 +183,7 @@ const UnattendedInstallModal = ({
         ) : (
           <div className="col-12 col-md-8">
             <label className="form-label" htmlFor="unattended-path">
-              ISO path (on the agent host)
+              {t('machine.unattendedInstallModal.isoPathLabel')}
             </label>
             <div className="d-flex gap-2 align-items-start">
               <div className="flex-grow-1">
@@ -191,7 +193,7 @@ const UnattendedInstallModal = ({
                   onChange={next => patch({ path: next })}
                   server={currentServer}
                   mode="file"
-                  pickTitle="Pick the installer ISO"
+                  pickTitle={t('machine.unattendedInstallModal.pickIsoTitle')}
                   disabled={loading}
                 />
               </div>
@@ -200,12 +202,12 @@ const UnattendedInstallModal = ({
                 className="btn btn-outline-secondary"
                 onClick={handleProbe}
                 disabled={loading || probing || !form.path.trim()}
-                title="Ask VirtualBox what OS this ISO installs and whether unattended install supports it"
+                title={t('machine.unattendedInstallModal.probeTooltip')}
               >
                 <i
                   className={`fas ${probing ? 'fa-spinner fa-pulse' : 'fa-magnifying-glass'} me-2`}
                 />
-                Probe
+                {t('machine.unattendedInstallModal.probeButton')}
               </button>
             </div>
           </div>
@@ -215,18 +217,19 @@ const UnattendedInstallModal = ({
             <div
               className={`alert py-2 ${probe.supported === false ? 'alert-warning' : 'alert-info'}`}
             >
-              Detected: <code>{probe.os_typeid || 'unknown'}</code>
+              {t('machine.unattendedInstallModal.detectedPrefix')}{' '}
+              <code>{probe.os_typeid || t('machine.unattendedInstallModal.unknownOs')}</code>
               {probe.version ? ` · ${probe.version}` : ''} ·{' '}
               {probe.supported === false
-                ? 'unattended install NOT supported for this ISO'
-                : 'unattended install supported'}
+                ? t('machine.unattendedInstallModal.unsupportedIso')
+                : t('machine.unattendedInstallModal.supportedIso')}
             </div>
           </div>
         )}
 
         <div className="col-12 col-md-6">
           <label className="form-label" htmlFor="unattended-user">
-            User <span className="text-danger">*</span>
+            {t('machine.unattendedInstallModal.userLabel')} <span className="text-danger">*</span>
           </label>
           <input
             id="unattended-user"
@@ -239,7 +242,8 @@ const UnattendedInstallModal = ({
         </div>
         <div className="col-12 col-md-6">
           <label className="form-label" htmlFor="unattended-password">
-            Password <span className="text-danger">*</span>
+            {t('machine.unattendedInstallModal.passwordLabel')}{' '}
+            <span className="text-danger">*</span>
           </label>
           <RevealInput
             id="unattended-password"
@@ -252,17 +256,19 @@ const UnattendedInstallModal = ({
 
         <div className="col-12">
           <details>
-            <summary className="fw-semibold">Advanced</summary>
+            <summary className="fw-semibold">
+              {t('machine.unattendedInstallModal.advancedSummary')}
+            </summary>
             <div className="row g-3 mt-1">
               <div className="col-12 col-md-4">
                 <label className="form-label" htmlFor="unattended-hostname">
-                  Hostname
+                  {t('machine.unattendedInstallModal.hostnameLabel')}
                 </label>
                 <input
                   id="unattended-hostname"
                   className="form-control"
                   type="text"
-                  placeholder="(installer default)"
+                  placeholder={t('machine.unattendedInstallModal.hostnamePlaceholder')}
                   value={form.hostname}
                   onChange={e => patch({ hostname: e.target.value })}
                   disabled={loading}
@@ -270,13 +276,13 @@ const UnattendedInstallModal = ({
               </div>
               <div className="col-6 col-md-4">
                 <label className="form-label" htmlFor="unattended-locale">
-                  Locale
+                  {t('machine.unattendedInstallModal.localeLabel')}
                 </label>
                 <input
                   id="unattended-locale"
                   className="form-control"
                   type="text"
-                  placeholder="e.g. en_US"
+                  placeholder={t('machine.unattendedInstallModal.localePlaceholder')}
                   value={form.locale}
                   onChange={e => patch({ locale: e.target.value })}
                   disabled={loading}
@@ -284,13 +290,13 @@ const UnattendedInstallModal = ({
               </div>
               <div className="col-6 col-md-4">
                 <label className="form-label" htmlFor="unattended-timezone">
-                  Time zone
+                  {t('machine.unattendedInstallModal.timeZoneLabel')}
                 </label>
                 <input
                   id="unattended-timezone"
                   className="form-control"
                   type="text"
-                  placeholder="e.g. America/Chicago"
+                  placeholder={t('machine.unattendedInstallModal.timeZonePlaceholder')}
                   value={form.time_zone}
                   onChange={e => patch({ time_zone: e.target.value })}
                   disabled={loading}
@@ -298,14 +304,14 @@ const UnattendedInstallModal = ({
               </div>
               <div className="col-6 col-md-4">
                 <label className="form-label" htmlFor="unattended-image-index">
-                  Image index (Windows edition)
+                  {t('machine.unattendedInstallModal.imageIndexLabel')}
                 </label>
                 <input
                   id="unattended-image-index"
                   className="form-control"
                   type="number"
                   min="0"
-                  placeholder="(default)"
+                  placeholder={t('machine.unattendedInstallModal.imageIndexPlaceholder')}
                   value={form.image_index}
                   onChange={e => patch({ image_index: e.target.value })}
                   disabled={loading}
@@ -313,13 +319,13 @@ const UnattendedInstallModal = ({
               </div>
               <div className="col-12 col-md-8">
                 <label className="form-label" htmlFor="unattended-product-key">
-                  Product key
+                  {t('machine.unattendedInstallModal.productKeyLabel')}
                 </label>
                 <input
                   id="unattended-product-key"
                   className="form-control"
                   type="text"
-                  placeholder="(none)"
+                  placeholder={t('machine.unattendedInstallModal.productKeyPlaceholder')}
                   value={form.product_key}
                   onChange={e => patch({ product_key: e.target.value })}
                   disabled={loading}
@@ -341,7 +347,7 @@ const UnattendedInstallModal = ({
               disabled={loading}
             />
             <label className="form-check-label" htmlFor="unattended-additions">
-              Install Guest Additions
+              {t('machine.unattendedInstallModal.installAdditionsLabel')}
             </label>
           </div>
         </div>
@@ -357,7 +363,7 @@ const UnattendedInstallModal = ({
               disabled={loading}
             />
             <label className="form-check-label" htmlFor="unattended-start">
-              Boot into the installer now
+              {t('machine.unattendedInstallModal.startNowLabel')}
             </label>
           </div>
         </div>

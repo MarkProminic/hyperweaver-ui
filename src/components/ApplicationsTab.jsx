@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { PathInput } from './common';
 
@@ -34,6 +35,7 @@ const toConfig = rows =>
   rows.map(row => ({ name: row.name, path: row.path, args: row.args.map(arg => arg.value) }));
 
 const ApplicationsTab = ({ applications, onChange, server }) => {
+  const { t } = useTranslation();
   const [rows, setRows] = useState(() => toRows(applications));
   // Reset from the prop only on an EXTERNAL change (settings reload / restore),
   // never on our own emit — the parent stores the exact object we passed.
@@ -70,25 +72,22 @@ const ApplicationsTab = ({ applications, onChange, server }) => {
     <div>
       <div className="alert alert-info py-2">
         <div className="mb-1">
-          Configure desktop tools (PuTTY, WinSCP, mstsc…) launched per machine from its Controls
-          menu. Each launch spawns on the <strong>agent host</strong>.
+          {t('accounts.applicationsTab.configureToolsDescription')}{' '}
+          <strong>{t('accounts.applicationsTab.agentHostLabel')}</strong>.
         </div>
         <div>
-          Placeholders resolved at launch:{' '}
+          {t('accounts.applicationsTab.placeholdersLabel')}{' '}
           {PLACEHOLDERS.map(token => (
             <code className="me-2" key={token}>
               {token}
             </code>
           ))}
         </div>
-        <div className="small text-muted mt-1">
-          Each argument is passed as one word — no shell quoting — so a value containing spaces
-          stays a single argument.
-        </div>
+        <div className="small text-muted mt-1">{t('accounts.applicationsTab.argumentsNote')}</div>
       </div>
 
       {rows.length === 0 && (
-        <p className="text-muted">No applications configured yet — add one below.</p>
+        <p className="text-muted">{t('accounts.applicationsTab.emptyState')}</p>
       )}
 
       {rows.map(app => (
@@ -97,19 +96,19 @@ const ApplicationsTab = ({ applications, onChange, server }) => {
             <div className="row g-2 mb-2">
               <div className="col-12 col-md-4">
                 <label className="form-label small mb-1" htmlFor={`app-name-${app.key}`}>
-                  Name
+                  {t('accounts.applicationsTab.labelName')}
                 </label>
                 <input
                   id={`app-name-${app.key}`}
                   className="form-control"
-                  placeholder="e.g. WinSCP"
+                  placeholder={t('accounts.applicationsTab.namePlaceholder')}
                   value={app.name}
                   onChange={e => updateApp(app.key, { name: e.target.value })}
                 />
               </div>
               <div className="col-12 col-md-8">
                 <label className="form-label small mb-1" htmlFor={`app-path-${app.key}`}>
-                  Executable path (on the agent host)
+                  {t('accounts.applicationsTab.labelExecutablePath')}
                 </label>
                 <PathInput
                   id={`app-path-${app.key}`}
@@ -117,30 +116,32 @@ const ApplicationsTab = ({ applications, onChange, server }) => {
                   onChange={next => updateApp(app.key, { path: next })}
                   server={server}
                   mode="file"
-                  pickTitle="Pick the executable"
+                  pickTitle={t('accounts.applicationsTab.pickExecutableTitle')}
                 />
               </div>
             </div>
 
-            <span className="form-label small mb-1 d-block">Arguments</span>
+            <span className="form-label small mb-1 d-block">
+              {t('accounts.applicationsTab.labelArguments')}
+            </span>
             <div className="d-flex flex-column gap-1 mb-2">
               {app.args.length === 0 && (
                 <span className="text-muted small">
-                  No arguments — add one if the tool needs any.
+                  {t('accounts.applicationsTab.noArguments')}
                 </span>
               )}
               {app.args.map(arg => (
                 <div className="input-group input-group-sm" key={arg.key}>
                   <input
                     className="form-control font-monospace"
-                    placeholder="e.g. sftp://{user}:{password}@{host}:{port}"
+                    placeholder={t('accounts.applicationsTab.argumentPlaceholder')}
                     value={arg.value}
                     onChange={e => setArg(app.key, arg.key, e.target.value)}
                   />
                   <button
                     type="button"
                     className="btn btn-outline-danger"
-                    aria-label="Remove argument"
+                    aria-label={t('accounts.applicationsTab.removeArgumentLabel')}
                     onClick={() => removeArg(app.key, arg.key)}
                   >
                     <i className="fas fa-trash" />
@@ -156,7 +157,7 @@ const ApplicationsTab = ({ applications, onChange, server }) => {
                 onClick={() => addArg(app.key)}
               >
                 <i className="fas fa-plus me-2" />
-                Add argument
+                {t('accounts.applicationsTab.addArgumentButton')}
               </button>
               <button
                 type="button"
@@ -164,7 +165,7 @@ const ApplicationsTab = ({ applications, onChange, server }) => {
                 onClick={() => removeApp(app.key)}
               >
                 <i className="fas fa-trash me-2" />
-                Remove application
+                {t('accounts.applicationsTab.removeApplicationButton')}
               </button>
             </div>
           </div>
@@ -173,11 +174,12 @@ const ApplicationsTab = ({ applications, onChange, server }) => {
 
       <button type="button" className="btn btn-sm btn-primary" onClick={addApp}>
         <i className="fas fa-plus me-2" />
-        Add application
+        {t('accounts.applicationsTab.addApplicationButton')}
       </button>
       <p className="form-text text-muted mt-2">
-        Changes are staged here — press <strong>Save</strong> at the top of Agent Settings to
-        persist them.
+        {t('accounts.applicationsTab.stageChangesNote', {
+          action: t('accounts.applicationsTab.saveButton'),
+        })}
       </p>
     </div>
   );

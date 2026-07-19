@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import * as consoleAPI from '../api/consoleAPI';
 import * as deviceAPI from '../api/deviceAPI';
@@ -49,6 +50,7 @@ export const useServers = () => {
  * @param {React.ReactNode} props.children - Child components
  */
 export const ServerProvider = ({ children }) => {
+  const { t } = useTranslation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { isDirect, ready: modeReady, serverInfo } = useMode();
   const [servers, setServers] = useState([]);
@@ -94,10 +96,10 @@ export const ServerProvider = ({ children }) => {
       port: parseInt(window.location.port, 10) || (scheme === 'https' ? 443 : 80),
       protocol: scheme,
       entityName: serverInfo.hostname || window.location.hostname,
-      description: 'This host (Direct mode)',
+      description: t('app.serverContext.selfServerDescription'),
       capabilities: serverInfo,
     };
-  }, [isDirect, serverInfo]);
+  }, [isDirect, serverInfo, t]);
 
   /**
    * Keep the request layer's addressing in sync with mode + registry
@@ -332,7 +334,7 @@ export const ServerProvider = ({ children }) => {
   const addServer = useCallback(
     async serverData => {
       if (isDirect) {
-        return { success: false, message: 'Server management is not available in Direct mode' };
+        return { success: false, message: t('app.serverContext.directModeUnavailable') };
       }
       try {
         setLoading(true);
@@ -348,13 +350,13 @@ export const ServerProvider = ({ children }) => {
         console.error('Add server error:', addErr);
         return {
           success: false,
-          message: addErr.response?.data?.message || 'Failed to add server',
+          message: addErr.response?.data?.message || t('app.serverContext.addServerFailed'),
         };
       } finally {
         setLoading(false);
       }
     },
-    [isDirect, loadServers]
+    [isDirect, loadServers, t]
   );
 
   /**
@@ -368,7 +370,7 @@ export const ServerProvider = ({ children }) => {
   const testServer = useCallback(
     async serverData => {
       if (isDirect) {
-        return { success: false, message: 'Server management is not available in Direct mode' };
+        return { success: false, message: t('app.serverContext.directModeUnavailable') };
       }
       try {
         const response = await axios.post('/api/servers/test', serverData);
@@ -382,11 +384,11 @@ export const ServerProvider = ({ children }) => {
         console.error('Test server error:', testErr);
         return {
           success: false,
-          message: testErr.response?.data?.message || 'Connection test failed',
+          message: testErr.response?.data?.message || t('app.serverContext.connectionTestFailed'),
         };
       }
     },
-    [isDirect]
+    [isDirect, t]
   );
 
   /**
@@ -400,7 +402,7 @@ export const ServerProvider = ({ children }) => {
   const updateServer = useCallback(
     async (serverId, allowInsecure) => {
       if (isDirect) {
-        return { success: false, message: 'Server management is not available in Direct mode' };
+        return { success: false, message: t('app.serverContext.directModeUnavailable') };
       }
       try {
         setLoading(true);
@@ -416,13 +418,13 @@ export const ServerProvider = ({ children }) => {
         console.error('Update server error:', updateErr);
         return {
           success: false,
-          message: updateErr.response?.data?.message || 'Failed to update server',
+          message: updateErr.response?.data?.message || t('app.serverContext.updateServerFailed'),
         };
       } finally {
         setLoading(false);
       }
     },
-    [isDirect, loadServers]
+    [isDirect, loadServers, t]
   );
 
   /**
@@ -433,7 +435,7 @@ export const ServerProvider = ({ children }) => {
   const removeServer = useCallback(
     async serverId => {
       if (isDirect) {
-        return { success: false, message: 'Server management is not available in Direct mode' };
+        return { success: false, message: t('app.serverContext.directModeUnavailable') };
       }
       try {
         setLoading(true);
@@ -455,13 +457,13 @@ export const ServerProvider = ({ children }) => {
         console.error('Remove server error:', removeErr);
         return {
           success: false,
-          message: removeErr.response?.data?.message || 'Failed to remove server',
+          message: removeErr.response?.data?.message || t('app.serverContext.removeServerFailed'),
         };
       } finally {
         setLoading(false);
       }
     },
-    [isDirect, loadServers, currentServer]
+    [isDirect, loadServers, currentServer, t]
   );
 
   /**
@@ -507,7 +509,7 @@ export const ServerProvider = ({ children }) => {
 
   const getApiKeys = useCallback(async () => {
     if (!currentServer) {
-      return { success: false, message: 'No server selected' };
+      return { success: false, message: t('app.serverContext.noServerSelected') };
     }
     return await makeAgentRequest(
       currentServer.hostname,
@@ -516,12 +518,12 @@ export const ServerProvider = ({ children }) => {
       'api-keys',
       'GET'
     );
-  }, [currentServer]);
+  }, [currentServer, t]);
 
   const generateApiKey = useCallback(
     async (name, description) => {
       if (!currentServer) {
-        return { success: false, message: 'No server selected' };
+        return { success: false, message: t('app.serverContext.noServerSelected') };
       }
       return await makeAgentRequest(
         currentServer.hostname,
@@ -532,12 +534,12 @@ export const ServerProvider = ({ children }) => {
         { name, description }
       );
     },
-    [currentServer]
+    [currentServer, t]
   );
 
   const bootstrapApiKey = useCallback(async () => {
     if (!currentServer) {
-      return { success: false, message: 'No server selected' };
+      return { success: false, message: t('app.serverContext.noServerSelected') };
     }
     return await makeAgentRequest(
       currentServer.hostname,
@@ -547,12 +549,12 @@ export const ServerProvider = ({ children }) => {
       'POST',
       { name: 'Initial-Setup', description: 'Initial bootstrap API key' }
     );
-  }, [currentServer]);
+  }, [currentServer, t]);
 
   const deleteApiKey = useCallback(
     async id => {
       if (!currentServer) {
-        return { success: false, message: 'No server selected' };
+        return { success: false, message: t('app.serverContext.noServerSelected') };
       }
       return await makeAgentRequest(
         currentServer.hostname,
@@ -562,7 +564,7 @@ export const ServerProvider = ({ children }) => {
         'DELETE'
       );
     },
-    [currentServer]
+    [currentServer, t]
   );
 
   // Memoized: the value's identity only changes when actual state changes. An inline

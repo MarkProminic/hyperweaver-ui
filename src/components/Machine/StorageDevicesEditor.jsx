@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { Fragment } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { markButtonClass, markIconClass } from './CurrentHardware';
 import {
@@ -24,29 +25,34 @@ const kindIcon = kind => (kind === 'cdrom' ? 'fa-compact-disc' : 'fa-hdd');
 
 /** An attached medium with its remove mark (boot medium is unremovable). */
 const EditableAttachmentRow = ({ entry, isMarked, onToggle, formDisabled }) => {
+  const { t } = useTranslation();
   const bootDisk = entry.port === 0 && entry.kind === 'disk';
   return (
     <div className={`hw-device-row hw-device-child ${isMarked ? 'hw-device-removed' : ''}`}>
       <i className={`fas ${kindIcon(entry.kind)} text-muted`} />
       <span className="hw-device-meta">
-        port {entry.port} · dev {entry.device}
+        {t('machineEdit.storageDevicesEditor.portDev', { port: entry.port, device: entry.device })}
       </span>
       <span className="hw-device-path" title={entry.path}>
-        {entry.path || 'empty drive'}
+        {entry.path || t('machineEdit.storageDevicesEditor.emptyDrive')}
       </span>
       {bootDisk ? (
         <span
           className="badge text-bg-light ms-auto"
-          title="Port 0 is the boot medium — the agent refuses removing it"
+          title={t('machineEdit.storageDevicesEditor.bootMediumTitle')}
         >
-          boot
+          {t('machineEdit.storageDevicesEditor.boot')}
         </span>
       ) : (
         <div className="hw-device-actions">
           <button
             type="button"
             className={`btn btn-sm py-0 ${markButtonClass(isMarked)}`}
-            title={isMarked ? 'Unmark' : 'Mark this device for removal'}
+            title={
+              isMarked
+                ? t('machineEdit.storageDevicesEditor.unmark')
+                : t('machineEdit.storageDevicesEditor.markForRemoval')
+            }
             onClick={() => onToggle(entry)}
             disabled={formDisabled}
           >
@@ -73,35 +79,42 @@ const PendingDiskRow = ({
   showController,
   showPort = true,
   formDisabled,
-}) => (
-  <div className="hw-device-row hw-device-child hw-device-child-form">
-    <div className="row g-2 align-items-end">
-      <DiskSourceFields
-        idPrefix="add-disk"
-        idSuffix={`-${row.key}`}
-        sourceLabel="New disk — source"
-        valueCol="col-5 col-md-3"
-        sizeLabel="Size (e.g. 20G)"
-        existingLabel="Path (on the agent host)"
-        row={row}
-        onPatch={onPatch}
-        currentServer={currentServer}
-        disabled={formDisabled}
-      />
-      <ControllerPortFields
-        idPrefix="add-disk"
-        idSuffix={`-${row.key}`}
-        row={row}
-        onPatch={onPatch}
-        showController={showController}
-        showPort={showPort}
-        portPlaceholder="auto"
-        disabled={formDisabled}
-      />
-      <RemoveRowButton label="Drop this disk row" onClick={onDrop} disabled={formDisabled} />
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="hw-device-row hw-device-child hw-device-child-form">
+      <div className="row g-2 align-items-end">
+        <DiskSourceFields
+          idPrefix="add-disk"
+          idSuffix={`-${row.key}`}
+          sourceLabel={t('machineEdit.storageDevicesEditor.newDiskSource')}
+          valueCol="col-5 col-md-3"
+          sizeLabel={t('machineEdit.storageDevicesEditor.sizeHint')}
+          existingLabel={t('machineEdit.storageDevicesEditor.pathOnAgentHost')}
+          row={row}
+          onPatch={onPatch}
+          currentServer={currentServer}
+          disabled={formDisabled}
+        />
+        <ControllerPortFields
+          idPrefix="add-disk"
+          idSuffix={`-${row.key}`}
+          row={row}
+          onPatch={onPatch}
+          showController={showController}
+          showPort={showPort}
+          portPlaceholder={t('machineEdit.common.auto')}
+          disabled={formDisabled}
+        />
+        <RemoveRowButton
+          label={t('machineEdit.storageDevicesEditor.dropDiskRow')}
+          onClick={onDrop}
+          disabled={formDisabled}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 PendingDiskRow.propTypes = {
   row: PropTypes.object.isRequired,
@@ -122,36 +135,43 @@ const PendingCdromRow = ({
   showController,
   showPort = true,
   formDisabled,
-}) => (
-  <div className="hw-device-row hw-device-child hw-device-child-form">
-    <div className="row g-2 align-items-end">
-      <CdromSourceFields
-        idPrefix="add-cdrom"
-        idSuffix={`-${row.key}`}
-        sourceLabel="New ISO — source"
-        sourceCol="col-3 col-md-2"
-        isoCol="col-6 col-md-3"
-        pathCol="col-9 col-md-3"
-        row={row}
-        onPatch={onPatch}
-        isoOptions={isoOptions}
-        currentServer={currentServer}
-        disabled={formDisabled}
-      />
-      <ControllerPortFields
-        idPrefix="add-cdrom"
-        idSuffix={`-${row.key}`}
-        row={row}
-        onPatch={onPatch}
-        showController={showController}
-        showPort={showPort}
-        portPlaceholder="auto"
-        disabled={formDisabled}
-      />
-      <RemoveRowButton label="Drop this ISO row" onClick={onDrop} disabled={formDisabled} />
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="hw-device-row hw-device-child hw-device-child-form">
+      <div className="row g-2 align-items-end">
+        <CdromSourceFields
+          idPrefix="add-cdrom"
+          idSuffix={`-${row.key}`}
+          sourceLabel={t('machineEdit.storageDevicesEditor.newIsoSource')}
+          sourceCol="col-3 col-md-2"
+          isoCol="col-6 col-md-3"
+          pathCol="col-9 col-md-3"
+          row={row}
+          onPatch={onPatch}
+          isoOptions={isoOptions}
+          currentServer={currentServer}
+          disabled={formDisabled}
+        />
+        <ControllerPortFields
+          idPrefix="add-cdrom"
+          idSuffix={`-${row.key}`}
+          row={row}
+          onPatch={onPatch}
+          showController={showController}
+          showPort={showPort}
+          portPlaceholder={t('machineEdit.common.auto')}
+          disabled={formDisabled}
+        />
+        <RemoveRowButton
+          label={t('machineEdit.storageDevicesEditor.dropIsoRow')}
+          onClick={onDrop}
+          disabled={formDisabled}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 PendingCdromRow.propTypes = {
   row: PropTypes.object.isRequired,
@@ -164,127 +184,134 @@ PendingCdromRow.propTypes = {
   formDisabled: PropTypes.bool,
 };
 
-const ZonePendingDiskRow = ({ row, onPatch, onDrop, poolChoices, zoneName, formDisabled }) => (
-  <div className="hw-device-row hw-device-child hw-device-child-form">
-    <div className="row g-2 align-items-end">
-      <div className="col-4 col-md-2">
-        <label className="form-label small mb-1" htmlFor={`add-zdisk-mode-${row.key}`}>
-          New disk — source
-        </label>
-        <select
-          id={`add-zdisk-mode-${row.key}`}
-          className="form-select form-select-sm"
-          value={row.mode}
-          onChange={e => onPatch({ mode: e.target.value })}
-          disabled={formDisabled}
-        >
-          <option value="new">New zvol</option>
-          <option value="existing">Existing zvol</option>
-        </select>
-      </div>
-      {row.mode === 'new' ? (
-        <>
-          <div className="col-4 col-md-2">
-            <label className="form-label small mb-1" htmlFor={`add-zdisk-size-${row.key}`}>
-              Size
-            </label>
-            <input
-              id={`add-zdisk-size-${row.key}`}
-              className="form-control form-control-sm"
-              placeholder="e.g. 50G"
-              value={row.size}
-              onChange={e => onPatch({ size: e.target.value })}
-              disabled={formDisabled}
-            />
-          </div>
-          <div className="col-4 col-md-2">
-            <label className="form-label small mb-1" htmlFor={`add-zdisk-pool-${row.key}`}>
-              Pool
-            </label>
-            <PickOrType
-              id={`add-zdisk-pool-${row.key}`}
-              value={row.pool}
-              onChange={next => onPatch({ pool: next })}
-              options={poolChoices}
-              blankLabel="rpool"
-              placeholder="pool name"
-              small
-              disabled={formDisabled}
-            />
-          </div>
-          <div className="col-4 col-md-2">
-            <label className="form-label small mb-1" htmlFor={`add-zdisk-volume-${row.key}`}>
-              Volume name
-            </label>
-            <input
-              id={`add-zdisk-volume-${row.key}`}
-              className="form-control form-control-sm"
-              placeholder="diskN"
-              value={row.volume_name}
-              onChange={e => onPatch({ volume_name: e.target.value })}
-              disabled={formDisabled}
-            />
-          </div>
-          <div className="col-4 col-md-2">
-            <label className="form-label small mb-1" htmlFor={`add-zdisk-dataset-${row.key}`}>
-              Parent dataset
-            </label>
-            <input
-              id={`add-zdisk-dataset-${row.key}`}
-              className="form-control form-control-sm"
-              placeholder="zones"
-              value={row.dataset}
-              onChange={e => onPatch({ dataset: e.target.value })}
-              disabled={formDisabled}
-            />
-          </div>
-          <div className="col-auto">
-            <div className="form-check form-switch mb-1">
+const ZonePendingDiskRow = ({ row, onPatch, onDrop, poolChoices, zoneName, formDisabled }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="hw-device-row hw-device-child hw-device-child-form">
+      <div className="row g-2 align-items-end">
+        <div className="col-4 col-md-2">
+          <label className="form-label small mb-1" htmlFor={`add-zdisk-mode-${row.key}`}>
+            {t('machineEdit.storageDevicesEditor.newDiskSource')}
+          </label>
+          <select
+            id={`add-zdisk-mode-${row.key}`}
+            className="form-select form-select-sm"
+            value={row.mode}
+            onChange={e => onPatch({ mode: e.target.value })}
+            disabled={formDisabled}
+          >
+            <option value="new">{t('machineEdit.storageDevicesEditor.newZvol')}</option>
+            <option value="existing">{t('machineEdit.storageDevicesEditor.existingZvol')}</option>
+          </select>
+        </div>
+        {row.mode === 'new' ? (
+          <>
+            <div className="col-4 col-md-2">
+              <label className="form-label small mb-1" htmlFor={`add-zdisk-size-${row.key}`}>
+                {t('machineEdit.storageDevicesEditor.size')}
+              </label>
               <input
-                id={`add-zdisk-sparse-${row.key}`}
-                className="form-check-input"
-                type="checkbox"
-                role="switch"
-                checked={row.sparse}
-                onChange={e => onPatch({ sparse: e.target.checked })}
+                id={`add-zdisk-size-${row.key}`}
+                className="form-control form-control-sm"
+                placeholder="e.g. 50G"
+                value={row.size}
+                onChange={e => onPatch({ size: e.target.value })}
                 disabled={formDisabled}
               />
-              <label className="form-check-label small" htmlFor={`add-zdisk-sparse-${row.key}`}>
-                Sparse
-              </label>
             </div>
+            <div className="col-4 col-md-2">
+              <label className="form-label small mb-1" htmlFor={`add-zdisk-pool-${row.key}`}>
+                {t('machineEdit.storageDevicesEditor.pool')}
+              </label>
+              <PickOrType
+                id={`add-zdisk-pool-${row.key}`}
+                value={row.pool}
+                onChange={next => onPatch({ pool: next })}
+                options={poolChoices}
+                blankLabel="rpool"
+                placeholder={t('machineEdit.storageDevicesEditor.poolName')}
+                small
+                disabled={formDisabled}
+              />
+            </div>
+            <div className="col-4 col-md-2">
+              <label className="form-label small mb-1" htmlFor={`add-zdisk-volume-${row.key}`}>
+                {t('machineEdit.storageDevicesEditor.volumeName')}
+              </label>
+              <input
+                id={`add-zdisk-volume-${row.key}`}
+                className="form-control form-control-sm"
+                placeholder="diskN"
+                value={row.volume_name}
+                onChange={e => onPatch({ volume_name: e.target.value })}
+                disabled={formDisabled}
+              />
+            </div>
+            <div className="col-4 col-md-2">
+              <label className="form-label small mb-1" htmlFor={`add-zdisk-dataset-${row.key}`}>
+                {t('machineEdit.storageDevicesEditor.parentDataset')}
+              </label>
+              <input
+                id={`add-zdisk-dataset-${row.key}`}
+                className="form-control form-control-sm"
+                placeholder="zones"
+                value={row.dataset}
+                onChange={e => onPatch({ dataset: e.target.value })}
+                disabled={formDisabled}
+              />
+            </div>
+            <div className="col-auto">
+              <div className="form-check form-switch mb-1">
+                <input
+                  id={`add-zdisk-sparse-${row.key}`}
+                  className="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  checked={row.sparse}
+                  onChange={e => onPatch({ sparse: e.target.checked })}
+                  disabled={formDisabled}
+                />
+                <label className="form-check-label small" htmlFor={`add-zdisk-sparse-${row.key}`}>
+                  {t('machineEdit.storageDevicesEditor.sparse')}
+                </label>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="col-8 col-md-5">
+            <label className="form-label small mb-1" htmlFor={`add-zdisk-existing-${row.key}`}>
+              {t('machineEdit.storageDevicesEditor.existingZvolDatasetName')}
+            </label>
+            <input
+              id={`add-zdisk-existing-${row.key}`}
+              className="form-control form-control-sm font-monospace"
+              placeholder="e.g. rpool/zones/mydisk"
+              value={row.existing_dataset}
+              onChange={e => onPatch({ existing_dataset: e.target.value })}
+              disabled={formDisabled}
+            />
           </div>
-        </>
-      ) : (
-        <div className="col-8 col-md-5">
-          <label className="form-label small mb-1" htmlFor={`add-zdisk-existing-${row.key}`}>
-            Existing zvol (dataset name)
-          </label>
-          <input
-            id={`add-zdisk-existing-${row.key}`}
-            className="form-control form-control-sm font-monospace"
-            placeholder="e.g. rpool/zones/mydisk"
-            value={row.existing_dataset}
-            onChange={e => onPatch({ existing_dataset: e.target.value })}
-            disabled={formDisabled}
-          />
-        </div>
+        )}
+        <RemoveRowButton
+          label={t('machineEdit.storageDevicesEditor.dropDiskRow')}
+          onClick={onDrop}
+          disabled={formDisabled}
+        />
+      </div>
+      {row.mode === 'new' && (
+        <span className="form-text text-muted small">
+          {t('machineEdit.storageDevicesEditor.createsZvol')}{' '}
+          <code>
+            {row.pool.trim() || 'rpool'}/{row.dataset.trim() || 'zones'}/{zoneName || '<zone>'}/
+            {row.volume_name.trim() || 'disk<N>'}
+          </code>{' '}
+          — {row.size.trim() || t('machineEdit.storageDevicesEditor.sizeRequired')}
+          {row.sparse ? t('machineEdit.storageDevicesEditor.sparseSuffix') : ''}
+        </span>
       )}
-      <RemoveRowButton label="Drop this disk row" onClick={onDrop} disabled={formDisabled} />
     </div>
-    {row.mode === 'new' && (
-      <span className="form-text text-muted small">
-        Creates zvol{' '}
-        <code>
-          {row.pool.trim() || 'rpool'}/{row.dataset.trim() || 'zones'}/{zoneName || '<zone>'}/
-          {row.volume_name.trim() || 'disk<N>'}
-        </code>{' '}
-        — {row.size.trim() || 'size required'}
-        {row.sparse ? ', sparse' : ''}
-      </span>
-    )}
-  </div>
-);
+  );
+};
 
 ZonePendingDiskRow.propTypes = {
   row: PropTypes.object.isRequired,
@@ -323,6 +350,7 @@ const StorageDevicesEditor = ({
   currentServer,
   formDisabled = false,
 }) => {
+  const { t } = useTranslation();
   const { controllers, attachments, zone } = currentHardware;
   const controllerNames = new Set(controllers.map(controller => controller.name));
   const types = controllerTypes || FALLBACK_CONTROLLER_TYPES;
@@ -388,7 +416,7 @@ const StorageDevicesEditor = ({
     <div className="hw-device-tree">
       <div className="hw-device-tree-head">
         <i className="fas fa-hard-drive" />
-        <span>Storage Devices</span>
+        <span>{t('machineEdit.storageDevicesEditor.storageDevices')}</span>
       </div>
 
       {zone && (
@@ -396,7 +424,7 @@ const StorageDevicesEditor = ({
           {zone.disks.length > 0 && (
             <div className="hw-device-row hw-device-group">
               <i className="fas fa-hard-drive text-muted" />
-              <span>Disks</span>
+              <span>{t('machineEdit.storageDevicesEditor.disks')}</span>
             </div>
           )}
           {zone.disks.map(disk => {
@@ -415,20 +443,22 @@ const StorageDevicesEditor = ({
                 {disk.boot && (
                   <span
                     className="badge text-bg-light"
-                    title="The zone's boot medium — detaching it leaves the zone unbootable until a new boot medium is configured"
+                    title={t('machineEdit.storageDevicesEditor.zoneBootMediumTitle')}
                   >
-                    boot
+                    {t('machineEdit.storageDevicesEditor.boot')}
                   </span>
                 )}
                 {disk.boot && isMarked && (
-                  <span className="badge text-bg-danger">unbootable after Apply</span>
+                  <span className="badge text-bg-danger">
+                    {t('machineEdit.storageDevicesEditor.unbootableAfterApply')}
+                  </span>
                 )}
                 <div className="hw-device-actions">
                   {!isMarked && (
                     <button
                       type="button"
                       className="btn btn-sm py-0 btn-outline-secondary"
-                      title="Manage this zvol — resize, snapshot, ZFS properties"
+                      title={t('machineEdit.storageDevicesEditor.manageZvol')}
                       onClick={() => onManageZoneDisk(disk)}
                       disabled={formDisabled}
                     >
@@ -440,10 +470,10 @@ const StorageDevicesEditor = ({
                     className={`btn btn-sm py-0 ${markButtonClass(isMarked)}`}
                     title={
                       isMarked
-                        ? 'Unmark'
-                        : `Detach this disk from the zone — the zvol and its data survive${
+                        ? t('machineEdit.storageDevicesEditor.unmark')
+                        : `${t('machineEdit.storageDevicesEditor.detachDiskTitle')}${
                             disk.boot
-                              ? '. THIS IS THE BOOT MEDIUM: the zone cannot boot without a replacement'
+                              ? t('machineEdit.storageDevicesEditor.detachBootDiskSuffix')
                               : ''
                           }`
                     }
@@ -459,7 +489,7 @@ const StorageDevicesEditor = ({
           {zone.cdroms.length > 0 && (
             <div className="hw-device-row hw-device-group">
               <i className="fas fa-compact-disc text-muted" />
-              <span>CD/DVD</span>
+              <span>{t('machineEdit.storageDevicesEditor.cdDvd')}</span>
             </div>
           )}
           {zone.cdroms.map(cdrom => {
@@ -478,7 +508,11 @@ const StorageDevicesEditor = ({
                   <button
                     type="button"
                     className={`btn btn-sm py-0 ${markButtonClass(isMarked)}`}
-                    title={isMarked ? 'Unmark' : 'Eject this ISO from the zone'}
+                    title={
+                      isMarked
+                        ? t('machineEdit.storageDevicesEditor.unmark')
+                        : t('machineEdit.storageDevicesEditor.ejectIso')
+                    }
                     onClick={() => onToggleZoneCdrom(cdrom.name)}
                     disabled={formDisabled}
                   >
@@ -508,14 +542,15 @@ const StorageDevicesEditor = ({
             />
           ))}
           <div className="hw-device-row hw-device-meta">
-            Detached disks keep their zvols (destroy them separately under Storage → ZFS Datasets if
-            wanted). Changes queue on Apply; a running zone accrues them for the next power cycle.
+            {t('machineEdit.storageDevicesEditor.detachedDisksHint')}
           </div>
         </>
       )}
 
       {!zone && controllers.length === 0 && attachments.length === 0 && (
-        <div className="hw-device-row hw-device-meta">No storage devices reported.</div>
+        <div className="hw-device-row hw-device-meta">
+          {t('machineEdit.storageDevicesEditor.noStorageDevices')}
+        </div>
       )}
 
       {controllers.map(controller => {
@@ -532,7 +567,7 @@ const StorageDevicesEditor = ({
                 <button
                   type="button"
                   className="btn btn-sm py-0 btn-outline-secondary"
-                  title="Attach a disk to this controller"
+                  title={t('machineEdit.storageDevicesEditor.attachDisk')}
                   onClick={() => onAddDisksChange([...addDisks, newDisk(controller.name)])}
                   disabled={formDisabled}
                 >
@@ -542,7 +577,7 @@ const StorageDevicesEditor = ({
                 <button
                   type="button"
                   className="btn btn-sm py-0 btn-outline-secondary"
-                  title="Attach an ISO to this controller"
+                  title={t('machineEdit.storageDevicesEditor.attachIso')}
                   onClick={() => onAddCdromsChange([...addCdroms, newCdrom(controller.name)])}
                   disabled={formDisabled}
                 >
@@ -552,7 +587,11 @@ const StorageDevicesEditor = ({
                 <button
                   type="button"
                   className={`btn btn-sm py-0 ${markButtonClass(isMarked)}`}
-                  title={isMarked ? 'Unmark' : 'Mark this controller for removal (must be empty)'}
+                  title={
+                    isMarked
+                      ? t('machineEdit.storageDevicesEditor.unmark')
+                      : t('machineEdit.storageDevicesEditor.markControllerForRemoval')
+                  }
                   onClick={() => onToggleController(controller.name)}
                   disabled={formDisabled}
                 >
@@ -580,9 +619,11 @@ const StorageDevicesEditor = ({
         <>
           <div className="hw-device-row hw-device-group">
             <i className="fas fa-plus text-success" />
-            <span>New devices</span>
+            <span>{t('machineEdit.storageDevicesEditor.newDevices')}</span>
             <span className="hw-device-meta">
-              {zone ? 'attach to the zone on Apply' : "blank controller = the agent's default"}
+              {zone
+                ? t('machineEdit.storageDevicesEditor.attachToZoneOnApply')
+                : t('machineEdit.storageDevicesEditor.blankControllerDefault')}
             </span>
           </div>
           {pendingRows(orphanDisks, orphanCdroms, !zone, !zone)}
@@ -592,10 +633,10 @@ const StorageDevicesEditor = ({
       {addControllers.map(row => (
         <div className="hw-device-row hw-device-group" key={`add-controller-${row.key}`}>
           <i className="fas fa-plus text-success" />
-          <span>New controller</span>
+          <span>{t('machineEdit.storageDevicesEditor.newController')}</span>
           <select
             className="form-select form-select-sm w-auto"
-            aria-label="New controller type"
+            aria-label={t('machineEdit.storageDevicesEditor.newControllerType')}
             value={row.type}
             onChange={e =>
               onAddControllersChange(
@@ -614,8 +655,8 @@ const StorageDevicesEditor = ({
           </select>
           <input
             className="form-control form-control-sm w-auto"
-            aria-label="New controller name"
-            placeholder="Name (optional)"
+            aria-label={t('machineEdit.storageDevicesEditor.newControllerName')}
+            placeholder={t('machineEdit.storageDevicesEditor.nameOptional')}
             value={row.name}
             onChange={e =>
               onAddControllersChange(
@@ -630,7 +671,7 @@ const StorageDevicesEditor = ({
             <button
               type="button"
               className="btn btn-sm py-0 btn-outline-danger"
-              aria-label="Drop this controller row"
+              aria-label={t('machineEdit.storageDevicesEditor.dropControllerRow')}
               onClick={() =>
                 onAddControllersChange(addControllers.filter(entry => entry.key !== row.key))
               }
@@ -666,7 +707,7 @@ const StorageDevicesEditor = ({
           disabled={formDisabled}
         >
           <i className="fas fa-plus me-1" />
-          Disk
+          {t('machineEdit.storageDevicesEditor.disk')}
         </button>
         <button
           type="button"
@@ -675,7 +716,7 @@ const StorageDevicesEditor = ({
           disabled={formDisabled}
         >
           <i className="fas fa-plus me-1" />
-          ISO
+          {t('machineEdit.storageDevicesEditor.iso')}
         </button>
         {!zone && (
           <button
@@ -690,7 +731,7 @@ const StorageDevicesEditor = ({
             disabled={formDisabled}
           >
             <i className="fas fa-plus me-1" />
-            Controller
+            {t('machineEdit.storageDevicesEditor.controller')}
           </button>
         )}
       </div>

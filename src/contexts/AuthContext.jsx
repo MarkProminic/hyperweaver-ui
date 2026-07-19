@@ -1,6 +1,7 @@
 import axios from 'axios';
 import PropTypes from 'prop-types';
 import { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useMode } from './ModeContext';
 
@@ -76,6 +77,7 @@ export const useAuth = () => {
  * @param {React.ReactNode} props.children - Child components
  */
 export const AuthProvider = ({ children }) => {
+  const { t } = useTranslation();
   const { isDirect, ready: modeReady } = useMode();
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('authToken'));
@@ -376,7 +378,7 @@ export const AuthProvider = ({ children }) => {
    */
   const login = async (identifier, password, authMethod = 'local') => {
     if (isDirect) {
-      return { success: false, message: 'Use an API key to sign in to this host' };
+      return { success: false, message: t('app.authContext.apiKeyLoginRequired') };
     }
     try {
       console.log(`🔐 Attempting ${authMethod.toUpperCase()} authentication for:`, identifier);
@@ -414,7 +416,9 @@ export const AuthProvider = ({ children }) => {
       console.error(`${authMethod.toUpperCase()} login error:`, loginErr);
       return {
         success: false,
-        message: loginErr.response?.data?.message || `${authMethod.toUpperCase()} login failed`,
+        message:
+          loginErr.response?.data?.message ||
+          t('app.authContext.authMethodLoginFailed', { method: authMethod.toUpperCase() }),
       };
     }
   };
@@ -427,15 +431,15 @@ export const AuthProvider = ({ children }) => {
    */
   const loginWithApiKey = async apiKey => {
     if (!isDirect) {
-      return { success: false, message: 'API-key login is only available in Direct mode' };
+      return { success: false, message: t('app.authContext.apiKeyLoginDirectOnly') };
     }
     if (!apiKey || !apiKey.trim()) {
-      return { success: false, message: 'Please enter an API key' };
+      return { success: false, message: t('app.authContext.enterApiKey') };
     }
     try {
       const directUser = await validateApiKey(apiKey.trim());
       if (!directUser) {
-        return { success: false, message: 'Invalid API key' };
+        return { success: false, message: t('app.authContext.invalidApiKey') };
       }
 
       localStorage.setItem('authToken', apiKey.trim());
@@ -444,7 +448,10 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       axios.defaults.headers.common.Authorization = `Bearer ${apiKey.trim()}`;
 
-      return { success: true, message: `Signed in as ${directUser.username}` };
+      return {
+        success: true,
+        message: t('app.authContext.signedInAs', { username: directUser.username }),
+      };
     } catch (keyErr) {
       console.error('API key login failed:', keyErr);
       const status = keyErr.response?.status;
@@ -452,8 +459,8 @@ export const AuthProvider = ({ children }) => {
         success: false,
         message:
           status === 401 || status === 403
-            ? 'Invalid API key'
-            : keyErr.response?.data?.msg || 'Failed to validate API key',
+            ? t('app.authContext.invalidApiKey')
+            : keyErr.response?.data?.msg || t('app.authContext.apiKeyValidationFailed'),
       };
     }
   };
@@ -466,7 +473,7 @@ export const AuthProvider = ({ children }) => {
    */
   const bootstrapFirstKey = async setupToken => {
     if (!isDirect) {
-      return { success: false, message: 'Bootstrap is only available in Direct mode' };
+      return { success: false, message: t('app.authContext.bootstrapDirectOnly') };
     }
     try {
       const response = await axios.post('/api-keys/bootstrap', {
@@ -477,7 +484,7 @@ export const AuthProvider = ({ children }) => {
 
       const apiKey = response.data?.api_key;
       if (!apiKey) {
-        return { success: false, message: 'Agent did not return an API key' };
+        return { success: false, message: t('app.authContext.bootstrapNoKeyReturned') };
       }
 
       const result = await loginWithApiKey(apiKey);
@@ -486,7 +493,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Bootstrap failed:', bootstrapErr);
       return {
         success: false,
-        message: bootstrapErr.response?.data?.msg || 'Bootstrap failed',
+        message: bootstrapErr.response?.data?.msg || t('app.authContext.bootstrapFailed'),
       };
     }
   };
@@ -499,7 +506,7 @@ export const AuthProvider = ({ children }) => {
     if (isDirect) {
       return {
         success: true,
-        methods: [{ id: 'apikey', name: 'API Key', enabled: true }],
+        methods: [{ id: 'apikey', name: t('app.authContext.apiKeyMethodName'), enabled: true }],
         localRegistrationEnabled: false, // agents have no user registration at all
       };
     }
@@ -516,9 +523,12 @@ export const AuthProvider = ({ children }) => {
       console.error('Get auth methods error:', methodsErr);
       return {
         success: false,
-        methods: [{ id: 'local', name: 'Local Account', enabled: true }], // Fallback
+        // Fallback
+        methods: [
+          { id: 'local', name: t('app.authContext.localAccountMethodName'), enabled: true },
+        ],
         localRegistrationEnabled: true,
-        message: methodsErr.response?.data?.message || 'Failed to load authentication methods',
+        message: methodsErr.response?.data?.message || t('app.authContext.loadAuthMethodsFailed'),
       };
     }
   };
@@ -534,7 +544,7 @@ export const AuthProvider = ({ children }) => {
    */
   const register = async userData => {
     if (isDirect) {
-      return { success: false, message: 'Registration is not available in Direct mode' };
+      return { success: false, message: t('app.authContext.registrationDirectOnly') };
     }
     try {
       const response = await axios.post('/api/auth/register', userData);
@@ -547,7 +557,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Registration error:', registerErr);
       return {
         success: false,
-        message: registerErr.response?.data?.message || 'Registration failed',
+        message: registerErr.response?.data?.message || t('app.authContext.registrationFailed'),
       };
     }
   };
@@ -632,7 +642,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Change password error:', changeErr);
       return {
         success: false,
-        message: changeErr.response?.data?.message || 'Password change failed',
+        message: changeErr.response?.data?.message || t('app.authContext.passwordChangeFailed'),
       };
     }
   };
@@ -654,7 +664,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Get profile error:', profileErr);
       return {
         success: false,
-        message: profileErr.response?.data?.message || 'Failed to get profile',
+        message: profileErr.response?.data?.message || t('app.authContext.getProfileFailed'),
       };
     }
   };

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   getProvisioners,
@@ -31,14 +32,14 @@ import { VarRowList, VAR_NAME_PATTERN, ROLE_NAME_PATTERN } from './ProvisioningV
 // Scripts sits between them. Hooks wrap the whole run, so they sit past
 // Roles. WHEN anything runs is the document's own order — no slots.
 const TABS = [
-  { id: 'folders', label: 'Folders' },
-  { id: 'vars', label: 'Variables' },
-  { id: 'scripts', label: 'Scripts' },
-  { id: 'playbooks', label: 'Playbooks' },
-  { id: 'roles', label: 'Roles' },
-  { id: 'hooks', label: 'Hooks' },
-  { id: 'transport', label: 'Transport' },
-  { id: 'json', label: 'Raw JSON' },
+  { id: 'folders', labelKey: 'provisioning.provisioningEditor.tabFolders' },
+  { id: 'vars', labelKey: 'provisioning.provisioningEditor.tabVariables' },
+  { id: 'scripts', labelKey: 'provisioning.provisioningEditor.tabScripts' },
+  { id: 'playbooks', labelKey: 'provisioning.provisioningEditor.tabPlaybooks' },
+  { id: 'roles', labelKey: 'provisioning.provisioningEditor.tabRoles' },
+  { id: 'hooks', labelKey: 'provisioning.provisioningEditor.tabHooks' },
+  { id: 'transport', labelKey: 'provisioning.provisioningEditor.tabTransport' },
+  { id: 'json', labelKey: 'provisioning.provisioningEditor.tabRawJson' },
 ];
 
 /**
@@ -165,28 +166,43 @@ const clean = doc => {
  * Names that would break the Ansible run — invalid variable identifiers or
  * role names. Store refuses these (Mark's ruling); everything else is free.
  */
-const invalidNameProblems = doc => {
+const invalidNameProblems = (doc, t) => {
   const problems = [];
   const checkKeys = (map, label) => {
     Object.keys(map || {}).forEach(key => {
       if (!VAR_NAME_PATTERN.test(key)) {
-        problems.push(`${label} "${key}"`);
+        problems.push(t('provisioning.provisioningEditor.invalidNameProblem', { label, key }));
       }
     });
   };
-  checkKeys(doc.vars, 'variable');
+  checkKeys(doc.vars, t('provisioning.provisioningEditor.variableLabel'));
   (Array.isArray(doc.roles) ? doc.roles : []).forEach(role => {
     const name = String(role.name || '').trim();
     if (name === '' || !ROLE_NAME_PATTERN.test(name)) {
-      problems.push(`role name "${name || '(empty)'}"`);
+      problems.push(
+        t('provisioning.provisioningEditor.roleNameProblem', {
+          name: name || t('provisioning.provisioningEditor.emptyPlaceholder'),
+        })
+      );
     }
-    checkKeys(role.vars, `variable on ${name || 'role'}`);
-    checkKeys(role.environment, `env var on ${name || 'role'}`);
+    checkKeys(
+      role.vars,
+      t('provisioning.provisioningEditor.variableOnLabel', {
+        role: name || t('provisioning.provisioningEditor.roleFallback'),
+      })
+    );
+    checkKeys(
+      role.environment,
+      t('provisioning.provisioningEditor.envVarOnLabel', {
+        role: name || t('provisioning.provisioningEditor.roleFallback'),
+      })
+    );
   });
   return problems;
 };
 
 const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) => {
+  const { t } = useTranslation();
   const [doc, setDoc] = useState({});
   const [tab, setTab] = useState('folders');
   const [jsonText, setJsonText] = useState('');
@@ -331,7 +347,7 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
       updateDoc(tagRows(JSON.parse(jsonText)));
       setError('');
     } catch (parseErr) {
-      setError(`Not valid JSON: ${parseErr.message}`);
+      setError(t('provisioning.provisioningEditor.notValidJson', { message: parseErr.message }));
     }
   };
 
@@ -346,14 +362,16 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
     // The JSON tab may hold unapplied text — refuse rather than silently
     // saving something other than what the user sees.
     if (tab === 'json' && jsonText !== JSON.stringify(clean(doc), null, 2)) {
-      setError('Apply the JSON first (button below the editor) — it differs from the stored form.');
+      setError(t('provisioning.provisioningEditor.applyJsonFirst'));
       return;
     }
     // Invalid NAMES are guaranteed Ansible run failures — refuse those and
     // nothing else (Mark's ruling).
-    const problems = invalidNameProblems(clean(doc));
+    const problems = invalidNameProblems(clean(doc), t);
     if (problems.length > 0) {
-      setError(`Fix invalid names before storing: ${problems.join(', ')}.`);
+      setError(
+        t('provisioning.provisioningEditor.fixInvalidNames', { problems: problems.join(', ') })
+      );
       return;
     }
     setLoading(true);
@@ -367,7 +385,7 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
     );
     setLoading(false);
     if (result.success) {
-      onSaved(result.data?.message || 'Provisioning document stored');
+      onSaved(result.data?.message || t('provisioning.provisioningEditor.documentStored'));
     } else {
       setError(result.message);
     }
@@ -377,7 +395,7 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
     <div>
       <h5 className="fs-6 fw-bold mt-3 mb-2">
         <i className="fas fa-pen-to-square me-2" />
-        Provisioning Document
+        {t('provisioning.provisioningEditor.heading')}
       </h5>
 
       {error && <div className="alert alert-danger py-2">{error}</div>}
@@ -390,7 +408,7 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
               className={`nav-link py-1 px-2 ${tab === entry.id ? 'active' : ''}`}
               onClick={() => setTab(entry.id)}
             >
-              {entry.label}
+              {t(entry.labelKey)}
             </button>
           </li>
         ))}
@@ -465,15 +483,15 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
       {tab === 'vars' && (
         <div>
           <p className="form-text text-muted mt-0 mb-2">
-            Global variables — every role and script sees them. Values keep their JSON types; lists
-            and dicts edit behind the <code>{'{ }'}</code> button as YAML.
+            {t('provisioning.provisioningEditor.varsIntro1')} <code>{'{ }'}</code>{' '}
+            {t('provisioning.provisioningEditor.varsIntro2')}
           </p>
           <VarRowList
             idPrefix="doc-vars"
             entries={doc.vars || {}}
             disabled={loading}
             onChange={next => updateDoc({ ...doc, vars: next })}
-            addLabel="Add Variable"
+            addLabel={t('provisioning.provisioningEditor.addVariable')}
           />
         </div>
       )}
@@ -486,11 +504,11 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
             value={jsonText}
             onChange={e => setJsonText(e.target.value)}
             disabled={loading}
-            aria-label="Provisioner document JSON"
+            aria-label={t('provisioning.provisioningEditor.rawJsonAriaLabel')}
             spellCheck={false}
           />
           <button type="button" className="btn btn-sm btn-outline-primary mt-2" onClick={applyJson}>
-            Apply JSON to the form
+            {t('provisioning.provisioningEditor.applyJsonToForm')}
           </button>
         </>
       )}
@@ -502,7 +520,7 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
           ) : (
             <i className="fas fa-check me-2" />
           )}
-          Store Document
+          {t('provisioning.provisioningEditor.storeDocument')}
         </button>
         <button
           type="button"
@@ -510,7 +528,7 @@ const ProvisioningEditor = ({ currentServer, machineName, document, onSaved }) =
           onClick={discard}
           disabled={loading}
         >
-          Discard Edits
+          {t('provisioning.provisioningEditor.discardEdits')}
         </button>
       </div>
     </div>

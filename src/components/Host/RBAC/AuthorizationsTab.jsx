@@ -1,11 +1,13 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const AuthorizationsTab = ({ authorizations, loading, copyToClipboard }) => {
+  const { t } = useTranslation();
   if (loading && authorizations.length === 0) {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading authorizations...</p>
+        <p className="mt-2">{t('hostTools.AuthorizationsTab.loadingAuthorizations')}</p>
       </div>
     );
   }
@@ -14,7 +16,7 @@ const AuthorizationsTab = ({ authorizations, loading, copyToClipboard }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-shield-alt fa-2x text-muted" />
-        <p className="mt-2 text-muted">No authorizations found</p>
+        <p className="mt-2 text-muted">{t('hostTools.AuthorizationsTab.noAuthorizationsFound')}</p>
       </div>
     );
   }
@@ -24,10 +26,10 @@ const AuthorizationsTab = ({ authorizations, loading, copyToClipboard }) => {
       <table className="table table-hover">
         <thead>
           <tr>
-            <th>Authorization</th>
-            <th>Short Description</th>
-            <th>Long Description</th>
-            <th>Actions</th>
+            <th>{t('hostTools.AuthorizationsTab.headerAuthorization')}</th>
+            <th>{t('hostTools.AuthorizationsTab.headerShortDescription')}</th>
+            <th>{t('hostTools.AuthorizationsTab.headerLongDescription')}</th>
+            <th>{t('hostTools.AuthorizationsTab.headerActions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -36,18 +38,20 @@ const AuthorizationsTab = ({ authorizations, loading, copyToClipboard }) => {
               <td>
                 <code className="small">{auth.name}</code>
               </td>
-              <td className="small">{auth.short_description || 'N/A'}</td>
+              <td className="small">
+                {auth.short_description || t('hostTools.AuthorizationsTab.naFallback')}
+              </td>
               <td className="small" title={auth.long_description}>
                 {auth.long_description && auth.long_description.length > 50
                   ? `${auth.long_description.substring(0, 50)}...`
-                  : auth.long_description || 'N/A'}
+                  : auth.long_description || t('hostTools.AuthorizationsTab.naFallback')}
               </td>
               <td>
                 <button
                   type="button"
                   className="btn btn-sm"
                   onClick={() => copyToClipboard(auth.name)}
-                  title="Copy to clipboard"
+                  title={t('hostTools.AuthorizationsTab.copyToClipboard')}
                 >
                   <i className="fas fa-copy" />
                 </button>

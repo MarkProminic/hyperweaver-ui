@@ -1,8 +1,10 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { ContentModal } from '../../common';
 
 const PackageDetailsModal = ({ package: pkg, onClose }) => {
+  const { t } = useTranslation();
   const formatDetails = details => {
     if (!details) {
       return [];
@@ -41,25 +43,43 @@ const PackageDetailsModal = ({ package: pkg, onClose }) => {
     const status = [];
 
     if (pkg.installed) {
-      status.push({ label: 'Installation Status', value: 'Installed' });
+      status.push({
+        label: t('host.packageDetailsModal.installationStatus'),
+        value: t('host.packageDetailsModal.installed'),
+      });
     } else {
-      status.push({ label: 'Installation Status', value: 'Not Installed' });
+      status.push({
+        label: t('host.packageDetailsModal.installationStatus'),
+        value: t('host.packageDetailsModal.notInstalled'),
+      });
     }
 
     if (pkg.frozen) {
-      status.push({ label: 'Frozen', value: 'Yes' });
+      status.push({
+        label: t('host.packageDetailsModal.frozen'),
+        value: t('host.packageDetailsModal.yes'),
+      });
     }
 
     if (pkg.manually_installed) {
-      status.push({ label: 'Manually Installed', value: 'Yes' });
+      status.push({
+        label: t('host.packageDetailsModal.manuallyInstalled'),
+        value: t('host.packageDetailsModal.yes'),
+      });
     }
 
     if (pkg.obsolete) {
-      status.push({ label: 'Obsolete', value: 'Yes' });
+      status.push({
+        label: t('host.packageDetailsModal.obsolete'),
+        value: t('host.packageDetailsModal.yes'),
+      });
     }
 
     if (pkg.renamed) {
-      status.push({ label: 'Renamed', value: 'Yes' });
+      status.push({
+        label: t('host.packageDetailsModal.renamed'),
+        value: t('host.packageDetailsModal.yes'),
+      });
     }
 
     return status;
@@ -68,39 +88,50 @@ const PackageDetailsModal = ({ package: pkg, onClose }) => {
   const statusInfo = getStatusInfo();
 
   return (
-    <ContentModal isOpen onClose={onClose} title="Package Details" icon="fas fa-cube">
+    <ContentModal
+      isOpen
+      onClose={onClose}
+      title={t('host.packageDetailsModal.packageDetails')}
+      icon="fas fa-cube"
+    >
       {/* Package Basic Info */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Basic Information</h3>
+          <h3 className="fs-6 fw-bold">{t('host.packageDetailsModal.basicInformation')}</h3>
           <div className="table-responsive">
             <table className="table">
               <tbody>
                 <tr>
                   <td>
-                    <strong>Package Name</strong>
+                    <strong>{t('host.packageDetailsModal.packageName')}</strong>
                   </td>
                   <td className="font-monospace">{pkg.name}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Publisher</strong>
+                    <strong>{t('host.packageDetailsModal.publisher')}</strong>
                   </td>
                   <td>
-                    <span className="badge text-bg-info">{pkg.publisher || 'Unknown'}</span>
+                    <span className="badge text-bg-info">
+                      {pkg.publisher || t('host.packageDetailsModal.unknown')}
+                    </span>
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Version</strong>
+                    <strong>{t('host.packageDetailsModal.version')}</strong>
                   </td>
-                  <td className="font-monospace">{pkg.version || 'N/A'}</td>
+                  <td className="font-monospace">
+                    {pkg.version || t('host.packageDetailsModal.notAvailable')}
+                  </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Flags</strong>
+                    <strong>{t('host.packageDetailsModal.flags')}</strong>
                   </td>
-                  <td className="font-monospace">{pkg.flags || 'N/A'}</td>
+                  <td className="font-monospace">
+                    {pkg.flags || t('host.packageDetailsModal.notAvailable')}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -112,7 +143,7 @@ const PackageDetailsModal = ({ package: pkg, onClose }) => {
       {statusInfo.length > 0 && (
         <div className="card mb-4">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Package Status</h3>
+            <h3 className="fs-6 fw-bold">{t('host.packageDetailsModal.packageStatus')}</h3>
             <div className="table-responsive">
               <table className="table">
                 <tbody>
@@ -135,7 +166,7 @@ const PackageDetailsModal = ({ package: pkg, onClose }) => {
       {detailsArray.length > 0 && (
         <div className="card">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Detailed Information</h3>
+            <h3 className="fs-6 fw-bold">{t('host.packageDetailsModal.detailedInformation')}</h3>
             <div className="table-responsive">
               <table className="table">
                 <tbody>
@@ -163,7 +194,7 @@ const PackageDetailsModal = ({ package: pkg, onClose }) => {
       {/* Show message if no details available */}
       {detailsArray.length === 0 && (
         <div className="alert alert-info">
-          <p>No detailed information available for this package.</p>
+          <p>{t('host.packageDetailsModal.noDetailedInformation')}</p>
         </div>
       )}
     </ContentModal>

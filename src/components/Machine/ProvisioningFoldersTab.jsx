@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import StepCardList from './ProvisioningStepList';
 import { LinesField } from './ProvisioningVarRows';
@@ -12,29 +13,43 @@ import { LinesField } from './ProvisioningVarRows';
 
 const FOLDER_TYPES = ['rsync', 'scp', 'virtualbox', 'disabled'];
 
-const FolderTitle = ({ folder }) => (
-  <>
-    <span className="hw-rc-role">
-      {folder.map || '—'} → {folder.to || '—'}
-    </span>
-    <span className="hw-chip">{folder.type || 'rsync'}</span>
-    {folder.disabled && <span className="hw-chip hw-chip-when">disabled</span>}
-    {folder.syncback && <span className="hw-chip hw-chip-vars">sync back</span>}
-  </>
-);
+const FolderTitle = ({ folder }) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      <span className="hw-rc-role">
+        {folder.map || '—'} → {folder.to || '—'}
+      </span>
+      <span className="hw-chip">{folder.type || 'rsync'}</span>
+      {folder.disabled && (
+        <span className="hw-chip hw-chip-when">
+          {t('provisioning.provisioningFoldersTab.disabledChip')}
+        </span>
+      )}
+      {folder.syncback && (
+        <span className="hw-chip hw-chip-vars">
+          {t('provisioning.provisioningFoldersTab.syncBackChip')}
+        </span>
+      )}
+    </>
+  );
+};
 
 FolderTitle.propTypes = {
   folder: PropTypes.object.isRequired,
 };
 
 const FolderBody = ({ folder, patch, disabled }) => {
+  const { t } = useTranslation();
   const uiId = folder._ui_id;
   return (
     <>
       {folder.description && <p className="hw-rc-desc">{folder.description}</p>}
       <div className="hw-rc-fields">
         <span className="hw-field">
-          <label htmlFor={`folder-map-${uiId}`}>from (host)</label>
+          <label htmlFor={`folder-map-${uiId}`}>
+            {t('provisioning.provisioningFoldersTab.fromHostLabel')}
+          </label>
           <input
             id={`folder-map-${uiId}`}
             className="form-control form-control-sm font-monospace hw-field-med"
@@ -45,7 +60,9 @@ const FolderBody = ({ folder, patch, disabled }) => {
           />
         </span>
         <span className="hw-field">
-          <label htmlFor={`folder-to-${uiId}`}>to (guest)</label>
+          <label htmlFor={`folder-to-${uiId}`}>
+            {t('provisioning.provisioningFoldersTab.toGuestLabel')}
+          </label>
           <input
             id={`folder-to-${uiId}`}
             className="form-control form-control-sm font-monospace hw-field-med"
@@ -56,7 +73,9 @@ const FolderBody = ({ folder, patch, disabled }) => {
           />
         </span>
         <span className="hw-field">
-          <label htmlFor={`folder-type-${uiId}`}>type</label>
+          <label htmlFor={`folder-type-${uiId}`}>
+            {t('provisioning.provisioningFoldersTab.typeLabel')}
+          </label>
           <select
             id={`folder-type-${uiId}`}
             className="form-select form-select-sm w-auto"
@@ -72,24 +91,28 @@ const FolderBody = ({ folder, patch, disabled }) => {
           </select>
         </span>
         <span className="hw-field">
-          <label htmlFor={`folder-owner-${uiId}`}>owner</label>
+          <label htmlFor={`folder-owner-${uiId}`}>
+            {t('provisioning.provisioningFoldersTab.ownerLabel')}
+          </label>
           <input
             id={`folder-owner-${uiId}`}
             className="form-control form-control-sm hw-field-short"
             type="text"
-            placeholder="ssh user"
+            placeholder={t('provisioning.provisioningFoldersTab.ownerPlaceholder')}
             value={folder.owner ?? ''}
             disabled={disabled}
             onChange={e => patch({ owner: e.target.value === '' ? undefined : e.target.value })}
           />
         </span>
         <span className="hw-field">
-          <label htmlFor={`folder-group-${uiId}`}>group</label>
+          <label htmlFor={`folder-group-${uiId}`}>
+            {t('provisioning.provisioningFoldersTab.groupLabel')}
+          </label>
           <input
             id={`folder-group-${uiId}`}
             className="form-control form-control-sm hw-field-short"
             type="text"
-            placeholder="owner"
+            placeholder={t('provisioning.provisioningFoldersTab.groupPlaceholder')}
             value={folder.group ?? ''}
             disabled={disabled}
             onChange={e => patch({ group: e.target.value === '' ? undefined : e.target.value })}
@@ -107,7 +130,7 @@ const FolderBody = ({ folder, patch, disabled }) => {
             onChange={e => patch({ disabled: e.target.checked })}
           />
           <label className="form-check-label small" htmlFor={`folder-disabled-${uiId}`}>
-            Disabled
+            {t('provisioning.provisioningFoldersTab.disabledLabel')}
           </label>
         </span>
         <span className="hw-field form-check mb-0">
@@ -122,9 +145,9 @@ const FolderBody = ({ folder, patch, disabled }) => {
           <label
             className="form-check-label small"
             htmlFor={`folder-syncback-${uiId}`}
-            title="Pull this folder from the guest (to) back to the host (from) after provisioning, or on an ad-hoc Sync Back"
+            title={t('provisioning.provisioningFoldersTab.syncBackTitle')}
           >
-            Sync back
+            {t('provisioning.provisioningFoldersTab.syncBackLabel')}
           </label>
         </span>
         <span className="hw-field form-check mb-0">
@@ -139,9 +162,9 @@ const FolderBody = ({ folder, patch, disabled }) => {
           <label
             className="form-check-label small"
             htmlFor={`folder-delete-${uiId}`}
-            title="rsync --delete: remove guest files the host no longer has (push only, never on syncback)"
+            title={t('provisioning.provisioningFoldersTab.deleteExtraneousTitle')}
           >
-            Delete extraneous
+            {t('provisioning.provisioningFoldersTab.deleteExtraneousLabel')}
           </label>
         </span>
         <span className="hw-field form-check mb-0">
@@ -156,15 +179,17 @@ const FolderBody = ({ folder, patch, disabled }) => {
           <label
             className="form-check-label small"
             htmlFor={`folder-automount-${uiId}`}
-            title="VirtualBox shared folders only"
+            title={t('provisioning.provisioningFoldersTab.automountTitle')}
           >
-            Automount
+            {t('provisioning.provisioningFoldersTab.automountLabel')}
           </label>
         </span>
       </div>
       <div className="hw-rc-fields">
         <span className="hw-field">
-          <label htmlFor={`folder-description-${uiId}`}>description</label>
+          <label htmlFor={`folder-description-${uiId}`}>
+            {t('provisioning.provisioningFoldersTab.descriptionLabel')}
+          </label>
           <input
             id={`folder-description-${uiId}`}
             className="form-control form-control-sm hw-field-wide"
@@ -180,7 +205,7 @@ const FolderBody = ({ folder, patch, disabled }) => {
       <div className="hw-rc-fields">
         <LinesField
           id={`folder-args-${uiId}`}
-          label="rsync args (one per line)"
+          label={t('provisioning.provisioningFoldersTab.rsyncArgsLabel')}
           lines={folder.args}
           disabled={disabled}
           placeholder={'--archive\n--delete\n-z'}
@@ -188,7 +213,7 @@ const FolderBody = ({ folder, patch, disabled }) => {
         />
         <LinesField
           id={`folder-exclude-${uiId}`}
-          label="exclude (one per line)"
+          label={t('provisioning.provisioningFoldersTab.excludeLabel')}
           lines={folder.exclude}
           disabled={disabled}
           placeholder={'.git\nnode_modules'}
@@ -205,25 +230,29 @@ FolderBody.propTypes = {
   disabled: PropTypes.bool,
 };
 
-const ProvisioningFoldersTab = ({ folders, onChange, disabled, makeRow }) => (
-  <div>
-    <p className="form-text text-muted mt-0 mb-2">
-      Folders sync top to bottom — drag to reorder. <strong>Sync back</strong> also pulls the folder
-      guest→host (to→from) after provisioning and on an ad-hoc Sync Back (rsync/scp folders only).
-    </p>
-    <StepCardList
-      rows={folders}
-      onChange={onChange}
-      disabled={disabled}
-      addLabel="Add Folder"
-      makeRow={makeRow}
-      renderTitle={folder => <FolderTitle folder={folder} />}
-      renderBody={(folder, patch) => (
-        <FolderBody folder={folder} patch={patch} disabled={disabled} />
-      )}
-    />
-  </div>
-);
+const ProvisioningFoldersTab = ({ folders, onChange, disabled, makeRow }) => {
+  const { t } = useTranslation();
+  return (
+    <div>
+      <p className="form-text text-muted mt-0 mb-2">
+        {t('provisioning.provisioningFoldersTab.introText1')}{' '}
+        <strong>{t('provisioning.provisioningFoldersTab.syncBackLabel')}</strong>{' '}
+        {t('provisioning.provisioningFoldersTab.introText2')}
+      </p>
+      <StepCardList
+        rows={folders}
+        onChange={onChange}
+        disabled={disabled}
+        addLabel={t('provisioning.provisioningFoldersTab.addFolder')}
+        makeRow={makeRow}
+        renderTitle={folder => <FolderTitle folder={folder} />}
+        renderBody={(folder, patch) => (
+          <FolderBody folder={folder} patch={patch} disabled={disabled} />
+        )}
+      />
+    </div>
+  );
+};
 
 ProvisioningFoldersTab.propTypes = {
   folders: PropTypes.array.isRequired,

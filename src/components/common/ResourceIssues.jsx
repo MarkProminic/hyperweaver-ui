@@ -34,48 +34,57 @@ export const ResourceIssueList = ({ details }) => {
   const { t } = useTranslation();
   return (
     <div className="alert alert-danger py-2">
-      <strong>{t('A1-01.resourceIssueList.insufficientResources')}</strong>
-    <ul className="mb-0 mt-1 list-unstyled">
-      {details.map(detail => (
-        <li key={`${detail.resource || 'issue'}:${detail.message}`}>
-          <i className={`${iconFor(detail.resource)} me-2`} />
-          {detail.message}
-        </li>
-      ))}
-    </ul>
-  </div>
-);
+      <strong>{t('common.resourceIssueList.insufficientResources')}</strong>
+      <ul className="mb-0 mt-1 list-unstyled">
+        {details.map(detail => (
+          <li key={`${detail.resource || 'issue'}:${detail.message}`}>
+            <i className={`${iconFor(detail.resource)} me-2`} />
+            {detail.message}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
 
 ResourceIssueList.propTypes = {
   details: PropTypes.array.isRequired,
 };
 
 /** Non-blocking banner for resource_warnings[] on a success answer. */
-export const ResourceWarningBanner = ({ warnings, onDismiss }) => (
-  <div
-    className={`alert ${warnings.some(warning => warning.level === 'critical') ? 'alert-danger' : 'alert-warning'} py-2 d-flex justify-content-between align-items-start`}
-  >
-    <div>
-      <strong>Resource pressure</strong>
-      <ul className="mb-0 mt-1 list-unstyled">
-        {warnings.map(warning => (
-          <li key={`${warning.resource || 'warning'}:${warning.message}`}>
-            <i className={`${iconFor(warning.resource)} me-2`} />
-            {warning.message}
-            {warning.projected_percent !== null && warning.projected_percent !== undefined && (
-              <span className="text-muted small ms-1">
-                (projected {warning.projected_percent}%)
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
+export const ResourceWarningBanner = ({ warnings, onDismiss }) => {
+  const { t } = useTranslation();
+  return (
+    <div
+      className={`alert ${warnings.some(warning => warning.level === 'critical') ? 'alert-danger' : 'alert-warning'} py-2 d-flex justify-content-between align-items-start`}
+    >
+      <div>
+        <strong>{t('common.resourceWarningBanner.resourcePressure')}</strong>
+        <ul className="mb-0 mt-1 list-unstyled">
+          {warnings.map(warning => (
+            <li key={`${warning.resource || 'warning'}:${warning.message}`}>
+              <i className={`${iconFor(warning.resource)} me-2`} />
+              {warning.message}
+              {warning.projected_percent !== null && warning.projected_percent !== undefined && (
+                <span className="text-muted small ms-1">
+                  (projected {warning.projected_percent}%)
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+      {onDismiss && (
+        <button
+          type="button"
+          className="btn-close"
+          aria-label={t('common.resourceWarningBanner.dismiss')}
+          onClick={onDismiss}
+        />
+      )}
     </div>
-    {onDismiss && (
-      <button type="button" className="btn-close" aria-label="Dismiss" onClick={onDismiss} />
-    )}
-  </div>
-);
+  );
+};
 
 ResourceWarningBanner.propTypes = {
   warnings: PropTypes.array.isRequired,

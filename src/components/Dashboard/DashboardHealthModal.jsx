@@ -1,20 +1,25 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { ContentModal } from '../common';
 
 import { getServerHealthStatus } from './dashboardUtils';
 
 /** Every displayable issue on one server result — the card just renders these. */
-const collectIssues = serverResult => {
+const collectIssues = (serverResult, t) => {
   const status = getServerHealthStatus(serverResult);
   const issues = [];
   const rebootInfo = serverResult.healthData?.reboot_info;
 
   if (status === 'offline') {
-    issues.push(serverResult.error || 'Connection failed');
+    issues.push(serverResult.error || t('dashboard.healthModal.connectionFailed'));
   } else if (status === 'warning' && serverResult.data) {
     if (serverResult.data.loadavg?.[0] > 2) {
-      issues.push(`High CPU load: ${serverResult.data.loadavg[0].toFixed(2)}`);
+      issues.push(
+        t('dashboard.healthModal.highCpuLoad', {
+          cpuLoad: serverResult.data.loadavg[0].toFixed(2),
+        })
+      );
     }
     if (
       serverResult.data.totalmem &&
@@ -25,25 +30,31 @@ const collectIssues = serverResult => {
         ((serverResult.data.totalmem - serverResult.data.freemem) / serverResult.data.totalmem) *
           100
       );
-      issues.push(`Low memory: ${memUsed}% used`);
+      issues.push(t('dashboard.healthModal.lowMemory', { memUsed }));
     }
   }
 
   if (serverResult.healthData?.reboot_required) {
-    const reasons = rebootInfo?.reasons?.join(', ') || 'Configuration changes';
+    const reasons =
+      rebootInfo?.reasons?.join(', ') || t('dashboard.healthModal.configurationChanges');
     const ageMinutes = rebootInfo?.age_minutes || 0;
     const timeAgo =
       ageMinutes > 60
         ? `${Math.floor(ageMinutes / 60)}h ${ageMinutes % 60}m ago`
         : `${ageMinutes}m ago`;
-    issues.push(`Reboot required (${reasons}) - Changed ${timeAgo}`);
+    issues.push(t('dashboard.healthModal.rebootRequired', { reasons, timeAgo }));
   }
 
   if (serverResult.healthData?.faultStatus?.hasFaults) {
     const { faultStatus } = serverResult.healthData;
     const faultSummary = faultStatus.severityLevels?.join(', ') || 'Unknown';
+    const faultWord = faultStatus.faultCount === 1 ? 'fault' : 'faults';
     issues.push(
-      `${faultStatus.faultCount} system fault${faultStatus.faultCount === 1 ? '' : 's'} (${faultSummary})`
+      t('dashboard.healthModal.systemFault', {
+        faultCount: faultStatus.faultCount,
+        faultWord,
+        severity: faultSummary,
+      })
     );
   }
 
@@ -54,7 +65,8 @@ const collectIssues = serverResult => {
  * Modal showing detailed health issues for unhealthy servers.
  */
 const HealthIssueCard = ({ serverResult }) => {
-  const { status, issues } = collectIssues(serverResult);
+  const { t } = useTranslation();
+  const { status, issues } = collectIssues(serverResult, t);
   const statusColor = status === 'offline' ? 'alert-danger' : 'alert-warning';
 
   return (
@@ -67,7 +79,7 @@ const HealthIssueCard = ({ serverResult }) => {
         {serverResult.healthData?.reboot_required && (
           <span className="badge text-bg-warning d-inline-flex align-items-center gap-1">
             <i className="fas fa-redo" />
-            <span>Reboot Required</span>
+            <span>{t('dashboard.healthModal.rebootRequiredBadge')}</span>
           </span>
         )}
       </div>
@@ -91,6 +103,7 @@ HealthIssueCard.propTypes = {
 };
 
 const DashboardHealthModal = ({ isOpen, onClose, servers }) => {
+  const { t } = useTranslation();
   // Must mirror EVERY issue source the summary counts (calculateInfrastructureSummary):
   // load/memory/offline via status, reboot_required, AND system faults — a fault-only
   // server used to be filtered out here, so the badge said 1 but the modal was empty.
@@ -106,7 +119,7 @@ const DashboardHealthModal = ({ isOpen, onClose, servers }) => {
     <ContentModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Infrastructure Health Issues"
+      title={t('dashboard.healthModal.title')}
       icon="fas fa-exclamation-triangle"
     >
       {unhealthyServers.map(serverResult => (

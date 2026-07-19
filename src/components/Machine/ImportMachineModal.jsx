@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { importMachine } from '../../api/machineAPI';
 import { FormModal, PathInput } from '../common';
 
 const ImportMachineModal = ({ isOpen, onClose, currentServer, onDone }) => {
+  const { t } = useTranslation();
   const [path, setPath] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,7 +22,7 @@ const ImportMachineModal = ({ isOpen, onClose, currentServer, onDone }) => {
 
   const handleSubmit = async () => {
     if (!path.trim()) {
-      setError('Enter the .ova/.ovf path on the agent host.');
+      setError(t('machine.importMachineModal.pathRequired'));
       return;
     }
     setLoading(true);
@@ -41,7 +43,7 @@ const ImportMachineModal = ({ isOpen, onClose, currentServer, onDone }) => {
     }
     const taskId = result.data?.task_id || result.data?.parent_task_id;
     onDone({
-      text: `${result.data?.message || 'Import queued'}${taskId ? ` (task ${taskId})` : ''} — the machine row appears via discovery when the import completes.`,
+      text: `${result.data?.message || t('machine.importMachineModal.importQueuedFallback')}${taskId ? ` ${t('machine.importMachineModal.taskSuffix', { taskId })}` : ''} ${t('machine.importMachineModal.discoveryNote')}`,
       warning: false,
     });
     onClose();
@@ -52,9 +54,9 @@ const ImportMachineModal = ({ isOpen, onClose, currentServer, onDone }) => {
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Import Machine (.ova / .ovf)"
+      title={t('machine.importMachineModal.title')}
       icon="fas fa-file-import"
-      submitText="Import"
+      submitText={t('machine.importMachineModal.submit')}
       submitIcon="fas fa-file-import"
       loading={loading}
       showCancelButton
@@ -62,7 +64,7 @@ const ImportMachineModal = ({ isOpen, onClose, currentServer, onDone }) => {
       {error && <div className="alert alert-danger py-2">{error}</div>}
       <div className="mb-3">
         <label className="form-label" htmlFor="import-machine-path">
-          Appliance path (on the agent host) <span className="text-danger">*</span>
+          {t('machine.importMachineModal.pathLabel')} <span className="text-danger">*</span>
         </label>
         <PathInput
           id="import-machine-path"
@@ -70,19 +72,19 @@ const ImportMachineModal = ({ isOpen, onClose, currentServer, onDone }) => {
           onChange={setPath}
           server={currentServer}
           mode="file"
-          pickTitle="Pick the .ova/.ovf"
+          pickTitle={t('machine.importMachineModal.pickTitle')}
           disabled={loading}
         />
       </div>
       <div className="mb-3">
         <label className="form-label" htmlFor="import-machine-name">
-          Name
+          {t('machine.importMachineModal.nameLabel')}
         </label>
         <input
           id="import-machine-name"
           className="form-control"
           type="text"
-          placeholder="(blank = the appliance's own name)"
+          placeholder={t('machine.importMachineModal.namePlaceholder')}
           value={name}
           onChange={e => setName(e.target.value)}
           disabled={loading}

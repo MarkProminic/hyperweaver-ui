@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../../contexts/ServerContext';
 import NTPConfirmActionModal from '../NTPConfirmActionModal';
@@ -10,6 +11,7 @@ import TimeSyncServiceInfo from './ServiceInfo';
 import TimeSyncServiceManagement from './ServiceManagement';
 
 const TimeSyncStatus = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [statusInfo, setStatusInfo] = useState(null);
   const [availableSystems, setAvailableSystems] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -232,7 +234,7 @@ const TimeSyncStatus = ({ server, onError }) => {
     return (
       <div className="text-center p-4">
         <i className="fas fa-spinner fa-spin fa-2x" />
-        <p className="mt-2">Loading time synchronization status...</p>
+        <p className="mt-2">{t('hostTime.timeSyncStatus.loading')}</p>
       </div>
     );
   }
@@ -240,11 +242,8 @@ const TimeSyncStatus = ({ server, onError }) => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">Time Synchronization Status</h2>
-        <p>
-          Monitor time synchronization service and peer status on <strong>{server.hostname}</strong>
-          .
-        </p>
+        <h2 className="fs-5 fw-bold">{t('hostTime.timeSyncStatus.heading')}</h2>
+        <p>{t('hostTime.timeSyncStatus.description', { hostname: server.hostname })}</p>
       </div>
 
       {/* Service Status Information */}

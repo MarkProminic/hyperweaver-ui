@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import ZloginActionsDropdown from '../ZloginActionsDropdown';
 import ZoneShell from '../ZoneShell';
@@ -25,6 +26,8 @@ const ZloginModal = ({
   modalReadOnly,
   setModalReadOnly,
 }) => {
+  const { t } = useTranslation();
+
   if (!showZloginConsole) {
     return null;
   }
@@ -41,7 +44,7 @@ const ZloginModal = ({
         }}
         role="button"
         tabIndex={0}
-        aria-label="Close modal"
+        aria-label={t('machine.zloginModal.closeModal')}
       />
       <div
         className={

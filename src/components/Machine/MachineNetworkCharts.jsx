@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getNetworkUsage, getZoneUsage } from '../../api/monitoringAPI';
 import Chart from '../Chart';
@@ -34,6 +35,7 @@ const appendPoint = (list, ts, value, cutoff) =>
   [...list, [ts, value]].filter(([time]) => time >= cutoff);
 
 const MachineNetworkCharts = ({ currentServer, machineName, links }) => {
+  const { t } = useTranslation();
   // {link: {rx: [[ts, mbps]], tx: [[ts, mbps]]}}
   const [data, setData] = useState({});
   // {cpu: [[ts, pct]], rss: [[ts, GB]], swap: [[ts, GB]], read: [[ts, MBps]], write: [[ts, MBps]]}
@@ -51,7 +53,7 @@ const MachineNetworkCharts = ({ currentServer, machineName, links }) => {
       { zone: machineName, since: lastSeen.current.__zone__ || sinceIso(), limit: 200 }
     );
     if (!result.success) {
-      return `Zone usage failed (GET monitoring/zones/usage): ${result.message}`;
+      return t('machine.machineNetworkCharts.zoneUsageFailed', { message: result.message });
     }
     const rows = Array.isArray(result.data?.usage) ? result.data.usage : [];
     setZoneData(prev => {
@@ -82,7 +84,7 @@ const MachineNetworkCharts = ({ currentServer, machineName, links }) => {
       return next;
     });
     return '';
-  }, [currentServer, machineName]);
+  }, [currentServer, machineName, t]);
 
   // `links` is a fresh array each parent render — a joined key drives the
   // effect, a ref feeds the callback, so the poll only resets when the
@@ -129,9 +131,9 @@ const MachineNetworkCharts = ({ currentServer, machineName, links }) => {
       return next;
     });
     return failed
-      ? `Network usage failed (GET monitoring/network/usage): ${failed.result.message}`
+      ? t('machine.machineNetworkCharts.networkUsageFailed', { message: failed.result.message })
       : '';
-  }, [currentServer]);
+  }, [currentServer, t]);
 
   const load = useCallback(async () => {
     const [zoneError, netError] = await Promise.all([loadZoneUsage(), loadNetwork()]);
@@ -160,13 +162,17 @@ const MachineNetworkCharts = ({ currentServer, machineName, links }) => {
         <div className="d-flex justify-content-between align-items-center mb-2">
           <h4 className="fs-6 fw-bold mb-0">
             <i className="fas fa-chart-area me-2" />
-            Resources ({WINDOW_MINUTES}-minute window)
+            {t('machine.machineNetworkCharts.resourcesHeading', { minutes: WINDOW_MINUTES })}
           </h4>
           <button
             type="button"
             className="btn btn-sm btn-link"
             onClick={() => setCollapsed(prev => !prev)}
-            title={collapsed ? 'Show the charts' : 'Hide the charts'}
+            title={
+              collapsed
+                ? t('machine.machineNetworkCharts.showCharts')
+                : t('machine.machineNetworkCharts.hideCharts')
+            }
           >
             <i className={`fas ${collapsed ? 'fa-chevron-down' : 'fa-chevron-up'}`} />
           </button>
@@ -175,27 +181,51 @@ const MachineNetworkCharts = ({ currentServer, machineName, links }) => {
         {!collapsed && !hasZoneSamples && (
           <p className="text-muted small mb-2">
             <i className="fas fa-spinner fa-pulse me-2" />
-            Waiting for zone usage samples…
+            {t('machine.machineNetworkCharts.waitingForZoneSamples')}
           </p>
         )}
         {!collapsed && hasZoneSamples && (
           <>
             <Chart
-              options={chartOptionsFor('CPU (% of host)', '%', [
-                { name: 'CPU', data: zoneData.cpu, color: '#4caf50' },
+              options={chartOptionsFor(t('machine.machineNetworkCharts.cpuTitle'), '%', [
+                {
+                  name: t('machine.machineNetworkCharts.cpuSeries'),
+                  data: zoneData.cpu,
+                  color: '#4caf50',
+                },
               ])}
             />
             <Chart
-              options={chartOptionsFor('Memory', 'GB', [
-                { name: 'RSS', data: zoneData.rss, color: '#64b5f6' },
-                { name: 'Swap', data: zoneData.swap, color: '#ff9800' },
+              options={chartOptionsFor(t('machine.machineNetworkCharts.memoryTitle'), 'GB', [
+                {
+                  name: t('machine.machineNetworkCharts.rssSeries'),
+                  data: zoneData.rss,
+                  color: '#64b5f6',
+                },
+                {
+                  name: t('machine.machineNetworkCharts.swapSeries'),
+                  data: zoneData.swap,
+                  color: '#ff9800',
+                },
               ])}
             />
             <Chart
-              options={chartOptionsFor('Filesystem I/O (zvol block traffic not included)', 'MB/s', [
-                { name: 'Read', data: zoneData.read, color: '#64b5f6' },
-                { name: 'Write', data: zoneData.write, color: '#ff9800' },
-              ])}
+              options={chartOptionsFor(
+                t('machine.machineNetworkCharts.filesystemIoTitle'),
+                'MB/s',
+                [
+                  {
+                    name: t('machine.machineNetworkCharts.readSeries'),
+                    data: zoneData.read,
+                    color: '#64b5f6',
+                  },
+                  {
+                    name: t('machine.machineNetworkCharts.writeSeries'),
+                    data: zoneData.write,
+                    color: '#ff9800',
+                  },
+                ]
+              )}
             />
           </>
         )}
@@ -206,17 +236,31 @@ const MachineNetworkCharts = ({ currentServer, machineName, links }) => {
               return (
                 <p className="text-muted small mb-2" key={link}>
                   <i className="fas fa-spinner fa-pulse me-2" />
-                  Waiting for samples on <code>{link}</code>…
+                  {t('machine.machineNetworkCharts.waitingForLinkSamplesPrefix')}{' '}
+                  <code>{link}</code>
+                  {t('machine.machineNetworkCharts.waitingForLinkSamplesSuffix')}
                 </p>
               );
             }
             return (
               <Chart
                 key={link}
-                options={chartOptionsFor(`Network — ${link}`, 'Mbps', [
-                  { name: 'RX', data: entry.rx, color: '#64b5f6' },
-                  { name: 'TX', data: entry.tx, color: '#ff9800' },
-                ])}
+                options={chartOptionsFor(
+                  t('machine.machineNetworkCharts.networkTitle', { link }),
+                  'Mbps',
+                  [
+                    {
+                      name: t('machine.machineNetworkCharts.rxSeries'),
+                      data: entry.rx,
+                      color: '#64b5f6',
+                    },
+                    {
+                      name: t('machine.machineNetworkCharts.txSeries'),
+                      data: entry.tx,
+                      color: '#ff9800',
+                    },
+                  ]
+                )}
               />
             );
           })}
