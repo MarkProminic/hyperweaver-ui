@@ -106,7 +106,9 @@ const TestRecipeModal = ({ isOpen, onClose, server, recipe }) => {
           </span>
         </div>
         <div className="col-12 col-md-6">
-          <span className="form-label d-block">Call-time variables (merge over the recipe's)</span>
+          <span className="form-label d-block">
+            Call-time variables (merge over the recipe&apos;s)
+          </span>
           <VariableRowsEditor
             rows={variableRows}
             onRowsChange={setVariableRows}
@@ -302,8 +304,7 @@ const RecipesManagement = ({ server }) => {
       {loading && recipes.length === 0 && <p className="text-muted">Loading…</p>}
       {!loading && recipes.length === 0 && (
         <div className="alert alert-info">
-          No recipes yet — the seeded defaults appear here once the agent ships them, or create
-          one.
+          No recipes yet — the seeded defaults appear here once the agent ships them, or create one.
         </div>
       )}
 

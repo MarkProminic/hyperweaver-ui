@@ -1871,8 +1871,24 @@ OsTypeSelect.propTypes = {
   disabled: PropTypes.bool,
 };
 
-// System step — zones.* fields, settings.os_type, cloud-init, the full
-// hardware.<section>.<key> knob surface (Advanced), and the raw `vbox`
+// firmware_type ↔ bootrom linkage (converged contract): a non-CSM ROM boots
+// UEFI only → picking one LOCKS Firmware to UEFI; Firmware BIOS filters the
+// ROM list to *_CSM entries; explicit bootrom wins agent-side.
+const bootromLocksUefiFor = (bhyve, bootromValue) =>
+  bhyve && bootromValue !== '' && !bootromValue.toUpperCase().endsWith('_CSM');
+
+const bootromChoicesFor = (knobValues, firmwareType) => {
+  const list = knobValues?.['zones.bootrom'] || [];
+  return firmwareType === 'BIOS'
+    ? list.filter(rom => String(rom).toUpperCase().endsWith('_CSM'))
+    : list;
+};
+
+const firmwareChoicesFor = (knobValues, locksUefi) =>
+  locksUefi ? ['UEFI'] : knobValues?.['settings.firmware_type'] || ['UEFI', 'BIOS'];
+
+// System step — zones.* fields (bhyve), settings.os_type, cloud-init, the
+// full vbox.<section>.<key> knob surface (Advanced), and the raw
 // passthrough escape hatch.
 export const SystemStep = ({
   zones,
@@ -1900,17 +1916,9 @@ export const SystemStep = ({
   const knobValues = agentDefaults?.knob_values || null;
   const cpuTopo = Array.isArray(zones.complex_cpu_conf) ? zones.complex_cpu_conf[0] || {} : {};
   const setCpuTopo = patch => setZone('complex_cpu_conf', [{ ...cpuTopo, ...patch }]);
-  // firmware_type ↔ bootrom linkage (converged contract): a non-CSM ROM
-  // boots UEFI only → picking one LOCKS Firmware to UEFI; Firmware BIOS
-  // filters the ROM list to *_CSM entries; explicit bootrom wins agent-side.
-  const bootromValue = String(zones.bootrom ?? '').trim();
-  const bootromLocksUefi =
-    bhyve && bootromValue !== '' && !bootromValue.toUpperCase().endsWith('_CSM');
-  const bootromList = knobValues?.['zones.bootrom'] || [];
-  const bootromChoices =
-    settings.firmware_type === 'BIOS'
-      ? bootromList.filter(rom => String(rom).toUpperCase().endsWith('_CSM'))
-      : bootromList;
+  const bootromLocksUefi = bootromLocksUefiFor(bhyve, String(zones.bootrom ?? '').trim());
+  const bootromChoices = bootromChoicesFor(knobValues, settings.firmware_type);
+  const firmwareChoices = firmwareChoicesFor(knobValues, bootromLocksUefi);
 
   return (
     <>
@@ -1988,9 +1996,7 @@ export const SystemStep = ({
           <VocabularySelect
             id="machine-system-firmware"
             value={settings.firmware_type ?? ''}
-            entries={
-              bootromLocksUefi ? ['UEFI'] : knobValues?.['settings.firmware_type'] || ['UEFI', 'BIOS']
-            }
+            entries={firmwareChoices}
             blankLabel={defaultLabel('firmware_type')}
             onChange={next => setSetting('firmware_type', next)}
             disabled={loading}

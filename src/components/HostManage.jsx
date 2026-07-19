@@ -387,10 +387,9 @@ const HostManage = () => {
               <div>
                 <div className="mb-4">
                   <p>
-                    zlogin console recipes on <strong>{currentServer.hostname}</strong> —
-                    early-boot guest automation the <code>zone_setup</code> step runs over the
-                    console before SSH answers. The default recipe per OS family and brand is what
-                    setup picks.
+                    zlogin console recipes on <strong>{currentServer.hostname}</strong> — early-boot
+                    guest automation the <code>zone_setup</code> step runs over the console before
+                    SSH answers. The default recipe per OS family and brand is what setup picks.
                   </p>
                 </div>
 

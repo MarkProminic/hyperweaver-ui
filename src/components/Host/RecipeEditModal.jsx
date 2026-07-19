@@ -52,9 +52,7 @@ const buildSteps = stepRows =>
 
 const buildVariables = variableRows =>
   Object.fromEntries(
-    variableRows
-      .filter(row => row.name.trim() !== '')
-      .map(row => [row.name.trim(), row.value])
+    variableRows.filter(row => row.name.trim() !== '').map(row => [row.name.trim(), row.value])
   );
 
 /** Key/value rows — the recipe `variables` map editor (shared by the test panel). */
@@ -69,7 +67,9 @@ export const VariableRowsEditor = ({ rows, onRowsChange, idPrefix, disabled }) =
           value={row.name}
           onChange={e =>
             onRowsChange(
-              rows.map(entry => (entry.key === row.key ? { ...entry, name: e.target.value } : entry))
+              rows.map(entry =>
+                entry.key === row.key ? { ...entry, name: e.target.value } : entry
+              )
             )
           }
           disabled={disabled}
