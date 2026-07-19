@@ -1323,7 +1323,8 @@
       "managing": "Managing {{totalServers}} servers",
       "with": "with {{totalZones}} {{resource}}",
       "lastUpdated": "Last updated {{time}}",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "datacenterTopology": "Datacenter topology"
     },
     "summaryCards": {
       "totalServers": "Total Servers",
@@ -4195,7 +4196,8 @@
       "waitHelp": "Timeout for address configuration",
       "primaryAddress": "Primary address",
       "temporary": "Temporary (not persistent across reboots)",
-      "downState": "Create in down state"
+      "downState": "Create in down state",
+      "goTypeHelp": "This agent: static works everywhere (CIDR); DHCP is Windows-only; SLAAC is automatic — no addrconf."
     },
     "ipAddressManagement": {
       "errors": {
@@ -4231,7 +4233,10 @@
       "warning": "Warning:",
       "cannotUndo": "This action cannot be undone.",
       "deletePrompt": "Are you sure you want to delete the IP address",
-      "deleteNote": "This will remove the IP address configuration from the system."
+      "deleteNote": "This will remove the IP address configuration from the system.",
+      "goDisableTitle": "Disable interface addressing",
+      "goDisableBody": "On this agent enable/disable acts on the WHOLE interface — disabling cuts every address on {{iface}}.",
+      "goDisableConfirm": "Disable interface"
     },
     "interfacesTable": {
       "resetSortTitle": "Click to reset sorting to default",
@@ -5667,7 +5672,32 @@
       "hostOnlyNetwork": "Host-only — {{name}}",
       "natNetwork": "NAT network — {{name}}",
       "natShared": "NAT (per-machine)",
-      "sharedNetworks": "Shared networks (subnet evidence):"
+      "sharedNetworks": "Shared networks (subnet evidence):",
+      "issueUnassigned": "zone-less vnics: {{count}}",
+      "lensDebug": "Debug",
+      "pendingBadge": "pending · reboot",
+      "pendingMoveTitle": "Staged rewire — applies at next boot",
+      "stagedHeading_one": "{{count}} staged network change",
+      "stagedHeading_other": "{{count}} staged network changes",
+      "applyChanges": "Apply",
+      "discard": "Discard",
+      "moveLine": "{{machine}} · {{link}} → {{carrier}}{{vlan}}",
+      "trayNote": "Changes stage here and apply through machine-modify: stopped machines queue for next boot; running machines accrue until the next agent-driven power cycle.",
+      "applyOk": "staged on the agent",
+      "applyReboot": "accepted — applies at next boot / power cycle",
+      "applyFail": "agent refused the change",
+      "applyNoHost": "host no longer reachable",
+      "rewireUnavailable": "drag-rewire needs the VBox re-attach wire",
+      "openNetworking": "Open networking management",
+      "unusedAdapter": "up · UNUSED — capacity available",
+      "upstreamColumn": "Upstream",
+      "upstreamHeading": "LACP partner switch — unknown",
+      "upstreamBody": "awaits LLDP; this stage fills with real uplink ports and switch identities, never guessed",
+      "filterPlaceholder": "filter machines…",
+      "sharedBadge": "shared",
+      "legendDrag": "drag a vnic chip onto a network to stage a rewire — applies at reboot / power cycle",
+      "hostOnlyNetNetwork": "Host-only net — {{name}}",
+      "rewireNeedsModify": "rewire needs machine-modify"
     }
   },
   "machine": {
