@@ -117,6 +117,22 @@ export const refreshProvisionerFromSource = async (hostname, port, protocol, nam
   );
 
 /**
+ * The WHOLE stored document as raw YAML (frozen hosts-yml contract, both
+ * agents): GET → {machine_name, yaml}; PUT {yaml} → 200 {warnings: []}
+ * (strings, non-blocking) | 400 {error, line?, column?} (numeric). Stored
+ * VERBATIM with key order preserved (comments die); a section absent from
+ * the PUT is REMOVED; agent bookkeeping never appears and 400s if named;
+ * unknown top-level keys 400 loudly.
+ */
+export const getHostsYml = async (hostname, port, protocol, machineName) =>
+  await makeAgentRequest(hostname, port, protocol, `machines/${machineName}/hosts-yml`);
+
+export const putHostsYml = async (hostname, port, protocol, machineName, yaml) =>
+  await makeAgentRequest(hostname, port, protocol, `machines/${machineName}/hosts-yml`, 'PUT', {
+    yaml,
+  });
+
+/**
  * zlogin recipe registry (zoneweaver/bhyve-only surface — the zone_setup
  * early-boot console automation). filters = {os_family?, brand?}.
  */

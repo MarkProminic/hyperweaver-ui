@@ -11,6 +11,7 @@ import { hasFeature } from '../../utils/capabilities';
 import { canCreateMachines, canStartStopMachines } from '../../utils/permissions';
 import { ConfirmModal, DismissibleAlert } from '../common';
 
+import HostsYmlModal from './HostsYmlModal';
 import { parseConfiguration } from './machineHelpers';
 import ProvisioningEditor from './ProvisioningEditor';
 
@@ -40,6 +41,7 @@ const MachineProvisioning = ({
   // The 409 host-hooks pre-flight gate ({reason} from the agent) — confirming
   // re-POSTs {confirm_host_hooks: true}; the agent remembers per machine.
   const [hookConfirm, setHookConfirm] = useState(null);
+  const [hostsYmlOpen, setHostsYmlOpen] = useState(false);
 
   const machineName = machineDetails?.machine_info?.name;
   const configuration = parseConfiguration(machineDetails);
@@ -253,20 +255,46 @@ const MachineProvisioning = ({
         )}
 
         {canReshape && (
-          <ProvisioningEditor
-            currentServer={currentServer}
-            machineName={machineName}
-            document={provisionerDoc}
-            onSaved={text => {
-              report(text, 'success');
-              // The stored document reshapes configuration.provisioner —
-              // refresh so a first document flips the status (and the
-              // Controls menu) on, and the editor reseeds from what stuck.
-              if (onDocumentStored) {
-                onDocumentStored();
-              }
-            }}
-          />
+          <>
+            <div className="mt-2 mb-2">
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => setHostsYmlOpen(true)}
+                disabled={loading}
+                title="Edit the WHOLE stored document as raw YAML — the emergency hatch between create-without-start and provision"
+              >
+                <i className="fas fa-file-code me-2" />
+                Edit Hosts.yml (raw)
+              </button>
+            </div>
+            <ProvisioningEditor
+              currentServer={currentServer}
+              machineName={machineName}
+              document={provisionerDoc}
+              onSaved={text => {
+                report(text, 'success');
+                // The stored document reshapes configuration.provisioner —
+                // refresh so a first document flips the status (and the
+                // Controls menu) on, and the editor reseeds from what stuck.
+                if (onDocumentStored) {
+                  onDocumentStored();
+                }
+              }}
+            />
+            <HostsYmlModal
+              isOpen={hostsYmlOpen}
+              onClose={() => setHostsYmlOpen(false)}
+              currentServer={currentServer}
+              machineName={machineName}
+              onSaved={text => {
+                report(text, 'success');
+                if (onDocumentStored) {
+                  onDocumentStored();
+                }
+              }}
+            />
+          </>
         )}
 
         {hookConfirm && (
