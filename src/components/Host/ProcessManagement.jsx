@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { hasHypervisor } from '../../utils/capabilities';
@@ -30,6 +31,7 @@ const ProcessManagement = ({ server }) => {
   const [showBatchKillModal, setShowBatchKillModal] = useState(false);
 
   const { makeAgentRequest } = useServers();
+  const { t } = useTranslation();
 
   // The zone filter is an illumos concept — the Go agent has no `zone`
   // field and ignores `?zone=`.
@@ -105,16 +107,16 @@ const ProcessManagement = ({ server }) => {
         const users = [...new Set(processData.map(p => p.username).filter(Boolean))].sort();
         setAvailableUsers(users);
       } else {
-        setError(result.message || 'Failed to load processes');
+        setError(result.message || t('host.processManagement.errors.loadFailed'));
         setProcesses([]);
       }
     } catch (err) {
-      setError(`Error loading processes: ${err.message}`);
+      setError(t('host.processManagement.errors.loadError', { message: err.message }));
       setProcesses([]);
     } finally {
       setLoading(false);
     }
-  }, [server, makeAgentRequest, debouncedPattern, filters.zone, filters.user, filters.detailed]);
+  }, [server, makeAgentRequest, debouncedPattern, filters.zone, filters.user, filters.detailed, t]);
 
   // Load processes on component mount and when filters change
   useEffect(() => {
@@ -124,7 +126,7 @@ const ProcessManagement = ({ server }) => {
 
   const handleProcessAction = async (pid, action, options = {}) => {
     if (!server || !makeAgentRequest) {
-      return { success: false, message: 'Server not available' };
+      return { success: false, message: t('host.processManagement.errors.serverNotAvailable') };
     }
 
     try {
@@ -159,10 +161,13 @@ const ProcessManagement = ({ server }) => {
         await loadProcesses();
         return { success: true, message: result.message };
       }
-      setError(result.message || `Failed to ${action} process`);
+      setError(result.message || t('host.processManagement.errors.actionFailed', { action }));
       return { success: false, message: result.message };
     } catch (err) {
-      const errorMsg = `Error performing ${action}: ${err.message}`;
+      const errorMsg = t('host.processManagement.errors.actionError', {
+        action,
+        message: err.message,
+      });
       setError(errorMsg);
       return { success: false, message: errorMsg };
     } finally {
@@ -172,7 +177,7 @@ const ProcessManagement = ({ server }) => {
 
   const handleBatchKill = async (pattern, signal = 'TERM', zone = '') => {
     if (!server || !makeAgentRequest) {
-      return { success: false, message: 'Server not available' };
+      return { success: false, message: t('host.processManagement.errors.serverNotAvailable') };
     }
 
     try {
@@ -201,10 +206,10 @@ const ProcessManagement = ({ server }) => {
           killed: result.killed || [],
         };
       }
-      setError(result.message || 'Failed to perform batch kill');
+      setError(result.message || t('host.processManagement.errors.batchKillFailed'));
       return { success: false, message: result.message };
     } catch (err) {
-      const errorMsg = `Error performing batch kill: ${err.message}`;
+      const errorMsg = t('host.processManagement.errors.batchKillError', { message: err.message });
       setError(errorMsg);
       return { success: false, message: errorMsg };
     } finally {
@@ -233,10 +238,10 @@ const ProcessManagement = ({ server }) => {
         setSelectedProcess({ ...process, details: result.data });
         setShowDetailsModal(true);
       } else {
-        setError(result.message || 'Failed to load process details');
+        setError(result.message || t('host.processManagement.errors.loadDetailsFailed'));
       }
     } catch (err) {
-      setError(`Error loading process details: ${err.message}`);
+      setError(t('host.processManagement.errors.loadDetailsError', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -267,13 +272,13 @@ const ProcessManagement = ({ server }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="command-filter">
-                  Filter by Command
+                  {t('host.processManagement.filterByCommand')}
                 </label>
                 <input
                   id="command-filter"
                   className="form-control"
                   type="text"
-                  placeholder="Enter command pattern..."
+                  placeholder={t('host.processManagement.filterByCommandPlaceholder')}
                   value={filters.pattern}
                   onChange={e => handleFilterChange('pattern', e.target.value)}
                 />
@@ -283,7 +288,7 @@ const ProcessManagement = ({ server }) => {
               <div className="col">
                 <div className="mb-3">
                   <label className="form-label" htmlFor="zone-filter">
-                    Filter by Zone
+                    {t('host.processManagement.filterByZone')}
                   </label>
                   <select
                     id="zone-filter"
@@ -291,7 +296,7 @@ const ProcessManagement = ({ server }) => {
                     value={filters.zone}
                     onChange={e => handleFilterChange('zone', e.target.value)}
                   >
-                    <option value="">All Zones</option>
+                    <option value="">{t('host.processManagement.allZones')}</option>
                     {availableZones.map(zone => (
                       <option key={zone} value={zone}>
                         {zone}
@@ -304,7 +309,7 @@ const ProcessManagement = ({ server }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="user-filter">
-                  Filter by User
+                  {t('host.processManagement.filterByUser')}
                 </label>
                 <select
                   id="user-filter"
@@ -312,7 +317,7 @@ const ProcessManagement = ({ server }) => {
                   value={filters.user}
                   onChange={e => handleFilterChange('user', e.target.value)}
                 >
-                  <option value="">All Users</option>
+                  <option value="">{t('host.processManagement.allUsers')}</option>
                   {availableUsers.map(user => (
                     <option key={user} value={user}>
                       {user}
@@ -324,7 +329,7 @@ const ProcessManagement = ({ server }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="detailed-view-toggle">
-                  Detailed View
+                  {t('host.processManagement.detailedView')}
                 </label>
                 <div className="form-check form-switch">
                   <input
@@ -336,7 +341,7 @@ const ProcessManagement = ({ server }) => {
                     onChange={e => handleFilterChange('detailed', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="detailed-view-toggle">
-                    Show CPU/Memory
+                    {t('host.processManagement.showCpuMemory')}
                   </label>
                 </div>
               </div>
@@ -344,7 +349,7 @@ const ProcessManagement = ({ server }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="refresh-button">
-                  Refresh
+                  {t('host.processManagement.refresh')}
                 </label>
                 <div>
                   <button
@@ -355,7 +360,7 @@ const ProcessManagement = ({ server }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-sync-alt me-2" />
-                    <span>Refresh</span>
+                    <span>{t('host.processManagement.refresh')}</span>
                   </button>
                 </div>
               </div>
@@ -363,7 +368,7 @@ const ProcessManagement = ({ server }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="clear-filters-button">
-                  Clear
+                  {t('host.processManagement.clear')}
                 </label>
                 <div>
                   <button
@@ -374,7 +379,7 @@ const ProcessManagement = ({ server }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-times me-2" />
-                    <span>Clear</span>
+                    <span>{t('host.processManagement.clear')}</span>
                   </button>
                 </div>
               </div>
@@ -382,7 +387,7 @@ const ProcessManagement = ({ server }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="batch-kill-button">
-                  Actions
+                  {t('host.processManagement.actions')}
                 </label>
                 <div>
                   <button
@@ -393,7 +398,7 @@ const ProcessManagement = ({ server }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-stop-circle me-2" />
-                    <span>Batch Kill</span>
+                    <span>{t('host.processManagement.batchKill')}</span>
                   </button>
                 </div>
               </div>
@@ -415,7 +420,7 @@ const ProcessManagement = ({ server }) => {
         <div className="card-body">
           <div className="d-flex justify-content-between align-items-center mb-4">
             <h3 className="fs-6 fw-bold">
-              Processes ({processes.length})
+              {t('host.processManagement.processesCount', { count: processes.length })}
               {loading && (
                 <span className="ml-2">
                   <i className="fas fa-spinner fa-spin" />

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { ConfirmModal } from '../common';
@@ -9,6 +10,7 @@ import EditRepositoryModal from './EditRepositoryModal';
 import RepositoryTable from './RepositoryTable';
 
 const RepositorySection = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [repositories, setRepositories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRepository, setSelectedRepository] = useState(null);
@@ -61,16 +63,16 @@ const RepositorySection = ({ server, onError }) => {
         });
         setRepositories(filteredRepos);
       } else {
-        onError(result.message || 'Failed to load repositories');
+        onError(result.message || t('host.repositorySection.errors.loadFailed'));
         setRepositories([]);
       }
     } catch (err) {
-      onError(`Error loading repositories: ${err.message}`);
+      onError(t('host.repositorySection.errors.loadError', { message: err.message }));
       setRepositories([]);
     } finally {
       setLoading(false);
     }
-  }, [server, makeAgentRequest, onError, filters.enabledOnly, filters.publisher, filters.type]);
+  }, [server, makeAgentRequest, onError, filters.enabledOnly, filters.publisher, filters.type, t]);
 
   // Load repositories on component mount and when filters change
   useEffect(() => {
@@ -99,10 +101,15 @@ const RepositorySection = ({ server, onError }) => {
         // Refresh repositories list after action
         await loadRepositories();
       } else {
-        onError(result.message || `Failed to ${action} repository`);
+        onError(result.message || t('host.repositorySection.errors.actionFailed', { action }));
       }
     } catch (err) {
-      onError(`Error ${enable ? 'enabling' : 'disabling'} repository: ${err.message}`);
+      onError(
+        t('host.repositorySection.errors.actionError', {
+          action: enable ? 'enabling' : 'disabling',
+          message: err.message,
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -125,10 +132,17 @@ const RepositorySection = ({ server, onError }) => {
         // Refresh repositories list after deletion
         await loadRepositories();
       } else {
-        onError(result.message || `Failed to delete repository "${publisherName}"`);
+        onError(
+          result.message || t('host.repositorySection.errors.deleteFailed', { name: publisherName })
+        );
       }
     } catch (err) {
-      onError(`Error deleting repository "${publisherName}": ${err.message}`);
+      onError(
+        t('host.repositorySection.errors.deleteError', {
+          name: publisherName,
+          message: err.message,
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -185,10 +199,10 @@ const RepositorySection = ({ server, onError }) => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">Repository Management</h2>
+        <h2 className="fs-5 fw-bold">{t('host.repositorySection.title')}</h2>
         <p>
-          Manage package repositories (publishers) on <strong>{server.hostname}</strong>. Add,
-          remove, enable, and disable package repositories.
+          {t('host.repositorySection.managePrefix')} <strong>{server.hostname}</strong>
+          {t('host.repositorySection.manageSuffix')}
         </p>
       </div>
 
@@ -199,14 +213,14 @@ const RepositorySection = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="publisher-filter">
-                  Filter by Publisher
+                  {t('host.repositorySection.filterByPublisher')}
                 </label>
 
                 <input
                   id="publisher-filter"
                   className="form-control"
                   type="text"
-                  placeholder="Enter publisher name..."
+                  placeholder={t('host.repositorySection.enterPublisherName')}
                   value={filters.publisher}
                   onChange={e => handleFilterChange('publisher', e.target.value)}
                 />
@@ -215,7 +229,7 @@ const RepositorySection = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="type-filter">
-                  Filter by Type
+                  {t('host.repositorySection.filterByType')}
                 </label>
 
                 <select
@@ -224,16 +238,16 @@ const RepositorySection = ({ server, onError }) => {
                   value={filters.type}
                   onChange={e => handleFilterChange('type', e.target.value)}
                 >
-                  <option value="">All Types</option>
-                  <option value="origin">Origin</option>
-                  <option value="mirror">Mirror</option>
+                  <option value="">{t('host.repositorySection.allTypes')}</option>
+                  <option value="origin">{t('host.repositorySection.origin')}</option>
+                  <option value="mirror">{t('host.repositorySection.mirror')}</option>
                 </select>
               </div>
             </div>
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="enabled-only-filter">
-                  Enabled Only
+                  {t('host.repositorySection.enabledOnly')}
                 </label>
 
                 <div className="form-check form-switch">
@@ -246,7 +260,7 @@ const RepositorySection = ({ server, onError }) => {
                     onChange={e => handleFilterChange('enabledOnly', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="enabled-only-filter">
-                    Enabled
+                    {t('host.repositorySection.enabled')}
                   </label>
                 </div>
               </div>
@@ -254,7 +268,7 @@ const RepositorySection = ({ server, onError }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="refresh-button">
-                  Refresh
+                  {t('host.repositorySection.refresh')}
                 </label>
                 <div>
                   <button
@@ -264,7 +278,7 @@ const RepositorySection = ({ server, onError }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-sync-alt me-2" />
-                    <span>Refresh</span>
+                    <span>{t('host.repositorySection.refresh')}</span>
                   </button>
                 </div>
               </div>
@@ -272,7 +286,7 @@ const RepositorySection = ({ server, onError }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="clear-button">
-                  Clear
+                  {t('host.repositorySection.clear')}
                 </label>
                 <div>
                   <button
@@ -282,7 +296,7 @@ const RepositorySection = ({ server, onError }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-times me-2" />
-                    <span>Clear</span>
+                    <span>{t('host.repositorySection.clear')}</span>
                   </button>
                 </div>
               </div>
@@ -297,7 +311,7 @@ const RepositorySection = ({ server, onError }) => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center gap-2">
               <h3 className="fs-6 fw-bold mb-0">
-                Repositories ({repositories.length})
+                {t('host.repositorySection.repositories', { total: repositories.length })}
                 {loading && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin" />
@@ -313,7 +327,7 @@ const RepositorySection = ({ server, onError }) => {
                 disabled={loading}
               >
                 <i className="fas fa-plus me-2" />
-                <span>Add Repository</span>
+                <span>{t('host.repositorySection.addRepository')}</span>
               </button>
             </div>
           </div>
@@ -366,9 +380,9 @@ const RepositorySection = ({ server, onError }) => {
           isOpen={!!repoToDelete}
           onClose={() => setRepoToDelete(null)}
           onConfirm={handleConfirmDelete}
-          title="Delete Repository"
-          message={`Are you sure you want to delete repository "${repoToDelete}"?`}
-          confirmText="Delete"
+          title={t('host.repositorySection.deleteTitle')}
+          message={t('host.repositorySection.deleteMessage', { name: repoToDelete })}
+          confirmText={t('host.repositorySection.delete')}
           confirmVariant="is-danger"
           loading={loading}
         />

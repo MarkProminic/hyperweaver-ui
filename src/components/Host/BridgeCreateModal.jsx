@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { FormModal } from '../common';
 
 const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     protection: 'stp',
@@ -86,36 +88,34 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      onError('Bridge name is required');
+      onError(t('host.bridgeCreateModal.errors.nameRequired'));
       return false;
     }
 
     // Validate bridge name format
     const nameRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
     if (!nameRegex.test(formData.name)) {
-      onError(
-        'Bridge name must start with a letter and contain only letters, numbers, and underscores'
-      );
+      onError(t('host.bridgeCreateModal.errors.nameFormat'));
       return false;
     }
 
     if (formData.priority < 0 || formData.priority > 65535) {
-      onError('Priority must be between 0 and 65535');
+      onError(t('host.bridgeCreateModal.errors.priorityRange'));
       return false;
     }
 
     if (formData.max_age < 6 || formData.max_age > 40) {
-      onError('Max age must be between 6 and 40 seconds');
+      onError(t('host.bridgeCreateModal.errors.maxAgeRange'));
       return false;
     }
 
     if (formData.hello_time < 1 || formData.hello_time > 10) {
-      onError('Hello time must be between 1 and 10 seconds');
+      onError(t('host.bridgeCreateModal.errors.helloTimeRange'));
       return false;
     }
 
     if (formData.forward_delay < 4 || formData.forward_delay > 30) {
-      onError('Forward delay must be between 4 and 30 seconds');
+      onError(t('host.bridgeCreateModal.errors.forwardDelayRange'));
       return false;
     }
 
@@ -154,10 +154,10 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
       if (result.success) {
         onSuccess();
       } else {
-        onError(result.message || 'Failed to create bridge');
+        onError(result.message || t('host.bridgeCreateModal.errors.createFailed'));
       }
     } catch (err) {
-      onError(`Error creating bridge: ${err.message}`);
+      onError(t('host.bridgeCreateModal.errors.createError', { message: err.message }));
     } finally {
       setCreating(false);
     }
@@ -168,15 +168,15 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create Bridge"
+      title={t('host.bridgeCreateModal.title')}
       icon="fas fa-plus-circle"
-      submitText="Create Bridge"
+      submitText={t('host.bridgeCreateModal.title')}
       submitVariant="is-primary"
       loading={creating}
     >
       <div className="mb-3">
         <label htmlFor="bridge-name" className="form-label">
-          Bridge Name *
+          {t('host.bridgeCreateModal.bridgeNameLabel')} *
         </label>
         <input
           id="bridge-name"
@@ -188,16 +188,14 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
           disabled={creating}
           required
         />
-        <p className="form-text text-muted">
-          Must start with a letter and contain only letters, numbers, and underscores
-        </p>
+        <p className="form-text text-muted">{t('host.bridgeCreateModal.nameHelp')}</p>
       </div>
 
       <div className="row g-3">
         <div className="col">
           <div className="mb-3">
             <label htmlFor="bridge-protection" className="form-label">
-              Protection
+              {t('host.bridgeCreateModal.protection')}
             </label>
             <select
               id="bridge-protection"
@@ -206,16 +204,16 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
               onChange={e => handleInputChange('protection', e.target.value)}
               disabled={creating}
             >
-              <option value="stp">STP (Spanning Tree Protocol)</option>
-              <option value="rstp">RSTP (Rapid Spanning Tree)</option>
-              <option value="none">None</option>
+              <option value="stp">{t('host.bridgeCreateModal.protectionStp')}</option>
+              <option value="rstp">{t('host.bridgeCreateModal.protectionRstp')}</option>
+              <option value="none">{t('host.bridgeCreateModal.protectionNone')}</option>
             </select>
           </div>
         </div>
         <div className="col">
           <div className="mb-3">
             <label htmlFor="bridge-priority" className="form-label">
-              Priority
+              {t('host.bridgeCreateModal.priority')}
             </label>
             <input
               id="bridge-priority"
@@ -227,7 +225,7 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
               onChange={e => handleInputChange('priority', e.target.value)}
               disabled={creating}
             />
-            <p className="form-text text-muted">0-65535 (default: 32768)</p>
+            <p className="form-text text-muted">{t('host.bridgeCreateModal.priorityHelp')}</p>
           </div>
         </div>
       </div>
@@ -236,7 +234,7 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
         <div className="col">
           <div className="mb-3">
             <label htmlFor="bridge-max-age" className="form-label">
-              Max Age (seconds)
+              {t('host.bridgeCreateModal.maxAge')}
             </label>
             <input
               id="bridge-max-age"
@@ -248,13 +246,13 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
               onChange={e => handleInputChange('max_age', e.target.value)}
               disabled={creating}
             />
-            <p className="form-text text-muted">6-40 seconds</p>
+            <p className="form-text text-muted">{t('host.bridgeCreateModal.maxAgeHelp')}</p>
           </div>
         </div>
         <div className="col">
           <div className="mb-3">
             <label htmlFor="bridge-hello-time" className="form-label">
-              Hello Time (seconds)
+              {t('host.bridgeCreateModal.helloTime')}
             </label>
             <input
               id="bridge-hello-time"
@@ -266,13 +264,13 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
               onChange={e => handleInputChange('hello_time', e.target.value)}
               disabled={creating}
             />
-            <p className="form-text text-muted">1-10 seconds</p>
+            <p className="form-text text-muted">{t('host.bridgeCreateModal.helloTimeHelp')}</p>
           </div>
         </div>
         <div className="col">
           <div className="mb-3">
             <label htmlFor="bridge-forward-delay" className="form-label">
-              Forward Delay (seconds)
+              {t('host.bridgeCreateModal.forwardDelay')}
             </label>
             <input
               id="bridge-forward-delay"
@@ -284,13 +282,13 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
               onChange={e => handleInputChange('forward_delay', e.target.value)}
               disabled={creating}
             />
-            <p className="form-text text-muted">4-30 seconds</p>
+            <p className="form-text text-muted">{t('host.bridgeCreateModal.forwardDelayHelp')}</p>
           </div>
         </div>
       </div>
 
       <div className="mb-3">
-        <span className="form-label d-block">Member Links (Optional)</span>
+        <span className="form-label d-block">{t('host.bridgeCreateModal.memberLinks')}</span>
         <div className="input-group">
           <select
             id="bridge-link-select"
@@ -300,13 +298,16 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
             disabled={creating || loadingLinks}
           >
             <option value="">
-              {loadingLinks ? 'Loading available links...' : 'Select a link to add to bridge'}
+              {loadingLinks
+                ? t('host.bridgeCreateModal.loadingLinks')
+                : t('host.bridgeCreateModal.selectLink')}
             </option>
             {availableLinks
               .filter(link => !formData.links.includes(link.link))
               .map(link => (
                 <option key={link.link} value={link.link}>
-                  {link.link} ({link.class}, {link.state}, {link.speed || 'Unknown speed'})
+                  {link.link} ({link.class}, {link.state},{' '}
+                  {link.speed || t('host.bridgeCreateModal.unknownSpeed')})
                 </option>
               ))}
           </select>
@@ -316,14 +317,14 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
             onClick={addLink}
             disabled={!newLink.trim() || creating}
           >
-            Add Link
+            {t('host.bridgeCreateModal.addLink')}
           </button>
         </div>
 
         {formData.links.length > 0 && (
           <div className="mt-3">
             <p>
-              <strong>Current Links:</strong>
+              <strong>{t('host.bridgeCreateModal.currentLinks')}</strong>
             </p>
             <div className="d-flex flex-wrap gap-2">
               {formData.links.map(link => (
@@ -335,7 +336,7 @@ const BridgeCreateModal = ({ server, onClose, onSuccess, onError }) => {
                   <button
                     type="button"
                     className="btn-close btn-close-white"
-                    aria-label="Remove"
+                    aria-label={t('host.bridgeCreateModal.remove')}
                     onClick={() => removeLink(link)}
                     disabled={creating}
                   />

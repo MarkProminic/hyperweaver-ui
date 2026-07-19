@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import FormModal from '../common/FormModal';
 
 const RoleCreateModal = ({ server, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     rolename: '',
@@ -81,7 +83,7 @@ const RoleCreateModal = ({ server, onClose, onSuccess, onError }) => {
     e.preventDefault();
 
     if (!formData.rolename.trim()) {
-      onError('Role name is required');
+      onError(t('host.roleCreateModal.errors.nameRequired'));
       return;
     }
 
@@ -120,10 +122,10 @@ const RoleCreateModal = ({ server, onClose, onSuccess, onError }) => {
         }
         onSuccess();
       } else {
-        onError(result.message || 'Failed to create role');
+        onError(result.message || t('host.roleCreateModal.errors.createFailed'));
       }
     } catch (err) {
-      onError(`Error creating role: ${err.message}`);
+      onError(t('host.roleCreateModal.errors.createError', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -136,17 +138,17 @@ const RoleCreateModal = ({ server, onClose, onSuccess, onError }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create Role"
+      title={t('host.roleCreateModal.title')}
       icon="fas fa-user-shield-plus"
-      submitText="Create Role"
+      submitText={t('host.roleCreateModal.title')}
       submitIcon="fas fa-plus"
       loading={loading}
       showCancelButton
-      aria-label="Create new RBAC role"
+      aria-label={t('host.roleCreateModal.ariaLabel')}
     >
       <div className="mb-3">
         <label className="form-label" htmlFor="rolename">
-          Role Name <span className="text-danger">*</span>
+          {t('host.roleCreateModal.roleNameLabel')} <span className="text-danger">*</span>
         </label>
         <input
           id="rolename"
@@ -156,16 +158,14 @@ const RoleCreateModal = ({ server, onClose, onSuccess, onError }) => {
           onChange={e => handleInputChange('rolename', e.target.value)}
           required
           disabled={loading}
-          placeholder="Enter role name"
+          placeholder={t('host.roleCreateModal.roleNamePlaceholder')}
         />
-        <p className="form-text text-muted">
-          Role name must be unique and contain only valid characters
-        </p>
+        <p className="form-text text-muted">{t('host.roleCreateModal.roleNameHelp')}</p>
       </div>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="comment">
-          Comment
+          {t('host.roleCreateModal.commentLabel')}
         </label>
         <input
           id="comment"
@@ -174,13 +174,13 @@ const RoleCreateModal = ({ server, onClose, onSuccess, onError }) => {
           value={formData.comment}
           onChange={e => handleInputChange('comment', e.target.value)}
           disabled={loading}
-          placeholder="Role description"
+          placeholder={t('host.roleCreateModal.commentPlaceholder')}
         />
       </div>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="shell">
-          Shell
+          {t('host.roleCreateModal.shellLabel')}
         </label>
         <select
           id="shell"
@@ -195,16 +195,16 @@ const RoleCreateModal = ({ server, onClose, onSuccess, onError }) => {
             </option>
           ))}
         </select>
-        <p className="form-text text-muted">Profile shell (pfsh) is recommended for RBAC roles</p>
+        <p className="form-text text-muted">{t('host.roleCreateModal.shellHelp')}</p>
       </div>
 
       <hr />
 
-      <h5 className="fs-6 fw-bold">RBAC Configuration</h5>
+      <h5 className="fs-6 fw-bold">{t('host.roleCreateModal.rbacConfiguration')}</h5>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="authorizations">
-          Authorizations
+          {t('host.roleCreateModal.authorizationsLabel')}
         </label>
         <textarea
           id="authorizations"
@@ -213,16 +213,14 @@ const RoleCreateModal = ({ server, onClose, onSuccess, onError }) => {
           value={formData.authorizations.join(', ')}
           onChange={e => handleArrayInputChange('authorizations', e.target.value)}
           disabled={loading}
-          placeholder="solaris.admin.dcmgr.*, solaris.smf.read (comma-separated)"
+          placeholder={t('host.roleCreateModal.authorizationsPlaceholder')}
         />
-        <p className="form-text text-muted">
-          Enter authorizations separated by commas. Use * for wildcards.
-        </p>
+        <p className="form-text text-muted">{t('host.roleCreateModal.authorizationsHelp')}</p>
       </div>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="profiles">
-          Profiles
+          {t('host.roleCreateModal.profilesLabel')}
         </label>
         <input
           id="profiles"
@@ -231,9 +229,9 @@ const RoleCreateModal = ({ server, onClose, onSuccess, onError }) => {
           value={formData.profiles.join(', ')}
           onChange={e => handleArrayInputChange('profiles', e.target.value)}
           disabled={loading}
-          placeholder="Media Backup, File System Management (comma-separated)"
+          placeholder={t('host.roleCreateModal.profilesPlaceholder')}
         />
-        <p className="form-text text-muted">Enter profile names separated by commas</p>
+        <p className="form-text text-muted">{t('host.roleCreateModal.profilesHelp')}</p>
       </div>
 
       <hr />
@@ -250,18 +248,16 @@ const RoleCreateModal = ({ server, onClose, onSuccess, onError }) => {
             disabled={loading}
           />
           <label className="form-check-label" htmlFor="create_home">
-            Create Home Directory
+            {t('host.roleCreateModal.createHomeLabel')}
           </label>
         </div>
-        <p className="form-text text-muted">
-          Usually not needed for roles unless they require file storage
-        </p>
+        <p className="form-text text-muted">{t('host.roleCreateModal.createHomeHelp')}</p>
       </div>
 
       <div className="alert alert-info">
         <p className="mb-0">
-          <strong>Note:</strong> Roles are special user accounts used for RBAC. Users can assume
-          roles to gain additional privileges without needing direct assignment of authorizations.
+          <strong>{t('host.roleCreateModal.noteLabel')}</strong>{' '}
+          {t('host.roleCreateModal.noteText')}
         </p>
       </div>
     </FormModal>

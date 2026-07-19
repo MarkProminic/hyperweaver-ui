@@ -154,12 +154,112 @@ const machinePageGates = (currentServer, role) => ({
     hasConsole(currentServer, 'zlogin'),
 });
 
+/** The Overview tab's card grid — split out of Machines for the complexity
+ *  budget; behavior identical. */
+const OverviewGrid = ({
+  machineDetails,
+  monitoringHealth,
+  getMachineStatus,
+  selectedMachine,
+  currentServer,
+  consoleAvailable,
+  consoleDisplay,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="row g-3">
+      <div className="col-12 col-lg-6">
+        <MachineInfo
+          machineDetails={machineDetails}
+          monitoringHealth={monitoringHealth}
+          getMachineStatus={getMachineStatus}
+          selectedMachine={selectedMachine}
+        />
+      </div>
+
+      {/* The console keeps its half — everything else flows
+          around it as cards in the same grid. */}
+      <div className="col-12 col-lg-6">
+        {!consoleAvailable && (
+          <div className="card h-100">
+            <div className="card-body">
+              <h4 className="fs-6 fw-bold mb-3">
+                <i className="fas fa-terminal me-2" />
+                {t('pages.machines.consoleHeading')}
+              </h4>
+              <div className="alert alert-info mb-0">
+                <p className="mb-0">{t('pages.machines.noConsoleAvailable')}</p>
+              </div>
+            </div>
+          </div>
+        )}
+        {consoleAvailable && consoleDisplay}
+      </div>
+
+      <div className="col-12 col-lg-6 col-xxl-4">
+        <TagsNotesPanel
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          currentTags={machineDetails.machine_info?.tags}
+          currentNotes={machineDetails.machine_info?.notes}
+        />
+      </div>
+
+      <MachineHardware
+        machineDetails={machineDetails}
+        currentHardware={currentHardwareOf(machineDetails)}
+        colClass="col-12 col-lg-6 col-xxl-4"
+      />
+
+      <MachineGuestAgent
+        currentServer={currentServer}
+        machineName={selectedMachine}
+        guestInfo={machineDetails.configuration?.guest_info}
+        hypervisor={machineDetails.machine_info?.hypervisor}
+        colClass="col-12 col-lg-6 col-xxl-4"
+      />
+
+      <MachineGuestInfo
+        currentServer={currentServer}
+        machineName={selectedMachine}
+        hypervisor={machineDetails.machine_info?.hypervisor}
+        colClass="col-12 col-lg-6 col-xxl-4"
+      />
+
+      {hasFeature(currentServer, 'monitoring') && hasHypervisor(currentServer, 'bhyve') && (
+        <MachineResourceCharts
+          currentServer={currentServer}
+          machineName={selectedMachine}
+          links={(currentHardwareOf(machineDetails).zone?.nics || [])
+            .map(nic => nic.physical)
+            .filter(Boolean)}
+        />
+      )}
+
+      {hasFeature(currentServer, 'monitoring') && hasHypervisor(currentServer, 'virtualbox') && (
+        <VboxResourceCharts currentServer={currentServer} machineName={selectedMachine} />
+      )}
+    </div>
+  );
+};
+
+OverviewGrid.propTypes = {
+  machineDetails: PropTypes.object.isRequired,
+  monitoringHealth: PropTypes.object,
+  getMachineStatus: PropTypes.func.isRequired,
+  selectedMachine: PropTypes.string,
+  currentServer: PropTypes.object,
+  consoleAvailable: PropTypes.bool,
+  consoleDisplay: PropTypes.node,
+};
+
 /** The page's conditional dialog stack — split out of Machines purely for
  *  the complexity budget (the DatasetModals pattern); behavior identical. */
 const MachinePageModals = ({
   gates,
   currentServer,
   selectedMachine,
+  hypervisor,
   isRunning,
   open,
   closeModal,
@@ -185,6 +285,7 @@ const MachinePageModals = ({
           onClose={closeModal('clone')}
           currentServer={currentServer}
           machineName={selectedMachine}
+          hypervisor={hypervisor}
           isRunning={isRunning}
           onCloned={({ taskId, message, warnings }) => {
             const parts = [message];
@@ -261,6 +362,7 @@ const MachinePageModals = ({
           machineName={selectedMachine}
           isRunning={isRunning}
           flavor={gates.guestExecFlavor}
+          hypervisor={hypervisor}
         />
       )}
 
@@ -282,6 +384,7 @@ MachinePageModals.propTypes = {
   gates: PropTypes.object.isRequired,
   currentServer: PropTypes.object,
   selectedMachine: PropTypes.string,
+  hypervisor: PropTypes.string,
   isRunning: PropTypes.bool,
   open: PropTypes.object.isRequired,
   closeModal: PropTypes.func.isRequired,
@@ -783,84 +886,15 @@ const Machines = () => {
                     {Object.keys(machineDetails).length > 0 ? (
                       <div>
                         {activeDetailTab === 'overview' && (
-                          <div className="row g-3">
-                            <div className="col-12 col-lg-6">
-                              <MachineInfo
-                                machineDetails={machineDetails}
-                                monitoringHealth={monitoringHealth}
-                                getMachineStatus={getMachineStatus}
-                                selectedMachine={selectedMachine}
-                              />
-                            </div>
-
-                            {/* The console keeps its half — everything else flows
-                                around it as cards in the same grid. */}
-                            <div className="col-12 col-lg-6">
-                              {!consoleAvailable && (
-                                <div className="card h-100">
-                                  <div className="card-body">
-                                    <h4 className="fs-6 fw-bold mb-3">
-                                      <i className="fas fa-terminal me-2" />
-                                      {t('pages.machines.consoleHeading')}
-                                    </h4>
-                                    <div className="alert alert-info mb-0">
-                                      <p className="mb-0">
-                                        {t('pages.machines.noConsoleAvailable')}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                              {consoleAvailable && legacyConsoleDisplay}
-                            </div>
-
-                            <div className="col-12 col-lg-6 col-xxl-4">
-                              <TagsNotesPanel
-                                currentServer={currentServer}
-                                machineName={selectedMachine}
-                                currentTags={machineDetails.machine_info?.tags}
-                                currentNotes={machineDetails.machine_info?.notes}
-                              />
-                            </div>
-
-                            <MachineHardware
-                              machineDetails={machineDetails}
-                              currentHardware={currentHardwareOf(machineDetails)}
-                              colClass="col-12 col-lg-6 col-xxl-4"
-                            />
-
-                            <MachineGuestAgent
-                              currentServer={currentServer}
-                              machineName={selectedMachine}
-                              guestInfo={machineDetails.configuration?.guest_info}
-                              colClass="col-12 col-lg-6 col-xxl-4"
-                            />
-
-                            <MachineGuestInfo
-                              currentServer={currentServer}
-                              machineName={selectedMachine}
-                              colClass="col-12 col-lg-6 col-xxl-4"
-                            />
-
-                            {hasFeature(currentServer, 'monitoring') &&
-                              hasHypervisor(currentServer, 'bhyve') && (
-                                <MachineResourceCharts
-                                  currentServer={currentServer}
-                                  machineName={selectedMachine}
-                                  links={(currentHardwareOf(machineDetails).zone?.nics || [])
-                                    .map(nic => nic.physical)
-                                    .filter(Boolean)}
-                                />
-                              )}
-
-                            {hasFeature(currentServer, 'monitoring') &&
-                              hasHypervisor(currentServer, 'virtualbox') && (
-                                <VboxResourceCharts
-                                  currentServer={currentServer}
-                                  machineName={selectedMachine}
-                                />
-                              )}
-                          </div>
+                          <OverviewGrid
+                            machineDetails={machineDetails}
+                            monitoringHealth={monitoringHealth}
+                            getMachineStatus={getMachineStatus}
+                            selectedMachine={selectedMachine}
+                            currentServer={currentServer}
+                            consoleAvailable={consoleAvailable}
+                            consoleDisplay={legacyConsoleDisplay}
+                          />
                         )}
 
                         {/* Kept MOUNTED (d-none when inactive) so typed-but-
@@ -871,6 +905,7 @@ const Machines = () => {
                             <MachineSettings
                               currentServer={currentServer}
                               machineName={selectedMachine}
+                              hypervisor={machineDetails.machine_info?.hypervisor}
                               configuration={machineDetails.configuration}
                               knobCurrent={machineDetails.knob_current}
                               pendingChanges={machineDetails.pending_changes}
@@ -892,6 +927,7 @@ const Machines = () => {
                           <MachineSnapshots
                             currentServer={currentServer}
                             machineName={selectedMachine}
+                            hypervisor={machineDetails.machine_info?.hypervisor}
                             isRunning={getMachineStatus(selectedMachine) === 'running'}
                             user={user}
                             snapshotPolicy={machineDetails.configuration?.snapshots}
@@ -970,6 +1006,7 @@ const Machines = () => {
         }}
         currentServer={currentServer}
         selectedMachine={selectedMachine}
+        hypervisor={machineDetails.machine_info?.hypervisor}
         isRunning={getMachineStatus(selectedMachine) === 'running'}
         open={{
           wizard: wizardOpen,

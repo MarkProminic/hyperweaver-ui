@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 
@@ -17,6 +18,7 @@ const rowsFrom = entries =>
   }));
 
 const HostsFileEditor = ({ server, onError }) => {
+  const { t } = useTranslation();
   const { makeAgentRequest } = useServers();
   const [rows, setRows] = useState([]);
   const [raw, setRaw] = useState('');
@@ -40,10 +42,10 @@ const HostsFileEditor = ({ server, onError }) => {
       setRaw(result.data?.raw || '');
       setPath(result.data?.path || '');
     } else {
-      onError(`Failed to load the hosts file: ${result.message}`);
+      onError(t('host.hostsFileEditor.errors.loadFailed', { message: result.message }));
     }
     setLoading(false);
-  }, [server, makeAgentRequest, onError]);
+  }, [server, makeAgentRequest, onError, t]);
 
   useEffect(() => {
     load();
@@ -78,13 +80,13 @@ const HostsFileEditor = ({ server, onError }) => {
     );
     setSaving(false);
     if (!result.success) {
-      onError(`Failed to save the hosts file: ${result.message}`);
+      onError(t('host.hostsFileEditor.errors.saveFailed', { message: result.message }));
       return;
     }
     setMsg(
       result.data?.backup
-        ? `Saved — the previous file was backed up to ${result.data.backup}.`
-        : 'Saved.'
+        ? t('host.hostsFileEditor.savedWithBackup', { backup: result.data.backup })
+        : t('host.hostsFileEditor.saved')
     );
     load();
   };
@@ -95,7 +97,7 @@ const HostsFileEditor = ({ server, onError }) => {
         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
           <h3 className="fs-6 fw-bold mb-0">
             <i className="fas fa-address-book me-2" />
-            Hosts File
+            {t('host.hostsFileEditor.hostsFile')}
             {path && <code className="small ms-2">{path}</code>}
           </h3>
           <div className="d-flex gap-2">
@@ -110,7 +112,7 @@ const HostsFileEditor = ({ server, onError }) => {
                 disabled={loading || saving}
               />
               <label className="form-check-label" htmlFor="hosts-raw-mode">
-                Edit raw file
+                {t('host.hostsFileEditor.editRawFile')}
               </label>
             </div>
             <button
@@ -120,7 +122,7 @@ const HostsFileEditor = ({ server, onError }) => {
               disabled={loading || saving}
             >
               <i className={`fas fa-sync-alt me-2 ${loading ? 'fa-spin' : ''}`} />
-              Refresh
+              {t('host.hostsFileEditor.refresh')}
             </button>
             <button
               type="button"
@@ -129,17 +131,17 @@ const HostsFileEditor = ({ server, onError }) => {
               disabled={loading || saving}
             >
               <i className={`fas ${saving ? 'fa-spinner fa-pulse' : 'fa-save'} me-2`} />
-              Save
+              {t('host.hostsFileEditor.save')}
             </button>
           </div>
         </div>
 
         {msg && <div className="alert alert-success py-2">{msg}</div>}
         <p className="form-text text-muted mt-0">
-          A timestamped backup of the current file is written before every save.
+          {t('host.hostsFileEditor.backupNote')}
           {rawMode
-            ? ' Raw mode saves the file text verbatim — comments and formatting included.'
-            : ' Table mode rewrites the file from the rows below; comments in the current file do not survive.'}
+            ? t('host.hostsFileEditor.rawModeNote')
+            : t('host.hostsFileEditor.tableModeNote')}
         </p>
 
         {rawMode ? (
@@ -149,7 +151,7 @@ const HostsFileEditor = ({ server, onError }) => {
             value={raw}
             onChange={e => setRaw(e.target.value)}
             disabled={loading || saving}
-            aria-label="Raw hosts file"
+            aria-label={t('host.hostsFileEditor.rawAriaLabel')}
           />
         ) : (
           <>
@@ -157,10 +159,14 @@ const HostsFileEditor = ({ server, onError }) => {
               <thead>
                 <tr>
                   <th scope="col" style={{ width: '30%' }}>
-                    IP address
+                    {t('host.hostsFileEditor.ipAddress')}
                   </th>
-                  <th scope="col">Hostnames (space-separated)</th>
-                  <th scope="col" style={{ width: '1%' }} aria-label="Actions" />
+                  <th scope="col">{t('host.hostsFileEditor.hostnames')}</th>
+                  <th
+                    scope="col"
+                    style={{ width: '1%' }}
+                    aria-label={t('host.hostsFileEditor.actions')}
+                  />
                 </tr>
               </thead>
               <tbody>
@@ -173,7 +179,9 @@ const HostsFileEditor = ({ server, onError }) => {
                         value={row.ip}
                         onChange={e => setRow(index, 'ip', e.target.value)}
                         disabled={loading || saving}
-                        aria-label={`Entry ${index + 1} IP address`}
+                        aria-label={t('host.hostsFileEditor.entryIpAriaLabel', {
+                          number: index + 1,
+                        })}
                       />
                     </td>
                     <td>
@@ -183,7 +191,9 @@ const HostsFileEditor = ({ server, onError }) => {
                         value={row.hostnames}
                         onChange={e => setRow(index, 'hostnames', e.target.value)}
                         disabled={loading || saving}
-                        aria-label={`Entry ${index + 1} hostnames`}
+                        aria-label={t('host.hostsFileEditor.entryHostnamesAriaLabel', {
+                          number: index + 1,
+                        })}
                       />
                     </td>
                     <td>
@@ -192,7 +202,7 @@ const HostsFileEditor = ({ server, onError }) => {
                         className="btn btn-sm btn-outline-danger"
                         onClick={() => deleteRow(row.key)}
                         disabled={loading || saving}
-                        title="Remove this entry"
+                        title={t('host.hostsFileEditor.removeEntry')}
                       >
                         <i className="fas fa-times" />
                       </button>
@@ -208,7 +218,7 @@ const HostsFileEditor = ({ server, onError }) => {
               disabled={loading || saving}
             >
               <i className="fas fa-plus me-2" />
-              Add entry
+              {t('host.hostsFileEditor.addEntry')}
             </button>
           </>
         )}

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import FormModal from '../../common/FormModal';
 
@@ -16,32 +17,46 @@ const PropertiesComparison = ({
   selectedGroup,
   selectedGroupObj,
   currentOctal,
-}) => (
-  <div className="mb-3">
-    <div className="alert alert-info">
-      <div className="row">
-        <div className="col">
-          <strong>Current:</strong>
-          <br />
-          User: {file._hwMetadata?.uid || 'Unknown'}
-          <br />
-          Group: {file._hwMetadata?.gid || 'Unknown'}
-          <br />
-          Mode: {file._hwMetadata?.permissions?.octal || 'Unknown'}
-        </div>
-        <div className="col">
-          <strong>New:</strong>
-          <br />
-          User: {selectedUser ? `${selectedUserObj?.username} (${selectedUser})` : 'No change'}
-          <br />
-          Group: {selectedGroup ? `${selectedGroupObj?.groupname} (${selectedGroup})` : 'No change'}
-          <br />
-          Mode: {currentOctal}
+}) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="mb-3">
+      <div className="alert alert-info">
+        <div className="row">
+          <div className="col">
+            <strong>{t('fileManager.filePropertiesComparison.currentLabel')}</strong>
+            <br />
+            {t('fileManager.filePropertiesComparison.userLabel')}{' '}
+            {file._hwMetadata?.uid || t('fileManager.filePropertiesComparison.unknown')}
+            <br />
+            {t('fileManager.filePropertiesComparison.groupLabel')}{' '}
+            {file._hwMetadata?.gid || t('fileManager.filePropertiesComparison.unknown')}
+            <br />
+            {t('fileManager.filePropertiesComparison.modeLabel')}{' '}
+            {file._hwMetadata?.permissions?.octal ||
+              t('fileManager.filePropertiesComparison.unknown')}
+          </div>
+          <div className="col">
+            <strong>{t('fileManager.filePropertiesComparison.newLabel')}</strong>
+            <br />
+            {t('fileManager.filePropertiesComparison.userLabel')}{' '}
+            {selectedUser
+              ? `${selectedUserObj?.username} (${selectedUser})`
+              : t('fileManager.filePropertiesComparison.noChange')}
+            <br />
+            {t('fileManager.filePropertiesComparison.groupLabel')}{' '}
+            {selectedGroup
+              ? `${selectedGroupObj?.groupname} (${selectedGroup})`
+              : t('fileManager.filePropertiesComparison.noChange')}
+            <br />
+            {t('fileManager.filePropertiesComparison.modeLabel')} {currentOctal}
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 PropertiesComparison.propTypes = {
   file: PropTypes.object.isRequired,
@@ -57,6 +72,7 @@ PropertiesComparison.propTypes = {
  * Allows viewing and editing file permissions, ownership, and metadata
  */
 const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [systemUsers, setSystemUsers] = useState([]);
@@ -177,10 +193,12 @@ const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
         onSuccess(result);
         onClose();
       } else {
-        setError(result.message || 'Failed to update permissions');
+        setError(result.message || t('fileManager.filePropertiesModal.failedToUpdate'));
       }
     } catch (submitErr) {
-      setError(`Failed to update permissions: ${submitErr.message}`);
+      setError(
+        t('fileManager.filePropertiesModal.failedToUpdateDetail', { message: submitErr.message })
+      );
     } finally {
       setLoading(false);
     }
@@ -200,9 +218,9 @@ const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={`Properties: ${file.name}`}
+      title={t('fileManager.filePropertiesModal.title', { name: file.name })}
       icon="fas fa-cog"
-      submitText="Apply Changes"
+      submitText={t('fileManager.filePropertiesModal.applyChanges')}
       submitVariant="is-primary"
       submitIcon="fas fa-save"
       loading={loading}
@@ -213,19 +231,26 @@ const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
         <div className="alert alert-dark">
           <div className="row">
             <div className="col">
-              <strong>Name:</strong> {file.name}
+              <strong>{t('fileManager.filePropertiesModal.nameLabel')}</strong> {file.name}
               <br />
-              <strong>Path:</strong> {file.path}
+              <strong>{t('fileManager.filePropertiesModal.pathLabel')}</strong> {file.path}
               <br />
-              <strong>Type:</strong> {file.isDirectory ? 'Directory' : 'File'}
+              <strong>{t('fileManager.filePropertiesModal.typeLabel')}</strong>{' '}
+              {file.isDirectory
+                ? t('fileManager.filePropertiesModal.directory')
+                : t('fileManager.filePropertiesModal.file')}
             </div>
             <div className="col">
-              <strong>Size:</strong> {formatFileSize(file.size)}
+              <strong>{t('fileManager.filePropertiesModal.sizeLabel')}</strong>{' '}
+              {formatFileSize(file.size)}
               <br />
-              <strong>Modified:</strong>{' '}
-              {file.updatedAt ? new Date(file.updatedAt).toLocaleString() : 'Unknown'}
+              <strong>{t('fileManager.filePropertiesModal.modifiedLabel')}</strong>{' '}
+              {file.updatedAt
+                ? new Date(file.updatedAt).toLocaleString()
+                : t('fileManager.filePropertiesModal.unknown')}
               <br />
-              <strong>MIME Type:</strong> {file._hwMetadata?.mimeType || 'Unknown'}
+              <strong>{t('fileManager.filePropertiesModal.mimeTypeLabel')}</strong>{' '}
+              {file._hwMetadata?.mimeType || t('fileManager.filePropertiesModal.unknown')}
             </div>
           </div>
         </div>
@@ -243,12 +268,12 @@ const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
         {/* Ownership — POSIX only; a Windows agent rejects uid/gid. */}
         {!isWindows && (
           <div className="col">
-            <h5 className="h6">Ownership</h5>
+            <h5 className="h6">{t('fileManager.filePropertiesModal.ownershipHeading')}</h5>
 
             {/* User selection */}
             <div className="mb-3">
               <label htmlFor="file-props-user" className="form-label">
-                User
+                {t('fileManager.filePropertiesModal.userLabel')}
               </label>
               <div>
                 <select
@@ -257,7 +282,7 @@ const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
                   value={selectedUser}
                   onChange={e => setSelectedUser(e.target.value)}
                 >
-                  <option value="">Keep current</option>
+                  <option value="">{t('fileManager.filePropertiesModal.keepCurrent')}</option>
                   {systemUsers.map(user => (
                     <option key={user.uid} value={user.uid.toString()}>
                       {user.username} ({user.uid})
@@ -266,15 +291,20 @@ const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
                 </select>
               </div>
               <p className="form-text text-muted">
-                Current: {selectedUserObj?.username || 'Unknown'} (
-                {selectedUser || file._hwMetadata?.uid || 'Unknown'})
+                {t('fileManager.filePropertiesModal.currentUser', {
+                  name: selectedUserObj?.username || t('fileManager.filePropertiesModal.unknown'),
+                  id:
+                    selectedUser ||
+                    file._hwMetadata?.uid ||
+                    t('fileManager.filePropertiesModal.unknown'),
+                })}
               </p>
             </div>
 
             {/* Group selection */}
             <div className="mb-3">
               <label htmlFor="file-props-group" className="form-label">
-                Group
+                {t('fileManager.filePropertiesModal.groupLabel')}
               </label>
               <div>
                 <select
@@ -283,7 +313,7 @@ const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
                   value={selectedGroup}
                   onChange={e => setSelectedGroup(e.target.value)}
                 >
-                  <option value="">Keep current</option>
+                  <option value="">{t('fileManager.filePropertiesModal.keepCurrent')}</option>
                   {systemGroups.map(group => (
                     <option key={group.gid} value={group.gid.toString()}>
                       {group.groupname} ({group.gid})
@@ -292,8 +322,13 @@ const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
                 </select>
               </div>
               <p className="form-text text-muted">
-                Current: {selectedGroupObj?.groupname || 'Unknown'} (
-                {selectedGroup || file._hwMetadata?.gid || 'Unknown'})
+                {t('fileManager.filePropertiesModal.currentGroup', {
+                  name: selectedGroupObj?.groupname || t('fileManager.filePropertiesModal.unknown'),
+                  id:
+                    selectedGroup ||
+                    file._hwMetadata?.gid ||
+                    t('fileManager.filePropertiesModal.unknown'),
+                })}
               </p>
             </div>
           </div>
@@ -325,11 +360,11 @@ const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
               onChange={e => setApplyRecursively(e.target.checked)}
             />
             <label className="form-check-label" htmlFor="file-props-recursive">
-              Apply changes recursively to all contents
+              {t('fileManager.filePropertiesModal.applyRecursively')}
             </label>
           </div>
           <p className="form-text text-warning">
-            Warning: Recursive changes will affect all files and subdirectories
+            {t('fileManager.filePropertiesModal.recursiveWarning')}
           </p>
         </div>
       )}
@@ -348,16 +383,19 @@ const FilePropertiesModal = ({ isOpen, onClose, file, api, onSuccess }) => {
       <div className="mb-3">
         <div className="alert alert-dark small">
           <div className="small">
-            <strong>Permission Guide:</strong>
+            <strong>{t('fileManager.filePropertiesModal.permissionGuide')}</strong>
             <br />
-            <strong>Read (r)</strong> - View file contents or list directory
+            <strong>{t('fileManager.filePropertiesModal.readLabel')}</strong>{' '}
+            {t('fileManager.filePropertiesModal.readDesc')}
             <br />
-            <strong>Write (w)</strong> - Modify file or create/delete in directory
+            <strong>{t('fileManager.filePropertiesModal.writeLabel')}</strong>{' '}
+            {t('fileManager.filePropertiesModal.writeDesc')}
             <br />
-            <strong>Execute (x)</strong> - Run file as program or enter directory
+            <strong>{t('fileManager.filePropertiesModal.executeLabel')}</strong>{' '}
+            {t('fileManager.filePropertiesModal.executeDesc')}
             <br />
-            <strong>Common modes:</strong> 644 (files), 755 (directories/executables), 600 (private
-            files)
+            <strong>{t('fileManager.filePropertiesModal.commonModes')}</strong>{' '}
+            {t('fileManager.filePropertiesModal.commonModesDesc')}
           </div>
         </div>
       </div>

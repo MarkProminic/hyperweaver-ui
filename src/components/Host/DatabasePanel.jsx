@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { ContentModal } from '../common';
@@ -35,6 +36,7 @@ const PAGE_SIZE = 50;
 /** Read-only paged row browser — the agent validates table/order_by, the
  *  UI never sends SQL. */
 const TableBrowserModal = ({ server, database, table, onClose }) => {
+  const { t } = useTranslation();
   const { makeAgentRequest } = useServers();
   const [columns, setColumns] = useState([]);
   const [rows, setRows] = useState([]);
@@ -88,7 +90,7 @@ const TableBrowserModal = ({ server, database, table, onClose }) => {
     <ContentModal isOpen onClose={onClose} title={`${database} · ${table}`} icon="fas fa-table">
       <div className="d-flex align-items-center flex-wrap gap-2 mb-2">
         <label className="small text-muted" htmlFor="db-browse-orderby">
-          Order by
+          {t('host.databasePanel.orderBy')}
         </label>
         <select
           id="db-browse-orderby"
@@ -100,7 +102,7 @@ const TableBrowserModal = ({ server, database, table, onClose }) => {
           }}
           disabled={loading}
         >
-          <option value="">(table order)</option>
+          <option value="">{t('host.databasePanel.tableOrder')}</option>
           {columns.map(column => (
             <option key={column} value={column}>
               {column}
@@ -111,7 +113,9 @@ const TableBrowserModal = ({ server, database, table, onClose }) => {
           <button
             type="button"
             className="btn btn-sm btn-outline-secondary"
-            title={desc ? 'Descending — click for ascending' : 'Ascending — click for descending'}
+            title={
+              desc ? t('host.databasePanel.sortDescTitle') : t('host.databasePanel.sortAscTitle')
+            }
             onClick={() => {
               setDesc(current => !current);
               setOffset(0);
@@ -125,19 +129,23 @@ const TableBrowserModal = ({ server, database, table, onClose }) => {
           <button
             type="button"
             className="btn btn-sm btn-outline-secondary"
-            aria-label="Previous page"
+            aria-label={t('host.databasePanel.previousPage')}
             onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
             disabled={loading || offset === 0}
           >
             <i className="fas fa-chevron-left" />
           </button>
           <span className="text-nowrap">
-            {from}–{to} of {total.toLocaleString()}
+            {t('host.databasePanel.pageRange', {
+              from,
+              to,
+              total: total.toLocaleString(),
+            })}
           </span>
           <button
             type="button"
             className="btn btn-sm btn-outline-secondary"
-            aria-label="Next page"
+            aria-label={t('host.databasePanel.nextPage')}
             onClick={() => setOffset(offset + PAGE_SIZE)}
             disabled={loading || to >= total}
           >
@@ -150,7 +158,7 @@ const TableBrowserModal = ({ server, database, table, onClose }) => {
       {loading && (
         <p className="text-muted mb-0">
           <i className="fas fa-spinner fa-pulse me-2" />
-          Loading…
+          {t('host.databasePanel.loading')}
         </p>
       )}
       {!loading && !error && (
@@ -186,7 +194,7 @@ const TableBrowserModal = ({ server, database, table, onClose }) => {
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={Math.max(columns.length, 1)} className="text-muted">
-                    No rows.
+                    {t('host.databasePanel.noRows')}
                   </td>
                 </tr>
               )}
@@ -206,6 +214,7 @@ TableBrowserModal.propTypes = {
 };
 
 const DatabaseRow = ({ database, expanded, tables, onToggle, onBrowse }) => {
+  const { t } = useTranslation();
   const files = Array.isArray(database.files) ? database.files : [];
   const tableCount = countOf(database.tables);
   const indexCount = countOf(database.indexes);
@@ -220,7 +229,11 @@ const DatabaseRow = ({ database, expanded, tables, onToggle, onBrowse }) => {
         <button
           type="button"
           className="btn btn-sm btn-link p-0 text-decoration-none"
-          aria-label={expanded ? `Collapse ${database.name}` : `Explore ${database.name}`}
+          aria-label={
+            expanded
+              ? t('host.databasePanel.collapseDatabase', { name: database.name })
+              : t('host.databasePanel.exploreDatabase', { name: database.name })
+          }
           onClick={() => onToggle(database.name)}
         >
           <i className={`fas ${expanded ? 'fa-caret-down' : 'fa-caret-right'}`} />
@@ -228,10 +241,14 @@ const DatabaseRow = ({ database, expanded, tables, onToggle, onBrowse }) => {
         <strong>{database.name}</strong>
         {totalSize !== null && <span className="badge text-bg-info">{formatBytes(totalSize)}</span>}
         {tableCount !== null && (
-          <span className="badge text-bg-secondary">{tableCount} tables</span>
+          <span className="badge text-bg-secondary">
+            {t('host.databasePanel.tablesCount', { count: tableCount })}
+          </span>
         )}
         {indexCount !== null && (
-          <span className="badge text-bg-secondary">{indexCount} indexes</span>
+          <span className="badge text-bg-secondary">
+            {t('host.databasePanel.indexesCount', { count: indexCount })}
+          </span>
         )}
       </div>
       {files.length > 0 && (
@@ -249,24 +266,28 @@ const DatabaseRow = ({ database, expanded, tables, onToggle, onBrowse }) => {
       {expanded && !tables && (
         <p className="text-muted small mb-0 mt-2">
           <i className="fas fa-spinner fa-pulse me-2" />
-          Loading tables…
+          {t('host.databasePanel.loadingTables')}
         </p>
       )}
       {expanded && tables && tables.length === 0 && (
-        <p className="text-muted small mb-0 mt-2">No tables reported.</p>
+        <p className="text-muted small mb-0 mt-2">{t('host.databasePanel.noTablesReported')}</p>
       )}
       {expanded && tables && tables.length > 0 && (
         <table className="table table-sm small mb-0 mt-2 align-middle">
           <thead>
             <tr>
-              <th scope="col">Table</th>
+              <th scope="col">{t('host.databasePanel.colTable')}</th>
               <th scope="col" className="text-end">
-                Rows
+                {t('host.databasePanel.colRows')}
               </th>
               <th scope="col" className="text-end">
-                Indexes
+                {t('host.databasePanel.colIndexes')}
               </th>
-              <th scope="col" className="text-end" aria-label="Actions" />
+              <th
+                scope="col"
+                className="text-end"
+                aria-label={t('host.databasePanel.colActions')}
+              />
             </tr>
           </thead>
           <tbody>
@@ -281,11 +302,11 @@ const DatabaseRow = ({ database, expanded, tables, onToggle, onBrowse }) => {
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-info py-0"
-                    title="Browse this table's rows (read-only)"
+                    title={t('host.databasePanel.browseRowsTitle')}
                     onClick={() => onBrowse(database.name, table.name)}
                   >
                     <i className="fas fa-table me-1" />
-                    Browse
+                    {t('host.databasePanel.browse')}
                   </button>
                 </td>
               </tr>
@@ -306,6 +327,7 @@ DatabaseRow.propTypes = {
 };
 
 const DatabasePanel = ({ server }) => {
+  const { t } = useTranslation();
   const { makeAgentRequest } = useServers();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -334,10 +356,10 @@ const DatabasePanel = ({ server }) => {
     );
     setStats(result.success ? result.data : null);
     if (!result.success) {
-      report(`Failed to load database stats: ${result.message}`, 'danger');
+      report(t('host.databasePanel.loadStatsFailed', { message: result.message }), 'danger');
     }
     setLoading(false);
-  }, [server, makeAgentRequest]);
+  }, [server, makeAgentRequest, t]);
 
   useEffect(() => {
     setMsg('');
@@ -369,7 +391,7 @@ const DatabasePanel = ({ server }) => {
       }));
     } else {
       setTablesByDb(prev => ({ ...prev, [name]: [] }));
-      report(`Failed to list tables for ${name}: ${result.message}`, 'danger');
+      report(t('host.databasePanel.listTablesFailed', { name, message: result.message }), 'danger');
     }
   };
 
@@ -385,7 +407,7 @@ const DatabasePanel = ({ server }) => {
     );
     setBusy('');
     if (!result.success) {
-      report(`${action} failed: ${result.message}`, 'danger');
+      report(t('host.databasePanel.actionFailed', { action, message: result.message }), 'danger');
       return;
     }
     const data = result.data || {};
@@ -394,11 +416,14 @@ const DatabasePanel = ({ server }) => {
         .map(entry => `${entry.name}: ${formatBytes(entry.space_reclaimed)}`)
         .join(', ');
       report(
-        `Vacuum complete — reclaimed ${formatBytes(data.total_reclaimed)} (${perDb}).`,
+        t('host.databasePanel.vacuumComplete', {
+          reclaimed: formatBytes(data.total_reclaimed),
+          perDb,
+        }),
         'success'
       );
     } else {
-      report(data.message || `${action} complete.`, 'success');
+      report(data.message || t('host.databasePanel.actionComplete', { action }), 'success');
     }
     load();
   };
@@ -411,7 +436,7 @@ const DatabasePanel = ({ server }) => {
         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
           <h3 className="fs-6 fw-bold mb-0">
             <i className="fas fa-database me-2" />
-            Agent Databases
+            {t('host.databasePanel.title')}
           </h3>
           <div className="d-flex gap-2">
             <button
@@ -421,41 +446,41 @@ const DatabasePanel = ({ server }) => {
               disabled={loading || busy !== ''}
             >
               <i className={`fas fa-sync-alt me-2 ${loading ? 'fa-spin' : ''}`} />
-              Refresh
+              {t('host.databasePanel.refresh')}
             </button>
             <button
               type="button"
               className="btn btn-sm btn-outline-primary"
               onClick={() => runMaintenance('vacuum')}
               disabled={loading || busy !== ''}
-              title="Rebuild the database files to reclaim free space"
+              title={t('host.databasePanel.vacuumTitle')}
             >
               <i className={`fas ${busy === 'vacuum' ? 'fa-spinner fa-pulse' : 'fa-broom'} me-2`} />
-              Vacuum
+              {t('host.databasePanel.vacuum')}
             </button>
             <button
               type="button"
               className="btn btn-sm btn-outline-primary"
               onClick={() => runMaintenance('analyze')}
               disabled={loading || busy !== ''}
-              title="Refresh the query planner statistics"
+              title={t('host.databasePanel.analyzeTitle')}
             >
               <i
                 className={`fas ${busy === 'analyze' ? 'fa-spinner fa-pulse' : 'fa-magnifying-glass-chart'} me-2`}
               />
-              Analyze
+              {t('host.databasePanel.analyze')}
             </button>
             <button
               type="button"
               className="btn btn-sm btn-outline-warning"
               onClick={() => runMaintenance('cleanup')}
               disabled={loading || busy !== ''}
-              title="Prune expired rows per the retention settings"
+              title={t('host.databasePanel.cleanupTitle')}
             >
               <i
                 className={`fas ${busy === 'cleanup' ? 'fa-spinner fa-pulse' : 'fa-trash-arrow-up'} me-2`}
               />
-              Cleanup
+              {t('host.databasePanel.cleanup')}
             </button>
           </div>
         </div>
@@ -466,24 +491,24 @@ const DatabasePanel = ({ server }) => {
           <p className="form-text text-muted mt-0">
             {typeof stats.total_size === 'number' && (
               <span className="me-3">
-                Total size: <strong>{formatBytes(stats.total_size)}</strong>
+                {t('host.databasePanel.totalSize')} <strong>{formatBytes(stats.total_size)}</strong>
               </span>
             )}
             {typeof stats.total_tables === 'number' && (
               <span className="me-3">
-                Tables: <strong>{stats.total_tables}</strong>
+                {t('host.databasePanel.tables')} <strong>{stats.total_tables}</strong>
               </span>
             )}
             {typeof stats.total_rows === 'number' && (
               <span>
-                Rows: <strong>{stats.total_rows.toLocaleString()}</strong>
+                {t('host.databasePanel.rows')} <strong>{stats.total_rows.toLocaleString()}</strong>
               </span>
             )}
           </p>
         )}
 
         {!loading && databases.length === 0 && (
-          <p className="text-muted small mb-0">No database statistics reported.</p>
+          <p className="text-muted small mb-0">{t('host.databasePanel.noStats')}</p>
         )}
         <div className="d-flex flex-column gap-2">
           {databases.map(database => (

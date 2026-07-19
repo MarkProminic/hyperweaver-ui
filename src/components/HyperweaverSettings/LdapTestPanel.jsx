@@ -1,6 +1,7 @@
 import axios from 'axios';
 import PropTypes from 'prop-types';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const LdapTestPanel = ({
   values,
@@ -13,12 +14,13 @@ const LdapTestPanel = ({
   setMsg,
   loading,
 }) => {
+  const { t } = useTranslation();
   const testLdapConnection = useCallback(async () => {
     const testKey = 'ldap';
     try {
       setTestLoading(prev => ({ ...prev, [testKey]: true }));
       setTestResults(prev => ({ ...prev, [testKey]: null }));
-      setMsg('Testing LDAP connection...');
+      setMsg(t('settings.ldapTestPanel.testing'));
 
       const payload = {};
       if (ldapTestCredentials.testUsername && ldapTestCredentials.testPassword) {
@@ -37,7 +39,7 @@ const LdapTestPanel = ({
             details: response.data.details,
           },
         }));
-        setMsg('LDAP connection test successful!');
+        setMsg(t('settings.ldapTestPanel.testSuccess'));
       } else {
         setTestResults(prev => ({
           ...prev,
@@ -47,7 +49,7 @@ const LdapTestPanel = ({
             error: response.data.error,
           },
         }));
-        setMsg(`LDAP connection test failed: ${response.data.message}`);
+        setMsg(t('settings.ldapTestPanel.testFailed', { message: response.data.message }));
       }
     } catch (error) {
       console.error('LDAP test error:', error);
@@ -55,11 +57,15 @@ const LdapTestPanel = ({
         ...prev,
         [testKey]: {
           success: false,
-          message: 'LDAP test failed',
+          message: t('settings.ldapTestPanel.testFailedShort'),
           error: error.response?.data?.error || error.message,
         },
       }));
-      setMsg(`LDAP test error: ${error.response?.data?.message || error.message}`);
+      setMsg(
+        t('settings.ldapTestPanel.testError', {
+          error: error.response?.data?.message || error.message,
+        })
+      );
     } finally {
       setTestLoading(prev => ({ ...prev, [testKey]: false }));
     }
@@ -69,6 +75,7 @@ const LdapTestPanel = ({
     setTestLoading,
     setTestResults,
     setMsg,
+    t,
   ]);
 
   if (!values['authentication.ldap_enabled']) {
@@ -82,20 +89,20 @@ const LdapTestPanel = ({
       <div className="card-body">
         <h3 className="fs-6 fw-bold">
           <i className="fas fa-vial me-2" />
-          Test LDAP Connection
+          {t('settings.ldapTestPanel.testLdapConnection')}
         </h3>
 
         <div className="row g-3">
           <div className="col-12 col-lg-6">
             <div className="mb-3">
               <label className="form-label" htmlFor="ldap-test-username">
-                Test Username (Optional)
+                {t('settings.ldapTestPanel.testUsername')}
               </label>
               <input
                 id="ldap-test-username"
                 className="form-control"
                 type="text"
-                placeholder="test.user"
+                placeholder={t('settings.ldapTestPanel.testUsernamePlaceholder')}
                 value={ldapTestCredentials.testUsername}
                 onChange={e =>
                   setLdapTestCredentials(prev => ({
@@ -105,21 +112,19 @@ const LdapTestPanel = ({
                 }
                 disabled={testLoading.ldap || loading}
               />
-              <p className="form-text text-muted">
-                Optional: Provide a username to test user authentication
-              </p>
+              <p className="form-text text-muted">{t('settings.ldapTestPanel.testUsernameHelp')}</p>
             </div>
           </div>
           <div className="col-12 col-lg-6">
             <div className="mb-3">
               <label className="form-label" htmlFor="ldap-test-password">
-                Test Password (Optional)
+                {t('settings.ldapTestPanel.testPassword')}
               </label>
               <input
                 id="ldap-test-password"
                 className="form-control"
                 type="password"
-                placeholder="user-password"
+                placeholder={t('settings.ldapTestPanel.testPasswordPlaceholder')}
                 value={ldapTestCredentials.testPassword}
                 onChange={e =>
                   setLdapTestCredentials(prev => ({
@@ -129,7 +134,7 @@ const LdapTestPanel = ({
                 }
                 disabled={testLoading.ldap || loading}
               />
-              <p className="form-text text-muted">Optional: Password for the test user</p>
+              <p className="form-text text-muted">{t('settings.ldapTestPanel.testPasswordHelp')}</p>
             </div>
           </div>
         </div>
@@ -149,12 +154,9 @@ const LdapTestPanel = ({
               />
             )}
             <i className="fas fa-plug me-2" />
-            <span>Test LDAP Connection</span>
+            <span>{t('settings.ldapTestPanel.testLdapConnection')}</span>
           </button>
-          <p className="form-text text-muted">
-            Tests server connection, bind credentials, search functionality, and optional user
-            authentication
-          </p>
+          <p className="form-text text-muted">{t('settings.ldapTestPanel.testButtonHelp')}</p>
         </div>
 
         {testResults.ldap && (
@@ -174,26 +176,26 @@ const LdapTestPanel = ({
                         <i
                           className={`fas me-1 ${testResults.ldap.details.connectionTest ? 'fa-check text-success' : 'fa-times text-danger'}`}
                         />
-                        <span>Server Connection</span>
+                        <span>{t('settings.ldapTestPanel.serverConnection')}</span>
                       </li>
                       <li>
                         <i
                           className={`fas me-1 ${testResults.ldap.details.bindTest ? 'fa-check text-success' : 'fa-times text-danger'}`}
                         />
-                        <span>Bind with Service Account</span>
+                        <span>{t('settings.ldapTestPanel.bindServiceAccount')}</span>
                       </li>
                       <li>
                         <i
                           className={`fas me-1 ${testResults.ldap.details.searchTest ? 'fa-check text-success' : 'fa-times text-danger'}`}
                         />
-                        <span>Directory Search</span>
+                        <span>{t('settings.ldapTestPanel.directorySearch')}</span>
                       </li>
                       {testResults.ldap.details.authTest !== null && (
                         <li>
                           <i
                             className={`fas me-1 ${testResults.ldap.details.authTest ? 'fa-check text-success' : 'fa-exclamation-triangle text-warning'}`}
                           />
-                          <span>User Authentication Test</span>
+                          <span>{t('settings.ldapTestPanel.userAuthTest')}</span>
                         </li>
                       )}
                     </ul>
@@ -201,7 +203,8 @@ const LdapTestPanel = ({
                 )}
                 {testResults.ldap.error && (
                   <p className="small text-muted mt-1">
-                    <strong>Error:</strong> {testResults.ldap.error}
+                    <strong>{t('settings.ldapTestPanel.errorLabel')}</strong>{' '}
+                    {testResults.ldap.error}
                   </p>
                 )}
               </div>

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { ConfirmModal } from '../common';
@@ -33,6 +34,7 @@ const ServerManagementTab = ({
   setMsg,
   serverContext,
 }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -72,18 +74,18 @@ const ServerManagementTab = ({
         setMsg('');
         const result = await removeServer(serverId);
         if (result.success) {
-          setMsg('Server removed successfully!');
+          setMsg(t('settings.serverManagementTab.serverRemoved'));
         } else {
-          setMsg(result.message || 'Failed to remove server');
+          setMsg(result.message || t('settings.serverManagementTab.failedRemove'));
         }
       } catch {
-        setMsg('Error removing server. Please try again.');
+        setMsg(t('settings.serverManagementTab.errorRemoving'));
       } finally {
         setLoading(false);
         setConfirmDelete(null);
       }
     },
-    [removeServer, setMsg]
+    [removeServer, setMsg, t]
   );
 
   // Handle server editing
@@ -107,29 +109,31 @@ const ServerManagementTab = ({
         const result = await updateServer(server.id, !server.allow_insecure);
         if (result.success) {
           setMsg(
-            `Self-signed TLS ${server.allow_insecure ? 'no longer accepted' : 'now accepted'} for ${server.hostname}.`
+            server.allow_insecure
+              ? t('settings.serverManagementTab.insecureRevoked', { hostname: server.hostname })
+              : t('settings.serverManagementTab.insecureAccepted', { hostname: server.hostname })
           );
         } else {
-          setMsg(result.message || 'Failed to update server');
+          setMsg(result.message || t('settings.serverManagementTab.failedUpdate'));
         }
       } catch {
-        setMsg('Error updating server. Please try again.');
+        setMsg(t('settings.serverManagementTab.errorUpdating'));
       } finally {
         setLoading(false);
       }
     },
-    [updateServer, setMsg]
+    [updateServer, setMsg, t]
   );
 
   // Handle connection test
   const handleTestConnection = useCallback(async () => {
     if (!hostname || !port || !protocol) {
-      setMsg('Please fill in hostname, port, and protocol first');
+      setMsg(t('settings.serverManagementTab.fillHostPortProtocol'));
       return;
     }
     try {
       setLoading(true);
-      setMsg('Testing connection...');
+      setMsg(t('settings.serverManagementTab.testingConnection'));
       setTestResult(null);
       const result = await testServer({
         hostname,
@@ -139,33 +143,33 @@ const ServerManagementTab = ({
       });
       if (result.success) {
         setTestResult('success');
-        setMsg('Connection test successful! Server is reachable and ready for bootstrap.');
+        setMsg(t('settings.serverManagementTab.testSuccess'));
       } else {
         setTestResult('error');
-        setMsg(`Connection test failed: ${result.message}`);
+        setMsg(t('settings.serverManagementTab.testFailed', { message: result.message }));
       }
     } catch {
       setTestResult('error');
-      setMsg('Connection test failed. Please check your server details.');
+      setMsg(t('settings.serverManagementTab.testFailedGeneric'));
     } finally {
       setLoading(false);
     }
-  }, [hostname, port, protocol, allowInsecure, testServer, setMsg, setTestResult]);
+  }, [hostname, port, protocol, allowInsecure, testServer, setMsg, setTestResult, t]);
 
   // Handle server addition
   const handleAddServer = useCallback(
     async e => {
       e.preventDefault();
       if (!hostname || !port || !protocol) {
-        setMsg('Hostname, port, and protocol are required');
+        setMsg(t('settings.serverManagementTab.hostPortProtocolRequired'));
         return;
       }
       if (useExistingApiKey && !apiKey) {
-        setMsg('API key is required when using existing API key option');
+        setMsg(t('settings.serverManagementTab.apiKeyRequired'));
         return;
       }
       if (!useExistingApiKey && !entityName) {
-        setMsg('Entity name is required when bootstrapping');
+        setMsg(t('settings.serverManagementTab.entityNameRequired'));
         return;
       }
       const isDuplicate = servers.some(
@@ -176,7 +180,7 @@ const ServerManagementTab = ({
       );
       if (isDuplicate) {
         setTestResult('error');
-        setMsg(`Server ${protocol}://${hostname}:${port} is already registered.`);
+        setMsg(t('settings.serverManagementTab.duplicateServer', { protocol, hostname, port }));
         return;
       }
       try {
@@ -196,7 +200,7 @@ const ServerManagementTab = ({
         const result = await addServer(serverData);
         if (result.success) {
           setTestResult('success');
-          setMsg('Server added successfully! Refreshing servers...');
+          setMsg(t('settings.serverManagementTab.serverAdded'));
           await refreshServers();
           setShowAddForm(false);
           resetForm();
@@ -206,7 +210,7 @@ const ServerManagementTab = ({
         }
       } catch {
         setTestResult('error');
-        setMsg('An unexpected error occurred. Please try again.');
+        setMsg(t('settings.serverManagementTab.unexpectedError'));
       } finally {
         setLoading(false);
       }
@@ -226,6 +230,7 @@ const ServerManagementTab = ({
       resetForm,
       setMsg,
       setTestResult,
+      t,
     ]
   );
 
@@ -235,7 +240,7 @@ const ServerManagementTab = ({
         <div className="card-body">
           {/* Server Management Header */}
           <div className="d-flex justify-content-between align-items-center mb-4">
-            <h2 className="fs-5 fw-bold">Servers</h2>
+            <h2 className="fs-5 fw-bold">{t('settings.serverManagementTab.servers')}</h2>
             <button
               type="button"
               className="btn btn-primary"
@@ -247,7 +252,9 @@ const ServerManagementTab = ({
               }}
             >
               <i className={`fas fa-${showAddForm ? 'times' : 'plus'} me-2`} />
-              {showAddForm ? 'Cancel' : 'Add Server'}
+              {showAddForm
+                ? t('settings.serverManagementTab.cancel')
+                : t('settings.serverManagementTab.addServer')}
             </button>
           </div>
 
@@ -293,7 +300,7 @@ const ServerManagementTab = ({
                       aria-hidden="true"
                     />
                   )}
-                  Test Connection
+                  {t('settings.serverManagementTab.testConnection')}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={loading}>
                   {loading && (
@@ -303,7 +310,9 @@ const ServerManagementTab = ({
                       aria-hidden="true"
                     />
                   )}
-                  {useExistingApiKey ? 'Add Server' : 'Bootstrap Server'}
+                  {useExistingApiKey
+                    ? t('settings.serverManagementTab.addServer')
+                    : t('settings.serverManagementTab.bootstrapServer')}
                 </button>
               </div>
             </form>
@@ -330,9 +339,9 @@ const ServerManagementTab = ({
         onConfirm={() => {
           handleDeleteServer(confirmDelete);
         }}
-        title="Remove Server"
-        message="Are you sure you want to remove this server? This will remove the server connection."
-        confirmText="Remove Server"
+        title={t('settings.serverManagementTab.removeServerTitle')}
+        message={t('settings.serverManagementTab.removeServerMessage')}
+        confirmText={t('settings.serverManagementTab.removeServerTitle')}
         confirmVariant="is-danger"
         icon="fas fa-trash"
         loading={loading}

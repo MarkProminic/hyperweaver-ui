@@ -1,16 +1,18 @@
 import { Handle, Position } from '@xyflow/react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const EtherstubNode = ({ data }) => {
+  const { t } = useTranslation();
   const { label, connectedVnics, class: deviceClass, flags } = data;
 
   const tooltipContent = `
-${label} (Etherstub - Virtual Switch)
-Type: Virtual Layer 2 Switch
-Connected VNICs: ${connectedVnics?.length || 0}
-${connectedVnics?.length ? `VNICs: ${connectedVnics.join(', ')}` : 'No connected VNICs'}
-Class: ${deviceClass || 'etherstub'}
-${flags && flags !== '--' ? `Flags: ${flags}` : ''}
+${label} (${t('hostTools.etherstubNode.typeCaption')})
+${t('hostTools.etherstubNode.typeLabel')}: ${t('hostTools.etherstubNode.typeValue')}
+${t('hostTools.etherstubNode.connectedVnicsLabel')}: ${connectedVnics?.length || 0}
+${connectedVnics?.length ? `${t('hostTools.etherstubNode.vnicsLabel')}: ${connectedVnics.join(', ')}` : t('hostTools.etherstubNode.noConnectedVnics')}
+${t('hostTools.etherstubNode.classLabel')}: ${deviceClass || 'etherstub'}
+${flags && flags !== '--' ? `${t('hostTools.etherstubNode.flagsLabel')}: ${flags}` : ''}
   `.trim();
 
   return (

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getAllMachines } from '../../api/machineAPI';
 import { getRecipes, updateRecipe, deleteRecipe, testRecipe } from '../../api/provisioningAPI';
@@ -18,6 +19,7 @@ const OS_FAMILY_FILTERS = ['linux', 'solaris', 'windows'];
 const BRAND_FILTERS = ['bhyve', 'lx', 'kvm'];
 
 const TestRecipeModal = ({ isOpen, onClose, server, recipe }) => {
+  const { t } = useTranslation();
   const [machines, setMachines] = useState([]);
   const [machineName, setMachineName] = useState('');
   const [variableRows, setVariableRows] = useState([]);
@@ -40,7 +42,7 @@ const TestRecipeModal = ({ isOpen, onClose, server, recipe }) => {
 
   const runTest = async dryRun => {
     if (!machineName) {
-      setError('Pick a machine — the test resolves (and a live run executes) against it.');
+      setError(t('host.recipesManagement.pickMachine'));
       return;
     }
     setLoading(true);
@@ -74,9 +76,9 @@ const TestRecipeModal = ({ isOpen, onClose, server, recipe }) => {
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={() => runTest(true)}
-      title={`Test Recipe: ${recipe?.name || ''}`}
+      title={t('host.recipesManagement.testRecipeTitle', { name: recipe?.name || '' })}
       icon="fas fa-vial"
-      submitText="Dry Run"
+      submitText={t('host.recipesManagement.dryRun')}
       loading={loading}
       showCancelButton
     >
@@ -84,7 +86,7 @@ const TestRecipeModal = ({ isOpen, onClose, server, recipe }) => {
       <div className="row g-3">
         <div className="col-12 col-md-6">
           <label className="form-label" htmlFor="recipe-test-machine">
-            Machine
+            {t('host.recipesManagement.machine')}
           </label>
           <select
             id="recipe-test-machine"
@@ -92,7 +94,7 @@ const TestRecipeModal = ({ isOpen, onClose, server, recipe }) => {
             value={machineName}
             onChange={e => setMachineName(e.target.value)}
           >
-            <option value="">Select…</option>
+            <option value="">{t('host.recipesManagement.select')}</option>
             {machines.map(row => (
               <option key={row.name} value={row.name}>
                 {row.name}
@@ -100,14 +102,11 @@ const TestRecipeModal = ({ isOpen, onClose, server, recipe }) => {
               </option>
             ))}
           </select>
-          <span className="form-text text-muted">
-            Dry Run only resolves variables. Run Live drives the zlogin console of a RUNNING
-            machine.
-          </span>
+          <span className="form-text text-muted">{t('host.recipesManagement.testHelp')}</span>
         </div>
         <div className="col-12 col-md-6">
           <span className="form-label d-block">
-            Call-time variables (merge over the recipe&apos;s)
+            {t('host.recipesManagement.callTimeVariables')}
           </span>
           <VariableRowsEditor
             rows={variableRows}
@@ -121,18 +120,18 @@ const TestRecipeModal = ({ isOpen, onClose, server, recipe }) => {
             className="btn btn-sm btn-danger"
             onClick={() => runTest(false)}
             disabled={loading}
-            title="EXECUTES the recipe over the machine's console — not a preview"
+            title={t('host.recipesManagement.runLiveTitle')}
           >
             <i className="fas fa-bolt me-2" />
-            Run Live
+            {t('host.recipesManagement.runLive')}
           </button>
         </div>
         {result && result.dryRun && (
           <div className="col-12">
-            <h6 className="fw-bold">Resolved steps</h6>
+            <h6 className="fw-bold">{t('host.recipesManagement.resolvedSteps')}</h6>
             {unresolved.length > 0 && (
               <p className="mb-1">
-                Unresolved variables:{' '}
+                {t('host.recipesManagement.unresolvedVariables')}{' '}
                 {unresolved.map(name => (
                   <span className="badge text-bg-warning me-1" key={name}>
                     {name}
@@ -145,7 +144,7 @@ const TestRecipeModal = ({ isOpen, onClose, server, recipe }) => {
         )}
         {result && !result.dryRun && (
           <div className="col-12">
-            <h6 className="fw-bold">Live run result</h6>
+            <h6 className="fw-bold">{t('host.recipesManagement.liveRunResult')}</h6>
             <pre className="small mb-0">
               {JSON.stringify(
                 {
@@ -172,6 +171,7 @@ TestRecipeModal.propTypes = {
 };
 
 const RecipesManagement = ({ server }) => {
+  const { t } = useTranslation();
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
@@ -208,9 +208,9 @@ const RecipesManagement = ({ server }) => {
       const rows = Array.isArray(result.data) ? result.data : result.data?.recipes || [];
       setRecipes(rows);
     } else {
-      report(`Failed to load recipes: ${result.message}`, 'danger');
+      report(t('host.recipesManagement.loadFailed', { message: result.message }), 'danger');
     }
-  }, [server, familyFilter, brandFilter]);
+  }, [server, familyFilter, brandFilter, t]);
 
   useEffect(() => {
     loadRecipes();
@@ -223,10 +223,16 @@ const RecipesManagement = ({ server }) => {
     });
     setLoading(false);
     if (result.success) {
-      report(`"${recipe.name}" is now the default for ${recipe.os_family}/${recipe.brand}.`);
+      report(
+        t('host.recipesManagement.setDefaultDone', {
+          name: recipe.name,
+          osFamily: recipe.os_family,
+          brand: recipe.brand,
+        })
+      );
       loadRecipes();
     } else {
-      report(`Set-default failed: ${result.message}`, 'danger');
+      report(t('host.recipesManagement.setDefaultFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -237,10 +243,10 @@ const RecipesManagement = ({ server }) => {
     const result = await deleteRecipe(server.hostname, server.port, server.protocol, target.id);
     setLoading(false);
     if (result.success) {
-      report(`Recipe "${target.name}" deleted.`);
+      report(t('host.recipesManagement.recipeDeleted', { name: target.name }));
       loadRecipes();
     } else {
-      report(`Delete failed: ${result.message}`, 'danger');
+      report(t('host.recipesManagement.deleteFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -255,7 +261,7 @@ const RecipesManagement = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-plus me-2" />
-            New Recipe
+            {t('host.recipesManagement.newRecipe')}
           </button>
           <button
             type="button"
@@ -264,17 +270,17 @@ const RecipesManagement = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-sync-alt me-2" />
-            Refresh
+            {t('host.recipesManagement.refresh')}
           </button>
         </div>
         <div className="d-flex gap-2">
           <select
             className="form-select form-select-sm w-auto"
-            aria-label="Filter by OS family"
+            aria-label={t('host.recipesManagement.filterByOsFamily')}
             value={familyFilter}
             onChange={e => setFamilyFilter(e.target.value)}
           >
-            <option value="">All OS families</option>
+            <option value="">{t('host.recipesManagement.allOsFamilies')}</option>
             {OS_FAMILY_FILTERS.map(family => (
               <option key={family} value={family}>
                 {family}
@@ -283,11 +289,11 @@ const RecipesManagement = ({ server }) => {
           </select>
           <select
             className="form-select form-select-sm w-auto"
-            aria-label="Filter by brand"
+            aria-label={t('host.recipesManagement.filterByBrand')}
             value={brandFilter}
             onChange={e => setBrandFilter(e.target.value)}
           >
-            <option value="">All brands</option>
+            <option value="">{t('host.recipesManagement.allBrands')}</option>
             {BRAND_FILTERS.map(brand => (
               <option key={brand} value={brand}>
                 {brand}
@@ -295,17 +301,17 @@ const RecipesManagement = ({ server }) => {
             ))}
           </select>
           <span className="badge text-bg-secondary align-self-center">
-            {recipes.length} recipes
+            {t('host.recipesManagement.recipesCount', { count: recipes.length })}
           </span>
         </div>
       </div>
 
       {msg && <div className={`alert alert-${msgVariant} py-2`}>{msg}</div>}
-      {loading && recipes.length === 0 && <p className="text-muted">Loading…</p>}
+      {loading && recipes.length === 0 && (
+        <p className="text-muted">{t('host.recipesManagement.loading')}</p>
+      )}
       {!loading && recipes.length === 0 && (
-        <div className="alert alert-info">
-          No recipes yet — the seeded defaults appear here once the agent ships them, or create one.
-        </div>
+        <div className="alert alert-info">{t('host.recipesManagement.emptyState')}</div>
       )}
 
       {recipes.length > 0 && (
@@ -313,12 +319,12 @@ const RecipesManagement = ({ server }) => {
           <table className="table table-striped table-sm">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>OS Family</th>
-                <th>Brand</th>
-                <th>Steps</th>
-                <th>Description</th>
-                <th>Actions</th>
+                <th>{t('host.recipesManagement.colName')}</th>
+                <th>{t('host.recipesManagement.colOsFamily')}</th>
+                <th>{t('host.recipesManagement.colBrand')}</th>
+                <th>{t('host.recipesManagement.colSteps')}</th>
+                <th>{t('host.recipesManagement.colDescription')}</th>
+                <th>{t('host.recipesManagement.colActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -326,7 +332,11 @@ const RecipesManagement = ({ server }) => {
                 <tr key={recipe.id ?? recipe.name}>
                   <td>
                     <code className="small">{recipe.name}</code>{' '}
-                    {recipe.is_default && <span className="badge text-bg-success">default</span>}
+                    {recipe.is_default && (
+                      <span className="badge text-bg-success">
+                        {t('host.recipesManagement.default')}
+                      </span>
+                    )}
                   </td>
                   <td>{recipe.os_family}</td>
                   <td>{recipe.brand}</td>
@@ -337,7 +347,7 @@ const RecipesManagement = ({ server }) => {
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-secondary py-0"
-                        title="Edit"
+                        title={t('host.recipesManagement.edit')}
                         onClick={() => setEditTarget(recipe)}
                         disabled={loading}
                       >
@@ -346,7 +356,7 @@ const RecipesManagement = ({ server }) => {
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-info py-0"
-                        title="Test — dry-run preview or live console run"
+                        title={t('host.recipesManagement.testTitle')}
                         onClick={() => setTestTarget(recipe)}
                         disabled={loading}
                       >
@@ -356,7 +366,7 @@ const RecipesManagement = ({ server }) => {
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-success py-0"
-                          title="Make this the default for its OS family + brand"
+                          title={t('host.recipesManagement.makeDefaultTitle')}
                           onClick={() => handleSetDefault(recipe)}
                           disabled={loading}
                         >
@@ -366,7 +376,7 @@ const RecipesManagement = ({ server }) => {
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-danger py-0"
-                        title="Delete"
+                        title={t('host.recipesManagement.delete')}
                         onClick={() => setDeleteTarget(recipe)}
                         disabled={loading}
                       >
@@ -406,9 +416,13 @@ const RecipesManagement = ({ server }) => {
           isOpen
           onClose={() => setDeleteTarget(null)}
           onConfirm={handleDelete}
-          title="Delete Recipe"
-          message={`Delete recipe "${deleteTarget.name}" (${deleteTarget.os_family}/${deleteTarget.brand})? Machines are unaffected; zone_setup falls back to the remaining default.`}
-          confirmText="Delete"
+          title={t('host.recipesManagement.deleteRecipeTitle')}
+          message={t('host.recipesManagement.deleteRecipeMessage', {
+            name: deleteTarget.name,
+            osFamily: deleteTarget.os_family,
+            brand: deleteTarget.brand,
+          })}
+          confirmText={t('host.recipesManagement.delete')}
           loading={loading}
         />
       )}

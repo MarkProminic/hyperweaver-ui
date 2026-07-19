@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { FormModal } from '../common';
@@ -8,6 +9,7 @@ import IpAddressCreateModal from './IpAddressCreateModal';
 import IpAddressTableManagement from './IpAddressTableManagement';
 
 const IpAddressManagement = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -64,11 +66,11 @@ const IpAddressManagement = ({ server, onError }) => {
         );
         setAddresses(uniqueAddresses);
       } else {
-        onError(result.message || 'Failed to load IP addresses');
+        onError(result.message || t('host.ipAddressManagement.errors.loadFailed'));
         setAddresses([]);
       }
     } catch (err) {
-      onError(`Error loading IP addresses: ${err.message}`);
+      onError(t('host.ipAddressManagement.errors.loadError', { message: err.message }));
       setAddresses([]);
     } finally {
       setLoading(false);
@@ -81,6 +83,7 @@ const IpAddressManagement = ({ server, onError }) => {
     filters.type,
     filters.state,
     onError,
+    t,
   ]);
 
   // Load IP addresses on component mount and when filters change
@@ -122,10 +125,18 @@ const IpAddressManagement = ({ server, onError }) => {
         // Refresh addresses list after deletion
         await loadAddresses();
       } else {
-        onError(result.message || `Failed to delete IP address "${addressToDelete}"`);
+        onError(
+          result.message ||
+            t('host.ipAddressManagement.errors.deleteFailed', { name: addressToDelete })
+        );
       }
     } catch (err) {
-      onError(`Error deleting IP address "${addressToDelete}": ${err.message}`);
+      onError(
+        t('host.ipAddressManagement.errors.deleteError', {
+          name: addressToDelete,
+          message: err.message,
+        })
+      );
     } finally {
       setDeleting(false);
     }
@@ -152,10 +163,19 @@ const IpAddressManagement = ({ server, onError }) => {
         // Refresh addresses list after action
         await loadAddresses();
       } else {
-        onError(result.message || `Failed to ${action} IP address "${address.addrobj}"`);
+        onError(
+          result.message ||
+            t('host.ipAddressManagement.errors.toggleFailed', { action, name: address.addrobj })
+        );
       }
     } catch (err) {
-      onError(`Error ${action}ing IP address "${address.addrobj}": ${err.message}`);
+      onError(
+        t('host.ipAddressManagement.errors.toggleError', {
+          action,
+          name: address.addrobj,
+          message: err.message,
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -180,9 +200,9 @@ const IpAddressManagement = ({ server, onError }) => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">IP Address Management</h2>
+        <h2 className="fs-5 fw-bold">{t('host.ipAddressManagement.title')}</h2>
         <p>
-          Manage IP address assignments on <strong>{server.hostname}</strong>.
+          {t('host.ipAddressManagement.managePrefix')} <strong>{server.hostname}</strong>.
         </p>
       </div>
 
@@ -193,7 +213,7 @@ const IpAddressManagement = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-interface">
-                  Filter by Interface
+                  {t('host.ipAddressManagement.filterByInterface')}
                 </label>
                 <input
                   id="filter-interface"
@@ -208,7 +228,7 @@ const IpAddressManagement = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-ip-version">
-                  IP Version
+                  {t('host.ipAddressManagement.ipVersion')}
                 </label>
                 <select
                   id="filter-ip-version"
@@ -216,7 +236,7 @@ const IpAddressManagement = ({ server, onError }) => {
                   value={filters.ip_version}
                   onChange={e => handleFilterChange('ip_version', e.target.value)}
                 >
-                  <option value="">All Versions</option>
+                  <option value="">{t('host.ipAddressManagement.allVersions')}</option>
                   <option value="v4">IPv4</option>
                   <option value="v6">IPv6</option>
                 </select>
@@ -225,7 +245,7 @@ const IpAddressManagement = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-type">
-                  Address Type
+                  {t('host.ipAddressManagement.addressType')}
                 </label>
                 <select
                   id="filter-type"
@@ -233,17 +253,17 @@ const IpAddressManagement = ({ server, onError }) => {
                   value={filters.type}
                   onChange={e => handleFilterChange('type', e.target.value)}
                 >
-                  <option value="">All Types</option>
-                  <option value="static">Static</option>
-                  <option value="dhcp">DHCP</option>
-                  <option value="addrconf">Auto Config</option>
+                  <option value="">{t('host.ipAddressManagement.allTypes')}</option>
+                  <option value="static">{t('host.ipAddressManagement.typeStatic')}</option>
+                  <option value="dhcp">{t('host.ipAddressManagement.typeDhcp')}</option>
+                  <option value="addrconf">{t('host.ipAddressManagement.typeAddrconf')}</option>
                 </select>
               </div>
             </div>
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-state">
-                  State
+                  {t('host.ipAddressManagement.state')}
                 </label>
                 <select
                   id="filter-state"
@@ -251,11 +271,11 @@ const IpAddressManagement = ({ server, onError }) => {
                   value={filters.state}
                   onChange={e => handleFilterChange('state', e.target.value)}
                 >
-                  <option value="">All States</option>
-                  <option value="ok">OK</option>
-                  <option value="disabled">Disabled</option>
-                  <option value="down">Down</option>
-                  <option value="duplicate">Duplicate</option>
+                  <option value="">{t('host.ipAddressManagement.allStates')}</option>
+                  <option value="ok">{t('host.ipAddressManagement.stateOk')}</option>
+                  <option value="disabled">{t('host.ipAddressManagement.stateDisabled')}</option>
+                  <option value="down">{t('host.ipAddressManagement.stateDown')}</option>
+                  <option value="duplicate">{t('host.ipAddressManagement.stateDuplicate')}</option>
                 </select>
               </div>
             </div>
@@ -275,7 +295,7 @@ const IpAddressManagement = ({ server, onError }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-sync-alt me-2" />
-                    Refresh
+                    {t('host.ipAddressManagement.refresh')}
                   </button>
                 </div>
               </div>
@@ -293,7 +313,7 @@ const IpAddressManagement = ({ server, onError }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-times me-2" />
-                    Clear
+                    {t('host.ipAddressManagement.clear')}
                   </button>
                 </div>
               </div>
@@ -308,7 +328,7 @@ const IpAddressManagement = ({ server, onError }) => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center gap-2">
               <h3 className="fs-6 fw-bold mb-0">
-                IP Addresses ({addresses.length})
+                {t('host.ipAddressManagement.ipAddresses', { total: addresses.length })}
                 {loading && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin" />
@@ -324,7 +344,7 @@ const IpAddressManagement = ({ server, onError }) => {
                 disabled={loading}
               >
                 <i className="fas fa-plus me-2" />
-                Create IP Address
+                {t('host.ipAddressManagement.createIpAddress')}
               </button>
             </div>
           </div>
@@ -360,24 +380,23 @@ const IpAddressManagement = ({ server, onError }) => {
             setAddressToDelete(null);
           }}
           onSubmit={confirmDeleteAddress}
-          title="Delete IP Address"
+          title={t('host.ipAddressManagement.deleteTitle')}
           icon="fas fa-trash"
-          submitText="Delete"
+          submitText={t('host.ipAddressManagement.delete')}
           submitVariant="is-danger"
           loading={deleting}
         >
           <div className="alert alert-danger">
             <p>
-              <strong>Warning:</strong> This action cannot be undone.
+              <strong>{t('host.ipAddressManagement.warning')}</strong>{' '}
+              {t('host.ipAddressManagement.cannotUndo')}
             </p>
           </div>
           <p className="mb-4">
-            Are you sure you want to delete the IP address{' '}
+            {t('host.ipAddressManagement.deletePrompt')}{' '}
             <strong className="font-monospace">{addressToDelete}</strong>?
           </p>
-          <p className="text-muted small">
-            This will remove the IP address configuration from the system.
-          </p>
+          <p className="text-muted small">{t('host.ipAddressManagement.deleteNote')}</p>
         </FormModal>
       )}
     </div>

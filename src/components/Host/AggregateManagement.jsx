@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { ConfirmModal } from '../common';
@@ -9,6 +10,7 @@ import AggregateDetailsModal from './AggregateDetailsModal';
 import AggregateTable from './AggregateTable';
 
 const AggregateManagement = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [aggregates, setAggregates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -55,16 +57,16 @@ const AggregateManagement = ({ server, onError }) => {
       if (result.success) {
         setAggregates(result.data?.aggregates || []);
       } else {
-        onError(result.message || 'Failed to load link aggregates');
+        onError(result.message || t('host.aggregateManagement.errors.loadFailed'));
         setAggregates([]);
       }
     } catch (err) {
-      onError(`Error loading link aggregates: ${err.message}`);
+      onError(t('host.aggregateManagement.errors.loadError', { message: err.message }));
       setAggregates([]);
     } finally {
       setLoading(false);
     }
-  }, [server, makeAgentRequest, onError, filters.state, filters.policy]);
+  }, [server, makeAgentRequest, onError, filters.state, filters.policy, t]);
 
   const checkCdpServiceStatus = useCallback(async () => {
     if (!server || !makeAgentRequest) {
@@ -125,10 +127,18 @@ const AggregateManagement = ({ server, onError }) => {
       if (result.success) {
         await loadAggregates();
       } else {
-        onError(result.message || `Failed to delete link aggregate "${deleteTarget}"`);
+        onError(
+          result.message ||
+            t('host.aggregateManagement.errors.deleteFailed', { name: deleteTarget })
+        );
       }
     } catch (err) {
-      onError(`Error deleting link aggregate "${deleteTarget}": ${err.message}`);
+      onError(
+        t('host.aggregateManagement.errors.deleteError', {
+          name: deleteTarget,
+          message: err.message,
+        })
+      );
     } finally {
       setDeleteTarget(null);
       setLoading(false);
@@ -147,7 +157,7 @@ const AggregateManagement = ({ server, onError }) => {
       const aggregateName = aggregate.name || aggregate.link;
 
       if (!aggregateName) {
-        onError('Unable to determine aggregate name');
+        onError(t('host.aggregateManagement.errors.nameUnknown'));
         return;
       }
 
@@ -164,10 +174,10 @@ const AggregateManagement = ({ server, onError }) => {
         setAggregateDetails(result.data);
         setShowDetailsModal(true);
       } else {
-        onError(result.message || 'Failed to load aggregate details');
+        onError(result.message || t('host.aggregateManagement.errors.detailsFailed'));
       }
     } catch (err) {
-      onError(`Error loading aggregate details: ${err.message}`);
+      onError(t('host.aggregateManagement.errors.detailsError', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -199,18 +209,18 @@ const AggregateManagement = ({ server, onError }) => {
         isOpen={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteAggregate}
-        title="Delete Link Aggregate"
-        message={`Are you sure you want to delete link aggregate "${deleteTarget}"?`}
-        confirmText="Delete"
+        title={t('host.aggregateManagement.deleteTitle')}
+        message={t('host.aggregateManagement.deleteMessage', { name: deleteTarget })}
+        confirmText={t('host.aggregateManagement.delete')}
         confirmVariant="is-danger"
         icon="fas fa-trash"
         loading={loading}
       />
 
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">Link Aggregation Management</h2>
+        <h2 className="fs-5 fw-bold">{t('host.aggregateManagement.title')}</h2>
         <p>
-          Manage link aggregates (LAGs) on <strong>{server.hostname}</strong>.
+          {t('host.aggregateManagement.managePrefix')} <strong>{server.hostname}</strong>.
         </p>
       </div>
 
@@ -220,11 +230,9 @@ const AggregateManagement = ({ server, onError }) => {
           <div className="d-flex align-items-center">
             <i className="fas fa-exclamation-triangle me-2" />
             <div className="ms-2">
-              <strong>CDP Service Detected</strong>
+              <strong>{t('host.aggregateManagement.cdpDetectedTitle')}</strong>
               <br />
-              The Cisco Discovery Protocol (CDP) service is currently running. Link aggregates
-              cannot be created while CDP is active. You can disable CDP when creating a new
-              aggregate.
+              {t('host.aggregateManagement.cdpDetectedBody')}
             </div>
           </div>
         </div>
@@ -237,7 +245,7 @@ const AggregateManagement = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label htmlFor="aggregate-filter-state" className="form-label">
-                  Filter by State
+                  {t('host.aggregateManagement.filterByState')}
                 </label>
                 <select
                   id="aggregate-filter-state"
@@ -245,17 +253,17 @@ const AggregateManagement = ({ server, onError }) => {
                   value={filters.state}
                   onChange={e => handleFilterChange('state', e.target.value)}
                 >
-                  <option value="">All States</option>
-                  <option value="up">Up</option>
-                  <option value="down">Down</option>
-                  <option value="unknown">Unknown</option>
+                  <option value="">{t('host.aggregateManagement.allStates')}</option>
+                  <option value="up">{t('host.aggregateManagement.stateUp')}</option>
+                  <option value="down">{t('host.aggregateManagement.stateDown')}</option>
+                  <option value="unknown">{t('host.aggregateManagement.stateUnknown')}</option>
                 </select>
               </div>
             </div>
             <div className="col">
               <div className="mb-3">
                 <label htmlFor="aggregate-filter-policy" className="form-label">
-                  Filter by Policy
+                  {t('host.aggregateManagement.filterByPolicy')}
                 </label>
                 <select
                   id="aggregate-filter-policy"
@@ -263,7 +271,7 @@ const AggregateManagement = ({ server, onError }) => {
                   value={filters.policy}
                   onChange={e => handleFilterChange('policy', e.target.value)}
                 >
-                  <option value="">All Policies</option>
+                  <option value="">{t('host.aggregateManagement.allPolicies')}</option>
                   <option value="L2">L2</option>
                   <option value="L3">L3</option>
                   <option value="L4">L4</option>
@@ -286,7 +294,7 @@ const AggregateManagement = ({ server, onError }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-sync-alt me-2" />
-                  <span>Refresh</span>
+                  <span>{t('host.aggregateManagement.refresh')}</span>
                 </button>
               </div>
             </div>
@@ -302,7 +310,7 @@ const AggregateManagement = ({ server, onError }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-times me-2" />
-                  <span>Clear</span>
+                  <span>{t('host.aggregateManagement.clear')}</span>
                 </button>
               </div>
             </div>
@@ -316,7 +324,7 @@ const AggregateManagement = ({ server, onError }) => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center gap-2">
               <h3 className="fs-6 fw-bold">
-                Link Aggregates ({aggregates.length})
+                {t('host.aggregateManagement.linkAggregates', { total: aggregates.length })}
                 {loading && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin" />
@@ -332,7 +340,7 @@ const AggregateManagement = ({ server, onError }) => {
                 disabled={loading}
               >
                 <i className="fas fa-plus me-2" />
-                <span>Create Aggregate</span>
+                <span>{t('host.aggregateManagement.createAggregate')}</span>
               </button>
             </div>
           </div>

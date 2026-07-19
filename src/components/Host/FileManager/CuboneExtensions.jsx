@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { isTextFile, isArchiveFile } from './FileManagerTransforms';
 
@@ -7,6 +8,7 @@ import { isTextFile, isArchiveFile } from './FileManagerTransforms';
  * Implements the pending PR's functionality locally
  */
 export const useCuboneExtensions = (files, permissions, customActionHandlers) => {
+  const { t } = useTranslation();
   useEffect(() => {
     // Monkey patch cubone's useFileList to add custom context menu items
     const extendContextMenu = () => {
@@ -73,7 +75,7 @@ export const useCuboneExtensions = (files, permissions, customActionHandlers) =>
           console.log('✅ CONTEXT: Adding Edit File option');
           customItems.push({
             icon: '📝',
-            text: 'Edit File',
+            text: t('fileManager.cuboneExtensions.editFile'),
             action: () => customActionHandlers.handleEditFile(selectedFile),
           });
         }
@@ -83,7 +85,7 @@ export const useCuboneExtensions = (files, permissions, customActionHandlers) =>
           console.log('✅ CONTEXT: Adding Extract Archive option');
           customItems.push({
             icon: '📦',
-            text: 'Extract Archive',
+            text: t('fileManager.cuboneExtensions.extractArchive'),
             action: () => customActionHandlers.handleExtractArchive(selectedFile),
           });
         }
@@ -104,7 +106,7 @@ export const useCuboneExtensions = (files, permissions, customActionHandlers) =>
           );
           customItems.push({
             icon: '🗜️',
-            text: `Create Archive (${selectedFiles.length})`,
+            text: t('fileManager.cuboneExtensions.createArchive', { count: selectedFiles.length }),
             action: () => customActionHandlers.handleCreateArchive(selectedFiles),
           });
         }
@@ -114,7 +116,7 @@ export const useCuboneExtensions = (files, permissions, customActionHandlers) =>
           console.log('✅ CONTEXT: Adding Properties option');
           customItems.push({
             icon: '⚙️',
-            text: 'Properties',
+            text: t('fileManager.cuboneExtensions.properties'),
             action: () => customActionHandlers.handleShowProperties(selectedFile),
           });
         }
@@ -247,7 +249,7 @@ export const useCuboneExtensions = (files, permissions, customActionHandlers) =>
 
             editButton.innerHTML = `
               <span style="font-size: 16px;">📝</span>
-              <span>Edit</span>
+              <span>${t('fileManager.cuboneExtensions.edit')}</span>
             `;
 
             editButton.addEventListener('click', e => {
@@ -281,7 +283,7 @@ export const useCuboneExtensions = (files, permissions, customActionHandlers) =>
 
             extractButton.innerHTML = `
               <span style="font-size: 16px;">📦</span>
-              <span>Extract</span>
+              <span>${t('fileManager.cuboneExtensions.extract')}</span>
             `;
 
             extractButton.addEventListener('click', e => {
@@ -315,7 +317,7 @@ export const useCuboneExtensions = (files, permissions, customActionHandlers) =>
 
             propertiesButton.innerHTML = `
               <span style="font-size: 16px;">⚙️</span>
-              <span>Properties</span>
+              <span>${t('fileManager.cuboneExtensions.properties')}</span>
             `;
 
             propertiesButton.addEventListener('click', e => {
@@ -348,7 +350,7 @@ export const useCuboneExtensions = (files, permissions, customActionHandlers) =>
 
             archiveButton.innerHTML = `
               <span style="font-size: 16px;">🗜️</span>
-              <span>Archive (${selectedFiles.length})</span>
+              <span>${t('fileManager.cuboneExtensions.archive', { count: selectedFiles.length })}</span>
             `;
 
             archiveButton.addEventListener('click', e => {
@@ -425,7 +427,7 @@ export const useCuboneExtensions = (files, permissions, customActionHandlers) =>
     const cleanup = setupObservers();
 
     return cleanup;
-  }, [files, permissions, customActionHandlers]);
+  }, [files, permissions, customActionHandlers, t]);
 };
 
 export default useCuboneExtensions;

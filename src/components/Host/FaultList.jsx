@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 
@@ -24,6 +25,7 @@ const FaultList = ({ server }) => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   const { makeAgentRequest } = useServers();
+  const { t } = useTranslation();
 
   const loadFaults = useCallback(
     async (forceRefresh = false) => {
@@ -56,19 +58,19 @@ const FaultList = ({ server }) => {
           setFaults(result.data?.faults || []);
           setSummary(result.data?.summary || null);
         } else {
-          setError(result.message || 'Failed to load faults');
+          setError(result.message || t('host.faultList.errors.loadFailed'));
           setFaults([]);
           setSummary(null);
         }
       } catch (err) {
-        setError(`Error loading faults: ${err.message}`);
+        setError(t('host.faultList.errors.loadError', { message: err.message }));
         setFaults([]);
         setSummary(null);
       } finally {
         setLoading(false);
       }
     },
-    [server, makeAgentRequest, filters.all, filters.summary, filters.limit]
+    [server, makeAgentRequest, filters.all, filters.summary, filters.limit, t]
   );
 
   useEffect(() => {
@@ -100,10 +102,10 @@ const FaultList = ({ server }) => {
         setFilters(prev => ({ ...prev, force_refresh: true }));
         await loadFaults();
       } else {
-        setError(result.message || `Failed to ${action} fault`);
+        setError(result.message || t('host.faultList.errors.actionFailed', { action }));
       }
     } catch (err) {
-      setError(`Error performing ${action}: ${err.message}`);
+      setError(t('host.faultList.errors.actionError', { action, message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -140,13 +142,13 @@ const FaultList = ({ server }) => {
           <div className="card-body">
             <h4 className="fs-6 fw-bold mb-3">
               <i className="fas fa-chart-pie me-2" />
-              <span>Fault Summary</span>
+              <span>{t('host.faultList.faultSummary')}</span>
             </h4>
 
             <div className="row g-3">
               <div className="col">
                 <div className="mb-3">
-                  <span className="form-label">Total Faults</span>
+                  <span className="form-label">{t('host.faultList.totalFaults')}</span>
                   <p>
                     <span className="badge text-bg-info">{summary.totalFaults}</span>
                   </p>
@@ -155,7 +157,7 @@ const FaultList = ({ server }) => {
               {summary.severityLevels.length > 0 && (
                 <div className="col">
                   <div className="mb-3">
-                    <span className="form-label">Severity Levels</span>
+                    <span className="form-label">{t('host.faultList.severityLevels')}</span>
                     <div>
                       <div className="d-flex flex-wrap gap-1">
                         {[...new Set(summary.severityLevels.map(level => level.toLowerCase()))].map(
@@ -173,7 +175,7 @@ const FaultList = ({ server }) => {
               {summary.faultClasses.length > 0 && (
                 <div className="col">
                   <div className="mb-3">
-                    <span className="form-label">Fault Classes</span>
+                    <span className="form-label">{t('host.faultList.faultClasses')}</span>
                     <div>
                       <div className="d-flex flex-wrap gap-1">
                         {summary.faultClasses.slice(0, 3).map(cls => (
@@ -183,7 +185,9 @@ const FaultList = ({ server }) => {
                         ))}
                         {summary.faultClasses.length > 3 && (
                           <span className="badge text-bg-secondary">
-                            +{summary.faultClasses.length - 3} more
+                            {t('host.faultList.moreClasses', {
+                              count: summary.faultClasses.length - 3,
+                            })}
                           </span>
                         )}
                       </div>
@@ -203,7 +207,7 @@ const FaultList = ({ server }) => {
             <div className="col-lg-3">
               <div className="mb-3">
                 <label htmlFor="fault-limit" className="form-label">
-                  Max Faults
+                  {t('host.faultList.maxFaults')}
                 </label>
                 <div>
                   <select
@@ -212,17 +216,17 @@ const FaultList = ({ server }) => {
                     value={filters.limit}
                     onChange={e => handleFilterChange('limit', parseInt(e.target.value))}
                   >
-                    <option value={25}>25 faults</option>
-                    <option value={50}>50 faults</option>
-                    <option value={100}>100 faults</option>
-                    <option value={200}>200 faults</option>
+                    <option value={25}>{t('host.faultList.faultsOption', { count: 25 })}</option>
+                    <option value={50}>{t('host.faultList.faultsOption', { count: 50 })}</option>
+                    <option value={100}>{t('host.faultList.faultsOption', { count: 100 })}</option>
+                    <option value={200}>{t('host.faultList.faultsOption', { count: 200 })}</option>
                   </select>
                 </div>
               </div>
             </div>
             <div className="col-auto">
               <div className="mb-3">
-                <span className="form-label">Include Resolved</span>
+                <span className="form-label">{t('host.faultList.includeResolved')}</span>
                 <div>
                   <div className="form-check form-switch">
                     <input
@@ -234,7 +238,7 @@ const FaultList = ({ server }) => {
                       onChange={e => handleFilterChange('all', e.target.checked)}
                     />
                     <label className="form-check-label" htmlFor="fault-include-resolved">
-                      Show All
+                      {t('host.faultList.showAll')}
                     </label>
                   </div>
                 </div>
@@ -253,7 +257,7 @@ const FaultList = ({ server }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-sync-alt me-2" />
-                    <span>Refresh</span>
+                    <span>{t('host.faultList.refresh')}</span>
                   </button>
                 </div>
               </div>
@@ -271,7 +275,7 @@ const FaultList = ({ server }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-times me-2" />
-                    <span>Clear</span>
+                    <span>{t('host.faultList.clear')}</span>
                   </button>
                 </div>
               </div>
@@ -294,7 +298,7 @@ const FaultList = ({ server }) => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center gap-2">
               <h3 className="fs-6 fw-bold">
-                System Faults ({faults.length})
+                {t('host.faultList.systemFaultsCount', { count: faults.length })}
                 {loading && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin" />

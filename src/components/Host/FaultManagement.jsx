@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { hasFeature } from '../../utils/capabilities';
 
@@ -9,12 +10,13 @@ import SyslogConfiguration from './SyslogConfiguration';
 import SystemLogs from './SystemLogs';
 
 const FaultManagement = ({ server }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('faults');
 
   if (!server) {
     return (
       <div className="alert alert-info">
-        <p>No server selected for fault management.</p>
+        <p>{t('host.faultManagement.noServerSelected')}</p>
       </div>
     );
   }
@@ -36,7 +38,7 @@ const FaultManagement = ({ server }) => {
             onClick={() => setActiveTab('faults')}
           >
             <i className="fas fa-exclamation-triangle me-2" />
-            <span>Current Faults</span>
+            <span>{t('host.faultManagement.tabCurrentFaults')}</span>
           </button>
         </li>
         {logsAvailable && (
@@ -47,7 +49,7 @@ const FaultManagement = ({ server }) => {
               onClick={() => setActiveTab('logs')}
             >
               <i className="fas fa-file-alt me-2" />
-              <span>System Logs</span>
+              <span>{t('host.faultManagement.tabSystemLogs')}</span>
             </button>
           </li>
         )}
@@ -58,7 +60,7 @@ const FaultManagement = ({ server }) => {
             onClick={() => setActiveTab('config')}
           >
             <i className="fas fa-cog me-2" />
-            <span>Configuration</span>
+            <span>{t('host.faultManagement.tabConfiguration')}</span>
           </button>
         </li>
         {syslogAvailable && (
@@ -69,7 +71,7 @@ const FaultManagement = ({ server }) => {
               onClick={() => setActiveTab('syslog-config')}
             >
               <i className="fas fa-edit me-2" />
-              <span>Syslog Config</span>
+              <span>{t('host.faultManagement.tabSyslogConfig')}</span>
             </button>
           </li>
         )}
@@ -82,11 +84,11 @@ const FaultManagement = ({ server }) => {
             <div className="mb-4">
               <h3 className="fs-6 fw-bold">
                 <i className="fas fa-exclamation-triangle me-2" />
-                <span>Current System Faults</span>
+                <span>{t('host.faultManagement.currentSystemFaults')}</span>
               </h3>
               <p>
-                Monitor and manage active system faults on <strong>{server.hostname}</strong>. View
-                fault details, acquit resolved issues, and track fault resolution status.
+                {t('host.faultManagement.faultsDescBefore')} <strong>{server.hostname}</strong>.{' '}
+                {t('host.faultManagement.faultsDescAfter')}
               </p>
             </div>
 
@@ -99,12 +101,11 @@ const FaultManagement = ({ server }) => {
             <div className="mb-4">
               <h3 className="fs-6 fw-bold">
                 <i className="fas fa-file-alt me-2" />
-                <span>System Logs</span>
+                <span>{t('host.faultManagement.systemLogs')}</span>
               </h3>
               <p>
-                Browse and analyze system log files on <strong>{server.hostname}</strong>. View
-                system messages, authentication logs, and fault manager logs with real-time
-                filtering.
+                {t('host.faultManagement.logsDescBefore')} <strong>{server.hostname}</strong>.{' '}
+                {t('host.faultManagement.logsDescAfter')}
               </p>
             </div>
 
@@ -117,12 +118,11 @@ const FaultManagement = ({ server }) => {
             <div className="mb-4">
               <h3 className="fs-6 fw-bold">
                 <i className="fas fa-cog me-2" />
-                <span>Fault Manager Configuration</span>
+                <span>{t('host.faultManagement.faultManagerConfiguration')}</span>
               </h3>
               <p>
-                View fault manager configuration and module status on{' '}
-                <strong>{server.hostname}</strong>. Monitor installed fault management modules and
-                their current state.
+                {t('host.faultManagement.configDescBefore')} <strong>{server.hostname}</strong>.{' '}
+                {t('host.faultManagement.configDescAfter')}
               </p>
             </div>
 
@@ -135,11 +135,11 @@ const FaultManagement = ({ server }) => {
             <div className="mb-4">
               <h3 className="fs-6 fw-bold">
                 <i className="fas fa-edit me-2" />
-                <span>Syslog Configuration</span>
+                <span>{t('host.faultManagement.syslogConfiguration')}</span>
               </h3>
               <p>
-                Configure system logging on <strong>{server.hostname}</strong>. Manage syslog rules,
-                facilities, and log destinations with validation and backup support.
+                {t('host.faultManagement.syslogDescBefore')} <strong>{server.hostname}</strong>.{' '}
+                {t('host.faultManagement.syslogDescAfter')}
               </p>
             </div>
 

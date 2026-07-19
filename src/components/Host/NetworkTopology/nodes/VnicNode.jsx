@@ -1,7 +1,9 @@
 import { Handle, Position } from '@xyflow/react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const VnicNode = ({ data }) => {
+  const { t } = useTranslation();
   const {
     label,
     over,
@@ -35,17 +37,17 @@ const VnicNode = ({ data }) => {
   };
 
   const tooltipContent = `
-${label} (Virtual NIC)
-State: ${state || 'unknown'}
-Over: ${over || 'N/A'}
-${vlanId ? `VLAN: ${vlanId}` : 'No VLAN'}
-Zone: ${zone || 'global'}
-MAC: ${macaddress || 'N/A'}
-MAC Type: ${macaddrtype || 'N/A'}
-Speed: ${formatSpeed(speed)}
-MTU: ${mtu || 'N/A'}
-${bandwidth ? `Bandwidth: ${formatBandwidth(bandwidth.totalMbps)} (↓${formatBandwidth(bandwidth.rxMbps)} ↑${formatBandwidth(bandwidth.txMbps)})` : 'No bandwidth data'}
-${ipAddresses?.length ? `IP: ${ipAddresses.map(ip => ip.ip_address).join(', ')}` : 'No IP addresses'}
+${label} (${t('hostTools.vnicNode.typeCaption')})
+${t('hostTools.vnicNode.stateLabel')}: ${state || t('hostTools.vnicNode.unknown')}
+${t('hostTools.vnicNode.overLabel')}: ${over || t('hostTools.vnicNode.notAvailable')}
+${vlanId ? `${t('hostTools.vnicNode.vlanLabel')}: ${vlanId}` : t('hostTools.vnicNode.noVlan')}
+${t('hostTools.vnicNode.zoneLabel')}: ${zone || 'global'}
+${t('hostTools.vnicNode.macLabel')}: ${macaddress || t('hostTools.vnicNode.notAvailable')}
+${t('hostTools.vnicNode.macTypeLabel')}: ${macaddrtype || t('hostTools.vnicNode.notAvailable')}
+${t('hostTools.vnicNode.speedLabel')}: ${formatSpeed(speed)}
+${t('hostTools.vnicNode.mtuLabel')}: ${mtu || t('hostTools.vnicNode.notAvailable')}
+${bandwidth ? `${t('hostTools.vnicNode.bandwidthLabel')}: ${formatBandwidth(bandwidth.totalMbps)} (↓${formatBandwidth(bandwidth.rxMbps)} ↑${formatBandwidth(bandwidth.txMbps)})` : t('hostTools.vnicNode.noBandwidthData')}
+${ipAddresses?.length ? `${t('hostTools.vnicNode.ipLabel')}: ${ipAddresses.map(ip => ip.ip_address).join(', ')}` : t('hostTools.vnicNode.noIpAddresses')}
   `.trim();
 
   // Color based on VLAN or status

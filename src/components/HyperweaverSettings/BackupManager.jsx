@@ -1,6 +1,7 @@
 import axios from 'axios';
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ContentModal } from '../common';
 
@@ -12,6 +13,7 @@ const BackupManager = ({
   setMsg,
   onBackupRestore,
 }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
 
@@ -23,11 +25,15 @@ const BackupManager = ({
       if (response.data.success) {
         setBackups(response.data.backups);
       } else {
-        setMsg(`Failed to load backups: ${response.data.message}`);
+        setMsg(t('settings.backupManager.failedToLoad', { message: response.data.message }));
       }
     } catch (error) {
       console.error('Error loading backups:', error);
-      setMsg(`Error loading backups: ${error.response?.data?.message || error.message}`);
+      setMsg(
+        t('settings.backupManager.errorLoading', {
+          error: error.response?.data?.message || error.message,
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -37,7 +43,7 @@ const BackupManager = ({
     setConfirmDialog({
       type: 'restore',
       filename: backupFilename,
-      message: `Are you sure you want to restore settings from backup "${backupFilename}"? Current settings will be lost.`,
+      message: t('settings.backupManager.restoreConfirm', { filename: backupFilename }),
     });
   };
 
@@ -47,12 +53,12 @@ const BackupManager = ({
 
     try {
       setLoading(true);
-      setMsg(`Restoring settings from backup ${backupFilename}...`);
+      setMsg(t('settings.backupManager.restoring', { filename: backupFilename }));
 
       const response = await axios.post(`/api/settings/restore/${backupFilename}`);
 
       if (response.data.success) {
-        setMsg('Settings restored successfully. Page will reload...');
+        setMsg(t('settings.backupManager.restoreSuccess'));
         setTimeout(() => {
           if (onBackupRestore) {
             onBackupRestore();
@@ -60,11 +66,15 @@ const BackupManager = ({
           window.location.reload();
         }, 1000);
       } else {
-        setMsg(`Failed to restore backup: ${response.data.message}`);
+        setMsg(t('settings.backupManager.failedToRestore', { message: response.data.message }));
       }
     } catch (error) {
       console.error('Error restoring backup:', error);
-      setMsg(`Error restoring backup: ${error.response?.data?.message || error.message}`);
+      setMsg(
+        t('settings.backupManager.errorRestoring', {
+          error: error.response?.data?.message || error.message,
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -74,7 +84,7 @@ const BackupManager = ({
     setConfirmDialog({
       type: 'delete',
       filename: backupFilename,
-      message: `Are you sure you want to delete backup "${backupFilename}"? This cannot be undone.`,
+      message: t('settings.backupManager.deleteConfirm', { filename: backupFilename }),
     });
   };
 
@@ -84,19 +94,23 @@ const BackupManager = ({
 
     try {
       setLoading(true);
-      setMsg(`Deleting backup ${backupFilename}...`);
+      setMsg(t('settings.backupManager.deleting', { filename: backupFilename }));
 
       const response = await axios.delete(`/api/settings/backups/${backupFilename}`);
 
       if (response.data.success) {
-        setMsg('Backup deleted successfully.');
+        setMsg(t('settings.backupManager.deleteSuccess'));
         await loadBackups();
       } else {
-        setMsg(`Failed to delete backup: ${response.data.message}`);
+        setMsg(t('settings.backupManager.failedToDelete', { message: response.data.message }));
       }
     } catch (error) {
       console.error('Error deleting backup:', error);
-      setMsg(`Error deleting backup: ${error.response?.data?.message || error.message}`);
+      setMsg(
+        t('settings.backupManager.errorDeleting', {
+          error: error.response?.data?.message || error.message,
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -121,19 +135,19 @@ const BackupManager = ({
         <ContentModal
           isOpen={showBackupModal}
           onClose={() => setShowBackupModal(false)}
-          title="Configuration Backups"
+          title={t('settings.backupManager.backupsTitle')}
           icon="fas fa-history"
         >
           {backups.length === 0 ? (
-            <p className="text-muted">No backups available</p>
+            <p className="text-muted">{t('settings.backupManager.noBackups')}</p>
           ) : (
             <div className="table-responsive">
               <table className="table table-striped">
                 <thead>
                   <tr>
-                    <th>Filename</th>
-                    <th>Created</th>
-                    <th className="text-end">Actions</th>
+                    <th>{t('settings.backupManager.filename')}</th>
+                    <th>{t('settings.backupManager.created')}</th>
+                    <th className="text-end">{t('settings.backupManager.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -154,7 +168,7 @@ const BackupManager = ({
                             }}
                             disabled={loading}
                           >
-                            Restore
+                            {t('settings.backupManager.restore')}
                           </button>
                           <button
                             type="button"
@@ -162,7 +176,7 @@ const BackupManager = ({
                             onClick={() => deleteBackup(backup.filename)}
                             disabled={loading}
                           >
-                            Delete
+                            {t('settings.backupManager.delete')}
                           </button>
                         </div>
                       </td>
@@ -180,7 +194,7 @@ const BackupManager = ({
         <ContentModal
           isOpen={Boolean(confirmDialog)}
           onClose={handleCancelConfirm}
-          title="Confirm Action"
+          title={t('settings.backupManager.confirmActionTitle')}
           icon="fas fa-exclamation-triangle"
         >
           <div>
@@ -192,7 +206,7 @@ const BackupManager = ({
                 onClick={handleCancelConfirm}
                 disabled={loading}
               >
-                Cancel
+                {t('settings.backupManager.cancel')}
               </button>
               <button
                 type="button"
@@ -200,7 +214,9 @@ const BackupManager = ({
                 onClick={handleConfirm}
                 disabled={loading}
               >
-                {confirmDialog.type === 'delete' ? 'Delete' : 'Restore'}
+                {confirmDialog.type === 'delete'
+                  ? t('settings.backupManager.delete')
+                  : t('settings.backupManager.restore')}
               </button>
             </div>
           </div>

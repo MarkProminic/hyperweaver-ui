@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { formatBytes, getHealthColor, parseSize } from './StorageUtils';
 
@@ -11,6 +12,8 @@ const PoolsTable = ({
   sectionsCollapsed,
   toggleSection,
 }) => {
+  const { t } = useTranslation();
+
   const getUsageColor = percent => {
     if (percent > 80) {
       return 'text-bg-danger';
@@ -30,10 +33,12 @@ const PoolsTable = ({
               className="btn btn-link fs-5 fw-bold mb-0 p-0"
               type="button"
               onClick={resetPoolSort}
-              title="Click to reset sorting to default"
+              title={t('host.poolsTable.resetSortTitle')}
             >
               <i className="fas fa-database me-2" />
-              <span>ZFS Storage Pools ({storagePools.length})</span>
+              <span>
+                {t('host.poolsTable.zfsStoragePoolsCount', { count: storagePools.length })}
+              </span>
               {poolSort.length > 1 && <i className="fas fa-sort-amount-down text-info ms-2" />}
             </button>
           </div>
@@ -42,7 +47,11 @@ const PoolsTable = ({
               className="btn btn-link btn-sm"
               type="button"
               onClick={() => toggleSection('pools')}
-              title={sectionsCollapsed.pools ? 'Expand section' : 'Collapse section'}
+              title={
+                sectionsCollapsed.pools
+                  ? t('host.poolsTable.expandSection')
+                  : t('host.poolsTable.collapseSection')
+              }
             >
               <i
                 className={`fas ${sectionsCollapsed.pools ? 'fa-chevron-down' : 'fa-chevron-up'}`}
@@ -60,23 +69,25 @@ const PoolsTable = ({
                       <th
                         className="cursor-pointer"
                         onClick={e => handlePoolSort('pool', e)}
-                        title="Click to sort by pool name. Hold Ctrl/Cmd to add to existing sort."
+                        title={t('host.poolsTable.sortByPoolNameTitle')}
                       >
-                        Pool Name <i className={`fas ${getSortIcon(poolSort, 'pool')}`} />
+                        {t('host.poolsTable.thPoolName')}{' '}
+                        <i className={`fas ${getSortIcon(poolSort, 'pool')}`} />
                       </th>
                       <th
                         className="cursor-pointer"
                         onClick={e => handlePoolSort('health', e)}
-                        title="Click to sort by health status. Hold Ctrl/Cmd to add to existing sort."
+                        title={t('host.poolsTable.sortByHealthTitle')}
                       >
-                        Health <i className={`fas ${getSortIcon(poolSort, 'health')}`} />
+                        {t('host.poolsTable.thHealth')}{' '}
+                        <i className={`fas ${getSortIcon(poolSort, 'health')}`} />
                       </th>
-                      <th>Size</th>
-                      <th>Used</th>
-                      <th>Available</th>
-                      <th>Usage %</th>
-                      <th>Dedup Ratio</th>
-                      <th>Fragmentation</th>
+                      <th>{t('host.poolsTable.thSize')}</th>
+                      <th>{t('host.poolsTable.thUsed')}</th>
+                      <th>{t('host.poolsTable.thAvailable')}</th>
+                      <th>{t('host.poolsTable.thUsagePercent')}</th>
+                      <th>{t('host.poolsTable.thDedupRatio')}</th>
+                      <th>{t('host.poolsTable.thFragmentation')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -96,7 +107,7 @@ const PoolsTable = ({
                           </td>
                           <td>
                             <span className={`badge ${getHealthColor(pool.health || pool.status)}`}>
-                              {pool.health || pool.status || 'Unknown'}
+                              {pool.health || pool.status || t('host.poolsTable.unknown')}
                             </span>
                           </td>
                           <td>{formatBytes(totalBytes)}</td>
@@ -117,7 +128,7 @@ const PoolsTable = ({
               </div>
             ) : (
               <div className="alert alert-info">
-                <p>No ZFS pool data available or monitoring endpoint not configured.</p>
+                <p>{t('host.poolsTable.noPoolData')}</p>
               </div>
             )}
           </>

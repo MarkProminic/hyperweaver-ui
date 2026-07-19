@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { ContentModal } from '../common';
 
 const ProcessDetailsModal = ({ process, server, onClose }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('basic');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,15 +42,17 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
             [type]: result.data,
           }));
         } else {
-          setError(result.message || `Failed to load ${type} data`);
+          setError(result.message || t('host.processDetailsModal.errors.loadTypeFailed', { type }));
         }
       } catch (err) {
-        setError(`Error loading ${type} data: ${err.message}`);
+        setError(
+          t('host.processDetailsModal.errors.loadTypeError', { type, message: err.message })
+        );
       } finally {
         setLoading(false);
       }
     },
-    [server, makeAgentRequest, process.pid, additionalData]
+    [server, makeAgentRequest, process.pid, additionalData, t]
   );
 
   useEffect(() => {
@@ -87,13 +91,13 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
     }
 
     return [
-      { label: 'Process ID', value: details.pid },
-      { label: 'Parent PID', value: details.ppid || 'N/A' },
-      { label: 'Zone', value: details.zone || 'N/A' },
-      { label: 'User ID', value: details.uid || 'N/A' },
-      { label: 'Virtual Size', value: formatMemory(details.vsz) },
-      { label: 'Resident Size', value: formatMemory(details.rss) },
-      { label: 'Command', value: details.command || 'N/A' },
+      { label: t('host.processDetailsModal.labelProcessId'), value: details.pid },
+      { label: t('host.processDetailsModal.labelParentPid'), value: details.ppid || 'N/A' },
+      { label: t('host.processDetailsModal.labelZone'), value: details.zone || 'N/A' },
+      { label: t('host.processDetailsModal.labelUserId'), value: details.uid || 'N/A' },
+      { label: t('host.processDetailsModal.labelVirtualSize'), value: formatMemory(details.vsz) },
+      { label: t('host.processDetailsModal.labelResidentSize'), value: formatMemory(details.rss) },
+      { label: t('host.processDetailsModal.labelCommand'), value: details.command || 'N/A' },
     ];
   };
 
@@ -104,7 +108,7 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
       <div>
         <div className="card mb-4">
           <div className="card-body">
-            <h4 className="fs-6 fw-bold">Process Information</h4>
+            <h4 className="fs-6 fw-bold">{t('host.processDetailsModal.processInformation')}</h4>
             <div className="table-responsive">
               <table className="table">
                 <tbody>
@@ -125,7 +129,7 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
         {process.details?.open_files_sample && (
           <div className="card">
             <div className="card-body">
-              <h4 className="fs-6 fw-bold">Open Files Sample</h4>
+              <h4 className="fs-6 fw-bold">{t('host.processDetailsModal.openFilesSample')}</h4>
               <pre className="small p-3 bg-body-tertiary">{process.details.open_files_sample}</pre>
             </div>
           </div>
@@ -139,7 +143,7 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
       return (
         <div className="text-center p-4">
           <i className="fas fa-spinner fa-spin fa-2x" />
-          <p className="mt-2">Loading open files...</p>
+          <p className="mt-2">{t('host.processDetailsModal.loadingOpenFiles')}</p>
         </div>
       );
     }
@@ -147,7 +151,7 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
     if (!additionalData.files || additionalData.files.length === 0) {
       return (
         <div className="alert alert-info">
-          <p>No open files information available or no files found.</p>
+          <p>{t('host.processDetailsModal.noOpenFiles')}</p>
         </div>
       );
     }
@@ -155,14 +159,14 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
     return (
       <div className="card">
         <div className="card-body">
-          <h4 className="fs-6 fw-bold">Open File Descriptors</h4>
+          <h4 className="fs-6 fw-bold">{t('host.processDetailsModal.openFileDescriptors')}</h4>
           <div className="table-responsive">
             <table className="table table-hover">
               <thead>
                 <tr>
-                  <th>FD</th>
-                  <th>Description</th>
-                  <th>Details</th>
+                  <th>{t('host.processDetailsModal.thFd')}</th>
+                  <th>{t('host.processDetailsModal.thDescription')}</th>
+                  <th>{t('host.processDetailsModal.thDetails')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -186,7 +190,7 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
       return (
         <div className="text-center p-4">
           <i className="fas fa-spinner fa-spin fa-2x" />
-          <p className="mt-2">Loading resource limits...</p>
+          <p className="mt-2">{t('host.processDetailsModal.loadingResourceLimits')}</p>
         </div>
       );
     }
@@ -194,7 +198,7 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
     if (!additionalData.limits) {
       return (
         <div className="alert alert-info">
-          <p>No resource limits information available.</p>
+          <p>{t('host.processDetailsModal.noResourceLimits')}</p>
         </div>
       );
     }
@@ -202,13 +206,13 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
     return (
       <div className="card">
         <div className="card-body">
-          <h4 className="fs-6 fw-bold">Resource Limits</h4>
+          <h4 className="fs-6 fw-bold">{t('host.processDetailsModal.resourceLimits')}</h4>
           <div className="table-responsive">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Resource</th>
-                  <th>Limit</th>
+                  <th>{t('host.processDetailsModal.thResource')}</th>
+                  <th>{t('host.processDetailsModal.thLimit')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -233,7 +237,7 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
       return (
         <div className="text-center p-4">
           <i className="fas fa-spinner fa-spin fa-2x" />
-          <p className="mt-2">Loading stack trace...</p>
+          <p className="mt-2">{t('host.processDetailsModal.loadingStackTrace')}</p>
         </div>
       );
     }
@@ -241,7 +245,7 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
     if (!additionalData.stack) {
       return (
         <div className="alert alert-info">
-          <p>No stack trace information available.</p>
+          <p>{t('host.processDetailsModal.noStackTrace')}</p>
         </div>
       );
     }
@@ -249,7 +253,7 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
     return (
       <div className="card">
         <div className="card-body">
-          <h4 className="fs-6 fw-bold">Process Stack Trace</h4>
+          <h4 className="fs-6 fw-bold">{t('host.processDetailsModal.processStackTrace')}</h4>
           <pre
             className="small p-3 bg-body-tertiary"
             style={{ maxHeight: '400px', overflow: 'auto' }}
@@ -264,17 +268,17 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
   };
 
   const tabs = [
-    { key: 'basic', label: 'Basic Info', icon: 'fa-info-circle' },
-    { key: 'files', label: 'Open Files', icon: 'fa-folder-open' },
-    { key: 'limits', label: 'Resource Limits', icon: 'fa-chart-bar' },
-    { key: 'stack', label: 'Stack Trace', icon: 'fa-layer-group' },
+    { key: 'basic', label: t('host.processDetailsModal.tabBasicInfo'), icon: 'fa-info-circle' },
+    { key: 'files', label: t('host.processDetailsModal.tabOpenFiles'), icon: 'fa-folder-open' },
+    { key: 'limits', label: t('host.processDetailsModal.tabResourceLimits'), icon: 'fa-chart-bar' },
+    { key: 'stack', label: t('host.processDetailsModal.tabStackTrace'), icon: 'fa-layer-group' },
   ];
 
   return (
     <ContentModal
       isOpen
       onClose={onClose}
-      title={`Process Details - PID ${process.pid}`}
+      title={t('host.processDetailsModal.title', { pid: process.pid })}
       icon="fas fa-tasks"
     >
       {/* Error Display */}

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { keysymMap, sendKeyWithModifiers } from '../../utils/vncKeyUtils';
 
@@ -11,6 +12,7 @@ const VncKeyboardSubmenu = ({
   onClose,
   handleCtrlAltDel,
 }) => {
+  const { t } = useTranslation();
   const [showFunctionKeys, setShowFunctionKeys] = useState(false);
   const [showKeyboardInput, setShowKeyboardInput] = useState(false);
 
@@ -80,7 +82,7 @@ const VncKeyboardSubmenu = ({
     >
       <div className="d-flex align-items-center">
         <i className="fas fa-keyboard me-2" />
-        <span>Keyboard & Input</span>
+        <span>{t('console.vncKeyboardSubmenu.keyboardInput')}</span>
       </div>
       <i className="fas fa-chevron-right" />
 
@@ -91,7 +93,7 @@ const VncKeyboardSubmenu = ({
           <div>
             <div className="dropdown-item fw-semibold text-secondary">
               <i className="fas fa-keyboard me-2" />
-              <span>Common Shortcuts</span>
+              <span>{t('console.vncKeyboardSubmenu.commonShortcuts')}</span>
             </div>
             <hr className="dropdown-divider" />
 
@@ -108,7 +110,7 @@ const VncKeyboardSubmenu = ({
               tabIndex={0}
             >
               <i className="fas fa-power-off me-2" />
-              <span>Ctrl+Alt+Del</span>
+              <span>{t('console.vncKeyboardSubmenu.ctrlAltDel')}</span>
             </div>
 
             <div
@@ -124,7 +126,7 @@ const VncKeyboardSubmenu = ({
               tabIndex={0}
             >
               <i className="fas fa-window-restore me-2" />
-              <span>Alt+Tab</span>
+              <span>{t('console.vncKeyboardSubmenu.altTab')}</span>
             </div>
 
             <div
@@ -140,14 +142,14 @@ const VncKeyboardSubmenu = ({
               tabIndex={0}
             >
               <i className="fas fa-times me-2" />
-              <span>Alt+F4</span>
+              <span>{t('console.vncKeyboardSubmenu.altF4')}</span>
             </div>
 
             <hr className="dropdown-divider" />
 
             <div className="dropdown-item fw-semibold text-secondary">
               <i className="fas fa-hand-paper me-2" />
-              <span>Modifier Keys</span>
+              <span>{t('console.vncKeyboardSubmenu.modifierKeys')}</span>
             </div>
 
             <div className="dropdown-item px-3 py-2">
@@ -161,7 +163,12 @@ const VncKeyboardSubmenu = ({
                         e.stopPropagation();
                         toggleModifier(mod);
                       }}
-                      title={`${mod.toUpperCase()} ${modifierKeys[mod] ? 'ON' : 'OFF'} - Click to toggle`}
+                      title={t('console.vncKeyboardSubmenu.modifierToggleTitle', {
+                        mod: mod.toUpperCase(),
+                        state: modifierKeys[mod]
+                          ? t('console.vncKeyboardSubmenu.stateOn')
+                          : t('console.vncKeyboardSubmenu.stateOff'),
+                      })}
                     >
                       <i
                         className={`fas ${modifierKeys[mod] ? 'fa-toggle-on' : 'fa-toggle-off'} me-2`}
@@ -173,7 +180,7 @@ const VncKeyboardSubmenu = ({
               </div>
               {(modifierKeys.ctrl || modifierKeys.alt || modifierKeys.shift) && (
                 <div className="form-text mt-1">
-                  Active modifiers will be combined with function keys
+                  {t('console.vncKeyboardSubmenu.activeModifiersHint')}
                 </div>
               )}
             </div>
@@ -188,7 +195,7 @@ const VncKeyboardSubmenu = ({
               tabIndex={0}
             >
               <i className="fas fa-keyboard me-2" />
-              <span>Function Keys</span>
+              <span>{t('console.vncKeyboardSubmenu.functionKeys')}</span>
               <i className="fas fa-chevron-right ms-auto" />
 
               {showFunctionKeys && (
@@ -211,7 +218,12 @@ const VncKeyboardSubmenu = ({
                           }}
                           role="button"
                           tabIndex={0}
-                          title={`Send ${modifierKeys.ctrl || modifierKeys.alt || modifierKeys.shift ? buildKeyString(`F${fKeyNum}`) : `F${fKeyNum}`} to guest`}
+                          title={t('console.vncKeyboardSubmenu.sendToGuest', {
+                            key:
+                              modifierKeys.ctrl || modifierKeys.alt || modifierKeys.shift
+                                ? buildKeyString(`F${fKeyNum}`)
+                                : `F${fKeyNum}`,
+                          })}
                         >
                           <i className="fas fa-keyboard me-2" />
                           <span>F{fKeyNum}</span>

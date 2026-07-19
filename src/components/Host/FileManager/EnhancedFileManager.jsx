@@ -1,6 +1,7 @@
 import { FileManager } from '@cubone/react-file-manager';
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import '@cubone/react-file-manager/dist/style.css';
 
 import { getAgentBasePath } from '../../../api/serverUtils';
@@ -22,6 +23,7 @@ import './HostFileManager.scss';
  * Implements the PR's custom actions functionality locally
  */
 const EnhancedFileManager = ({ server }) => {
+  const { t } = useTranslation();
   const [files, setFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPath, setCurrentPath] = useState('/');
@@ -148,13 +150,15 @@ const EnhancedFileManager = ({ server }) => {
           setCurrentPath(answeredPath);
         }
       } catch (loadErr) {
-        setError(`Failed to load files: ${loadErr.message}`);
+        setError(
+          t('fileManager.enhancedFileManager.failedToLoadFiles', { message: loadErr.message })
+        );
         setFiles([]);
       } finally {
         setIsLoading(false);
       }
     },
-    [server, currentPath, api]
+    [server, currentPath, api, t]
   );
 
   // Load files when component mounts or dependencies change
@@ -204,28 +208,34 @@ const EnhancedFileManager = ({ server }) => {
   }, []);
 
   // Custom action handlers for the config.actions system
-  const handleEditFile = useCallback(file => {
-    if (isTextFile(file)) {
-      setTextEditorFile(file);
-      setShowTextEditor(true);
-    } else {
-      setError('This file cannot be edited as text');
-    }
-  }, []);
+  const handleEditFile = useCallback(
+    file => {
+      if (isTextFile(file)) {
+        setTextEditorFile(file);
+        setShowTextEditor(true);
+      } else {
+        setError(t('fileManager.enhancedFileManager.cannotEditAsText'));
+      }
+    },
+    [t]
+  );
 
   const handleCreateArchive = useCallback(selectedFiles => {
     setSelectedFilesForArchive(Array.isArray(selectedFiles) ? selectedFiles : [selectedFiles]);
     setShowCreateArchiveModal(true);
   }, []);
 
-  const handleExtractArchive = useCallback(file => {
-    if (isArchiveFile(file)) {
-      setArchiveFileForExtract(file);
-      setShowExtractArchiveModal(true);
-    } else {
-      setError('This file cannot be extracted');
-    }
-  }, []);
+  const handleExtractArchive = useCallback(
+    file => {
+      if (isArchiveFile(file)) {
+        setArchiveFileForExtract(file);
+        setShowExtractArchiveModal(true);
+      } else {
+        setError(t('fileManager.enhancedFileManager.cannotExtract'));
+      }
+    },
+    [t]
+  );
 
   const handleShowProperties = useCallback(file => {
     setPropertiesFile(file);
@@ -236,7 +246,7 @@ const EnhancedFileManager = ({ server }) => {
   const customActions = useMemo(
     () => [
       {
-        title: 'Open',
+        title: t('fileManager.enhancedFileManager.actionOpen'),
         key: 'open',
         onClick: file => {
           if (file.isDirectory) {
@@ -250,7 +260,7 @@ const EnhancedFileManager = ({ server }) => {
         icon: null,
       },
       {
-        title: 'Edit File',
+        title: t('fileManager.enhancedFileManager.actionEditFile'),
         key: 'edit',
         onClick: handleEditFile,
         showToolbar: false,
@@ -260,7 +270,7 @@ const EnhancedFileManager = ({ server }) => {
         hidden: false,
       },
       {
-        title: 'Create Archive',
+        title: t('fileManager.enhancedFileManager.actionCreateArchive'),
         key: 'createArchive',
         onClick: handleCreateArchive,
         showToolbar: true,
@@ -270,7 +280,7 @@ const EnhancedFileManager = ({ server }) => {
         hidden: false,
       },
       {
-        title: 'Extract Archive',
+        title: t('fileManager.enhancedFileManager.actionExtractArchive'),
         key: 'extractArchive',
         onClick: handleExtractArchive,
         showToolbar: false,
@@ -280,7 +290,7 @@ const EnhancedFileManager = ({ server }) => {
         hidden: false,
       },
       {
-        title: 'Properties',
+        title: t('fileManager.enhancedFileManager.actionProperties'),
         key: 'properties',
         onClick: handleShowProperties,
         showToolbar: false,
@@ -290,7 +300,7 @@ const EnhancedFileManager = ({ server }) => {
         hidden: false,
       },
     ],
-    [handleEditFile, handleCreateArchive, handleExtractArchive, handleShowProperties]
+    [handleEditFile, handleCreateArchive, handleExtractArchive, handleShowProperties, t]
   );
 
   // Get all handlers from custom hook
@@ -361,7 +371,7 @@ const EnhancedFileManager = ({ server }) => {
   if (!server) {
     return (
       <div className="alert alert-info">
-        <p>Please select a server from the navbar to access the file manager.</p>
+        <p>{t('fileManager.enhancedFileManager.selectServer')}</p>
       </div>
     );
   }

@@ -102,8 +102,157 @@ const matchesFilter = (row, needle) => {
     row.name?.toLowerCase().includes(needle) ||
     String(row.server_id ?? '').includes(needle) ||
     tags.some(tag => String(tag).toLowerCase().includes(needle)) ||
-    (provisionerOf(row) || '').toLowerCase().includes(needle)
+    (provisionerOf(row) || '').toLowerCase().includes(needle) ||
+    (row.hypervisor || '').toLowerCase().includes(needle)
   );
+};
+
+/** One row's action buttons — lifecycle, provision, and the gear menu. */
+const RowActions = ({
+  row,
+  status,
+  rowIsUtm,
+  singular,
+  loading,
+  canOperate,
+  pauseAvailable,
+  suspendAvailable,
+  cloneAvailable,
+  provisionerRef,
+  onSelect,
+  onLifecycle,
+  onClone,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="d-flex gap-1">
+      <button
+        type="button"
+        className="btn btn-sm btn-outline-info"
+        title={t('machine.machineListPanel.viewTooltip', {
+          noun: singular.toLowerCase(),
+        })}
+        onClick={() => onSelect(row.name)}
+      >
+        <i className="fas fa-eye" />
+      </button>
+      {canOperate && status !== 'running' && status !== 'paused' && (
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-success"
+          title={t('machine.machineListPanel.startTooltip')}
+          onClick={() => onLifecycle(row, 'start')}
+          disabled={loading}
+        >
+          <i className="fas fa-play" />
+        </button>
+      )}
+      {canOperate && status === 'running' && (
+        <>
+          {pauseAvailable && !rowIsUtm && (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-warning"
+              title={t('machine.machineListPanel.pauseTooltip')}
+              onClick={() => onLifecycle(row, 'pause')}
+              disabled={loading}
+            >
+              <i className="fas fa-pause" />
+            </button>
+          )}
+          {(suspendAvailable || rowIsUtm) && (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-warning"
+              title={t('machine.machineListPanel.suspendTooltip')}
+              onClick={() => onLifecycle(row, 'suspend')}
+              disabled={loading}
+            >
+              <i className="fas fa-moon" />
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-danger"
+            title={t('machine.machineListPanel.shutdownTooltip')}
+            onClick={() => onLifecycle(row, 'stop')}
+            disabled={loading}
+          >
+            <i className="fas fa-stop" />
+          </button>
+        </>
+      )}
+      {canOperate &&
+        (status === 'paused' || status === 'suspended') &&
+        (pauseAvailable || suspendAvailable || rowIsUtm) && (
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-success"
+            title={t('machine.machineListPanel.resumeTooltip')}
+            onClick={() => onLifecycle(row, 'resume')}
+            disabled={loading}
+          >
+            <i className="fas fa-play-circle" />
+          </button>
+        )}
+      {canOperate && provisionerRef && (
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-warning"
+          title={t('machine.machineListPanel.provisionTooltip')}
+          onClick={() => onLifecycle(row, 'provision')}
+          disabled={loading}
+        >
+          <i className="fas fa-cogs" />
+        </button>
+      )}
+      {(canOperate || cloneAvailable) && (
+        <Dropdown align="end">
+          <Dropdown.Toggle
+            variant="outline-secondary"
+            size="sm"
+            title={t('machine.machineListPanel.moreActionsTooltip')}
+          >
+            <i className="fas fa-gear" />
+          </Dropdown.Toggle>
+          <Dropdown.Menu>
+            {canOperate && status === 'running' && (
+              <Dropdown.Item as="button" type="button" onClick={() => onLifecycle(row, 'restart')}>
+                <i className="fas fa-redo text-warning me-2" />
+                {t('machine.machineListPanel.restartItem')}
+              </Dropdown.Item>
+            )}
+            {cloneAvailable && (
+              <Dropdown.Item as="button" type="button" onClick={() => onClone(row)}>
+                <i className="fas fa-clone me-2" />
+                {t('machine.machineListPanel.cloneItem')}
+              </Dropdown.Item>
+            )}
+            <Dropdown.Item as="button" type="button" onClick={() => onSelect(row.name)}>
+              <i className="fas fa-eye text-info me-2" />
+              {t('machine.machineListPanel.openItem')}
+            </Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
+      )}
+    </div>
+  );
+};
+
+RowActions.propTypes = {
+  row: PropTypes.object.isRequired,
+  status: PropTypes.string.isRequired,
+  rowIsUtm: PropTypes.bool,
+  singular: PropTypes.string.isRequired,
+  loading: PropTypes.bool,
+  canOperate: PropTypes.bool,
+  pauseAvailable: PropTypes.bool,
+  suspendAvailable: PropTypes.bool,
+  cloneAvailable: PropTypes.bool,
+  provisionerRef: PropTypes.string,
+  onSelect: PropTypes.func.isRequired,
+  onLifecycle: PropTypes.func.isRequired,
+  onClone: PropTypes.func.isRequired,
 };
 
 const MachineListPanel = ({ currentServer, user, onSelect }) => {
@@ -267,6 +416,9 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
             const status = (row.status || 'unknown').toLowerCase();
             const systemLine = systemLineOf(row);
             const sentence = statusSentence(row, singular, t);
+            // On utm rows pause and suspend are ONE concept (both utmctl
+            // suspend) — the suspend control is the one that renders.
+            const rowIsUtm = row.hypervisor === 'utm';
             return (
               <div className="border rounded p-2" key={row.name}>
                 <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
@@ -297,6 +449,9 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                       <span className={`badge ${statusClass(status)} text-capitalize`}>
                         {status}
                       </span>
+                      {row.hypervisor && (
+                        <span className="badge text-bg-secondary">{row.hypervisor}</span>
+                      )}
                       {row.backing && (
                         <span className="badge text-bg-secondary">{row.backing}</span>
                       )}
@@ -317,129 +472,21 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
                       ))}
                     </div>
                   </div>
-                  <div className="d-flex gap-1">
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-info"
-                      title={t('machine.machineListPanel.viewTooltip', {
-                        noun: singular.toLowerCase(),
-                      })}
-                      onClick={() => onSelect(row.name)}
-                    >
-                      <i className="fas fa-eye" />
-                    </button>
-                    {canOperate && status !== 'running' && status !== 'paused' && (
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline-success"
-                        title={t('machine.machineListPanel.startTooltip')}
-                        onClick={() => handleLifecycle(row, 'start')}
-                        disabled={loading}
-                      >
-                        <i className="fas fa-play" />
-                      </button>
-                    )}
-                    {canOperate && status === 'running' && (
-                      <>
-                        {pauseAvailable && (
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-warning"
-                            title={t('machine.machineListPanel.pauseTooltip')}
-                            onClick={() => handleLifecycle(row, 'pause')}
-                            disabled={loading}
-                          >
-                            <i className="fas fa-pause" />
-                          </button>
-                        )}
-                        {suspendAvailable && (
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-warning"
-                            title={t('machine.machineListPanel.suspendTooltip')}
-                            onClick={() => handleLifecycle(row, 'suspend')}
-                            disabled={loading}
-                          >
-                            <i className="fas fa-moon" />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-outline-danger"
-                          title={t('machine.machineListPanel.shutdownTooltip')}
-                          onClick={() => handleLifecycle(row, 'stop')}
-                          disabled={loading}
-                        >
-                          <i className="fas fa-stop" />
-                        </button>
-                      </>
-                    )}
-                    {canOperate &&
-                      ((pauseAvailable && status === 'paused') ||
-                        (suspendAvailable && status === 'suspended')) && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-outline-success"
-                          title={t('machine.machineListPanel.resumeTooltip')}
-                          onClick={() => handleLifecycle(row, 'resume')}
-                          disabled={loading}
-                        >
-                          <i className="fas fa-play-circle" />
-                        </button>
-                      )}
-                    {canOperate && provisionerRef && (
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline-warning"
-                        title={t('machine.machineListPanel.provisionTooltip')}
-                        onClick={() => handleLifecycle(row, 'provision')}
-                        disabled={loading}
-                      >
-                        <i className="fas fa-cogs" />
-                      </button>
-                    )}
-                    {(canOperate || cloneAvailable) && (
-                      <Dropdown align="end">
-                        <Dropdown.Toggle
-                          variant="outline-secondary"
-                          size="sm"
-                          title={t('machine.machineListPanel.moreActionsTooltip')}
-                        >
-                          <i className="fas fa-gear" />
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu>
-                          {canOperate && status === 'running' && (
-                            <Dropdown.Item
-                              as="button"
-                              type="button"
-                              onClick={() => handleLifecycle(row, 'restart')}
-                            >
-                              <i className="fas fa-redo text-warning me-2" />
-                              {t('machine.machineListPanel.restartItem')}
-                            </Dropdown.Item>
-                          )}
-                          {cloneAvailable && (
-                            <Dropdown.Item
-                              as="button"
-                              type="button"
-                              onClick={() => setCloneTarget(row)}
-                            >
-                              <i className="fas fa-clone me-2" />
-                              {t('machine.machineListPanel.cloneItem')}
-                            </Dropdown.Item>
-                          )}
-                          <Dropdown.Item
-                            as="button"
-                            type="button"
-                            onClick={() => onSelect(row.name)}
-                          >
-                            <i className="fas fa-eye text-info me-2" />
-                            {t('machine.machineListPanel.openItem')}
-                          </Dropdown.Item>
-                        </Dropdown.Menu>
-                      </Dropdown>
-                    )}
-                  </div>
+                  <RowActions
+                    row={row}
+                    status={status}
+                    rowIsUtm={rowIsUtm}
+                    singular={singular}
+                    loading={loading}
+                    canOperate={canOperate}
+                    pauseAvailable={pauseAvailable}
+                    suspendAvailable={suspendAvailable}
+                    cloneAvailable={cloneAvailable}
+                    provisionerRef={provisionerRef}
+                    onSelect={onSelect}
+                    onLifecycle={handleLifecycle}
+                    onClone={setCloneTarget}
+                  />
                 </div>
               </div>
             );
@@ -453,6 +500,7 @@ const MachineListPanel = ({ currentServer, user, onSelect }) => {
           onClose={() => setCloneTarget(null)}
           currentServer={currentServer}
           machineName={cloneTarget.name}
+          hypervisor={cloneTarget.hypervisor}
           isRunning={(cloneTarget.status || '').toLowerCase() === 'running'}
           onCloned={({ taskId, message }) => {
             // The clone's row appears when its task completes — never select

@@ -467,6 +467,7 @@ SnapshotPolicyEditor.propTypes = {
 const MachineSnapshots = ({
   currentServer,
   machineName,
+  hypervisor,
   isRunning,
   user,
   snapshotPolicy,
@@ -500,6 +501,10 @@ const MachineSnapshots = ({
 
   const canMutate = canCreateMachines(user?.role);
   const templatesAvailable = hasFeature(currentServer, 'templates');
+  // utm snapshots: take is stopped-only (running 400s), rename/description
+  // does not exist (modify 400s), and the retention-policy override rides
+  // the modify subset utm refuses — those controls hide on utm machines.
+  const isUtm = hypervisor === 'utm';
   const resetTakeForm = () =>
     setTakeForm({
       mode: 'name',
@@ -558,6 +563,10 @@ const MachineSnapshots = ({
   };
 
   const handleTake = async () => {
+    if (isUtm && isRunning) {
+      setMsg(t('machine.machineSnapshots.utmStoppedOnly'));
+      return;
+    }
     const usePrefix = takeForm.mode === 'prefix';
     if (usePrefix ? !takeForm.prefix.trim() : !takeForm.name.trim()) {
       setMsg(
@@ -726,7 +735,7 @@ const MachineSnapshots = ({
           <p className="text-muted mb-0 small">{t('machine.machineSnapshots.noSnapshotsYet')}</p>
         )}
 
-        {canMutate && (
+        {canMutate && !isUtm && (
           <SnapshotPolicyEditor
             currentServer={currentServer}
             machineName={machineName}
@@ -799,18 +808,20 @@ const MachineSnapshots = ({
                 </div>
                 {canMutate && (
                   <div className="d-flex gap-1 flex-shrink-0">
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-secondary"
-                      title={t('machine.machineSnapshots.renameTooltip')}
-                      disabled={busy}
-                      onClick={() => {
-                        setEditSnap(snapshot);
-                        setEditForm({ new_name: '', description: snapshot.description || '' });
-                      }}
-                    >
-                      <i className="fas fa-pen" />
-                    </button>
+                    {!isUtm && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-secondary"
+                        title={t('machine.machineSnapshots.renameTooltip')}
+                        disabled={busy}
+                        onClick={() => {
+                          setEditSnap(snapshot);
+                          setEditForm({ new_name: '', description: snapshot.description || '' });
+                        }}
+                      >
+                        <i className="fas fa-pen" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-warning"
@@ -960,19 +971,26 @@ const MachineSnapshots = ({
             onChange={e => setTakeForm({ ...takeForm, description: e.target.value })}
           />
         </div>
-        <div className="form-check">
-          <input
-            className="form-check-input"
-            type="checkbox"
-            id="snapshot-quiesce"
-            checked={takeForm.quiesce}
-            onChange={e => setTakeForm({ ...takeForm, quiesce: e.target.checked })}
-          />
-          <label className="form-check-label" htmlFor="snapshot-quiesce">
-            {t('machine.machineSnapshots.quiesceOptionLabel')}
-          </label>
-        </div>
-        {isRunning && (
+        {isUtm && isRunning && (
+          <div className="alert alert-warning py-2 mb-3">
+            {t('machine.machineSnapshots.utmStoppedOnly')}
+          </div>
+        )}
+        {!isUtm && (
+          <div className="form-check">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              id="snapshot-quiesce"
+              checked={takeForm.quiesce}
+              onChange={e => setTakeForm({ ...takeForm, quiesce: e.target.checked })}
+            />
+            <label className="form-check-label" htmlFor="snapshot-quiesce">
+              {t('machine.machineSnapshots.quiesceOptionLabel')}
+            </label>
+          </div>
+        )}
+        {isRunning && !isUtm && (
           <div className="form-check">
             <input
               className="form-check-input"
@@ -1083,6 +1101,7 @@ const MachineSnapshots = ({
 MachineSnapshots.propTypes = {
   currentServer: PropTypes.object,
   machineName: PropTypes.string.isRequired,
+  hypervisor: PropTypes.string,
   isRunning: PropTypes.bool,
   user: PropTypes.object,
   snapshotPolicy: PropTypes.object,

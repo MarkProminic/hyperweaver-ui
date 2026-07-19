@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { ConfirmModal } from '../common';
@@ -24,6 +25,7 @@ const VlanManagement = ({ server, onError }) => {
   const [deleting, setDeleting] = useState(false);
 
   const { makeAgentRequest } = useServers();
+  const { t } = useTranslation();
 
   const loadFilterOptions = useCallback(async () => {
     if (!server || !makeAgentRequest) {
@@ -92,16 +94,16 @@ const VlanManagement = ({ server, onError }) => {
         );
         setVlans(uniqueVlans);
       } else {
-        onError(result.message || 'Failed to load VLANs');
+        onError(result.message || t('host.vlanManagement.errors.loadFailed'));
         setVlans([]);
       }
     } catch (err) {
-      onError(`Error loading VLANs: ${err.message}`);
+      onError(t('host.vlanManagement.errors.loadError', { message: err.message }));
       setVlans([]);
     } finally {
       setLoading(false);
     }
-  }, [server, makeAgentRequest, filters, onError]);
+  }, [server, makeAgentRequest, filters, onError, t]);
 
   // Load VLANs on component mount and when filters change
   useEffect(() => {
@@ -139,10 +141,14 @@ const VlanManagement = ({ server, onError }) => {
         // Refresh VLANs list after deletion
         await loadVlans();
       } else {
-        onError(result.message || `Failed to delete VLAN "${vlanToDelete}"`);
+        onError(
+          result.message || t('host.vlanManagement.errors.deleteFailed', { name: vlanToDelete })
+        );
       }
     } catch (err) {
-      onError(`Error deleting VLAN "${vlanToDelete}": ${err.message}`);
+      onError(
+        t('host.vlanManagement.errors.deleteError', { name: vlanToDelete, message: err.message })
+      );
     } finally {
       setDeleting(false);
       setVlanToDelete(null);
@@ -170,10 +176,10 @@ const VlanManagement = ({ server, onError }) => {
         setSelectedVlan({ ...vlan, details: result.data });
         setShowDetailsModal(true);
       } else {
-        onError(result.message || 'Failed to load VLAN details');
+        onError(result.message || t('host.vlanManagement.errors.loadDetailsFailed'));
       }
     } catch (err) {
-      onError(`Error loading VLAN details: ${err.message}`);
+      onError(t('host.vlanManagement.errors.loadDetailsError', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -197,9 +203,9 @@ const VlanManagement = ({ server, onError }) => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">VLAN Management</h2>
+        <h2 className="fs-5 fw-bold">{t('host.vlanManagement.title')}</h2>
         <p>
-          Manage Virtual Local Area Networks (VLANs) on <strong>{server.hostname}</strong>.
+          {t('host.vlanManagement.manageOn')} <strong>{server.hostname}</strong>.
         </p>
       </div>
 
@@ -210,7 +216,7 @@ const VlanManagement = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-vid">
-                  Filter by VLAN ID
+                  {t('host.vlanManagement.filterByVlanId')}
                 </label>
                 <input
                   id="filter-vid"
@@ -218,7 +224,7 @@ const VlanManagement = ({ server, onError }) => {
                   type="number"
                   min="1"
                   max="4094"
-                  placeholder="e.g., 100"
+                  placeholder={t('host.vlanManagement.filterByVlanIdPlaceholder')}
                   value={filters.vid}
                   onChange={e => handleFilterChange('vid', e.target.value)}
                 />
@@ -227,7 +233,7 @@ const VlanManagement = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-over">
-                  Filter by Physical Link
+                  {t('host.vlanManagement.filterByPhysicalLink')}
                 </label>
                 <select
                   id="filter-over"
@@ -235,7 +241,7 @@ const VlanManagement = ({ server, onError }) => {
                   value={filters.over}
                   onChange={e => handleFilterChange('over', e.target.value)}
                 >
-                  <option value="">All Physical Links</option>
+                  <option value="">{t('host.vlanManagement.allPhysicalLinks')}</option>
                   {availableLinks.map(link => (
                     <option key={link} value={link}>
                       {link}
@@ -247,7 +253,7 @@ const VlanManagement = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-state">
-                  Filter by State
+                  {t('host.vlanManagement.filterByState')}
                 </label>
                 <select
                   id="filter-state"
@@ -255,10 +261,10 @@ const VlanManagement = ({ server, onError }) => {
                   value={filters.state}
                   onChange={e => handleFilterChange('state', e.target.value)}
                 >
-                  <option value="">All States</option>
-                  <option value="up">Up</option>
-                  <option value="down">Down</option>
-                  <option value="unknown">Unknown</option>
+                  <option value="">{t('host.vlanManagement.allStates')}</option>
+                  <option value="up">{t('host.vlanManagement.stateUp')}</option>
+                  <option value="down">{t('host.vlanManagement.stateDown')}</option>
+                  <option value="unknown">{t('host.vlanManagement.stateUnknown')}</option>
                 </select>
               </div>
             </div>
@@ -272,7 +278,7 @@ const VlanManagement = ({ server, onError }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-sync-alt me-2" />
-                  <span>Refresh</span>
+                  <span>{t('host.vlanManagement.refresh')}</span>
                 </button>
               </div>
             </div>
@@ -286,7 +292,7 @@ const VlanManagement = ({ server, onError }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-times me-2" />
-                  <span>Clear</span>
+                  <span>{t('host.vlanManagement.clear')}</span>
                 </button>
               </div>
             </div>
@@ -300,7 +306,7 @@ const VlanManagement = ({ server, onError }) => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center gap-2">
               <h3 className="fs-6 fw-bold">
-                VLANs ({vlans.length})
+                {t('host.vlanManagement.vlansCount', { count: vlans.length })}
                 {loading && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin" />
@@ -316,7 +322,7 @@ const VlanManagement = ({ server, onError }) => {
                 disabled={loading}
               >
                 <i className="fas fa-plus me-2" />
-                <span>Create VLAN</span>
+                <span>{t('host.vlanManagement.createVlan')}</span>
               </button>
             </div>
           </div>
@@ -360,9 +366,9 @@ const VlanManagement = ({ server, onError }) => {
           isOpen={!!vlanToDelete}
           onClose={() => setVlanToDelete(null)}
           onConfirm={confirmDeleteVlan}
-          title="Delete VLAN"
-          message={`Are you sure you want to delete VLAN "${vlanToDelete}"? This action cannot be undone.`}
-          confirmText="Delete"
+          title={t('host.vlanManagement.deleteVlanTitle')}
+          message={t('host.vlanManagement.deleteVlanMessage', { name: vlanToDelete })}
+          confirmText={t('host.vlanManagement.delete')}
           confirmVariant="is-danger"
           loading={deleting}
         />

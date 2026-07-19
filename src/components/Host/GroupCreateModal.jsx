@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import FormModal from '../common/FormModal';
 
 const GroupCreateModal = ({ server, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     groupname: '',
@@ -63,7 +65,7 @@ const GroupCreateModal = ({ server, onClose, onSuccess, onError }) => {
     e.preventDefault();
 
     if (!formData.groupname.trim()) {
-      onError('Group name is required');
+      onError(t('host.groupCreateModal.errors.nameRequired'));
       return;
     }
 
@@ -95,10 +97,10 @@ const GroupCreateModal = ({ server, onClose, onSuccess, onError }) => {
         }
         onSuccess();
       } else {
-        onError(result.message || 'Failed to create group');
+        onError(result.message || t('host.groupCreateModal.errors.createFailed'));
       }
     } catch (err) {
-      onError(`Error creating group: ${err.message}`);
+      onError(t('host.groupCreateModal.errors.createError', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -109,17 +111,17 @@ const GroupCreateModal = ({ server, onClose, onSuccess, onError }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create Group"
+      title={t('host.groupCreateModal.title')}
       icon="fas fa-users-plus"
-      submitText="Create Group"
+      submitText={t('host.groupCreateModal.title')}
       submitIcon="fas fa-plus"
       loading={loading}
       showCancelButton
-      aria-label="Create new group"
+      aria-label={t('host.groupCreateModal.ariaLabel')}
     >
       <div className="mb-3">
         <label className="form-label" htmlFor="group-name-input">
-          Group Name <span className="text-danger">*</span>
+          {t('host.groupCreateModal.groupNameLabel')} <span className="text-danger">*</span>
         </label>
         <input
           id="group-name-input"
@@ -129,16 +131,14 @@ const GroupCreateModal = ({ server, onClose, onSuccess, onError }) => {
           onChange={e => handleInputChange('groupname', e.target.value)}
           required
           disabled={loading}
-          placeholder="Enter group name"
+          placeholder={t('host.groupCreateModal.groupNamePlaceholder')}
         />
-        <p className="form-text text-muted">
-          Group name must be unique and contain only valid characters
-        </p>
+        <p className="form-text text-muted">{t('host.groupCreateModal.groupNameHelp')}</p>
       </div>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="group-gid-input">
-          Group ID (GID)
+          {t('host.groupCreateModal.gidLabel')}
         </label>
         <input
           id="group-gid-input"
@@ -147,18 +147,16 @@ const GroupCreateModal = ({ server, onClose, onSuccess, onError }) => {
           value={formData.gid}
           onChange={e => handleInputChange('gid', e.target.value)}
           disabled={loading}
-          placeholder="Auto-assign if empty"
+          placeholder={t('host.groupCreateModal.gidPlaceholder')}
           min="100"
         />
-        <p className="form-text text-muted">
-          Leave empty to auto-assign. System groups use GID &lt; 100
-        </p>
+        <p className="form-text text-muted">{t('host.groupCreateModal.gidHelp')}</p>
       </div>
 
       <div className="alert alert-info">
         <p className="mb-0">
-          <strong>Note:</strong> Group members can be managed after creation through user management
-          or by editing individual user accounts.
+          <strong>{t('host.groupCreateModal.noteLabel')}</strong>{' '}
+          {t('host.groupCreateModal.noteText')}
         </p>
       </div>
     </FormModal>

@@ -1,9 +1,11 @@
 import PropTypes from 'prop-types';
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { makeAgentRequest } from '../../api/serverUtils';
 
 const ProvisioningStatus = ({ currentServer }) => {
+  const { t } = useTranslation();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,20 +26,20 @@ const ProvisioningStatus = ({ currentServer }) => {
         if (result.success) {
           setStatus(result.data);
         } else {
-          setError(`Failed to load provisioning status: ${result.message}`);
+          setError(t('host.provisioningStatus.loadFailed', { message: result.message }));
         }
         setLoading(false);
       } catch (err) {
-        setError(`Failed to load provisioning status: ${err.message}`);
+        setError(t('host.provisioningStatus.loadFailed', { message: err.message }));
         setLoading(false);
       }
     };
 
     fetchStatus();
-  }, [currentServer]);
+  }, [currentServer, t]);
 
   if (loading) {
-    return <p>Loading provisioning status...</p>;
+    return <p>{t('host.provisioningStatus.loading')}</p>;
   }
 
   if (error) {
@@ -47,7 +49,7 @@ const ProvisioningStatus = ({ currentServer }) => {
   return (
     <div className="card">
       <div className="card-body">
-        <h3 className="h5">Provisioning Status</h3>
+        <h3 className="h5">{t('host.provisioningStatus.title')}</h3>
         <div className="row g-2">
           {status &&
             Object.entries(status).map(([pkg, installed]) => (
@@ -55,7 +57,9 @@ const ProvisioningStatus = ({ currentServer }) => {
                 <div className="d-flex justify-content-between">
                   <span>{pkg}</span>
                   <span className={`badge ${installed ? 'text-bg-success' : 'text-bg-danger'}`}>
-                    {installed ? 'Installed' : 'Not Installed'}
+                    {installed
+                      ? t('host.provisioningStatus.installed')
+                      : t('host.provisioningStatus.notInstalled')}
                   </span>
                 </div>
               </div>

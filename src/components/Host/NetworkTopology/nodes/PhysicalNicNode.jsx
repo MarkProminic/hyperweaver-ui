@@ -1,7 +1,9 @@
 import { Handle, Position } from '@xyflow/react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const PhysicalNicNode = ({ data }) => {
+  const { t } = useTranslation();
   const { label, state, speed, bandwidth, ipAddresses, mtu, flags } = data;
 
   const isActive = state?.toLowerCase() === 'up';
@@ -25,13 +27,13 @@ const PhysicalNicNode = ({ data }) => {
   };
 
   const tooltipContent = `
-${label} (Physical NIC)
-Status: ${state || 'unknown'}
-Speed: ${formatSpeed(speed)}
-MTU: ${mtu || 'N/A'}
-${bandwidth ? `Bandwidth: ${formatBandwidth(bandwidth.totalMbps)} (↓${formatBandwidth(bandwidth.rxMbps)} ↑${formatBandwidth(bandwidth.txMbps)})` : 'No bandwidth data'}
-${ipAddresses?.length ? `IP: ${ipAddresses.map(ip => ip.ip_address).join(', ')}` : 'No IP addresses'}
-${flags && flags !== '--' ? `Flags: ${flags}` : ''}
+${label} (${t('hostTools.physicalNicNode.typeCaption')})
+${t('hostTools.physicalNicNode.statusLabel')}: ${state || t('hostTools.physicalNicNode.unknown')}
+${t('hostTools.physicalNicNode.speedLabel')}: ${formatSpeed(speed)}
+${t('hostTools.physicalNicNode.mtuLabel')}: ${mtu || t('hostTools.physicalNicNode.notAvailable')}
+${bandwidth ? `${t('hostTools.physicalNicNode.bandwidthLabel')}: ${formatBandwidth(bandwidth.totalMbps)} (↓${formatBandwidth(bandwidth.rxMbps)} ↑${formatBandwidth(bandwidth.txMbps)})` : t('hostTools.physicalNicNode.noBandwidthData')}
+${ipAddresses?.length ? `${t('hostTools.physicalNicNode.ipLabel')}: ${ipAddresses.map(ip => ip.ip_address).join(', ')}` : t('hostTools.physicalNicNode.noIpAddresses')}
+${flags && flags !== '--' ? `${t('hostTools.physicalNicNode.flagsLabel')}: ${flags}` : ''}
   `.trim();
 
   return (

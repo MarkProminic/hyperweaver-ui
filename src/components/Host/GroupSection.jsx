@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { useDebounce } from '../../utils/debounce';
@@ -23,6 +24,7 @@ const GroupSection = ({ server, onError }) => {
   });
 
   const { makeAgentRequest } = useServers();
+  const { t } = useTranslation();
 
   // Debounce the pattern filter to avoid excessive API calls
   const debouncedPattern = useDebounce(filters.pattern, 500);
@@ -60,16 +62,24 @@ const GroupSection = ({ server, onError }) => {
       if (result.success) {
         setGroups(result.data?.groups || []);
       } else {
-        onError(result.message || 'Failed to load groups');
+        onError(result.message || t('host.groupSection.errors.loadFailed'));
         setGroups([]);
       }
     } catch (err) {
-      onError(`Error loading groups: ${err.message}`);
+      onError(t('host.groupSection.errors.loadError', { message: err.message }));
       setGroups([]);
     } finally {
       setLoading(false);
     }
-  }, [server, makeAgentRequest, debouncedPattern, filters.includeSystem, filters.limit, onError]);
+  }, [
+    server,
+    makeAgentRequest,
+    debouncedPattern,
+    filters.includeSystem,
+    filters.limit,
+    onError,
+    t,
+  ]);
 
   // Load groups on component mount and when filters change
   useEffect(() => {
@@ -142,10 +152,10 @@ const GroupSection = ({ server, onError }) => {
         }
         await loadGroups();
       } else {
-        onError(result.message || `Failed to ${action} group`);
+        onError(result.message || t('host.groupSection.errors.actionFailed', { action }));
       }
     } catch (err) {
-      onError(`Error performing ${action}: ${err.message}`);
+      onError(t('host.groupSection.errors.actionError', { action, message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -187,10 +197,10 @@ const GroupSection = ({ server, onError }) => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">Group Management</h2>
+        <h2 className="fs-5 fw-bold">{t('host.groupSection.title')}</h2>
         <p>
-          Manage system groups on <strong>{server.hostname}</strong>. Create, modify, and delete
-          groups, and manage group memberships.
+          {t('host.groupSection.manageOn')} <strong>{server.hostname}</strong>.{' '}
+          {t('host.groupSection.manageActions')}
         </p>
       </div>
 
@@ -201,13 +211,13 @@ const GroupSection = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-group-name">
-                  Filter by Group Name
+                  {t('host.groupSection.filterByName')}
                 </label>
                 <input
                   id="filter-group-name"
                   className="form-control"
                   type="text"
-                  placeholder="Enter group name pattern..."
+                  placeholder={t('host.groupSection.filterByNamePlaceholder')}
                   value={filters.pattern}
                   onChange={e => handleFilterChange('pattern', e.target.value)}
                 />
@@ -216,7 +226,7 @@ const GroupSection = ({ server, onError }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-include-system">
-                  Include System Groups
+                  {t('host.groupSection.includeSystemGroups')}
                 </label>
                 <div className="form-check form-switch">
                   <input
@@ -228,7 +238,7 @@ const GroupSection = ({ server, onError }) => {
                     onChange={e => handleFilterChange('includeSystem', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="filter-include-system">
-                    Show All
+                    {t('host.groupSection.showAll')}
                   </label>
                 </div>
               </div>
@@ -236,7 +246,7 @@ const GroupSection = ({ server, onError }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-limit">
-                  Limit Results
+                  {t('host.groupSection.limitResults')}
                 </label>
                 <select
                   id="filter-limit"
@@ -244,10 +254,10 @@ const GroupSection = ({ server, onError }) => {
                   value={filters.limit}
                   onChange={e => handleFilterChange('limit', parseInt(e.target.value))}
                 >
-                  <option value={25}>25 Groups</option>
-                  <option value={50}>50 Groups</option>
-                  <option value={100}>100 Groups</option>
-                  <option value={200}>200 Groups</option>
+                  <option value={25}>{t('host.groupSection.groupsOption', { count: 25 })}</option>
+                  <option value={50}>{t('host.groupSection.groupsOption', { count: 50 })}</option>
+                  <option value={100}>{t('host.groupSection.groupsOption', { count: 100 })}</option>
+                  <option value={200}>{t('host.groupSection.groupsOption', { count: 200 })}</option>
                 </select>
               </div>
             </div>
@@ -263,7 +273,7 @@ const GroupSection = ({ server, onError }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-sync-alt me-2" />
-                  <span>Refresh</span>
+                  <span>{t('host.groupSection.refresh')}</span>
                 </button>
               </div>
             </div>
@@ -279,7 +289,7 @@ const GroupSection = ({ server, onError }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-times me-2" />
-                  <span>Clear</span>
+                  <span>{t('host.groupSection.clear')}</span>
                 </button>
               </div>
             </div>
@@ -293,7 +303,7 @@ const GroupSection = ({ server, onError }) => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center gap-2">
               <h3 className="fs-6 fw-bold mb-0">
-                Groups ({groups.length})
+                {t('host.groupSection.groupsCount', { count: groups.length })}
                 {loading && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin" />
@@ -309,7 +319,7 @@ const GroupSection = ({ server, onError }) => {
                 disabled={loading}
               >
                 <i className="fas fa-plus me-2" />
-                <span>Create Group</span>
+                <span>{t('host.groupSection.createGroup')}</span>
               </button>
             </div>
           </div>
@@ -357,22 +367,22 @@ const GroupSection = ({ server, onError }) => {
             <div className="modal-dialog modal-dialog-centered" role="document">
               <div className="modal-content">
                 <div className="modal-header">
-                  <h5 className="modal-title">Confirm Delete</h5>
+                  <h5 className="modal-title">{t('host.groupSection.confirmDelete')}</h5>
                   <button
                     type="button"
                     className="btn-close"
-                    aria-label="Close"
+                    aria-label={t('host.groupSection.close')}
                     onClick={cancelDeleteGroup}
                   />
                 </div>
                 <div className="modal-body">
                   <p>
-                    Are you sure you want to delete group <strong>{groupToDelete.groupname}</strong>
+                    {t('host.groupSection.deletePrompt')} <strong>{groupToDelete.groupname}</strong>
                     ?
                   </p>
                   <p className="mt-3 text-danger">
                     <i className="fas fa-exclamation-triangle me-2" />
-                    <span>This action cannot be undone.</span>
+                    <span>{t('host.groupSection.cannotBeUndone')}</span>
                   </p>
                 </div>
                 <div className="modal-footer">
@@ -382,10 +392,10 @@ const GroupSection = ({ server, onError }) => {
                     onClick={confirmDeleteGroup}
                     disabled={loading}
                   >
-                    Delete Group
+                    {t('host.groupSection.deleteGroup')}
                   </button>
                   <button type="button" className="btn btn-secondary" onClick={cancelDeleteGroup}>
-                    Cancel
+                    {t('host.groupSection.cancel')}
                   </button>
                 </div>
               </div>
@@ -395,7 +405,7 @@ const GroupSection = ({ server, onError }) => {
             type="button"
             className="modal-backdrop fade show"
             onClick={cancelDeleteGroup}
-            aria-label="Close modal"
+            aria-label={t('host.groupSection.closeModal')}
           />
         </>
       )}

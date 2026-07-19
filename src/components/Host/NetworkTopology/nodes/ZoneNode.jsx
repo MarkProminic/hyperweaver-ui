@@ -1,21 +1,23 @@
 import { Handle, Position } from '@xyflow/react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const ZoneNode = ({ data }) => {
+  const { t } = useTranslation();
   const { label, status, zonename, zonepath, autoboot, brand, ipType, vnics } = data;
 
   const isRunning = status?.toLowerCase() === 'running';
 
   const tooltipContent = `
-${label} (Zone)
-Status: ${status || 'unknown'}
-Zone Name: ${zonename || label}
-Zone Path: ${zonepath || 'N/A'}
-Brand: ${brand || 'N/A'}
-IP Type: ${ipType || 'N/A'}
-Autoboot: ${autoboot || 'N/A'}
-VNICs: ${vnics?.length || 0}
-${vnics?.length ? `Connected: ${vnics.join(', ')}` : 'No VNICs connected'}
+${label} (${t('hostTools.zoneNode.typeCaption')})
+${t('hostTools.zoneNode.statusLabel')}: ${status || t('hostTools.zoneNode.unknown')}
+${t('hostTools.zoneNode.zoneNameLabel')}: ${zonename || label}
+${t('hostTools.zoneNode.zonePathLabel')}: ${zonepath || t('hostTools.zoneNode.notAvailable')}
+${t('hostTools.zoneNode.brandLabel')}: ${brand || t('hostTools.zoneNode.notAvailable')}
+${t('hostTools.zoneNode.ipTypeLabel')}: ${ipType || t('hostTools.zoneNode.notAvailable')}
+${t('hostTools.zoneNode.autobootLabel')}: ${autoboot || t('hostTools.zoneNode.notAvailable')}
+${t('hostTools.zoneNode.vnicsLabel')}: ${vnics?.length || 0}
+${vnics?.length ? `${t('hostTools.zoneNode.connectedLabel')}: ${vnics.join(', ')}` : t('hostTools.zoneNode.noVnicsConnected')}
   `.trim();
 
   return (

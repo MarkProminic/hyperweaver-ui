@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const VncDisplaySettingsSubmenu = ({
   quality,
@@ -12,6 +13,7 @@ const VncDisplaySettingsSubmenu = ({
   onShowDotChange,
   calculateSubmenuPosition,
 }) => {
+  const { t } = useTranslation();
   const [showDisplaySettings, setShowDisplaySettings] = useState(false);
 
   const getSelectValue = () => {
@@ -49,7 +51,7 @@ const VncDisplaySettingsSubmenu = ({
     >
       <div className="d-flex align-items-center">
         <i className="fas fa-desktop me-2" />
-        <span>Display Settings</span>
+        <span>{t('console.vncDisplaySettingsSubmenu.displaySettings')}</span>
       </div>
       <i className="fas fa-chevron-right" />
 
@@ -59,7 +61,7 @@ const VncDisplaySettingsSubmenu = ({
             <div className="dropdown-item">
               <div className="mb-2">
                 <label className="form-label" htmlFor="vnc-scaling-mode">
-                  Scaling Mode
+                  {t('console.vncDisplaySettingsSubmenu.scalingMode')}
                 </label>
                 <select
                   className="form-select form-select-sm"
@@ -68,16 +70,22 @@ const VncDisplaySettingsSubmenu = ({
                   onChange={handleSelectChange}
                   onClick={e => e.stopPropagation()}
                 >
-                  <option value="none">None (1:1)</option>
-                  <option value="local">Local Scaling</option>
-                  <option value="remote">Remote Resizing</option>
+                  <option value="none">{t('console.vncDisplaySettingsSubmenu.scalingNone')}</option>
+                  <option value="local">
+                    {t('console.vncDisplaySettingsSubmenu.scalingLocal')}
+                  </option>
+                  <option value="remote">
+                    {t('console.vncDisplaySettingsSubmenu.scalingRemote')}
+                  </option>
                 </select>
               </div>
             </div>
 
             <div className="dropdown-item">
               <div className="mb-4">
-                <label className="form-label">Quality Level: {quality}</label>
+                <label className="form-label">
+                  {t('console.vncDisplaySettingsSubmenu.qualityLevel', { value: quality })}
+                </label>
                 <div className="mt-5 mb-5">
                   <input
                     className="hw-range-slider-primary"
@@ -96,13 +104,17 @@ const VncDisplaySettingsSubmenu = ({
                     }}
                   />
                 </div>
-                <div className="form-text mt-2 mb-2">0 = Lowest quality, 9 = Highest quality</div>
+                <div className="form-text mt-2 mb-2">
+                  {t('console.vncDisplaySettingsSubmenu.qualityHint')}
+                </div>
               </div>
             </div>
 
             <div className="dropdown-item">
               <div className="mb-4">
-                <label className="form-label">Compression Level: {compression}</label>
+                <label className="form-label">
+                  {t('console.vncDisplaySettingsSubmenu.compressionLevel', { value: compression })}
+                </label>
                 <div className="mt-5 mb-5">
                   <input
                     className="hw-range-slider-info"
@@ -121,7 +133,9 @@ const VncDisplaySettingsSubmenu = ({
                     }}
                   />
                 </div>
-                <div className="form-text mt-2 mb-2">0 = No compression, 9 = Max compression</div>
+                <div className="form-text mt-2 mb-2">
+                  {t('console.vncDisplaySettingsSubmenu.compressionHint')}
+                </div>
               </div>
             </div>
 
@@ -140,7 +154,7 @@ const VncDisplaySettingsSubmenu = ({
                   onClick={e => e.stopPropagation()}
                 />
                 <label className="form-check-label" htmlFor="vnc-show-dot">
-                  Show cursor dot when no cursor
+                  {t('console.vncDisplaySettingsSubmenu.showCursorDot')}
                 </label>
               </div>
             </div>

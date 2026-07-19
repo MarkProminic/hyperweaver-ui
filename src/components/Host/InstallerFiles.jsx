@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   getArtifacts,
@@ -42,28 +43,48 @@ const formatSize = bytes => {
   return `${(bytes / 1024 ** order).toFixed(order === 0 ? 0 : 1)} ${units[order]}`;
 };
 
-const artifactStatus = artifact => {
+const artifactStatus = (artifact, t) => {
   if (artifact.file_exists === false) {
-    return { label: 'Missing', className: 'text-bg-secondary', title: 'Expected, not present' };
+    return {
+      label: t('host.installerFiles.statusMissing'),
+      className: 'text-bg-secondary',
+      title: t('host.installerFiles.statusMissingTitle'),
+    };
   }
   if (artifact.checksum_verified === false) {
     return {
-      label: 'Mismatch',
+      label: t('host.installerFiles.statusMismatch'),
       className: 'text-bg-danger',
-      title: `File ${artifact.checksum} ≠ expected ${artifact.expected_sha256 || '(recorded expectation)'}`,
+      title: t('host.installerFiles.statusMismatchTitle', {
+        checksum: artifact.checksum,
+        expected: artifact.expected_sha256 || t('host.installerFiles.recordedExpectation'),
+      }),
     };
   }
   if (artifact.checksum_verified === true) {
-    return { label: 'Verified', className: 'text-bg-success', title: 'Hash matches expectation' };
+    return {
+      label: t('host.installerFiles.statusVerified'),
+      className: 'text-bg-success',
+      title: t('host.installerFiles.statusVerifiedTitle'),
+    };
   }
   if (!artifact.checksum) {
-    return { label: 'Unhashed', className: 'text-bg-warning', title: 'Never hashed — run a scan' };
+    return {
+      label: t('host.installerFiles.statusUnhashed'),
+      className: 'text-bg-warning',
+      title: t('host.installerFiles.statusUnhashedTitle'),
+    };
   }
-  return { label: 'Hashed', className: 'text-bg-info', title: 'Hashed; no expectation on record' };
+  return {
+    label: t('host.installerFiles.statusHashed'),
+    className: 'text-bg-info',
+    title: t('host.installerFiles.statusHashedTitle'),
+  };
 };
 
 /** Storage locations card: list, add/edit, enable/disable, delete, scan. */
 const LocationsCard = ({ server, locations, onRefresh, report }) => {
+  const { t } = useTranslation();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', path: '', type: 'iso', enabled: true });
@@ -93,7 +114,7 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
 
   const handleSave = async () => {
     if (!form.name.trim() || (!editing && !form.path.trim())) {
-      report('A location needs a name and a path.', 'danger');
+      report(t('host.installerFiles.locationNamePathRequired'), 'danger');
       return;
     }
     setBusy(true);
@@ -113,10 +134,15 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
     setBusy(false);
     if (result.success) {
       setFormOpen(false);
-      report(`Location "${body.name}" ${editing ? 'updated' : 'added'}.`, 'success');
+      report(
+        editing
+          ? t('host.installerFiles.locationUpdated', { name: body.name })
+          : t('host.installerFiles.locationAdded', { name: body.name }),
+        'success'
+      );
       onRefresh();
     } else {
-      report(`Location save failed: ${result.message}`, 'danger');
+      report(t('host.installerFiles.locationSaveFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -132,12 +158,14 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
     setBusy(false);
     if (result.success) {
       report(
-        `Location "${location.name}" ${location.enabled === false ? 'enabled' : 'disabled'}.`,
+        location.enabled === false
+          ? t('host.installerFiles.locationEnabled', { name: location.name })
+          : t('host.installerFiles.locationDisabled', { name: location.name }),
         'success'
       );
       onRefresh();
     } else {
-      report(`Location update failed: ${result.message}`, 'danger');
+      report(t('host.installerFiles.locationUpdateFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -154,13 +182,18 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
     );
     setBusy(false);
     if (result.success) {
+      const base =
+        result.data?.message ||
+        t('host.installerFiles.locationDeleteQueued', { name: target.name });
       report(
-        `${result.data?.message || `Location "${target.name}" delete queued`}${result.data?.task_id ? ` (task ${result.data.task_id})` : ''}`,
+        result.data?.task_id
+          ? t('host.installerFiles.messageWithTask', { message: base, taskId: result.data.task_id })
+          : base,
         'success'
       );
       onRefresh();
     } else {
-      report(`Location delete failed: ${result.message}`, 'danger');
+      report(t('host.installerFiles.locationDeleteFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -171,12 +204,14 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
     });
     setBusy(false);
     if (result.success) {
+      const base =
+        result.data?.message || t('host.installerFiles.scanOfQueued', { name: location.name });
       report(
-        `${result.data?.message || `Scan of "${location.name}" queued`} (task ${result.data?.task_id})`,
+        t('host.installerFiles.messageWithTask', { message: base, taskId: result.data?.task_id }),
         'success'
       );
     } else {
-      report(`Scan failed: ${result.message}`, 'danger');
+      report(t('host.installerFiles.scanFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -184,7 +219,7 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
     <div className="card mb-3">
       <div className="card-body py-2">
         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
-          <span className="fw-semibold">Storage Locations</span>
+          <span className="fw-semibold">{t('host.installerFiles.storageLocations')}</span>
           <button
             type="button"
             className="btn btn-sm btn-primary"
@@ -192,7 +227,7 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
             disabled={busy}
           >
             <i className="fas fa-plus me-1" />
-            Add Location
+            {t('host.installerFiles.addLocation')}
           </button>
         </div>
         <div className="d-flex flex-column gap-1">
@@ -202,25 +237,31 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
               <span className="fw-semibold small">{location.name}</span>
               <code className="small">{location.path}</code>
               {location.source === 'builtin' && (
-                <span className="badge text-bg-light">built-in</span>
+                <span className="badge text-bg-light">{t('host.installerFiles.builtIn')}</span>
               )}
               {location.enabled === false && (
-                <span className="badge text-bg-secondary">disabled</span>
+                <span className="badge text-bg-secondary">{t('host.installerFiles.disabled')}</span>
               )}
               <span className="text-muted small">
-                {location.file_count ?? 0} files · {formatSize(location.total_size)}
+                {t('host.installerFiles.filesSize', {
+                  count: location.file_count ?? 0,
+                  size: formatSize(location.total_size),
+                })}
               </span>
               {location.scan_errors > 0 && (
                 <i
                   className="fas fa-triangle-exclamation text-warning"
-                  title={location.last_error_message || `${location.scan_errors} scan errors`}
+                  title={
+                    location.last_error_message ||
+                    t('host.installerFiles.scanErrorsCount', { count: location.scan_errors })
+                  }
                 />
               )}
               <span className="ms-auto d-inline-flex gap-1">
                 <button
                   type="button"
                   className="btn btn-sm btn-outline-warning py-0"
-                  title="Scan this location"
+                  title={t('host.installerFiles.scanThisLocation')}
                   onClick={() => handleScan(location)}
                   disabled={busy}
                 >
@@ -229,7 +270,11 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
                 <button
                   type="button"
                   className="btn btn-sm btn-outline-secondary py-0"
-                  title={location.enabled === false ? 'Enable' : 'Disable'}
+                  title={
+                    location.enabled === false
+                      ? t('host.installerFiles.enable')
+                      : t('host.installerFiles.disable')
+                  }
                   onClick={() => handleToggle(location)}
                   disabled={busy}
                 >
@@ -242,7 +287,7 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-warning py-0"
-                      title="Edit"
+                      title={t('host.installerFiles.edit')}
                       onClick={() => openEdit(location)}
                       disabled={busy}
                     >
@@ -251,7 +296,7 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-danger py-0"
-                      title="Delete this location"
+                      title={t('host.installerFiles.deleteThisLocation')}
                       onClick={() => setDeleteTarget(location)}
                       disabled={busy}
                     >
@@ -263,7 +308,7 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
             </div>
           ))}
           {locations.length === 0 && (
-            <span className="text-muted small">none yet — the agent seeds its built-ins</span>
+            <span className="text-muted small">{t('host.installerFiles.noLocationsYet')}</span>
           )}
         </div>
       </div>
@@ -272,16 +317,20 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
         isOpen={formOpen}
         onClose={() => setFormOpen(false)}
         onSubmit={handleSave}
-        title={editing ? `Edit Location: ${editing.name}` : 'Add Storage Location'}
+        title={
+          editing
+            ? t('host.installerFiles.editLocationTitle', { name: editing.name })
+            : t('host.installerFiles.addStorageLocation')
+        }
         icon="fas fa-folder-tree"
-        submitText={editing ? 'Save' : 'Add Location'}
+        submitText={editing ? t('host.installerFiles.save') : t('host.installerFiles.addLocation')}
         loading={busy}
         showCancelButton
       >
         <div className="row g-3">
           <div className="col-12 col-md-4">
             <label className="form-label" htmlFor="location-name">
-              Name
+              {t('host.installerFiles.name')}
             </label>
             <input
               id="location-name"
@@ -293,7 +342,7 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
           </div>
           <div className="col-12 col-md-3">
             <label className="form-label" htmlFor="location-type">
-              Type{editing ? ' (fixed at creation)' : ''}
+              {editing ? t('host.installerFiles.typeFixed') : t('host.installerFiles.type')}
             </label>
             <select
               id="location-type"
@@ -311,7 +360,9 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
           </div>
           <div className="col-12 col-md-5">
             <label className="form-label" htmlFor="location-path">
-              Path (agent host{editing ? ' — fixed at creation' : ''})
+              {editing
+                ? t('host.installerFiles.pathAgentHostFixed')
+                : t('host.installerFiles.pathAgentHost')}
             </label>
             {editing ? (
               <input id="location-path" className="form-control" value={form.path} disabled />
@@ -321,7 +372,7 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
                 value={form.path}
                 onChange={next => setForm(prev => ({ ...prev, path: next }))}
                 server={server}
-                pickTitle="Pick the storage root"
+                pickTitle={t('host.installerFiles.pickStorageRoot')}
               />
             )}
           </div>
@@ -336,7 +387,7 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
                 onChange={e => setForm(prev => ({ ...prev, enabled: e.target.checked }))}
               />
               <label className="form-check-label" htmlFor="location-enabled">
-                Enabled
+                {t('host.installerFiles.enabled')}
               </label>
             </div>
           </div>
@@ -348,20 +399,21 @@ const LocationsCard = ({ server, locations, onRefresh, report }) => {
           isOpen
           onClose={() => setDeleteTarget(null)}
           onSubmit={handleDelete}
-          title={`Delete Location: ${deleteTarget.name}`}
+          title={t('host.installerFiles.deleteLocationTitle', { name: deleteTarget.name })}
           icon="fas fa-trash"
-          submitText="Queue Delete"
+          submitText={t('host.installerFiles.queueDelete')}
           submitVariant="danger"
           loading={busy}
           showCancelButton
         >
           <p>
-            Remove <code>{deleteTarget.path}</code> from the storage locations?
+            {t('host.installerFiles.removeLocationBefore')} <code>{deleteTarget.path}</code>{' '}
+            {t('host.installerFiles.removeLocationAfter')}
           </p>
           {[
-            ['recursive', 'Also delete the files under it (recursive)'],
-            ['remove_db_records', 'Remove its registry records'],
-            ['force', 'Force'],
+            ['recursive', t('host.installerFiles.deleteOptRecursive')],
+            ['remove_db_records', t('host.installerFiles.deleteOptRemoveRecords')],
+            ['force', t('host.installerFiles.deleteOptForce')],
           ].map(([key, label]) => (
             <div className="form-check form-switch" key={key}>
               <input
@@ -391,6 +443,7 @@ LocationsCard.propTypes = {
 };
 
 const InstallerFiles = ({ server }) => {
+  const { t } = useTranslation();
   const [locations, setLocations] = useState([]);
   const [artifacts, setArtifacts] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -449,10 +502,10 @@ const InstallerFiles = ({ server }) => {
         setPagination(result.data?.pagination || null);
         setSelected([]);
       } else {
-        report(`Failed to load artifacts: ${result.message}`, 'danger');
+        report(t('host.installerFiles.loadArtifactsFailed', { message: result.message }), 'danger');
       }
     },
-    [server, typeFilter, locationFilter, search]
+    [server, typeFilter, locationFilter, search, t]
   );
 
   useEffect(() => {
@@ -497,11 +550,14 @@ const InstallerFiles = ({ server }) => {
     setLoading(false);
     if (result.success) {
       report(
-        `${result.data?.message || 'Scan queued'} (task ${result.data?.task_id}) — refresh once it completes`,
+        t('host.installerFiles.scanQueuedFull', {
+          message: result.data?.message || t('host.installerFiles.scanQueuedDefault'),
+          taskId: result.data?.task_id,
+        }),
         'success'
       );
     } else {
-      report(`Scan failed: ${result.message}`, 'danger');
+      report(t('host.installerFiles.scanFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -515,13 +571,19 @@ const InstallerFiles = ({ server }) => {
     setLoading(false);
     setDeleteFilesToo(false);
     if (result.success) {
+      const base = result.data?.message || t('host.installerFiles.deleteQueuedDefault');
       report(
-        `${result.data?.message || 'Delete queued'}${result.data?.task_id ? ` (task ${result.data.task_id})` : ''} — refresh once it completes`,
+        result.data?.task_id
+          ? t('host.installerFiles.deleteQueuedFull', {
+              message: base,
+              taskId: result.data.task_id,
+            })
+          : t('host.installerFiles.refreshOnceComplete', { message: base }),
         'success'
       );
       setSelected([]);
     } else {
-      report(`Delete failed: ${result.message}`, 'danger');
+      report(t('host.installerFiles.deleteFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -546,14 +608,14 @@ const InstallerFiles = ({ server }) => {
       anchor.click();
       URL.revokeObjectURL(url);
     } else {
-      report(`Download failed: ${result.message}`, 'danger');
+      report(t('host.installerFiles.downloadFailed', { message: result.message }), 'danger');
     }
   };
 
   const handleTransfer = async () => {
     const { artifact, kind } = transferTarget;
     if (!transferDest) {
-      report('Pick a destination location.', 'danger');
+      report(t('host.installerFiles.pickDestination'), 'danger');
       return;
     }
     setLoading(true);
@@ -569,12 +631,24 @@ const InstallerFiles = ({ server }) => {
     if (result.success) {
       setTransferTarget(null);
       setTransferDest('');
+      const base =
+        result.data?.message ||
+        (kind === 'move'
+          ? t('host.installerFiles.moveQueued')
+          : t('host.installerFiles.copyQueued'));
       report(
-        `${result.data?.message || `${kind} queued`}${result.data?.task_id ? ` (task ${result.data.task_id})` : ''}`,
+        result.data?.task_id
+          ? t('host.installerFiles.messageWithTask', { message: base, taskId: result.data.task_id })
+          : base,
         'success'
       );
     } else {
-      report(`${kind} failed: ${result.message}`, 'danger');
+      report(
+        kind === 'move'
+          ? t('host.installerFiles.moveFailed', { message: result.message })
+          : t('host.installerFiles.copyFailed', { message: result.message }),
+        'danger'
+      );
     }
   };
 
@@ -612,7 +686,7 @@ const InstallerFiles = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-upload me-2" />
-            Upload
+            {t('host.installerFiles.upload')}
           </button>
           <button
             type="button"
@@ -621,7 +695,7 @@ const InstallerFiles = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-file-import me-2" />
-            Register Path
+            {t('host.installerFiles.registerPath')}
           </button>
           <button
             type="button"
@@ -630,7 +704,7 @@ const InstallerFiles = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-cloud-arrow-down me-2" />
-            Download URL
+            {t('host.installerFiles.downloadUrl')}
           </button>
           <button
             type="button"
@@ -639,7 +713,7 @@ const InstallerFiles = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-cloud-arrow-down me-2" />
-            HCL Portal
+            {t('host.installerFiles.hclPortal')}
           </button>
           {selected.length > 0 && (
             <button
@@ -649,7 +723,7 @@ const InstallerFiles = ({ server }) => {
               disabled={loading}
             >
               <i className="fas fa-trash me-2" />
-              Delete Selected ({selected.length})
+              {t('host.installerFiles.deleteSelected', { count: selected.length })}
             </button>
           )}
         </div>
@@ -664,7 +738,7 @@ const InstallerFiles = ({ server }) => {
               onChange={e => setVerifyChecksums(e.target.checked)}
             />
             <label className="form-check-label small" htmlFor="artifact-scan-verify">
-              Re-hash all
+              {t('host.installerFiles.reHashAll')}
             </label>
           </div>
           <button
@@ -674,7 +748,7 @@ const InstallerFiles = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-magnifying-glass me-2" />
-            Scan All
+            {t('host.installerFiles.scanAll')}
           </button>
           <button
             type="button"
@@ -683,7 +757,7 @@ const InstallerFiles = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-sync-alt me-2" />
-            Refresh
+            {t('host.installerFiles.refresh')}
           </button>
         </div>
       </div>
@@ -694,11 +768,11 @@ const InstallerFiles = ({ server }) => {
         <div className="col-6 col-md-2">
           <select
             className="form-select form-select-sm"
-            aria-label="Filter by type"
+            aria-label={t('host.installerFiles.filterByType')}
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
           >
-            <option value="">All types</option>
+            <option value="">{t('host.installerFiles.allTypes')}</option>
             {TYPES.map(type => (
               <option key={type} value={type}>
                 {type}
@@ -709,11 +783,11 @@ const InstallerFiles = ({ server }) => {
         <div className="col-6 col-md-3">
           <select
             className="form-select form-select-sm"
-            aria-label="Filter by location"
+            aria-label={t('host.installerFiles.filterByLocation')}
             value={locationFilter}
             onChange={e => setLocationFilter(e.target.value)}
           >
-            <option value="">All locations</option>
+            <option value="">{t('host.installerFiles.allLocations')}</option>
             {locations.map(location => (
               <option key={location.id} value={location.id}>
                 {location.name}
@@ -724,8 +798,8 @@ const InstallerFiles = ({ server }) => {
         <div className="col-8 col-md-4">
           <input
             className="form-control form-control-sm"
-            aria-label="Search filenames"
-            placeholder="Search filenames…"
+            aria-label={t('host.installerFiles.searchFilenames')}
+            placeholder={t('host.installerFiles.searchFilenamesPlaceholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             onKeyDown={e => {
@@ -743,23 +817,26 @@ const InstallerFiles = ({ server }) => {
             onClick={() => loadArtifacts(0)}
             disabled={loading}
           >
-            Search
+            {t('host.installerFiles.search')}
           </button>
         </div>
         <div className="col-12 col-md-2 text-end">
           <span className="badge text-bg-secondary">
-            {artifacts.length}
-            {pagination?.total !== undefined ? ` / ${pagination.total}` : ''} entries
+            {pagination?.total !== undefined
+              ? t('host.installerFiles.entriesCountTotal', {
+                  shown: artifacts.length,
+                  total: pagination.total,
+                })
+              : t('host.installerFiles.entriesCount', { count: artifacts.length })}
           </span>
         </div>
       </div>
 
-      {loading && artifacts.length === 0 && <p className="text-muted">Loading…</p>}
+      {loading && artifacts.length === 0 && (
+        <p className="text-muted">{t('host.installerFiles.loading')}</p>
+      )}
       {!loading && artifacts.length === 0 && (
-        <div className="alert alert-info">
-          No artifacts yet — upload, register, or download files, or run a scan to pick up files
-          already under a storage location.
-        </div>
+        <div className="alert alert-info">{t('host.installerFiles.emptyArtifacts')}</div>
       )}
 
       {artifacts.length > 0 && (
@@ -767,27 +844,29 @@ const InstallerFiles = ({ server }) => {
           <table className="table table-striped table-sm">
             <thead>
               <tr>
-                <th aria-label="Select" />
-                <th>Type</th>
-                <th>Location</th>
-                <th>Role</th>
-                <th>Filename</th>
-                <th>Version</th>
-                <th>Size</th>
-                <th>Status</th>
-                <th aria-label="Actions" />
+                <th aria-label={t('host.installerFiles.colSelect')} />
+                <th>{t('host.installerFiles.colType')}</th>
+                <th>{t('host.installerFiles.colLocation')}</th>
+                <th>{t('host.installerFiles.colRole')}</th>
+                <th>{t('host.installerFiles.colFilename')}</th>
+                <th>{t('host.installerFiles.colVersion')}</th>
+                <th>{t('host.installerFiles.colSize')}</th>
+                <th>{t('host.installerFiles.colStatus')}</th>
+                <th aria-label={t('host.installerFiles.colActions')} />
               </tr>
             </thead>
             <tbody>
               {artifacts.map(artifact => {
-                const status = artifactStatus(artifact);
+                const status = artifactStatus(artifact, t);
                 return (
                   <tr key={artifact.id}>
                     <td>
                       <input
                         className="form-check-input"
                         type="checkbox"
-                        aria-label={`Select ${artifact.filename}`}
+                        aria-label={t('host.installerFiles.selectArtifact', {
+                          filename: artifact.filename,
+                        })}
                         checked={selected.includes(artifact.id)}
                         onChange={() => toggleSelected(artifact.id)}
                       />
@@ -810,7 +889,7 @@ const InstallerFiles = ({ server }) => {
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-secondary py-0"
-                          title="Download"
+                          title={t('host.installerFiles.download')}
                           onClick={() => handleDownload(artifact)}
                           disabled={loading || artifact.file_exists === false}
                         >
@@ -819,7 +898,7 @@ const InstallerFiles = ({ server }) => {
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-secondary py-0"
-                          title="Move to another location (same type)"
+                          title={t('host.installerFiles.moveToLocation')}
                           onClick={() => {
                             setTransferTarget({ artifact, kind: 'move' });
                             setTransferDest('');
@@ -831,7 +910,7 @@ const InstallerFiles = ({ server }) => {
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-secondary py-0"
-                          title="Copy to another location (same type)"
+                          title={t('host.installerFiles.copyToLocation')}
                           onClick={() => {
                             setTransferTarget({ artifact, kind: 'copy' });
                             setTransferDest('');
@@ -854,7 +933,7 @@ const InstallerFiles = ({ server }) => {
               onClick={() => loadArtifacts(artifacts.length)}
               disabled={loading}
             >
-              Load more
+              {t('host.installerFiles.loadMore')}
             </button>
           )}
         </div>
@@ -900,14 +979,24 @@ const InstallerFiles = ({ server }) => {
           isOpen
           onClose={() => setTransferTarget(null)}
           onSubmit={handleTransfer}
-          title={`${transferTarget.kind === 'move' ? 'Move' : 'Copy'}: ${transferTarget.artifact.filename}`}
+          title={
+            transferTarget.kind === 'move'
+              ? t('host.installerFiles.moveTitle', { filename: transferTarget.artifact.filename })
+              : t('host.installerFiles.copyTitle', { filename: transferTarget.artifact.filename })
+          }
           icon="fas fa-arrows-turn-right"
-          submitText={transferTarget.kind === 'move' ? 'Queue Move' : 'Queue Copy'}
+          submitText={
+            transferTarget.kind === 'move'
+              ? t('host.installerFiles.queueMove')
+              : t('host.installerFiles.queueCopy')
+          }
           loading={loading}
           showCancelButton
         >
           <label className="form-label" htmlFor="artifact-transfer-dest">
-            Destination location (same type: {transferTarget.artifact.file_type})
+            {t('host.installerFiles.destinationLocation', {
+              type: transferTarget.artifact.file_type,
+            })}
           </label>
           <select
             id="artifact-transfer-dest"
@@ -915,7 +1004,7 @@ const InstallerFiles = ({ server }) => {
             value={transferDest}
             onChange={e => setTransferDest(e.target.value)}
           >
-            <option value="">Select…</option>
+            <option value="">{t('host.installerFiles.select')}</option>
             {transferOptions.map(location => (
               <option key={location.id} value={location.id}>
                 {location.name} — {location.path}
@@ -924,7 +1013,9 @@ const InstallerFiles = ({ server }) => {
           </select>
           {transferOptions.length === 0 && (
             <p className="form-text text-warning mb-0">
-              No other {transferTarget.artifact.file_type} location exists — add one above first.
+              {t('host.installerFiles.noOtherLocation', {
+                type: transferTarget.artifact.file_type,
+              })}
             </p>
           )}
         </FormModal>
@@ -938,17 +1029,18 @@ const InstallerFiles = ({ server }) => {
             setDeleteFilesToo(false);
           }}
           onSubmit={handleBatchDelete}
-          title={`Delete ${selected.length} artifact${selected.length === 1 ? '' : 's'}`}
+          title={t('host.installerFiles.deleteArtifactsTitle', { count: selected.length })}
           icon="fas fa-trash"
-          submitText={deleteFilesToo ? 'Delete Entries + Files' : 'Delete Entries'}
+          submitText={
+            deleteFilesToo
+              ? t('host.installerFiles.deleteEntriesFiles')
+              : t('host.installerFiles.deleteEntries')
+          }
           submitVariant="danger"
           loading={loading}
           showCancelButton
         >
-          <p>
-            Delete the selected registry entries? Without the switch below the files stay on disk
-            and a later scan re-registers them.
-          </p>
+          <p>{t('host.installerFiles.deleteEntriesHelp')}</p>
           <div className="form-check form-switch">
             <input
               id="artifact-delete-files-too"
@@ -959,7 +1051,7 @@ const InstallerFiles = ({ server }) => {
               onChange={e => setDeleteFilesToo(e.target.checked)}
             />
             <label className="form-check-label" htmlFor="artifact-delete-files-too">
-              Also delete the files from disk
+              {t('host.installerFiles.alsoDeleteFiles')}
             </label>
           </div>
         </FormModal>

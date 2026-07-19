@@ -1,9 +1,11 @@
+import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
 import Dropdown from 'react-bootstrap/Dropdown';
 import { useTranslation } from 'react-i18next';
 
 import { getApplications, launchMachineApplication, shutdownGuest } from '../api/machineAPI';
 import { getProvisionStatus } from '../api/provisioningAPI';
+import { useServers } from '../contexts/ServerContext';
 import { hasFeature, hasFeatureStrict, hasHypervisor } from '../utils/capabilities';
 import {
   canStartStopMachines,
@@ -44,6 +46,134 @@ const HOST_CONTROL_ROUTES = [
   '/ui/host-storage',
   '/ui/settings/agent',
 ];
+
+/** The machine menu's power/pause/suspend/guest items — utm-aware. */
+const MachinePowerItems = ({
+  userRole,
+  pauseAvailable,
+  canSuspend,
+  machineIsUtm,
+  guestExecAvailable,
+  onAction,
+  onGuestPower,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      {canStartStopMachines(userRole) && (
+        <>
+          <Dropdown.Item as="button" type="button" onClick={() => onAction('shutdown')}>
+            <i className="fas fa-stop text-danger me-2" />
+            {t('navbar.navbar.shutdown')}
+          </Dropdown.Item>
+          <Dropdown.Item as="button" type="button" onClick={() => onAction('start')}>
+            <i className="fas fa-play text-success me-2" />
+            {t('navbar.navbar.powerOn')}
+          </Dropdown.Item>
+        </>
+      )}
+
+      {canRestartMachines(userRole) && (
+        <>
+          <Dropdown.Item as="button" type="button" onClick={() => onAction('restart')}>
+            <i className="fas fa-redo text-warning me-2" />
+            {t('navbar.navbar.restart')}
+          </Dropdown.Item>
+          {!machineIsUtm && (
+            <Dropdown.Item
+              as="button"
+              type="button"
+              title={t('navbar.navbar.resetTitle')}
+              onClick={() => onAction('reset')}
+            >
+              <i className="fas fa-bolt text-danger me-2" />
+              {t('navbar.navbar.reset')}
+            </Dropdown.Item>
+          )}
+          <Dropdown.Item
+            as="button"
+            type="button"
+            title={t('navbar.navbar.injectNmiTitle')}
+            onClick={() => onAction('nmi')}
+          >
+            <i className="fas fa-bug text-danger me-2" />
+            {t('navbar.navbar.injectNmi')}
+          </Dropdown.Item>
+        </>
+      )}
+
+      {pauseAvailable && !machineIsUtm && canStartStopMachines(userRole) && (
+        <Dropdown.Item
+          as="button"
+          type="button"
+          title={t('navbar.navbar.pauseTitle')}
+          onClick={() => onAction('pause')}
+        >
+          <i className="fas fa-pause-circle text-warning me-2" />
+          {t('navbar.navbar.pause')}
+        </Dropdown.Item>
+      )}
+
+      {canSuspend && canStartStopMachines(userRole) && (
+        <>
+          <Dropdown.Item
+            as="button"
+            type="button"
+            title={t('navbar.navbar.suspendTitle')}
+            onClick={() => onAction('suspend')}
+          >
+            <i className="fas fa-pause text-warning me-2" />
+            {t('navbar.navbar.suspend')}
+          </Dropdown.Item>
+          <Dropdown.Item
+            as="button"
+            type="button"
+            title={t('navbar.navbar.resumeTitle')}
+            onClick={() => onAction('resume')}
+          >
+            <i className="fas fa-play-circle text-success me-2" />
+            {t('navbar.navbar.resume')}
+          </Dropdown.Item>
+        </>
+      )}
+
+      {guestExecAvailable && canStartStopMachines(userRole) && (
+        <>
+          <Dropdown.Item
+            as="button"
+            type="button"
+            title={t('navbar.navbar.guestShutdownTitle')}
+            onClick={() => onGuestPower('powerdown')}
+          >
+            <i className="fas fa-power-off text-danger me-2" />
+            {t('navbar.navbar.guestShutdown')}
+          </Dropdown.Item>
+          {!machineIsUtm && (
+            <Dropdown.Item
+              as="button"
+              type="button"
+              title={t('navbar.navbar.guestRebootTitle')}
+              onClick={() => onGuestPower('reboot')}
+            >
+              <i className="fas fa-rotate text-warning me-2" />
+              {t('navbar.navbar.guestReboot')}
+            </Dropdown.Item>
+          )}
+        </>
+      )}
+    </>
+  );
+};
+
+MachinePowerItems.propTypes = {
+  userRole: PropTypes.string,
+  pauseAvailable: PropTypes.bool,
+  canSuspend: PropTypes.bool,
+  machineIsUtm: PropTypes.bool,
+  guestExecAvailable: PropTypes.bool,
+  onAction: PropTypes.func.isRequired,
+  onGuestPower: PropTypes.func.isRequired,
+};
 
 const Navbar = () => {
   const { t } = useTranslation();
@@ -158,6 +288,27 @@ const Navbar = () => {
   // enough when the agent doesn't serve /system/host/*.
   const hostPowerAvailable = hasFeature(currentServer, 'host-power');
 
+  // The selected machine's hypervisor drives the utm control adaptations:
+  // no reset (stop+start instead), pause≡suspend, no guest reboot, and the
+  // VirtualBox-only flows (install/move/display) hide. From the rows wire.
+  const { getAllMachines } = useServers();
+  const [machineHypervisor, setMachineHypervisor] = useState(null);
+  useEffect(() => {
+    setMachineHypervisor(null);
+    if (!currentServer || !currentMachine) {
+      return;
+    }
+    getAllMachines(currentServer.hostname, currentServer.port, currentServer.protocol).then(
+      result => {
+        if (result.success) {
+          const row = (result.data?.machines || []).find(entry => entry.name === currentMachine);
+          setMachineHypervisor(row?.hypervisor || null);
+        }
+      }
+    );
+  }, [currentServer, currentMachine, getAllMachines]);
+  const machineIsUtm = machineHypervisor === 'utm';
+
   // Provisioning controls gate on the provision-status answer — a machine
   // gains them by carrying a provisioner document (the Provisioning tab's
   // enable path); an errored/absent status means not configured.
@@ -201,147 +352,19 @@ const Navbar = () => {
             </>
           )}
 
-          {canStartStopMachines(userRole) && (
-            <>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                onClick={() => {
-                  handleModalClick();
-                  setCurrentAction('shutdown');
-                  setCurrentMode('machine');
-                }}
-              >
-                <i className="fas fa-stop text-danger me-2" />
-                {t('navbar.navbar.shutdown')}
-              </Dropdown.Item>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                onClick={() => {
-                  handleModalClick();
-                  setCurrentAction('start');
-                  setCurrentMode('machine');
-                }}
-              >
-                <i className="fas fa-play text-success me-2" />
-                {t('navbar.navbar.powerOn')}
-              </Dropdown.Item>
-            </>
-          )}
-
-          {canRestartMachines(userRole) && (
-            <>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                onClick={() => {
-                  handleModalClick();
-                  setCurrentAction('restart');
-                  setCurrentMode('machine');
-                }}
-              >
-                <i className="fas fa-redo text-warning me-2" />
-                {t('navbar.navbar.restart')}
-              </Dropdown.Item>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                title={t('navbar.navbar.resetTitle')}
-                onClick={() => {
-                  handleModalClick();
-                  setCurrentAction('reset');
-                  setCurrentMode('machine');
-                }}
-              >
-                <i className="fas fa-bolt text-danger me-2" />
-                {t('navbar.navbar.reset')}
-              </Dropdown.Item>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                title={t('navbar.navbar.injectNmiTitle')}
-                onClick={() => {
-                  handleModalClick();
-                  setCurrentAction('nmi');
-                  setCurrentMode('machine');
-                }}
-              >
-                <i className="fas fa-bug text-danger me-2" />
-                {t('navbar.navbar.injectNmi')}
-              </Dropdown.Item>
-            </>
-          )}
-
-          {pauseAvailable && canStartStopMachines(userRole) && (
-            <Dropdown.Item
-              as="button"
-              type="button"
-              title={t('navbar.navbar.pauseTitle')}
-              onClick={() => {
-                handleModalClick();
-                setCurrentAction('pause');
-                setCurrentMode('machine');
-              }}
-            >
-              <i className="fas fa-pause-circle text-warning me-2" />
-              {t('navbar.navbar.pause')}
-            </Dropdown.Item>
-          )}
-
-          {canSuspend && canStartStopMachines(userRole) && (
-            <>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                title={t('navbar.navbar.suspendTitle')}
-                onClick={() => {
-                  handleModalClick();
-                  setCurrentAction('suspend');
-                  setCurrentMode('machine');
-                }}
-              >
-                <i className="fas fa-pause text-warning me-2" />
-                {t('navbar.navbar.suspend')}
-              </Dropdown.Item>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                title={t('navbar.navbar.resumeTitle')}
-                onClick={() => {
-                  handleModalClick();
-                  setCurrentAction('resume');
-                  setCurrentMode('machine');
-                }}
-              >
-                <i className="fas fa-play-circle text-success me-2" />
-                {t('navbar.navbar.resume')}
-              </Dropdown.Item>
-            </>
-          )}
-
-          {guestExecAvailable && canStartStopMachines(userRole) && (
-            <>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                title={t('navbar.navbar.guestShutdownTitle')}
-                onClick={() => setGuestPower('powerdown')}
-              >
-                <i className="fas fa-power-off text-danger me-2" />
-                {t('navbar.navbar.guestShutdown')}
-              </Dropdown.Item>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                title={t('navbar.navbar.guestRebootTitle')}
-                onClick={() => setGuestPower('reboot')}
-              >
-                <i className="fas fa-rotate text-warning me-2" />
-                {t('navbar.navbar.guestReboot')}
-              </Dropdown.Item>
-            </>
-          )}
+          <MachinePowerItems
+            userRole={userRole}
+            pauseAvailable={pauseAvailable}
+            canSuspend={canSuspend}
+            machineIsUtm={machineIsUtm}
+            guestExecAvailable={guestExecAvailable}
+            onAction={action => {
+              handleModalClick();
+              setCurrentAction(action);
+              setCurrentMode('machine');
+            }}
+            onGuestPower={setGuestPower}
+          />
 
           {applications.length > 0 && (
             <>
@@ -398,28 +421,30 @@ const Navbar = () => {
               {t('navbar.navbar.convertToTemplate')}
             </Dropdown.Item>
           )}
-          {hasHypervisor(currentServer, 'virtualbox') && canCreateMachines(userRole) && (
-            <>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                title={t('navbar.navbar.installOsTitle')}
-                onClick={() => navigate('/ui/machines?install=1')}
-              >
-                <i className="fas fa-compact-disc me-2" />
-                {t('navbar.navbar.installOs')}
-              </Dropdown.Item>
-              <Dropdown.Item
-                as="button"
-                type="button"
-                title={t('navbar.navbar.moveTitle')}
-                onClick={() => navigate('/ui/machines?move=1')}
-              >
-                <i className="fas fa-truck-arrow-right me-2" />
-                {t('navbar.navbar.move')}
-              </Dropdown.Item>
-            </>
-          )}
+          {hasHypervisor(currentServer, 'virtualbox') &&
+            !machineIsUtm &&
+            canCreateMachines(userRole) && (
+              <>
+                <Dropdown.Item
+                  as="button"
+                  type="button"
+                  title={t('navbar.navbar.installOsTitle')}
+                  onClick={() => navigate('/ui/machines?install=1')}
+                >
+                  <i className="fas fa-compact-disc me-2" />
+                  {t('navbar.navbar.installOs')}
+                </Dropdown.Item>
+                <Dropdown.Item
+                  as="button"
+                  type="button"
+                  title={t('navbar.navbar.moveTitle')}
+                  onClick={() => navigate('/ui/machines?move=1')}
+                >
+                  <i className="fas fa-truck-arrow-right me-2" />
+                  {t('navbar.navbar.move')}
+                </Dropdown.Item>
+              </>
+            )}
           {guestExecAvailable && canStartStopMachines(userRole) && (
             <Dropdown.Item
               as="button"
@@ -431,17 +456,19 @@ const Navbar = () => {
               {t('navbar.navbar.runInGuest')}
             </Dropdown.Item>
           )}
-          {hasHypervisor(currentServer, 'virtualbox') && canStartStopMachines(userRole) && (
-            <Dropdown.Item
-              as="button"
-              type="button"
-              title={t('navbar.navbar.setDisplaySizeTitle')}
-              onClick={() => navigate('/ui/machines?display=1')}
-            >
-              <i className="fas fa-display me-2" />
-              {t('navbar.navbar.setDisplaySize')}
-            </Dropdown.Item>
-          )}
+          {hasHypervisor(currentServer, 'virtualbox') &&
+            !machineIsUtm &&
+            canStartStopMachines(userRole) && (
+              <Dropdown.Item
+                as="button"
+                type="button"
+                title={t('navbar.navbar.setDisplaySizeTitle')}
+                onClick={() => navigate('/ui/machines?display=1')}
+              >
+                <i className="fas fa-display me-2" />
+                {t('navbar.navbar.setDisplaySize')}
+              </Dropdown.Item>
+            )}
 
           {/* Provisioning — executed by the Provisioning tab (?run=/?editprov=
               params), which reports the queued tasks. */}

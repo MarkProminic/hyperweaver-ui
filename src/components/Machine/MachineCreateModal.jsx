@@ -237,6 +237,12 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   const singular = resourceLabel(currentServer, { plural: false });
   const bhyve = !!currentServer && hasHypervisor(currentServer, 'bhyve');
   const vbox = !!currentServer && hasHypervisor(currentServer, 'virtualbox');
+  // The hypervisor picker is INFORMATIONAL (never token-gating, D14): it
+  // renders only when the agent's hypervisors[] actually offers utm. utm
+  // creates REQUIRE a template boot with settings.box — validateStep holds
+  // the gate; non-darwin agents 400 the spec server-side regardless.
+  const utmOffered = !!currentServer && hasHypervisor(currentServer, 'utm');
+  const [machineHypervisor, setMachineHypervisor] = useState('');
 
   const family = useMemo(
     () => provisioners.find(collection => collection.name === familyName) || null,
@@ -308,6 +314,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     setVersionDetail(null);
     setVersionPending(false);
     setName('');
+    setMachineHypervisor('');
     setSettings(emptySettings());
     setBootSource('template');
     setDiskConfig(emptyDiskConfig());
@@ -880,6 +887,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     });
     return {
       ...(name.trim() && { name: name.trim() }),
+      ...(machineHypervisor && { hypervisor: machineHypervisor }),
       // Provisioning is 100% OPTIONAL (Mark's ruling, 2026-07-07): no
       // provisioner picked = no provisioner key at all — a machine is just
       // a machine.
@@ -916,27 +924,32 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   /** Per-step gate — the reason Next exists instead of free tab-jumping. */
   const validateStep = stepId => {
     if (stepId === 'general' && (!settings.hostname || !settings.domain)) {
-      return 'Hostname and domain are required.';
+      return t('machineEdit.machineCreateModal.hostnameDomainRequired');
+    }
+    if (stepId === 'box' && machineHypervisor === 'utm') {
+      if (bootSource !== 'template' || !settings.box) {
+        return t('machineEdit.machineCreateModal.utmRequiresTemplateBox');
+      }
     }
     if (stepId === 'system' && vboxJson.trim()) {
       try {
         JSON.parse(vboxJson);
       } catch {
-        return 'The VBox passthrough section is not valid JSON.';
+        return t('machineEdit.machineCreateModal.vboxJsonInvalid');
       }
     }
     if (stepId === 'disks') {
       if (bootSource === 'scratch' && !diskConfig.bootSize) {
-        return 'A blank boot disk needs a size.';
+        return t('machineEdit.machineCreateModal.blankBootNeedsSize');
       }
       if (bootSource === 'existing' && !diskConfig.bootPath) {
-        return 'An existing boot disk needs its image path.';
+        return t('machineEdit.machineCreateModal.existingBootNeedsPath');
       }
     }
     // Provisioning is OPTIONAL (Mark's ruling) — only a half-made choice
     // (family without version) blocks.
     if (stepId === 'provisioning' && familyName && !versionKey) {
-      return 'Select a version for the chosen provisioner — or set it back to None.';
+      return t('machineEdit.machineCreateModal.selectVersionOrNone');
     }
     // The DSL's live validation pass — the agent re-runs it authoritatively
     // pre-render; visible fields only, required-only-while-visible.
@@ -945,7 +958,10 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       setFieldErrors(errors);
       const names = Object.keys(errors);
       if (names.length > 0) {
-        return `Fix the highlighted configuration field${names.length > 1 ? 's' : ''}: ${names.join(', ')}.`;
+        return t('machineEdit.machineCreateModal.fixHighlightedFields', {
+          count: names.length,
+          names: names.join(', '),
+        });
       }
     }
     return '';
@@ -1094,6 +1110,29 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       {error && <div className="alert alert-danger py-2">{error}</div>}
       {errorDetails.length > 0 && <ResourceIssueList details={errorDetails} />}
 
+      {currentStepId === 'general' && utmOffered && (
+        <div className="row g-3 mb-3">
+          <div className="col-12 col-md-4">
+            <label className="form-label" htmlFor="machine-create-hypervisor">
+              {t('machineEdit.machineCreateModal.hypervisorLabel')}
+            </label>
+            <select
+              id="machine-create-hypervisor"
+              className="form-select"
+              value={machineHypervisor}
+              onChange={e => setMachineHypervisor(e.target.value)}
+              disabled={loading}
+            >
+              <option value="">{t('machineEdit.machineCreateModal.hypervisorAgentDefault')}</option>
+              <option value="virtualbox">virtualbox</option>
+              <option value="utm">utm</option>
+            </select>
+            <span className="form-text text-muted small">
+              {t('machineEdit.machineCreateModal.hypervisorHint')}
+            </span>
+          </div>
+        </div>
+      )}
       {currentStepId === 'general' && (
         <GeneralStep
           name={name}

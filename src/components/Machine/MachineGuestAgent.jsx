@@ -52,16 +52,26 @@ GuestNetworkTable.propTypes = {
   interfaces: PropTypes.array.isRequired,
 };
 
-const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = 'col-12' }) => {
+const MachineGuestAgent = ({
+  currentServer,
+  machineName,
+  guestInfo,
+  hypervisor,
+  colClass = 'col-12',
+}) => {
   const { t } = useTranslation();
   const [osinfo, setOsinfo] = useState(null);
   const [showNetwork, setShowNetwork] = useState(false);
   const [interfaces, setInterfaces] = useState([]);
+  const [flatIps, setFlatIps] = useState([]);
   const [netLoading, setNetLoading] = useState(false);
   const [netError, setNetError] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionMsg, setActionMsg] = useState('');
 
+  // utm machines: osinfo and guest-agent/setup 400; the network answer is the
+  // FLAT {machine_name, ips: []} shape — never the QGA interfaces table.
+  const isUtm = hypervisor === 'utm';
   const ready = !!guestInfo?.agent_responding;
   const ips = Array.isArray(guestInfo?.ips) ? guestInfo.ips : [];
 
@@ -88,7 +98,7 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = '
 
   useEffect(() => {
     setOsinfo(null);
-    if (!ready || !currentServer || !machineName) {
+    if (!ready || !currentServer || !machineName || isUtm) {
       return undefined;
     }
     let cancelled = false;
@@ -105,7 +115,7 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = '
     return () => {
       cancelled = true;
     };
-  }, [ready, currentServer, machineName]);
+  }, [ready, currentServer, machineName, isUtm]);
 
   const handleShowNetwork = async () => {
     setShowNetwork(true);
@@ -120,6 +130,7 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = '
     setInterfaces(
       result.success && Array.isArray(result.data?.interfaces) ? result.data.interfaces : []
     );
+    setFlatIps(result.success && Array.isArray(result.data?.ips) ? result.data.ips : []);
     setNetError(result.success ? '' : result.message || 'Guest network query failed.');
     setNetLoading(false);
   };
@@ -151,16 +162,18 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = '
               <p className="text-muted small mb-2">
                 {t('machine.machineGuestAgent.channelNotResponding')}
               </p>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-primary"
-                onClick={runSetup}
-                disabled={busy}
-                title={t('machine.machineGuestAgent.setupChannelTooltip')}
-              >
-                <i className={`fas ${busy ? 'fa-spinner fa-pulse' : 'fa-plug'} me-2`} />
-                {t('machine.machineGuestAgent.setupChannelButton')}
-              </button>
+              {!isUtm && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-primary"
+                  onClick={runSetup}
+                  disabled={busy}
+                  title={t('machine.machineGuestAgent.setupChannelTooltip')}
+                >
+                  <i className={`fas ${busy ? 'fa-spinner fa-pulse' : 'fa-plug'} me-2`} />
+                  {t('machine.machineGuestAgent.setupChannelButton')}
+                </button>
+              )}
               {actionMsg && (
                 <div className="alert alert-info py-1 px-2 small mt-2 mb-0">{actionMsg}</div>
               )}
@@ -236,7 +249,21 @@ const MachineGuestAgent = ({ currentServer, machineName, guestInfo, colClass = '
               </div>
             )}
             {!netLoading && netError && <div className="alert alert-warning mb-0">{netError}</div>}
-            {!netLoading && !netError && <GuestNetworkTable interfaces={interfaces} />}
+            {!netLoading && !netError && isUtm && (
+              <>
+                {flatIps.length === 0 && (
+                  <p className="text-muted small mb-0">
+                    {t('machine.machineGuestAgent.noAddresses')}
+                  </p>
+                )}
+                {flatIps.map(ip => (
+                  <div key={ip}>
+                    <code>{ip}</code>
+                  </div>
+                ))}
+              </>
+            )}
+            {!netLoading && !netError && !isUtm && <GuestNetworkTable interfaces={interfaces} />}
           </ContentModal>
         </div>
       </div>
@@ -253,6 +280,7 @@ MachineGuestAgent.propTypes = {
     agent_responding: PropTypes.bool,
     checked_at: PropTypes.string,
   }),
+  hypervisor: PropTypes.string,
   colClass: PropTypes.string,
 };
 

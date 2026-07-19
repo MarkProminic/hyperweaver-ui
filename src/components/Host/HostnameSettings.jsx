@@ -1,9 +1,11 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 
 const HostnameSettings = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [hostnameInfo, setHostnameInfo] = useState(null);
   const [newHostname, setNewHostname] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,14 +35,14 @@ const HostnameSettings = ({ server, onError }) => {
         setHostnameInfo(result.data);
         setNewHostname(result.data.hostname || '');
       } else {
-        onError(result.message || 'Failed to load hostname information');
+        onError(result.message || t('host.hostnameSettings.errors.loadFailed'));
       }
     } catch (err) {
-      onError(`Error loading hostname information: ${err.message}`);
+      onError(t('host.hostnameSettings.errors.loadError', { message: err.message }));
     } finally {
       setLoading(false);
     }
-  }, [makeAgentRequest, server, onError]);
+  }, [makeAgentRequest, server, onError, t]);
 
   // Load current hostname information
   useEffect(() => {
@@ -51,12 +53,12 @@ const HostnameSettings = ({ server, onError }) => {
     e.preventDefault();
 
     if (!newHostname.trim()) {
-      onError('Hostname cannot be empty');
+      onError(t('host.hostnameSettings.errors.empty'));
       return;
     }
 
     if (newHostname === hostnameInfo?.hostname) {
-      onError('New hostname is the same as current hostname');
+      onError(t('host.hostnameSettings.errors.same'));
       return;
     }
 
@@ -88,10 +90,10 @@ const HostnameSettings = ({ server, onError }) => {
         // You might want to show a success notification here
         console.log(message);
       } else {
-        onError(result.message || 'Failed to change hostname');
+        onError(result.message || t('host.hostnameSettings.errors.changeFailed'));
       }
     } catch (err) {
-      onError(`Error changing hostname: ${err.message}`);
+      onError(t('host.hostnameSettings.errors.changeError', { message: err.message }));
     } finally {
       setChanging(false);
     }
@@ -131,7 +133,7 @@ const HostnameSettings = ({ server, onError }) => {
         <span>
           <i className="fas fa-spinner fa-spin fa-2x" />
         </span>
-        <p className="mt-2">Loading hostname information...</p>
+        <p className="mt-2">{t('host.hostnameSettings.loading')}</p>
       </div>
     );
   }
@@ -139,9 +141,9 @@ const HostnameSettings = ({ server, onError }) => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">Hostname Configuration</h2>
+        <h2 className="fs-5 fw-bold">{t('host.hostnameSettings.title')}</h2>
         <p>
-          View and modify the system hostname for <strong>{server.hostname}</strong>.
+          {t('host.hostnameSettings.viewPrefix')} <strong>{server.hostname}</strong>.
         </p>
       </div>
 
@@ -149,37 +151,39 @@ const HostnameSettings = ({ server, onError }) => {
       {hostnameInfo && (
         <div className="card mb-4">
           <div className="card-body">
-            <h3 className="fs-6 fw-bold">Current Hostname Information</h3>
+            <h3 className="fs-6 fw-bold">{t('host.hostnameSettings.currentInfo')}</h3>
             <div className="table-responsive">
               <table className="table">
                 <tbody>
                   <tr>
                     <td>
-                      <strong>Current Hostname</strong>
+                      <strong>{t('host.hostnameSettings.currentHostname')}</strong>
                     </td>
                     <td className="font-monospace">{hostnameInfo.hostname}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Nodename File</strong>
+                      <strong>{t('host.hostnameSettings.nodenameFile')}</strong>
                     </td>
                     <td className="font-monospace">{hostnameInfo.nodename_file}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>System Hostname</strong>
+                      <strong>{t('host.hostnameSettings.systemHostname')}</strong>
                     </td>
                     <td className="font-monospace">{hostnameInfo.system_hostname}</td>
                   </tr>
                   <tr>
                     <td>
-                      <strong>Configuration Match</strong>
+                      <strong>{t('host.hostnameSettings.configMatch')}</strong>
                     </td>
                     <td>
                       <span
                         className={`badge ${hostnameInfo.matches ? 'text-bg-success' : 'text-bg-warning'}`}
                       >
-                        {hostnameInfo.matches ? 'Yes' : 'No'}
+                        {hostnameInfo.matches
+                          ? t('host.hostnameSettings.yes')
+                          : t('host.hostnameSettings.no')}
                       </span>
                     </td>
                   </tr>
@@ -190,8 +194,8 @@ const HostnameSettings = ({ server, onError }) => {
             {!hostnameInfo.matches && (
               <div className="alert alert-warning">
                 <p>
-                  <strong>Warning:</strong> The system hostname does not match the configuration
-                  file. This may indicate a pending hostname change that requires a reboot.
+                  <strong>{t('host.hostnameSettings.warning')}</strong>{' '}
+                  {t('host.hostnameSettings.mismatchWarning')}
                 </p>
               </div>
             )}
@@ -202,25 +206,25 @@ const HostnameSettings = ({ server, onError }) => {
       {/* Change Hostname Form */}
       <div className="card">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Change Hostname</h3>
+          <h3 className="fs-6 fw-bold">{t('host.hostnameSettings.changeHostname')}</h3>
 
           <form onSubmit={handleChangeHostname}>
             <div className="mb-3">
               <label className="form-label" htmlFor="new-hostname-input">
-                New Hostname
+                {t('host.hostnameSettings.newHostname')}
               </label>
               <input
                 id="new-hostname-input"
                 className={`form-control ${newHostname && !isHostnameValid(newHostname) ? 'is-invalid' : ''}`}
                 type="text"
-                placeholder="Enter new hostname"
+                placeholder={t('host.hostnameSettings.enterNewHostname')}
                 value={newHostname}
                 onChange={e => setNewHostname(e.target.value)}
                 disabled={changing}
               />
               {newHostname && !isHostnameValid(newHostname) && (
                 <p className="form-text text-danger">
-                  Invalid hostname. Must be a valid hostname or FQDN
+                  {t('host.hostnameSettings.invalidHostname')}
                 </p>
               )}
             </div>
@@ -233,12 +237,12 @@ const HostnameSettings = ({ server, onError }) => {
                   onChange={e => setApplyImmediately(e.target.checked)}
                   disabled={changing}
                 />
-                <span className="ms-2">Apply immediately (no reboot required)</span>
+                <span className="ms-2">{t('host.hostnameSettings.applyImmediately')}</span>
               </label>
               <p className="form-text text-muted">
                 {applyImmediately
-                  ? 'The hostname will be changed immediately without requiring a reboot.'
-                  : 'The hostname will be changed in configuration files and applied after next reboot.'}
+                  ? t('host.hostnameSettings.applyImmediatelyHelp')
+                  : t('host.hostnameSettings.applyLaterHelp')}
               </p>
             </div>
 
@@ -249,7 +253,7 @@ const HostnameSettings = ({ server, onError }) => {
                 disabled={!hasChanges || !isHostnameValid(newHostname) || changing}
               >
                 {changing && <span className="spinner-border spinner-border-sm" />}
-                Change Hostname
+                {t('host.hostnameSettings.changeHostname')}
               </button>
               <button
                 type="button"
@@ -257,7 +261,7 @@ const HostnameSettings = ({ server, onError }) => {
                 onClick={() => setNewHostname(hostnameInfo?.hostname || '')}
                 disabled={!hasChanges || changing}
               >
-                Reset
+                {t('host.hostnameSettings.reset')}
               </button>
               <button
                 type="button"
@@ -269,7 +273,7 @@ const HostnameSettings = ({ server, onError }) => {
                 <span className="me-1">
                   <i className="fas fa-sync-alt" />
                 </span>
-                <span>Refresh</span>
+                <span>{t('host.hostnameSettings.refresh')}</span>
               </button>
             </div>
           </form>

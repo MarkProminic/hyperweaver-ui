@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   getOrchestrationStatus,
@@ -23,6 +24,7 @@ const STRATEGIES = ['parallel_by_priority', 'sequential', 'staggered'];
  * highest-priority-first; agent exit stops lowest-first.
  */
 const OrchestrationPanel = ({ server }) => {
+  const { t } = useTranslation();
   const [status, setStatus] = useState(null);
   const [priorities, setPriorities] = useState(null);
   const [plan, setPlan] = useState(null);
@@ -62,10 +64,13 @@ const OrchestrationPanel = ({ server }) => {
         : []
     );
     if (!statusResult.success) {
-      report(`Orchestration status unavailable: ${statusResult.message}`, 'warning');
+      report(
+        t('host.orchestrationPanel.statusUnavailable', { message: statusResult.message }),
+        'warning'
+      );
     }
     setLoading(false);
-  }, [server]);
+  }, [server, t]);
 
   useEffect(() => {
     load();
@@ -80,19 +85,21 @@ const OrchestrationPanel = ({ server }) => {
     if (result.success) {
       report(
         result.data?.message ||
-          `Orchestration ${status?.orchestration_enabled ? 'disabled' : 'enabled'} — persisted to config, fully applies at the next agent start.`,
+          (status?.orchestration_enabled
+            ? t('host.orchestrationPanel.disabledMessage')
+            : t('host.orchestrationPanel.enabledMessage')),
         'success'
       );
       load();
     } else {
-      report(`Toggle failed: ${result.message}`, 'danger');
+      report(t('host.orchestrationPanel.toggleFailed', { message: result.message }), 'danger');
     }
   };
 
   const handlePriority = async name => {
     const value = Number(edits[name]);
     if (!value || value < 1 || value > 100) {
-      report('Priority must be 1–100.', 'danger');
+      report(t('host.orchestrationPanel.priorityRange'), 'danger');
       return;
     }
     setLoading(true);
@@ -106,10 +113,13 @@ const OrchestrationPanel = ({ server }) => {
         delete next[name];
         return next;
       });
-      report(`Priority for ${name} set to ${value} (immediate).`, 'success');
+      report(t('host.orchestrationPanel.prioritySet', { name, value }), 'success');
       load();
     } else {
-      report(`Priority update failed for ${name}: ${result.message}`, 'danger');
+      report(
+        t('host.orchestrationPanel.priorityUpdateFailed', { name, message: result.message }),
+        'danger'
+      );
     }
   };
 
@@ -156,11 +166,15 @@ const OrchestrationPanel = ({ server }) => {
     const failed = results.filter(result => !result.success);
     if (failed.length > 0) {
       report(
-        `${failed.length} of ${changes.length} priority writes failed: ${failed[0].message}`,
+        t('host.orchestrationPanel.priorityWritesFailed', {
+          failed: failed.length,
+          total: changes.length,
+          message: failed[0].message,
+        }),
         'danger'
       );
     } else {
-      report(`Boot order applied — ${changes.length} priorities updated (immediate).`, 'success');
+      report(t('host.orchestrationPanel.bootOrderApplied', { count: changes.length }), 'success');
     }
     load();
   };
@@ -172,7 +186,7 @@ const OrchestrationPanel = ({ server }) => {
     if (result.success) {
       setPlan(result.data);
     } else {
-      report(`Dry run failed: ${result.message}`, 'danger');
+      report(t('host.orchestrationPanel.dryRunFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -190,7 +204,10 @@ const OrchestrationPanel = ({ server }) => {
     );
     if (!current.success) {
       setLoading(false);
-      report(`Could not read settings: ${current.message}`, 'danger');
+      report(
+        t('host.orchestrationPanel.readSettingsFailed', { message: current.message }),
+        'danger'
+      );
       return;
     }
     const machinesConfig = current.data?.machines || current.data?.settings?.machines || {};
@@ -209,10 +226,13 @@ const OrchestrationPanel = ({ server }) => {
     );
     setLoading(false);
     if (result.success) {
-      report(`Strategy set to ${strategy} — fully applies at the next agent start.`, 'success');
+      report(t('host.orchestrationPanel.strategySet', { strategy }), 'success');
       load();
     } else {
-      report(`Strategy update failed: ${result.message}`, 'danger');
+      report(
+        t('host.orchestrationPanel.strategyUpdateFailed', { message: result.message }),
+        'danger'
+      );
     }
   };
 
@@ -222,23 +242,25 @@ const OrchestrationPanel = ({ server }) => {
 
       <div className="d-flex flex-wrap align-items-center gap-3 mb-3">
         <span>
-          Status:{' '}
+          {t('host.orchestrationPanel.status')}{' '}
           {status ? (
             <span
               className={`badge ${status.orchestration_enabled ? 'text-bg-success' : 'text-bg-secondary'}`}
             >
-              {status.orchestration_enabled ? 'enabled' : 'disabled'}
+              {status.orchestration_enabled
+                ? t('host.orchestrationPanel.enabled')
+                : t('host.orchestrationPanel.disabled')}
             </span>
           ) : (
-            <span className="text-muted">unknown</span>
+            <span className="text-muted">{t('host.orchestrationPanel.unknown')}</span>
           )}
         </span>
         {status && (
           <span className="d-inline-flex align-items-center gap-1 small">
-            strategy
+            {t('host.orchestrationPanel.strategy')}
             <select
               className="form-select form-select-sm w-auto"
-              aria-label="Orchestration strategy"
+              aria-label={t('host.orchestrationPanel.strategyAriaLabel')}
               value={status.strategy || 'parallel_by_priority'}
               onChange={e => handleStrategy(e.target.value)}
               disabled={loading}
@@ -258,7 +280,9 @@ const OrchestrationPanel = ({ server }) => {
             onClick={() => (status.orchestration_enabled ? handleToggle() : setConfirmEnable(true))}
             disabled={loading}
           >
-            {status.orchestration_enabled ? 'Disable' : 'Enable'} Orchestration
+            {status.orchestration_enabled
+              ? t('host.orchestrationPanel.disableOrchestration')
+              : t('host.orchestrationPanel.enableOrchestration')}
           </button>
         )}
         <button
@@ -268,7 +292,7 @@ const OrchestrationPanel = ({ server }) => {
           disabled={loading}
         >
           <i className="fas fa-list-ol me-2" />
-          Preview Shutdown Plan
+          {t('host.orchestrationPanel.previewShutdownPlan')}
         </button>
         <button
           type="button"
@@ -284,7 +308,10 @@ const OrchestrationPanel = ({ server }) => {
         <div className="card mb-3">
           <div className="card-body">
             <h4 className="fs-6 fw-bold">
-              Dry-Run Plan — {plan.total_machines} machines, ~{plan.estimated_duration}
+              {t('host.orchestrationPanel.dryRunPlan', {
+                count: plan.total_machines,
+                duration: plan.estimated_duration,
+              })}
             </h4>
             {(plan.execution_plan || []).map(group => (
               <div key={group.priority_range} className="mb-1">
@@ -307,7 +334,7 @@ const OrchestrationPanel = ({ server }) => {
             <div className="d-flex justify-content-between align-items-center mb-2">
               <h4 className="fs-6 fw-bold mb-0">
                 <i className="fas fa-up-down me-2" />
-                Boot Order — drag to reorder (top boots first)
+                {t('host.orchestrationPanel.bootOrderTitle')}
               </h4>
               {orderDiffers && (
                 <button
@@ -317,7 +344,7 @@ const OrchestrationPanel = ({ server }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-check me-2" />
-                  Apply Order
+                  {t('host.orchestrationPanel.applyOrder')}
                 </button>
               )}
             </div>
@@ -343,7 +370,9 @@ const OrchestrationPanel = ({ server }) => {
                     <code className="small">{name}</code>
                     {row && <span className="text-muted small">{row.state}</span>}
                     {row && !row.has_custom_priority && (
-                      <span className="badge text-bg-light">default</span>
+                      <span className="badge text-bg-light">
+                        {t('host.orchestrationPanel.default')}
+                      </span>
                     )}
                     {orderDiffers && (
                       <span className="text-muted small">→ {priorityForIndex(index)}</span>
@@ -355,7 +384,7 @@ const OrchestrationPanel = ({ server }) => {
                         type="number"
                         min="1"
                         max="100"
-                        aria-label={`Boot priority for ${name}`}
+                        aria-label={t('host.orchestrationPanel.bootPriorityFor', { name })}
                         value={edits[name] ?? row?.priority ?? ''}
                         onChange={e => setEdits(prev => ({ ...prev, [name]: e.target.value }))}
                         disabled={loading}
@@ -367,7 +396,7 @@ const OrchestrationPanel = ({ server }) => {
                           onClick={() => handlePriority(name)}
                           disabled={loading}
                         >
-                          Save
+                          {t('host.orchestrationPanel.save')}
                         </button>
                       )}
                     </span>
@@ -376,25 +405,21 @@ const OrchestrationPanel = ({ server }) => {
               })}
             </div>
             <p className="form-text text-muted mb-0">
-              Drag to reorder and Apply (top = highest, spaced by 5), or type an exact number on a
-              row and Save — every write is immediate, no restart.
+              {t('host.orchestrationPanel.bootOrderHelp')}
             </p>
           </div>
         </div>
       )}
 
-      <p className="form-text text-muted">
-        Higher priority boots first at agent start (autostart machines only); shutdown at agent exit
-        runs lowest first. Priority changes apply immediately — no task, no restart.
-      </p>
+      <p className="form-text text-muted">{t('host.orchestrationPanel.priorityFootnote')}</p>
 
       <ConfirmModal
         isOpen={confirmEnable}
         onClose={() => setConfirmEnable(false)}
         onConfirm={handleToggle}
-        title="Enable Orchestration"
-        message="Enable host-level boot orchestration? The setting persists to the agent's config and fully applies at the next agent start — autostart machines will then boot in priority order."
-        confirmText="Enable"
+        title={t('host.orchestrationPanel.enableOrchestrationTitle')}
+        message={t('host.orchestrationPanel.enableOrchestrationMessage')}
+        confirmText={t('host.orchestrationPanel.enable')}
         confirmVariant="primary"
         loading={loading}
       />

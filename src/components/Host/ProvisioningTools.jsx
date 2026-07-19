@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { hasFeature } from '../../utils/capabilities';
@@ -14,6 +15,7 @@ import { hasFeature } from '../../utils/capabilities';
  * itself where `provisioning` isn't advertised.
  */
 const ProvisioningTools = ({ currentServer }) => {
+  const { t } = useTranslation();
   const { makeAgentRequest } = useServers();
   const [tools, setTools] = useState(null);
 
@@ -63,28 +65,29 @@ const ProvisioningTools = ({ currentServer }) => {
   return (
     <tr>
       <td>
-        <strong>Provisioning Tools</strong>
+        <strong>{t('host.provisioningTools.title')}</strong>
       </td>
       <td>
         <div className="d-flex flex-wrap gap-1">
-          {entries.map(([tool, installed]) => (
-            <span
-              key={tool}
-              className={`badge ${badgeClass(tool, installed)}`}
-              title={
-                installed
-                  ? `${tool} installed`
-                  : `${tool} missing${soft(tool) ? ' — the agent’s built-in transport covers folder sync' : ''}`
-              }
-            >
-              {tool}
-            </span>
-          ))}
+          {entries.map(([tool, installed]) => {
+            let toolTitle;
+            if (installed) {
+              toolTitle = t('host.provisioningTools.toolInstalled', { tool });
+            } else if (soft(tool)) {
+              toolTitle = t('host.provisioningTools.toolMissingSoft', { tool });
+            } else {
+              toolTitle = t('host.provisioningTools.toolMissing', { tool });
+            }
+            return (
+              <span key={tool} className={`badge ${badgeClass(tool, installed)}`} title={toolTitle}>
+                {tool}
+              </span>
+            );
+          })}
         </div>
         {missingHard.length > 0 && (
           <p className="small text-warning mb-0 mt-1">
-            {missingHard.length} tool{missingHard.length !== 1 ? 's' : ''} missing — provisioning
-            may fail until installed.
+            {t('host.provisioningTools.missingHardWarning', { count: missingHard.length })}
           </p>
         )}
       </td>

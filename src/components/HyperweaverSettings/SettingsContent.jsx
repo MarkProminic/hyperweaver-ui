@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { isFieldVisible } from '../../utils/settingsUtils';
 
@@ -22,6 +23,7 @@ const SettingsContent = ({
   setMsg,
   setRequiresRestart,
 }) => {
+  const { t } = useTranslation();
   const toggleSubsection = useCallback(
     (sectionName, subsectionName) => {
       const key = `${sectionName}-${subsectionName}`;
@@ -116,10 +118,11 @@ const SettingsContent = ({
                   <div className="card-body">
                     <h2 className="fs-5 fw-bold">
                       <i className={`${section.icon} me-2`} />
-                      {section.title} Settings
+                      {t('settings.settingsContent.sectionSettings', { title: section.title })}
                       <span className="badge text-bg-light ms-2">
-                        {section.fields.length} setting
-                        {section.fields.length !== 1 ? 's' : ''}
+                        {t('settings.settingsContent.settingCount', {
+                          count: section.fields.length,
+                        })}
                       </span>
                     </h2>
 
@@ -170,7 +173,7 @@ const SettingsContent = ({
                     <div className="card-body">
                       <h2 className="fs-5 fw-bold">
                         <i className={`${section.icon} me-2`} />
-                        {section.title} Settings
+                        {t('settings.settingsContent.sectionSettings', { title: section.title })}
                       </h2>
 
                       {section.description && (
@@ -178,7 +181,7 @@ const SettingsContent = ({
                       )}
 
                       <div className="alert alert-info">
-                        <p>No settings available in this section yet.</p>
+                        <p>{t('settings.settingsContent.noSettings')}</p>
                       </div>
                     </div>
                   </div>

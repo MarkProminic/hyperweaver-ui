@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 
@@ -16,6 +17,7 @@ const labelize = key =>
   key.replace(/(?<lower>[a-z])(?<upper>[A-Z])/gu, '$<lower> $<upper>').replace(/_/gu, ' ');
 
 const MonitoringDatabase = ({ currentServer }) => {
+  const { t } = useTranslation();
   const { makeAgentRequest, getMonitoringStatus } = useServers();
   const [summary, setSummary] = useState(null);
   const [statusConfig, setStatusConfig] = useState(null);
@@ -60,14 +62,14 @@ const MonitoringDatabase = ({ currentServer }) => {
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h5 className="h5 mb-0 d-flex align-items-center gap-2">
             <i className="fas fa-database" />
-            <span>Monitoring Database</span>
+            <span>{t('host.monitoringDatabase.title')}</span>
           </h5>
           <button
             type="button"
             className="btn btn-sm btn-outline-secondary"
             onClick={load}
             disabled={loading}
-            title="Refresh"
+            title={t('host.monitoringDatabase.refresh')}
           >
             <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`} />
           </button>
@@ -77,12 +79,16 @@ const MonitoringDatabase = ({ currentServer }) => {
           <p className="form-text text-muted mt-0">
             {statusConfig.collection_interval && (
               <span className="me-3">
-                Collection interval: <strong>{statusConfig.collection_interval}s</strong>
+                {t('host.monitoringDatabase.collectionInterval')}{' '}
+                <strong>{statusConfig.collection_interval}s</strong>
               </span>
             )}
             {statusConfig.retention_days && (
               <span>
-                Retention: <strong>{statusConfig.retention_days} days</strong>
+                {t('host.monitoringDatabase.retention')}{' '}
+                <strong>
+                  {t('host.monitoringDatabase.days', { count: statusConfig.retention_days })}
+                </strong>
               </span>
             )}
           </p>
@@ -92,9 +98,9 @@ const MonitoringDatabase = ({ currentServer }) => {
           <table className="table table-striped table-sm small mb-0">
             <thead>
               <tr>
-                <th className="px-3">Data</th>
-                <th className="px-3 text-end">Records</th>
-                <th className="px-3">Latest sample</th>
+                <th className="px-3">{t('host.monitoringDatabase.colData')}</th>
+                <th className="px-3 text-end">{t('host.monitoringDatabase.colRecords')}</th>
+                <th className="px-3">{t('host.monitoringDatabase.colLatestSample')}</th>
               </tr>
             </thead>
             <tbody>

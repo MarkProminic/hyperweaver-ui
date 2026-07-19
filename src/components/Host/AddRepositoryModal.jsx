@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { FormModal } from '../common';
 
 const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const mirrorIdCounter = useRef(1);
   const [formData, setFormData] = useState({
@@ -57,7 +59,7 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
 
   const handleSubmit = async () => {
     if (!formData.name.trim() || !formData.origin.trim()) {
-      onError('Publisher name and origin URL are required');
+      onError(t('host.addRepositoryModal.errors.nameOriginRequired'));
       return;
     }
 
@@ -106,10 +108,10 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
       if (result.success) {
         onSuccess();
       } else {
-        onError(result.message || 'Failed to add repository');
+        onError(result.message || t('host.addRepositoryModal.errors.addFailed'));
       }
     } catch (err) {
-      onError(`Error adding repository: ${err.message}`);
+      onError(t('host.addRepositoryModal.errors.addError', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -120,9 +122,9 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Add Repository"
+      title={t('host.addRepositoryModal.title')}
       icon="fas fa-plus-circle"
-      submitText="Add Repository"
+      submitText={t('host.addRepositoryModal.title')}
       submitIcon="fas fa-plus"
       submitVariant="is-success"
       loading={loading}
@@ -130,11 +132,11 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
       {/* Basic Information */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Basic Information</h3>
+          <h3 className="fs-6 fw-bold">{t('host.addRepositoryModal.basicInformation')}</h3>
 
           <div className="mb-3">
             <label htmlFor="repo-publisher-name" className="form-label">
-              Publisher Name *
+              {t('host.addRepositoryModal.publisherNameLabel')} *
             </label>
             <input
               id="repo-publisher-name"
@@ -145,12 +147,12 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
               onChange={e => handleInputChange('name', e.target.value)}
               required
             />
-            <p className="form-text text-muted">The name of the package publisher</p>
+            <p className="form-text text-muted">{t('host.addRepositoryModal.publisherNameHelp')}</p>
           </div>
 
           <div className="mb-3">
             <label htmlFor="repo-origin-url" className="form-label">
-              Origin URL *
+              {t('host.addRepositoryModal.originUrlLabel')} *
             </label>
             <input
               id="repo-origin-url"
@@ -161,7 +163,7 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
               onChange={e => handleInputChange('origin', e.target.value)}
               required
             />
-            <p className="form-text text-muted">The primary repository URL</p>
+            <p className="form-text text-muted">{t('host.addRepositoryModal.originUrlHelp')}</p>
           </div>
         </div>
       </div>
@@ -169,7 +171,7 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
       {/* Mirror URLs */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Mirror URLs (Optional)</h3>
+          <h3 className="fs-6 fw-bold">{t('host.addRepositoryModal.mirrorUrls')}</h3>
 
           {formData.mirrors.map(mirror => (
             <div key={mirror.id} className="input-group mb-3">
@@ -193,7 +195,7 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
 
           <button type="button" className="btn btn-info" onClick={addMirror}>
             <i className="fas fa-plus me-2" />
-            <span>Add Mirror</span>
+            <span>{t('host.addRepositoryModal.addMirror')}</span>
           </button>
         </div>
       </div>
@@ -201,7 +203,7 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
       {/* Repository Options */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Repository Options</h3>
+          <h3 className="fs-6 fw-bold">{t('host.addRepositoryModal.repositoryOptions')}</h3>
 
           <div className="row g-3">
             <div className="col">
@@ -215,7 +217,8 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
                     onChange={e => handleInputChange('enabled', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="repo-enabled">
-                    <strong>Enabled</strong> - Repository is active for package operations
+                    <strong>{t('host.addRepositoryModal.enabledStrong')}</strong>{' '}
+                    {t('host.addRepositoryModal.enabledText')}
                   </label>
                 </div>
               </div>
@@ -230,7 +233,8 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
                     onChange={e => handleInputChange('sticky', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="repo-sticky">
-                    <strong>Sticky</strong> - Prefer packages from this publisher
+                    <strong>{t('host.addRepositoryModal.stickyStrong')}</strong>{' '}
+                    {t('host.addRepositoryModal.stickyText')}
                   </label>
                 </div>
               </div>
@@ -245,7 +249,8 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
                     onChange={e => handleInputChange('searchFirst', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="repo-search-first">
-                    <strong>Search First</strong> - Search this repository first
+                    <strong>{t('host.addRepositoryModal.searchFirstStrong')}</strong>{' '}
+                    {t('host.addRepositoryModal.searchFirstText')}
                   </label>
                 </div>
               </div>
@@ -254,13 +259,13 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label htmlFor="repo-search-before" className="form-label">
-                  Search Before
+                  {t('host.addRepositoryModal.searchBefore')}
                 </label>
                 <input
                   id="repo-search-before"
                   className="form-control"
                   type="text"
-                  placeholder="Publisher name"
+                  placeholder={t('host.addRepositoryModal.publisherNamePlaceholder')}
                   value={formData.searchBefore}
                   onChange={e => handleInputChange('searchBefore', e.target.value)}
                 />
@@ -268,13 +273,13 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
 
               <div className="mb-3">
                 <label htmlFor="repo-search-after" className="form-label">
-                  Search After
+                  {t('host.addRepositoryModal.searchAfter')}
                 </label>
                 <input
                   id="repo-search-after"
                   className="form-control"
                   type="text"
-                  placeholder="Publisher name"
+                  placeholder={t('host.addRepositoryModal.publisherNamePlaceholder')}
                   value={formData.searchAfter}
                   onChange={e => handleInputChange('searchAfter', e.target.value)}
                 />
@@ -282,7 +287,7 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
 
               <div className="mb-3">
                 <label htmlFor="repo-proxy" className="form-label">
-                  Proxy
+                  {t('host.addRepositoryModal.proxy')}
                 </label>
                 <input
                   id="repo-proxy"
@@ -301,11 +306,11 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
       {/* SSL Configuration */}
       <div className="card">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">SSL Configuration (Optional)</h3>
+          <h3 className="fs-6 fw-bold">{t('host.addRepositoryModal.sslConfiguration')}</h3>
 
           <div className="mb-3">
             <label htmlFor="repo-ssl-cert" className="form-label">
-              SSL Certificate
+              {t('host.addRepositoryModal.sslCertificate')}
             </label>
             <textarea
               id="repo-ssl-cert"
@@ -319,7 +324,7 @@ const AddRepositoryModal = ({ server, onClose, onSuccess, onError }) => {
 
           <div className="mb-3">
             <label htmlFor="repo-ssl-key" className="form-label">
-              SSL Private Key
+              {t('host.addRepositoryModal.sslPrivateKey')}
             </label>
             <textarea
               id="repo-ssl-key"

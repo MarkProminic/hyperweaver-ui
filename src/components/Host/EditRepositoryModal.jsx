@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { FormModal } from '../common';
@@ -7,6 +8,7 @@ import { FormModal } from '../common';
 import UrlListEditor from './UrlListEditor';
 
 const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const nextEntryId = useRef(1);
   const [formData, setFormData] = useState({
@@ -138,10 +140,10 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
       if (result.success) {
         onSuccess();
       } else {
-        onError(result.message || 'Failed to update repository');
+        onError(result.message || t('host.editRepositoryModal.errors.updateFailed'));
       }
     } catch (err) {
-      onError(`Error updating repository: ${err.message}`);
+      onError(t('host.editRepositoryModal.errors.updateError', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -152,9 +154,9 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Edit Repository"
+      title={t('host.editRepositoryModal.title')}
       icon="fas fa-edit"
-      submitText="Update Repository"
+      submitText={t('host.editRepositoryModal.submit')}
       submitIcon="fas fa-save"
       submitVariant="is-success"
       loading={loading}
@@ -162,19 +164,21 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
       {/* Current Repository Info */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Current Repository Information</h3>
+          <h3 className="fs-6 fw-bold">
+            {t('host.editRepositoryModal.currentRepositoryInformation')}
+          </h3>
           <div className="table-responsive">
             <table className="table">
               <tbody>
                 <tr>
                   <td>
-                    <strong>Publisher</strong>
+                    <strong>{t('host.editRepositoryModal.publisher')}</strong>
                   </td>
                   <td className="font-monospace">{repository.name}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Type</strong>
+                    <strong>{t('host.editRepositoryModal.type')}</strong>
                   </td>
                   <td>
                     <span className="badge text-bg-info">{repository.type}</span>
@@ -182,7 +186,7 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
                 </tr>
                 <tr>
                   <td>
-                    <strong>Current Location</strong>
+                    <strong>{t('host.editRepositoryModal.currentLocation')}</strong>
                   </td>
                   <td className="font-monospace small">{repository.location}</td>
                 </tr>
@@ -195,30 +199,30 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
       {/* Origins Management */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Origins Management</h3>
+          <h3 className="fs-6 fw-bold">{t('host.editRepositoryModal.originsManagement')}</h3>
           <div className="row g-3">
             <div className="col">
               <UrlListEditor
-                label="Add Origins"
+                label={t('host.editRepositoryModal.addOrigins')}
                 entries={formData.originsToAdd}
                 placeholder="https://pkg.omnios.org/repository/"
                 onEntryChange={(id, value) => handleArrayChange('originsToAdd', id, value)}
                 onAdd={() => addToArray('originsToAdd')}
                 onRemove={id => removeFromArray('originsToAdd', id)}
-                addButtonText="Add Origin"
+                addButtonText={t('host.editRepositoryModal.addOrigin')}
                 addButtonClass="btn-info"
                 addButtonIcon="fa-plus"
               />
             </div>
             <div className="col">
               <UrlListEditor
-                label="Remove Origins"
+                label={t('host.editRepositoryModal.removeOrigins')}
                 entries={formData.originsToRemove}
-                placeholder="URL to remove"
+                placeholder={t('host.editRepositoryModal.urlToRemove')}
                 onEntryChange={(id, value) => handleArrayChange('originsToRemove', id, value)}
                 onAdd={() => addToArray('originsToRemove')}
                 onRemove={id => removeFromArray('originsToRemove', id)}
-                addButtonText="Remove Origin"
+                addButtonText={t('host.editRepositoryModal.removeOrigin')}
                 addButtonClass="btn-warning"
                 addButtonIcon="fa-minus"
               />
@@ -230,30 +234,30 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
       {/* Mirrors Management */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Mirrors Management</h3>
+          <h3 className="fs-6 fw-bold">{t('host.editRepositoryModal.mirrorsManagement')}</h3>
           <div className="row g-3">
             <div className="col">
               <UrlListEditor
-                label="Add Mirrors"
+                label={t('host.editRepositoryModal.addMirrors')}
                 entries={formData.mirrorsToAdd}
                 placeholder="https://mirror.example.com/repository/"
                 onEntryChange={(id, value) => handleArrayChange('mirrorsToAdd', id, value)}
                 onAdd={() => addToArray('mirrorsToAdd')}
                 onRemove={id => removeFromArray('mirrorsToAdd', id)}
-                addButtonText="Add Mirror"
+                addButtonText={t('host.editRepositoryModal.addMirror')}
                 addButtonClass="btn-info"
                 addButtonIcon="fa-plus"
               />
             </div>
             <div className="col">
               <UrlListEditor
-                label="Remove Mirrors"
+                label={t('host.editRepositoryModal.removeMirrors')}
                 entries={formData.mirrorsToRemove}
-                placeholder="URL to remove"
+                placeholder={t('host.editRepositoryModal.urlToRemove')}
                 onEntryChange={(id, value) => handleArrayChange('mirrorsToRemove', id, value)}
                 onAdd={() => addToArray('mirrorsToRemove')}
                 onRemove={id => removeFromArray('mirrorsToRemove', id)}
-                addButtonText="Remove Mirror"
+                addButtonText={t('host.editRepositoryModal.removeMirror')}
                 addButtonClass="btn-warning"
                 addButtonIcon="fa-minus"
               />
@@ -265,7 +269,7 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
       {/* Repository Options */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Repository Options</h3>
+          <h3 className="fs-6 fw-bold">{t('host.editRepositoryModal.repositoryOptions')}</h3>
           <div className="row g-3">
             <div className="col">
               <div className="mb-3">
@@ -278,7 +282,8 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
                     onChange={e => handleInputChange('enabled', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="repo-enabled">
-                    <strong>Enabled</strong> - Repository is active for package operations
+                    <strong>{t('host.editRepositoryModal.enabledStrong')}</strong>{' '}
+                    {t('host.editRepositoryModal.enabledText')}
                   </label>
                 </div>
               </div>
@@ -293,7 +298,8 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
                     onChange={e => handleInputChange('sticky', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="repo-sticky">
-                    <strong>Sticky</strong> - Prefer packages from this publisher
+                    <strong>{t('host.editRepositoryModal.stickyStrong')}</strong>{' '}
+                    {t('host.editRepositoryModal.stickyText')}
                   </label>
                 </div>
               </div>
@@ -308,7 +314,8 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
                     onChange={e => handleInputChange('searchFirst', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="repo-search-first">
-                    <strong>Search First</strong> - Search this repository first
+                    <strong>{t('host.editRepositoryModal.searchFirstStrong')}</strong>{' '}
+                    {t('host.editRepositoryModal.searchFirstText')}
                   </label>
                 </div>
               </div>
@@ -323,7 +330,8 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
                     onChange={e => handleInputChange('refresh', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="repo-refresh">
-                    <strong>Refresh</strong> - Refresh repository metadata after update
+                    <strong>{t('host.editRepositoryModal.refreshStrong')}</strong>{' '}
+                    {t('host.editRepositoryModal.refreshText')}
                   </label>
                 </div>
               </div>
@@ -332,13 +340,13 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
             <div className="col">
               <div className="mb-3">
                 <label htmlFor="repo-search-before" className="form-label">
-                  Search Before
+                  {t('host.editRepositoryModal.searchBefore')}
                 </label>
                 <input
                   id="repo-search-before"
                   className="form-control"
                   type="text"
-                  placeholder="Publisher name"
+                  placeholder={t('host.editRepositoryModal.publisherNamePlaceholder')}
                   value={formData.searchBefore}
                   onChange={e => handleInputChange('searchBefore', e.target.value)}
                 />
@@ -346,13 +354,13 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
 
               <div className="mb-3">
                 <label htmlFor="repo-search-after" className="form-label">
-                  Search After
+                  {t('host.editRepositoryModal.searchAfter')}
                 </label>
                 <input
                   id="repo-search-after"
                   className="form-control"
                   type="text"
-                  placeholder="Publisher name"
+                  placeholder={t('host.editRepositoryModal.publisherNamePlaceholder')}
                   value={formData.searchAfter}
                   onChange={e => handleInputChange('searchAfter', e.target.value)}
                 />
@@ -360,7 +368,7 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
 
               <div className="mb-3">
                 <label htmlFor="repo-proxy" className="form-label">
-                  Proxy
+                  {t('host.editRepositoryModal.proxy')}
                 </label>
                 <input
                   id="repo-proxy"
@@ -379,11 +387,11 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
       {/* SSL Configuration */}
       <div className="card">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">SSL Configuration (Optional)</h3>
+          <h3 className="fs-6 fw-bold">{t('host.editRepositoryModal.sslConfiguration')}</h3>
 
           <div className="mb-3">
             <label htmlFor="repo-ssl-cert" className="form-label">
-              SSL Certificate
+              {t('host.editRepositoryModal.sslCertificate')}
             </label>
             <textarea
               id="repo-ssl-cert"
@@ -397,7 +405,7 @@ const EditRepositoryModal = ({ server, repository, onClose, onSuccess, onError }
 
           <div className="mb-3">
             <label htmlFor="repo-ssl-key" className="form-label">
-              SSL Private Key
+              {t('host.editRepositoryModal.sslPrivateKey')}
             </label>
             <textarea
               id="repo-ssl-key"

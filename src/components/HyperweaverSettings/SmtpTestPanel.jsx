@@ -1,6 +1,7 @@
 import axios from 'axios';
 import PropTypes from 'prop-types';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const SmtpTestPanel = ({
   testResults,
@@ -12,17 +13,18 @@ const SmtpTestPanel = ({
   setMsg,
   loading,
 }) => {
+  const { t } = useTranslation();
   const testMailConnection = useCallback(async () => {
     const testKey = 'mail';
     if (!testEmail) {
-      setMsg('Please enter a test email address');
+      setMsg(t('settings.smtpTestPanel.enterEmail'));
       return;
     }
 
     try {
       setTestLoading(prev => ({ ...prev, [testKey]: true }));
       setTestResults(prev => ({ ...prev, [testKey]: null }));
-      setMsg('Testing SMTP connection and sending test email...');
+      setMsg(t('settings.smtpTestPanel.testing'));
 
       const response = await axios.post('/api/mail/test', { testEmail });
 
@@ -35,7 +37,7 @@ const SmtpTestPanel = ({
             details: response.data.details,
           },
         }));
-        setMsg('Test email sent successfully! Check your inbox.');
+        setMsg(t('settings.smtpTestPanel.testSuccess'));
       } else {
         setTestResults(prev => ({
           ...prev,
@@ -45,7 +47,7 @@ const SmtpTestPanel = ({
             error: response.data.error,
           },
         }));
-        setMsg(`Mail test failed: ${response.data.message}`);
+        setMsg(t('settings.smtpTestPanel.testFailed', { message: response.data.message }));
       }
     } catch (error) {
       console.error('Mail test error:', error);
@@ -53,15 +55,19 @@ const SmtpTestPanel = ({
         ...prev,
         [testKey]: {
           success: false,
-          message: 'Mail test failed',
+          message: t('settings.smtpTestPanel.testFailedShort'),
           error: error.response?.data?.error || error.message,
         },
       }));
-      setMsg(`Mail test error: ${error.response?.data?.message || error.message}`);
+      setMsg(
+        t('settings.smtpTestPanel.testError', {
+          error: error.response?.data?.message || error.message,
+        })
+      );
     } finally {
       setTestLoading(prev => ({ ...prev, [testKey]: false }));
     }
-  }, [testEmail, setTestLoading, setTestResults, setMsg]);
+  }, [testEmail, setTestLoading, setTestResults, setMsg, t]);
 
   const isMailSuccess = testResults.mail?.success;
 
@@ -70,19 +76,19 @@ const SmtpTestPanel = ({
       <div className="card-body">
         <h3 className="fs-6 fw-bold">
           <i className="fas fa-paper-plane me-2" />
-          Test Email Configuration
+          {t('settings.smtpTestPanel.testEmailConfig')}
         </h3>
 
         <div className="mb-3">
           <label className="form-label" htmlFor="test-email-address">
-            Test Email Address
+            {t('settings.smtpTestPanel.testEmailAddress')}
           </label>
           <div className="input-group">
             <input
               id="test-email-address"
               className="form-control"
               type="email"
-              placeholder="test@example.com"
+              placeholder={t('settings.smtpTestPanel.testEmailPlaceholder')}
               value={testEmail}
               onChange={e => setTestEmail(e.target.value)}
               disabled={testLoading.mail || loading}
@@ -91,7 +97,7 @@ const SmtpTestPanel = ({
               <i className="fas fa-envelope" />
             </span>
           </div>
-          <p className="form-text text-muted">Send a test email to verify SMTP configuration</p>
+          <p className="form-text text-muted">{t('settings.smtpTestPanel.testEmailHelp')}</p>
         </div>
 
         <div className="mb-3">
@@ -109,11 +115,9 @@ const SmtpTestPanel = ({
               />
             )}
             <i className="fas fa-paper-plane me-2" />
-            <span>Send Test Email</span>
+            <span>{t('settings.smtpTestPanel.sendTestEmail')}</span>
           </button>
-          <p className="form-text text-muted">
-            Tests SMTP server connection and sends a test email
-          </p>
+          <p className="form-text text-muted">{t('settings.smtpTestPanel.sendButtonHelp')}</p>
         </div>
 
         {testResults.mail && (
@@ -129,15 +133,21 @@ const SmtpTestPanel = ({
                 {testResults.mail.details && (
                   <div className="mt-2">
                     <p className="small">
-                      <strong>Host:</strong> {testResults.mail.details.host} <br />
-                      <strong>Port:</strong> {testResults.mail.details.port} <br />
-                      <strong>Secure:</strong> {testResults.mail.details.secure ? 'Yes' : 'No'}
+                      <strong>{t('settings.smtpTestPanel.hostLabel')}</strong>{' '}
+                      {testResults.mail.details.host} <br />
+                      <strong>{t('settings.smtpTestPanel.portLabel')}</strong>{' '}
+                      {testResults.mail.details.port} <br />
+                      <strong>{t('settings.smtpTestPanel.secureLabel')}</strong>{' '}
+                      {testResults.mail.details.secure
+                        ? t('settings.smtpTestPanel.yes')
+                        : t('settings.smtpTestPanel.no')}
                     </p>
                   </div>
                 )}
                 {testResults.mail.error && (
                   <p className="small text-muted mt-1">
-                    <strong>Error:</strong> {testResults.mail.error}
+                    <strong>{t('settings.smtpTestPanel.errorLabel')}</strong>{' '}
+                    {testResults.mail.error}
                   </p>
                 )}
               </div>
@@ -147,46 +157,46 @@ const SmtpTestPanel = ({
 
         {/* Configuration Help */}
         <div className="mt-4">
-          <h4 className="fs-6 fw-bold">Configuration Help</h4>
+          <h4 className="fs-6 fw-bold">{t('settings.smtpTestPanel.configHelp')}</h4>
           <div className="row g-3">
             <div className="col">
               <p>
-                <strong>Gmail:</strong>
+                <strong>{t('settings.smtpTestPanel.gmailLabel')}</strong>
               </p>
               <ul className="small">
-                <li>Host: smtp.gmail.com</li>
-                <li>Port: 587 (TLS) or 465 (SSL)</li>
-                <li>Use App Password (not regular password)</li>
+                <li>{t('settings.smtpTestPanel.gmailHost')}</li>
+                <li>{t('settings.smtpTestPanel.gmailPort')}</li>
+                <li>{t('settings.smtpTestPanel.gmailAppPassword')}</li>
               </ul>
               <p>
-                <strong>Outlook/Hotmail:</strong>
+                <strong>{t('settings.smtpTestPanel.outlookLabel')}</strong>
               </p>
               <ul className="small">
-                <li>Host: smtp-mail.outlook.com</li>
-                <li>Port: 587</li>
+                <li>{t('settings.smtpTestPanel.outlookHost')}</li>
+                <li>{t('settings.smtpTestPanel.outlookPort')}</li>
               </ul>
             </div>
             <div className="col">
               <p>
-                <strong>Yahoo:</strong>
+                <strong>{t('settings.smtpTestPanel.yahooLabel')}</strong>
               </p>
               <ul className="small">
-                <li>Host: smtp.mail.yahoo.com</li>
-                <li>Port: 587 or 465</li>
+                <li>{t('settings.smtpTestPanel.yahooHost')}</li>
+                <li>{t('settings.smtpTestPanel.yahooPort')}</li>
               </ul>
               <p>
-                <strong>Custom SMTP:</strong>
+                <strong>{t('settings.smtpTestPanel.customLabel')}</strong>
               </p>
               <ul className="small">
-                <li>Contact your hosting provider</li>
-                <li>Check documentation for settings</li>
+                <li>{t('settings.smtpTestPanel.customContact')}</li>
+                <li>{t('settings.smtpTestPanel.customDocs')}</li>
               </ul>
             </div>
           </div>
           <div className="alert alert-info">
             <p className="small">
-              <strong>Note:</strong> Save settings first, then use the test button to verify
-              configuration.
+              <strong>{t('settings.smtpTestPanel.noteLabel')}</strong>{' '}
+              {t('settings.smtpTestPanel.noteText')}
             </p>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { useDebounce } from '../../utils/debounce';
@@ -22,6 +23,7 @@ const RoleSection = ({ server, onError }) => {
   });
 
   const { makeAgentRequest } = useServers();
+  const { t } = useTranslation();
 
   // Debounce the pattern filter to avoid excessive API calls
   const debouncedPattern = useDebounce(filters.pattern, 500);
@@ -56,16 +58,16 @@ const RoleSection = ({ server, onError }) => {
       if (result.success) {
         setRoles(result.data?.roles || []);
       } else {
-        onError(result.message || 'Failed to load roles');
+        onError(result.message || t('host.roleSection.errors.loadFailed'));
         setRoles([]);
       }
     } catch (err) {
-      onError(`Error loading roles: ${err.message}`);
+      onError(t('host.roleSection.errors.loadError', { message: err.message }));
       setRoles([]);
     } finally {
       setLoading(false);
     }
-  }, [server, makeAgentRequest, debouncedPattern, filters.limit, onError]);
+  }, [server, makeAgentRequest, debouncedPattern, filters.limit, onError, t]);
 
   const pollTask = useCallback(
     taskId => {
@@ -116,7 +118,7 @@ const RoleSection = ({ server, onError }) => {
 
   const handleRoleAction = async (rolename, action, options = {}) => {
     if (!server || !makeAgentRequest) {
-      return { success: false, message: 'Server not available' };
+      return { success: false, message: t('host.roleSection.errors.serverNotAvailable') };
     }
 
     try {
@@ -153,10 +155,10 @@ const RoleSection = ({ server, onError }) => {
         await loadRoles();
         return { success: true, message: result.message };
       }
-      onError(result.message || `Failed to ${action} role`);
+      onError(result.message || t('host.roleSection.errors.actionFailed', { action }));
       return { success: false, message: result.message };
     } catch (err) {
-      const errorMsg = `Error performing ${action}: ${err.message}`;
+      const errorMsg = t('host.roleSection.errors.actionError', { action, message: err.message });
       onError(errorMsg);
       return { success: false, message: errorMsg };
     } finally {
@@ -194,10 +196,10 @@ const RoleSection = ({ server, onError }) => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">Role Management</h2>
+        <h2 className="fs-5 fw-bold">{t('host.roleSection.title')}</h2>
         <p>
-          Manage RBAC roles on <strong>{server.hostname}</strong>. Create, modify, and delete roles,
-          and manage role authorizations and profiles.
+          {t('host.roleSection.manageOn')} <strong>{server.hostname}</strong>.{' '}
+          {t('host.roleSection.manageActions')}
         </p>
       </div>
 
@@ -208,13 +210,13 @@ const RoleSection = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-pattern">
-                  Filter by Role Name
+                  {t('host.roleSection.filterByName')}
                 </label>
                 <input
                   id="filter-pattern"
                   className="form-control"
                   type="text"
-                  placeholder="Enter role name pattern..."
+                  placeholder={t('host.roleSection.filterByNamePlaceholder')}
                   value={filters.pattern}
                   onChange={e => handleFilterChange('pattern', e.target.value)}
                 />
@@ -223,7 +225,7 @@ const RoleSection = ({ server, onError }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="filter-limit">
-                  Limit Results
+                  {t('host.roleSection.limitResults')}
                 </label>
                 <select
                   id="filter-limit"
@@ -231,16 +233,16 @@ const RoleSection = ({ server, onError }) => {
                   value={filters.limit}
                   onChange={e => handleFilterChange('limit', parseInt(e.target.value))}
                 >
-                  <option value={25}>25 Roles</option>
-                  <option value={50}>50 Roles</option>
-                  <option value={100}>100 Roles</option>
+                  <option value={25}>{t('host.roleSection.rolesOption', { count: 25 })}</option>
+                  <option value={50}>{t('host.roleSection.rolesOption', { count: 50 })}</option>
+                  <option value={100}>{t('host.roleSection.rolesOption', { count: 100 })}</option>
                 </select>
               </div>
             </div>
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="refresh-button">
-                  Refresh
+                  {t('host.roleSection.refresh')}
                 </label>
                 <div>
                   <button
@@ -251,7 +253,7 @@ const RoleSection = ({ server, onError }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-sync-alt me-2" />
-                    <span>Refresh</span>
+                    <span>{t('host.roleSection.refresh')}</span>
                   </button>
                 </div>
               </div>
@@ -259,7 +261,7 @@ const RoleSection = ({ server, onError }) => {
             <div className="col-auto">
               <div className="mb-3">
                 <label className="form-label" htmlFor="clear-button">
-                  Clear
+                  {t('host.roleSection.clear')}
                 </label>
                 <div>
                   <button
@@ -270,7 +272,7 @@ const RoleSection = ({ server, onError }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-times me-2" />
-                    <span>Clear</span>
+                    <span>{t('host.roleSection.clear')}</span>
                   </button>
                 </div>
               </div>
@@ -285,7 +287,7 @@ const RoleSection = ({ server, onError }) => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center gap-2">
               <h3 className="fs-6 fw-bold mb-0">
-                Roles ({roles.length})
+                {t('host.roleSection.rolesCount', { count: roles.length })}
                 {loading && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin" />
@@ -301,7 +303,7 @@ const RoleSection = ({ server, onError }) => {
                 disabled={loading}
               >
                 <i className="fas fa-plus me-2" />
-                <span>Create Role</span>
+                <span>{t('host.roleSection.createRole')}</span>
               </button>
             </div>
           </div>
@@ -348,9 +350,9 @@ const RoleSection = ({ server, onError }) => {
           isOpen={!!roleToDelete}
           onClose={() => setRoleToDelete(null)}
           onConfirm={handleConfirmDelete}
-          title="Delete Role"
-          message={`Are you sure you want to delete role "${roleToDelete.rolename}"?\n\nThis will also remove any home directory if one exists.`}
-          confirmText="Delete"
+          title={t('host.roleSection.deleteRoleTitle')}
+          message={t('host.roleSection.deleteRoleMessage', { rolename: roleToDelete.rolename })}
+          confirmText={t('host.roleSection.delete')}
           confirmVariant="is-danger"
           loading={loading}
         />

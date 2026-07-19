@@ -437,6 +437,7 @@ const NetworkAdaptersEditor = ({
   knobDefaults = {},
   machineNetif = '',
   currentServer = null,
+  utmMode = false,
   formDisabled = false,
 }) => {
   const { t } = useTranslation();
@@ -686,7 +687,7 @@ const NetworkAdaptersEditor = ({
                 </button>
               </div>
             </div>
-            {!isMarked && (
+            {!isMarked && !utmMode && (
               <div className="hw-device-row hw-device-child hw-device-child-form">
                 <div className="row g-2 align-items-end">
                   {TUNING_FIELDS.map(field => {
@@ -875,8 +876,8 @@ const NetworkAdaptersEditor = ({
             )}
             {/* Tuning rides INLINE on the add_nics entry — the agent applies
                 it on whichever free slot it assigns. VirtualBox vocabulary,
-                hidden on zones. */}
-            {!isZone && (
+                hidden on zones and on utm machines. */}
+            {!isZone && !utmMode && (
               <div className="row g-2 align-items-end mt-0">
                 {TUNING_FIELDS.map(field => {
                   const inputId = `add-nic-${row.key}-${field.key}`;
@@ -939,6 +940,7 @@ NetworkAdaptersEditor.propTypes = {
   knobDefaults: PropTypes.object,
   machineNetif: PropTypes.string,
   currentServer: PropTypes.object,
+  utmMode: PropTypes.bool,
   formDisabled: PropTypes.bool,
 };
 

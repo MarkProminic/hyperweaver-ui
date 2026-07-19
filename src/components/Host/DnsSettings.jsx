@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 
@@ -17,6 +18,7 @@ const listFrom = text =>
     .filter(Boolean);
 
 const DnsSettings = ({ server, onError }) => {
+  const { t } = useTranslation();
   const { makeAgentRequest } = useServers();
   const [nameservers, setNameservers] = useState('');
   const [searchDomains, setSearchDomains] = useState('');
@@ -44,10 +46,10 @@ const DnsSettings = ({ server, onError }) => {
       setOptions(linesFrom(result.data?.options));
       setRaw(result.data?.raw || '');
     } else {
-      onError(`Failed to load the DNS configuration: ${result.message}`);
+      onError(t('host.dnsSettings.errors.loadFailed', { message: result.message }));
     }
     setLoading(false);
-  }, [server, makeAgentRequest, onError]);
+  }, [server, makeAgentRequest, onError, t]);
 
   useEffect(() => {
     load();
@@ -74,13 +76,13 @@ const DnsSettings = ({ server, onError }) => {
     );
     setSaving(false);
     if (!result.success) {
-      onError(`Failed to save the DNS configuration: ${result.message}`);
+      onError(t('host.dnsSettings.errors.saveFailed', { message: result.message }));
       return;
     }
     setMsg(
       result.data?.backup
-        ? `Saved — the previous file was backed up to ${result.data.backup}.`
-        : 'Saved.'
+        ? t('host.dnsSettings.savedWithBackup', { backup: result.data.backup })
+        : t('host.dnsSettings.saved')
     );
     load();
   };
@@ -91,7 +93,7 @@ const DnsSettings = ({ server, onError }) => {
         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
           <h3 className="fs-6 fw-bold mb-0">
             <i className="fas fa-route me-2" />
-            DNS Resolver
+            {t('host.dnsSettings.dnsResolver')}
           </h3>
           <div className="d-flex gap-2">
             <div className="form-check form-switch align-self-center">
@@ -105,7 +107,7 @@ const DnsSettings = ({ server, onError }) => {
                 disabled={loading || saving}
               />
               <label className="form-check-label" htmlFor="dns-raw-mode">
-                Edit raw file
+                {t('host.dnsSettings.editRawFile')}
               </label>
             </div>
             <button
@@ -115,7 +117,7 @@ const DnsSettings = ({ server, onError }) => {
               disabled={loading || saving}
             >
               <i className={`fas fa-sync-alt me-2 ${loading ? 'fa-spin' : ''}`} />
-              Refresh
+              {t('host.dnsSettings.refresh')}
             </button>
             <button
               type="button"
@@ -124,17 +126,15 @@ const DnsSettings = ({ server, onError }) => {
               disabled={loading || saving}
             >
               <i className={`fas ${saving ? 'fa-spinner fa-pulse' : 'fa-save'} me-2`} />
-              Save
+              {t('host.dnsSettings.save')}
             </button>
           </div>
         </div>
 
         {msg && <div className="alert alert-success py-2">{msg}</div>}
         <p className="form-text text-muted mt-0">
-          A timestamped backup of the current file is written before every save.
-          {rawMode
-            ? ' Raw mode saves the file text verbatim.'
-            : ' The parsed fields rewrite the file; one value per line in the list fields.'}
+          {t('host.dnsSettings.backupNote')}
+          {rawMode ? t('host.dnsSettings.rawModeNote') : t('host.dnsSettings.parsedNote')}
         </p>
 
         {rawMode ? (
@@ -144,13 +144,13 @@ const DnsSettings = ({ server, onError }) => {
             value={raw}
             onChange={e => setRaw(e.target.value)}
             disabled={loading || saving}
-            aria-label="Raw resolver configuration"
+            aria-label={t('host.dnsSettings.rawAriaLabel')}
           />
         ) : (
           <div className="row g-3">
             <div className="col-12 col-md-4">
               <label className="form-label" htmlFor="dns-nameservers">
-                Nameservers (one per line)
+                {t('host.dnsSettings.nameservers')}
               </label>
               <textarea
                 id="dns-nameservers"
@@ -164,7 +164,7 @@ const DnsSettings = ({ server, onError }) => {
             </div>
             <div className="col-12 col-md-4">
               <label className="form-label" htmlFor="dns-search-domains">
-                Search domains (one per line)
+                {t('host.dnsSettings.searchDomains')}
               </label>
               <textarea
                 id="dns-search-domains"
@@ -177,7 +177,7 @@ const DnsSettings = ({ server, onError }) => {
             </div>
             <div className="col-12 col-md-4">
               <label className="form-label" htmlFor="dns-domain">
-                Domain
+                {t('host.dnsSettings.domain')}
               </label>
               <input
                 id="dns-domain"
@@ -188,7 +188,7 @@ const DnsSettings = ({ server, onError }) => {
                 disabled={loading || saving}
               />
               <label className="form-label mt-3" htmlFor="dns-options">
-                Options (one per line)
+                {t('host.dnsSettings.options')}
               </label>
               <textarea
                 id="dns-options"

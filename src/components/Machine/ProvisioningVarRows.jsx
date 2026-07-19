@@ -18,9 +18,6 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 export const VAR_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/u;
 export const ROLE_NAME_PATTERN = /^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$/u;
 
-export const VAR_NAME_RULE =
-  'Variable names: letters, numbers, underscores — can’t start with a number.';
-
 /** Render a vars value for editing; parse it back preserving JSON types. */
 export const varToText = value => (typeof value === 'string' ? value : JSON.stringify(value));
 export const textToVar = text => {

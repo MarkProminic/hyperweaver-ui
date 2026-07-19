@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { ConfirmModal } from '../common';
@@ -9,6 +10,7 @@ import EtherstubDetailsModal from './EtherstubDetailsModal';
 import EtherstubTable from './EtherstubTable';
 
 const EtherstubManagement = ({ server, onError }) => {
+  const { t } = useTranslation();
   const [etherstubs, setEtherstubs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -49,16 +51,16 @@ const EtherstubManagement = ({ server, onError }) => {
       if (result.success) {
         setEtherstubs(result.data?.etherstubs || []);
       } else {
-        onError(result.message || 'Failed to load etherstubs');
+        onError(result.message || t('host.etherstubManagement.errors.loadFailed'));
         setEtherstubs([]);
       }
     } catch (err) {
-      onError(`Error loading etherstubs: ${err.message}`);
+      onError(t('host.etherstubManagement.errors.loadError', { message: err.message }));
       setEtherstubs([]);
     } finally {
       setLoading(false);
     }
-  }, [server, makeAgentRequest, filters.name, onError]);
+  }, [server, makeAgentRequest, filters.name, onError, t]);
 
   useEffect(() => {
     loadEtherstubs();
@@ -90,10 +92,18 @@ const EtherstubManagement = ({ server, onError }) => {
         setDeleteTarget(null);
         await loadEtherstubs();
       } else {
-        onError(result.message || `Failed to delete etherstub "${deleteTarget}"`);
+        onError(
+          result.message ||
+            t('host.etherstubManagement.errors.deleteFailed', { name: deleteTarget })
+        );
       }
     } catch (err) {
-      onError(`Error deleting etherstub "${deleteTarget}": ${err.message}`);
+      onError(
+        t('host.etherstubManagement.errors.deleteError', {
+          name: deleteTarget,
+          message: err.message,
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -111,7 +121,7 @@ const EtherstubManagement = ({ server, onError }) => {
       const etherstubName = etherstub.name || etherstub.link;
 
       if (!etherstubName) {
-        onError('Unable to determine etherstub name');
+        onError(t('host.etherstubManagement.errors.nameUnknown'));
         return;
       }
 
@@ -128,10 +138,10 @@ const EtherstubManagement = ({ server, onError }) => {
         setEtherstubDetails(result.data);
         setShowDetailsModal(true);
       } else {
-        onError(result.message || 'Failed to load etherstub details');
+        onError(result.message || t('host.etherstubManagement.errors.detailsFailed'));
       }
     } catch (err) {
-      onError(`Error loading etherstub details: ${err.message}`);
+      onError(t('host.etherstubManagement.errors.detailsError', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -159,10 +169,10 @@ const EtherstubManagement = ({ server, onError }) => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">Etherstub Management</h2>
+        <h2 className="fs-5 fw-bold">{t('host.etherstubManagement.title')}</h2>
         <p>
-          Manage etherstubs on <strong>{server.hostname}</strong>. Etherstubs provide a virtual
-          Layer 2 switch for connecting VNICs.
+          {t('host.etherstubManagement.managePrefix')} <strong>{server.hostname}</strong>
+          {t('host.etherstubManagement.manageSuffix')}
         </p>
       </div>
 
@@ -173,13 +183,13 @@ const EtherstubManagement = ({ server, onError }) => {
             <div className="col">
               <div className="mb-3">
                 <label htmlFor="etherstub-filter-name" className="form-label">
-                  Filter by Name
+                  {t('host.etherstubManagement.filterByName')}
                 </label>
                 <input
                   id="etherstub-filter-name"
                   className="form-control"
                   type="text"
-                  placeholder="Etherstub name"
+                  placeholder={t('host.etherstubManagement.etherstubNamePlaceholder')}
                   value={filters.name}
                   onChange={e => handleFilterChange('name', e.target.value)}
                 />
@@ -197,7 +207,7 @@ const EtherstubManagement = ({ server, onError }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-sync-alt me-2" />
-                  <span>Refresh</span>
+                  <span>{t('host.etherstubManagement.refresh')}</span>
                 </button>
               </div>
             </div>
@@ -213,7 +223,7 @@ const EtherstubManagement = ({ server, onError }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-times me-2" />
-                  <span>Clear</span>
+                  <span>{t('host.etherstubManagement.clear')}</span>
                 </button>
               </div>
             </div>
@@ -227,7 +237,7 @@ const EtherstubManagement = ({ server, onError }) => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center gap-2">
               <h3 className="fs-6 fw-bold">
-                Etherstubs ({etherstubs.length})
+                {t('host.etherstubManagement.etherstubs', { total: etherstubs.length })}
                 {loading && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin" />
@@ -243,7 +253,7 @@ const EtherstubManagement = ({ server, onError }) => {
                 disabled={loading}
               >
                 <i className="fas fa-plus me-2" />
-                <span>Create Etherstub</span>
+                <span>{t('host.etherstubManagement.createEtherstub')}</span>
               </button>
             </div>
           </div>
@@ -285,9 +295,9 @@ const EtherstubManagement = ({ server, onError }) => {
           isOpen
           onClose={() => setDeleteTarget(null)}
           onConfirm={confirmDeleteEtherstub}
-          title="Delete Etherstub"
-          message={`Are you sure you want to delete etherstub "${deleteTarget}"?`}
-          confirmText="Delete"
+          title={t('host.etherstubManagement.deleteTitle')}
+          message={t('host.etherstubManagement.deleteMessage', { name: deleteTarget })}
+          confirmText={t('host.etherstubManagement.delete')}
           confirmVariant="is-danger"
           icon="fas fa-trash"
           loading={loading}

@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const LogControls = ({
   filters,
@@ -11,11 +12,15 @@ const LogControls = ({
   onToggleStreaming,
   selectedLog,
 }) => {
+  const { t } = useTranslation();
+
   const getStreamingTitle = () => {
     if (selectedLog?.type === 'fault-manager') {
-      return 'Streaming not available for Fault Manager logs';
+      return t('host.logControls.streamingUnavailable');
     }
-    return isStreaming ? 'Stop real-time streaming' : 'Start real-time streaming';
+    return isStreaming
+      ? t('host.logControls.stopStreamingTitle')
+      : t('host.logControls.startStreamingTitle');
   };
 
   return (
@@ -25,7 +30,7 @@ const LogControls = ({
           <div className="col-2">
             <div className="mb-3">
               <label className="form-label" htmlFor="log-lines">
-                Lines
+                {t('host.logControls.lines')}
               </label>
               <input
                 id="log-lines"
@@ -41,13 +46,13 @@ const LogControls = ({
           <div className="col-3">
             <div className="mb-3">
               <label className="form-label" htmlFor="log-grep">
-                Filter (grep)
+                {t('host.logControls.filterGrep')}
               </label>
               <input
                 id="log-grep"
                 className="form-control form-control-sm"
                 type="text"
-                placeholder="error, warning..."
+                placeholder={t('host.logControls.filterPlaceholder')}
                 value={filters.grep}
                 onChange={e => onFilterChange('grep', e.target.value)}
               />
@@ -56,7 +61,7 @@ const LogControls = ({
           <div className="col-3">
             <div className="mb-3">
               <label className="form-label" htmlFor="log-since">
-                Since
+                {t('host.logControls.since')}
               </label>
               <input
                 id="log-since"
@@ -70,7 +75,7 @@ const LogControls = ({
           <div className="col-1">
             <div className="mb-3">
               <label className="form-label" htmlFor="log-tail">
-                Tail
+                {t('host.logControls.tail')}
               </label>
               <div className="form-check">
                 <input
@@ -81,7 +86,7 @@ const LogControls = ({
                   onChange={e => onFilterChange('tail', e.target.checked)}
                 />
                 <label className="form-check-label" htmlFor="log-tail">
-                  Latest
+                  {t('host.logControls.latest')}
                 </label>
               </div>
             </div>
@@ -96,7 +101,7 @@ const LogControls = ({
                 disabled={loading}
               >
                 <i className="fas fa-sync-alt me-2" />
-                <span>Refresh</span>
+                <span>{t('host.logControls.refresh')}</span>
               </button>
             </div>
           </div>
@@ -110,7 +115,7 @@ const LogControls = ({
                 disabled={loading || isStreaming}
               >
                 <i className={`fas ${autoRefresh ? 'fa-pause' : 'fa-play'} me-2`} />
-                <span>{autoRefresh ? 'Stop' : 'Auto'}</span>
+                <span>{autoRefresh ? t('host.logControls.stop') : t('host.logControls.auto')}</span>
               </button>
             </div>
           </div>
@@ -125,7 +130,11 @@ const LogControls = ({
                 title={getStreamingTitle()}
               >
                 <i className={`fas ${isStreaming ? 'fa-stop' : 'fa-stream'} me-2`} />
-                <span>{isStreaming ? 'Stop Stream' : 'Live Stream'}</span>
+                <span>
+                  {isStreaming
+                    ? t('host.logControls.stopStream')
+                    : t('host.logControls.liveStream')}
+                </span>
               </button>
             </div>
           </div>

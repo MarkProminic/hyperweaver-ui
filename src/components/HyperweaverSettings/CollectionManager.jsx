@@ -1,6 +1,7 @@
 import axios from 'axios';
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { buildCollectionItemFields } from '../../utils/settingsUtils';
 import { ConfirmModal, FormModal } from '../common';
@@ -22,6 +23,7 @@ const EMPTY_OBJ = {};
  * blank on edit keeps the stored value.
  */
 const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
+  const { t } = useTranslation();
   const { path, label } = field;
   const { icon, itemSchema, itemLabelField, secretFields, keyLabel, itemNoun } = field.collection;
 
@@ -57,14 +59,21 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
       if (response.data.success) {
         setItems(response.data.items);
       } else {
-        setMsg(`Failed to load ${label}: ${response.data.message}`);
+        setMsg(
+          t('settings.collectionManager.failedToLoad', { label, message: response.data.message })
+        );
       }
     } catch (error) {
-      setMsg(`Error loading ${label}: ${error.response?.data?.message || error.message}`);
+      setMsg(
+        t('settings.collectionManager.errorLoading', {
+          label,
+          error: error.response?.data?.message || error.message,
+        })
+      );
     } finally {
       setListLoading(false);
     }
-  }, [endpoint, label, setMsg]);
+  }, [endpoint, label, setMsg, t]);
 
   useEffect(() => {
     loadItems();
@@ -105,10 +114,10 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
     const isEdit = editingKey !== null;
     if (!isEdit) {
       if (!itemKey) {
-        return `${keyLabel} is required`;
+        return t('settings.collectionManager.keyRequired', { keyLabel });
       }
       if (!KEY_PATTERN.test(itemKey)) {
-        return `${keyLabel} may contain only letters, numbers, and underscores`;
+        return t('settings.collectionManager.keyPattern', { keyLabel });
       }
     }
     const missing = itemFields.find(f => {
@@ -121,8 +130,8 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
       const v = itemValues[f.path];
       return v === undefined || v === null || v === '';
     });
-    return missing ? `${missing.label} is required` : null;
-  }, [editingKey, itemKey, keyLabel, itemFields, secretFields, itemValues]);
+    return missing ? t('settings.collectionManager.fieldRequired', { label: missing.label }) : null;
+  }, [editingKey, itemKey, keyLabel, itemFields, secretFields, itemValues, t]);
 
   const submitItem = useCallback(
     async e => {
@@ -149,10 +158,20 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
           setShowModal(false);
           await loadItems();
         } else {
-          setMsg(`Failed to save ${itemNoun}: ${response.data.message}`);
+          setMsg(
+            t('settings.collectionManager.failedToSave', {
+              itemNoun,
+              message: response.data.message,
+            })
+          );
         }
       } catch (error) {
-        setMsg(`Error saving ${itemNoun}: ${error.response?.data?.message || error.message}`);
+        setMsg(
+          t('settings.collectionManager.errorSaving', {
+            itemNoun,
+            error: error.response?.data?.message || error.message,
+          })
+        );
       } finally {
         setSubmitting(false);
       }
@@ -167,6 +186,7 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
       setMsg,
       setRequiresRestart,
       loadItems,
+      t,
     ]
   );
 
@@ -183,14 +203,24 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
         }
         await loadItems();
       } else {
-        setMsg(`Failed to delete ${itemNoun}: ${response.data.message}`);
+        setMsg(
+          t('settings.collectionManager.failedToDelete', {
+            itemNoun,
+            message: response.data.message,
+          })
+        );
       }
     } catch (error) {
-      setMsg(`Error deleting ${itemNoun}: ${error.response?.data?.message || error.message}`);
+      setMsg(
+        t('settings.collectionManager.errorDeleting', {
+          itemNoun,
+          error: error.response?.data?.message || error.message,
+        })
+      );
     } finally {
       setSubmitting(false);
     }
-  }, [confirmDelete, endpoint, itemNoun, setMsg, setRequiresRestart, loadItems]);
+  }, [confirmDelete, endpoint, itemNoun, setMsg, setRequiresRestart, loadItems, t]);
 
   const busy = loading || submitting;
   const rowLabel = item => (itemLabelField && item[itemLabelField]) || item._key;
@@ -204,7 +234,7 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
             role="status"
             aria-hidden="true"
           />
-          Loading…
+          {t('settings.collectionManager.loading')}
         </div>
       );
     }
@@ -213,8 +243,10 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
       return (
         <div className="alert alert-warning mb-0">
           <p className="small mb-0">
-            No {label.toLowerCase()} configured yet. Click &quot;Add {itemNoun}
-            &quot; to add one.
+            {t('settings.collectionManager.emptyState', {
+              label: label.toLowerCase(),
+              itemNoun,
+            })}
           </p>
         </div>
       );
@@ -230,9 +262,13 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
                 <span className="badge text-bg-secondary ms-2">{item._key}</span>
                 {typeof item.enabled === 'boolean' &&
                   (item.enabled ? (
-                    <span className="badge text-bg-success ms-2">Enabled</span>
+                    <span className="badge text-bg-success ms-2">
+                      {t('settings.collectionManager.enabled')}
+                    </span>
                   ) : (
-                    <span className="badge text-bg-secondary ms-2">Disabled</span>
+                    <span className="badge text-bg-secondary ms-2">
+                      {t('settings.collectionManager.disabled')}
+                    </span>
                   ))}
               </div>
               <div className="d-flex gap-2">
@@ -243,7 +279,7 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
                   disabled={busy}
                 >
                   <i className="fas fa-pen me-1" />
-                  Edit
+                  {t('settings.collectionManager.edit')}
                 </button>
                 <button
                   type="button"
@@ -252,7 +288,7 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
                   disabled={busy}
                 >
                   <i className="fas fa-trash me-1" />
-                  Delete
+                  {t('settings.collectionManager.delete')}
                 </button>
               </div>
             </div>
@@ -272,7 +308,7 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
         )}
         <button type="button" className="btn btn-primary btn-sm" onClick={openAdd} disabled={busy}>
           <i className="fas fa-plus me-2" />
-          <span>Add {itemNoun}</span>
+          <span>{t('settings.collectionManager.addItem', { itemNoun })}</span>
         </button>
       </div>
 
@@ -283,9 +319,17 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
           isOpen={showModal}
           onClose={() => setShowModal(false)}
           onSubmit={submitItem}
-          title={editingKey ? `Edit ${itemNoun}` : `Add ${itemNoun}`}
+          title={
+            editingKey
+              ? t('settings.collectionManager.editItem', { itemNoun })
+              : t('settings.collectionManager.addItem', { itemNoun })
+          }
           icon={icon}
-          submitText={submitting ? 'Saving...' : `Save ${itemNoun}`}
+          submitText={
+            submitting
+              ? t('settings.collectionManager.saving')
+              : t('settings.collectionManager.saveItem', { itemNoun })
+          }
           submitVariant="is-primary"
           loading={submitting}
         >
@@ -304,8 +348,8 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
             />
             <p className="form-text text-muted">
               {editingKey
-                ? 'Internal identifier (cannot be changed after creation)'
-                : 'Internal identifier (letters, numbers, and underscores only)'}
+                ? t('settings.collectionManager.identifierLocked')
+                : t('settings.collectionManager.identifierHint')}
             </p>
           </div>
 
@@ -332,7 +376,7 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
 
           {editingKey && secretFields.length > 0 && (
             <p className="form-text text-muted">
-              Leave secret fields blank to keep their current values.
+              {t('settings.collectionManager.secretFieldsHint')}
             </p>
           )}
         </FormModal>
@@ -342,9 +386,12 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
         isOpen={confirmDelete !== null}
         onClose={() => setConfirmDelete(null)}
         onConfirm={deleteItem}
-        title={`Delete ${itemNoun}`}
-        message={`Are you sure you want to delete the ${itemNoun} "${confirmDelete}"? This cannot be undone.`}
-        confirmText={`Delete ${itemNoun}`}
+        title={t('settings.collectionManager.deleteItem', { itemNoun })}
+        message={t('settings.collectionManager.deleteItemConfirm', {
+          itemNoun,
+          key: confirmDelete,
+        })}
+        confirmText={t('settings.collectionManager.deleteItem', { itemNoun })}
         confirmVariant="is-danger"
         icon="fas fa-trash"
         loading={submitting}

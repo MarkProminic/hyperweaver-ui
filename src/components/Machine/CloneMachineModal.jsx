@@ -24,6 +24,7 @@ const CloneMachineModal = ({
   onClose,
   currentServer,
   machineName,
+  hypervisor,
   isRunning,
   onCloned,
 }) => {
@@ -43,7 +44,10 @@ const CloneMachineModal = ({
   const [details, setDetails] = useState([]);
 
   const singular = resourceLabel(currentServer, { plural: false });
-  const snapshotsAvailable = hasFeature(currentServer, 'machine-snapshots');
+  // utm clones take no snapshot/linked options (the wire 400s them) — the
+  // whole snapshot panel hides and nothing snapshot-shaped rides the body.
+  const isUtm = hypervisor === 'utm';
+  const snapshotsAvailable = hasFeature(currentServer, 'machine-snapshots') && !isUtm;
 
   // The snapshot picker feeds from the snapshots list (§4) the moment the
   // user picks copy-current-state.
@@ -66,7 +70,7 @@ const CloneMachineModal = ({
       setMsg(t('machine.cloneMachineModal.hostnameRequired'));
       return;
     }
-    if (source === 'current' && isRunning && !snapshot) {
+    if (source === 'current' && isRunning && !snapshot && !isUtm) {
       setMsg(t('machine.cloneMachineModal.snapshotRequiredWhileRunning'));
       return;
     }
@@ -181,7 +185,7 @@ const CloneMachineModal = ({
         </div>
       </div>
 
-      {source === 'current' && (
+      {source === 'current' && !isUtm && (
         <div className="border rounded p-2 mb-3">
           <div className="mb-2">
             <label className="form-label" htmlFor="clone-snapshot">
@@ -328,6 +332,7 @@ CloneMachineModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   currentServer: PropTypes.object,
   machineName: PropTypes.string.isRequired,
+  hypervisor: PropTypes.string,
   isRunning: PropTypes.bool,
   onCloned: PropTypes.func.isRequired,
 };

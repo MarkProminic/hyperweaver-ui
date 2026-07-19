@@ -148,6 +148,16 @@ const MachineInfo = ({ machineDetails, monitoringHealth, getMachineStatus, selec
                   </span>
                 </td>
               </tr>
+              {machine_info.hypervisor && (
+                <tr>
+                  <td className="px-3 py-2">
+                    <strong>{t('machine.machineInfo.hypervisorLabel')}</strong>
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className="badge text-bg-secondary">{machine_info.hypervisor}</span>
+                  </td>
+                </tr>
+              )}
               {machine_info.backing && (
                 <tr>
                   <td className="px-3 py-2">
@@ -273,6 +283,7 @@ MachineInfo.propTypes = {
   machineDetails: PropTypes.shape({
     machine_info: PropTypes.shape({
       status: PropTypes.string,
+      hypervisor: PropTypes.string,
       backing: PropTypes.string,
       home: PropTypes.string,
       last_seen: PropTypes.string,

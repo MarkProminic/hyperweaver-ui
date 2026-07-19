@@ -18,15 +18,18 @@ import { hasHypervisor } from '../../utils/capabilities';
 const IP_PATTERN = /^\/VirtualBox\/GuestInfo\/Net\/(?<nic>\d+)\/V4\/IP$/u;
 const CLOUD_INIT_PREFIX = '/Hyperweaver/CloudInit/';
 
-const MachineGuestInfo = ({ currentServer, machineName, colClass = 'col-12' }) => {
+const MachineGuestInfo = ({ currentServer, machineName, hypervisor, colClass = 'col-12' }) => {
   const { t } = useTranslation();
   const [properties, setProperties] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
   const isBhyve = hasHypervisor(currentServer, 'bhyve');
+  // Guest properties are the VirtualBox additions surface — utm machines
+  // have none (the endpoint 400s), so they are never asked.
+  const isUtm = hypervisor === 'utm';
 
   const load = useCallback(async () => {
-    if (!currentServer || !machineName || isBhyve) {
+    if (!currentServer || !machineName || isBhyve || isUtm) {
       return;
     }
     const result = await getGuestProperties(
@@ -39,7 +42,7 @@ const MachineGuestInfo = ({ currentServer, machineName, colClass = 'col-12' }) =
       result.success && Array.isArray(result.data?.properties) ? result.data.properties : []
     );
     setLoaded(true);
-  }, [currentServer, machineName, isBhyve]);
+  }, [currentServer, machineName, isBhyve, isUtm]);
 
   useEffect(() => {
     load();
@@ -141,6 +144,7 @@ const MachineGuestInfo = ({ currentServer, machineName, colClass = 'col-12' }) =
 MachineGuestInfo.propTypes = {
   currentServer: PropTypes.object,
   machineName: PropTypes.string.isRequired,
+  hypervisor: PropTypes.string,
   colClass: PropTypes.string,
 };
 

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 
@@ -23,6 +24,7 @@ const BootEnvironmentManagement = ({ server }) => {
   });
 
   const { makeAgentRequest } = useServers();
+  const { t } = useTranslation();
 
   const loadBootEnvironments = useCallback(async () => {
     if (!server || !makeAgentRequest) {
@@ -72,16 +74,16 @@ const BootEnvironmentManagement = ({ server }) => {
         });
         setBootEnvironments(filteredBEs);
       } else {
-        setError(result.message || 'Failed to load boot environments');
+        setError(result.message || t('host.bootEnvironmentManagement.errors.loadFailed'));
         setBootEnvironments([]);
       }
     } catch (err) {
-      setError(`Error loading boot environments: ${err.message}`);
+      setError(t('host.bootEnvironmentManagement.errors.loadError', { message: err.message }));
       setBootEnvironments([]);
     } finally {
       setLoading(false);
     }
-  }, [server, makeAgentRequest, filters]);
+  }, [server, makeAgentRequest, filters, t]);
 
   useEffect(() => {
     loadBootEnvironments();
@@ -89,7 +91,10 @@ const BootEnvironmentManagement = ({ server }) => {
 
   const handleBEAction = async (beName, action, options = {}) => {
     if (!server || !makeAgentRequest) {
-      return { success: false, message: 'No server connection' };
+      return {
+        success: false,
+        message: t('host.bootEnvironmentManagement.errors.noServerConnection'),
+      };
     }
 
     try {
@@ -154,10 +159,15 @@ const BootEnvironmentManagement = ({ server }) => {
         await loadBootEnvironments();
         return { success: true, data: result.data };
       }
-      setError(result.message || `Failed to ${action} boot environment`);
+      setError(
+        result.message || t('host.bootEnvironmentManagement.errors.actionFailed', { action })
+      );
       return { success: false, message: result.message };
     } catch (err) {
-      const errorMsg = `Error during boot environment ${action}: ${err.message}`;
+      const errorMsg = t('host.bootEnvironmentManagement.errors.actionError', {
+        action,
+        message: err.message,
+      });
       setError(errorMsg);
       return { success: false, message: errorMsg };
     } finally {
@@ -190,7 +200,7 @@ const BootEnvironmentManagement = ({ server }) => {
   if (!server || !makeAgentRequest) {
     return (
       <div className="alert alert-info">
-        <p>Please select a server to manage boot environments.</p>
+        <p>{t('host.bootEnvironmentManagement.selectServer')}</p>
       </div>
     );
   }
@@ -198,10 +208,10 @@ const BootEnvironmentManagement = ({ server }) => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="fs-5 fw-bold">Boot Environment Management</h2>
+        <h2 className="fs-5 fw-bold">{t('host.bootEnvironmentManagement.title')}</h2>
         <p>
-          Manage boot environments on <strong>{server.hostname}</strong>. Create, activate, mount,
-          and delete boot environments.
+          {t('host.bootEnvironmentManagement.manageOn')} <strong>{server.hostname}</strong>.{' '}
+          {t('host.bootEnvironmentManagement.manageActions')}
         </p>
       </div>
 
@@ -220,13 +230,13 @@ const BootEnvironmentManagement = ({ server }) => {
             <div className="col">
               <div className="mb-3">
                 <label htmlFor="be-filter-name" className="form-label">
-                  Filter by Name
+                  {t('host.bootEnvironmentManagement.filterByName')}
                 </label>
                 <input
                   id="be-filter-name"
                   className="form-control"
                   type="text"
-                  placeholder="Enter boot environment name..."
+                  placeholder={t('host.bootEnvironmentManagement.filterByNamePlaceholder')}
                   value={filters.name}
                   onChange={e => handleFilterChange('name', e.target.value)}
                 />
@@ -235,7 +245,7 @@ const BootEnvironmentManagement = ({ server }) => {
             <div className="col">
               <div className="mb-3">
                 <label htmlFor="be-filter-status" className="form-label">
-                  Filter by Status
+                  {t('host.bootEnvironmentManagement.filterByStatus')}
                 </label>
                 <select
                   id="be-filter-status"
@@ -243,16 +253,24 @@ const BootEnvironmentManagement = ({ server }) => {
                   value={filters.status}
                   onChange={e => handleFilterChange('status', e.target.value)}
                 >
-                  <option value="">All Status</option>
-                  <option value="active">Active Now</option>
-                  <option value="reboot">Active on Reboot</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="">{t('host.bootEnvironmentManagement.statusAll')}</option>
+                  <option value="active">
+                    {t('host.bootEnvironmentManagement.statusActiveNow')}
+                  </option>
+                  <option value="reboot">
+                    {t('host.bootEnvironmentManagement.statusActiveOnReboot')}
+                  </option>
+                  <option value="inactive">
+                    {t('host.bootEnvironmentManagement.statusInactive')}
+                  </option>
                 </select>
               </div>
             </div>
             <div className="col-auto">
               <div className="mb-3">
-                <span className="form-label d-block">Show Detailed</span>
+                <span className="form-label d-block">
+                  {t('host.bootEnvironmentManagement.showDetailed')}
+                </span>
                 <div className="form-check form-switch">
                   <input
                     id="be-filter-detailed"
@@ -263,14 +281,16 @@ const BootEnvironmentManagement = ({ server }) => {
                     onChange={e => handleFilterChange('showDetailed', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="be-filter-detailed">
-                    Details
+                    {t('host.bootEnvironmentManagement.details')}
                   </label>
                 </div>
               </div>
             </div>
             <div className="col-auto">
               <div className="mb-3">
-                <span className="form-label d-block">Show Snapshots</span>
+                <span className="form-label d-block">
+                  {t('host.bootEnvironmentManagement.showSnapshots')}
+                </span>
                 <div className="form-check form-switch">
                   <input
                     id="be-filter-snapshots"
@@ -281,7 +301,7 @@ const BootEnvironmentManagement = ({ server }) => {
                     onChange={e => handleFilterChange('showSnapshots', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="be-filter-snapshots">
-                    Snapshots
+                    {t('host.bootEnvironmentManagement.snapshots')}
                   </label>
                 </div>
               </div>
@@ -298,7 +318,7 @@ const BootEnvironmentManagement = ({ server }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-sync-alt me-2" />
-                  <span>Refresh</span>
+                  <span>{t('host.bootEnvironmentManagement.refresh')}</span>
                 </button>
               </div>
             </div>
@@ -314,7 +334,7 @@ const BootEnvironmentManagement = ({ server }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-times me-2" />
-                  <span>Clear</span>
+                  <span>{t('host.bootEnvironmentManagement.clear')}</span>
                 </button>
               </div>
             </div>
@@ -328,7 +348,9 @@ const BootEnvironmentManagement = ({ server }) => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center gap-2">
               <h3 className="fs-6 fw-bold mb-0">
-                Boot Environments ({bootEnvironments.length})
+                {t('host.bootEnvironmentManagement.bootEnvironmentsCount', {
+                  count: bootEnvironments.length,
+                })}
                 {loading && (
                   <span className="ms-2">
                     <i className="fas fa-spinner fa-spin" />
@@ -344,7 +366,7 @@ const BootEnvironmentManagement = ({ server }) => {
                 disabled={loading}
               >
                 <i className="fas fa-plus me-2" />
-                <span>Create Boot Environment</span>
+                <span>{t('host.bootEnvironmentManagement.createBootEnvironment')}</span>
               </button>
             </div>
           </div>

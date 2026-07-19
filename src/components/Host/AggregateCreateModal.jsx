@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { FormModal } from '../common';
@@ -30,6 +31,7 @@ const AggregateCreateModal = ({
   const [loadingLinks, setLoadingLinks] = useState(false);
   const [currentStep, setCurrentStep] = useState('');
 
+  const { t } = useTranslation();
   const { makeAgentRequest } = useServers();
 
   const generateNextAggregateName = useCallback(() => {
@@ -129,27 +131,25 @@ const AggregateCreateModal = ({
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      onError('Aggregate name is required');
+      onError(t('host.aggregateCreateModal.errors.nameRequired'));
       return false;
     }
 
     if (formData.links.length === 0) {
-      onError('At least one link is required');
+      onError(t('host.aggregateCreateModal.errors.linkRequired'));
       return false;
     }
 
     const nameRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
     if (!nameRegex.test(formData.name)) {
-      onError(
-        'Aggregate name must start with a letter and contain only letters, numbers, and underscores'
-      );
+      onError(t('host.aggregateCreateModal.errors.nameFormat'));
       return false;
     }
 
     if (formData.unicast_address) {
       const macRegex = /^(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/;
       if (!macRegex.test(formData.unicast_address)) {
-        onError('Invalid MAC address format (must be XX:XX:XX:XX:XX:XX)');
+        onError(t('host.aggregateCreateModal.errors.macFormat'));
         return false;
       }
     }
@@ -158,7 +158,7 @@ const AggregateCreateModal = ({
   };
 
   const disableCdpService = async () => {
-    setCurrentStep('Disabling CDP service...');
+    setCurrentStep(t('host.aggregateCreateModal.stepDisablingCdp'));
 
     const result = await makeAgentRequest(
       server.hostname,
@@ -173,14 +173,14 @@ const AggregateCreateModal = ({
     );
 
     if (!result.success) {
-      throw new Error(result.message || 'Failed to disable CDP service');
+      throw new Error(result.message || t('host.aggregateCreateModal.errors.disableCdpFailed'));
     }
 
     return result;
   };
 
   const createAggregate = async () => {
-    setCurrentStep('Creating link aggregate...');
+    setCurrentStep(t('host.aggregateCreateModal.stepCreating'));
 
     const requestData = {
       name: formData.name.trim(),
@@ -205,7 +205,7 @@ const AggregateCreateModal = ({
     );
 
     if (!result.success) {
-      throw new Error(result.message || 'Failed to create link aggregate');
+      throw new Error(result.message || t('host.aggregateCreateModal.errors.createFailed'));
     }
 
     return result;
@@ -217,7 +217,7 @@ const AggregateCreateModal = ({
     }
 
     if (cdpServiceRunning && !formData.disableCdp) {
-      onError('CDP service is running. Please check "Disable CDP service" to proceed.');
+      onError(t('host.aggregateCreateModal.errors.cdpRunning'));
       return;
     }
 
@@ -232,7 +232,7 @@ const AggregateCreateModal = ({
 
       await createAggregate();
 
-      setCurrentStep('Aggregate created successfully!');
+      setCurrentStep(t('host.aggregateCreateModal.stepCreated'));
       onSuccess();
     } catch (err) {
       onError(`${currentStep ? `${currentStep.replace('...', '')}: ` : ''}${err.message}`);
@@ -247,9 +247,9 @@ const AggregateCreateModal = ({
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create Aggregate"
+      title={t('host.aggregateCreateModal.title')}
       icon="fas fa-plus-circle"
-      submitText="Create Aggregate"
+      submitText={t('host.aggregateCreateModal.title')}
       submitVariant="is-primary"
       loading={creating}
       additionalActions={

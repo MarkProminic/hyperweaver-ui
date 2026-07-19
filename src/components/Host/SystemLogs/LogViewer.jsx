@@ -1,7 +1,10 @@
 import PropTypes from 'prop-types';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const LogViewer = ({ selectedLog, logData, loading, isStreaming, streamLines, onClearStream }) => {
+  const { t } = useTranslation();
+
   const getLogIcon = type => {
     switch (type) {
       case 'system':
@@ -116,7 +119,9 @@ const LogViewer = ({ selectedLog, logData, loading, isStreaming, streamLines, on
         <div className="text-center p-6">
           <i className="fas fa-spinner fa-spin fa-2x" />
           <p className="mt-2">
-            {isStreaming ? 'Connecting to log stream...' : 'Loading log content...'}
+            {isStreaming
+              ? t('host.logViewer.connectingStream')
+              : t('host.logViewer.loadingContent')}
           </p>
         </div>
       );
@@ -127,9 +132,9 @@ const LogViewer = ({ selectedLog, logData, loading, isStreaming, streamLines, on
         <div className="text-center p-6">
           <i className="fas fa-satellite-dish fa-2x text-success" />
           <p className="mt-2 text-success">
-            <strong>Live stream active</strong>
+            <strong>{t('host.logViewer.liveStreamActive')}</strong>
           </p>
-          <p className="small text-muted">Waiting for new log entries...</p>
+          <p className="small text-muted">{t('host.logViewer.waitingEntries')}</p>
         </div>
       );
     }
@@ -138,7 +143,7 @@ const LogViewer = ({ selectedLog, logData, loading, isStreaming, streamLines, on
       <div className="text-center p-6">
         <i className="fas fa-file-alt fa-2x text-muted" />
         <p className="mt-2 text-muted">
-          {selectedLog ? 'Click Refresh to load log content' : 'Select a log file to view content'}
+          {selectedLog ? t('host.logViewer.clickRefresh') : t('host.logViewer.selectLogFile')}
         </p>
       </div>
     );
@@ -160,7 +165,7 @@ const LogViewer = ({ selectedLog, logData, loading, isStreaming, streamLines, on
               {isStreaming && (
                 <span className="badge text-bg-primary ms-2">
                   <i className="fas fa-satellite-dish me-2" />
-                  <span>Live Stream</span>
+                  <span>{t('host.logViewer.liveStream')}</span>
                 </span>
               )}
             </h4>
@@ -171,18 +176,22 @@ const LogViewer = ({ selectedLog, logData, loading, isStreaming, streamLines, on
                 type="button"
                 className="btn btn-sm btn-secondary"
                 onClick={onClearStream}
-                title="Clear stream buffer"
+                title={t('host.logViewer.clearStreamBuffer')}
               >
                 <i className="fas fa-eraser me-2" />
-                <span>Clear</span>
+                <span>{t('host.logViewer.clear')}</span>
               </button>
             )}
             <div className="d-flex gap-2">
               {isStreaming && (
-                <span className="badge text-bg-primary">{streamLines.length} stream lines</span>
+                <span className="badge text-bg-primary">
+                  {t('host.logViewer.streamLines', { count: streamLines.length })}
+                </span>
               )}
               {!isStreaming && logData && (
-                <span className="badge text-bg-info">{logData.totalLines} lines</span>
+                <span className="badge text-bg-info">
+                  {t('host.logViewer.lineCount', { count: logData.totalLines })}
+                </span>
               )}
             </div>
           </div>
@@ -197,12 +206,13 @@ const LogViewer = ({ selectedLog, logData, loading, isStreaming, streamLines, on
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <p className="small mb-0">
-                  <strong>File:</strong> {logData.path}
+                  <strong>{t('host.logViewer.fileLabel')}</strong> {logData.path}
                   <span className="ms-3">
-                    <strong>Size:</strong> {logData.fileInfo.sizeFormatted}
+                    <strong>{t('host.logViewer.sizeLabel')}</strong>{' '}
+                    {logData.fileInfo.sizeFormatted}
                   </span>
                   <span className="ms-3">
-                    <strong>Modified:</strong>{' '}
+                    <strong>{t('host.logViewer.modifiedLabel')}</strong>{' '}
                     {new Date(logData.fileInfo.modified).toLocaleString()}
                   </span>
                 </p>
@@ -212,10 +222,10 @@ const LogViewer = ({ selectedLog, logData, loading, isStreaming, streamLines, on
                   type="button"
                   className="btn btn-sm btn-secondary"
                   onClick={handleDownload}
-                  title="Download Log"
+                  title={t('host.logViewer.downloadLog')}
                 >
                   <i className="fas fa-download me-2" />
-                  <span>Download</span>
+                  <span>{t('host.logViewer.download')}</span>
                 </button>
               </div>
             </div>

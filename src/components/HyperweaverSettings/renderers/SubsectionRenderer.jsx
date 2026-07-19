@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { isFieldVisible } from '../../../utils/settingsUtils';
 import SectionField from '../SectionField';
@@ -20,6 +21,7 @@ const SubsectionRenderer = ({
   setRequiresRestart,
   loading,
 }) => {
+  const { t } = useTranslation();
   const handleToggle = useCallback(() => {
     toggleSubsection(sectionName, subsectionName);
   }, [sectionName, subsectionName, toggleSubsection]);
@@ -53,8 +55,7 @@ const SubsectionRenderer = ({
             <i className={`${section.icon} me-2`} />
             {subsection.title}
             <span className="badge text-bg-light ms-2">
-              {visibleFields.length} setting
-              {visibleFields.length !== 1 ? 's' : ''}
+              {t('settings.subsectionRenderer.settingCount', { count: visibleFields.length })}
             </span>
           </h3>
         </div>

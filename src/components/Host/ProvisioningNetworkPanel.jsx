@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import {
@@ -17,6 +18,7 @@ import { ConfirmModal } from '../common';
  * existing `provisioning` token — no gate of its own.
  */
 const ProvisioningNetworkPanel = ({ server }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -36,10 +38,10 @@ const ProvisioningNetworkPanel = ({ server }) => {
       setError('');
     } else {
       setStatus(null);
-      setError(`Failed to load the provisioning network status: ${result.message}`);
+      setError(t('host.provisioningNetworkPanel.loadFailed', { message: result.message }));
     }
     setLoading(false);
-  }, [server]);
+  }, [server, t]);
 
   useEffect(() => {
     loadStatus();
@@ -52,9 +54,13 @@ const ProvisioningNetworkPanel = ({ server }) => {
     const result = await call(server.hostname, server.port, server.protocol);
     if (result.success) {
       const taskId = result.data?.task_id;
-      setMsg(`${label} queued${taskId ? ` (task ${taskId})` : ''}.`);
+      setMsg(
+        taskId
+          ? t('host.provisioningNetworkPanel.actionQueuedTask', { label, taskId })
+          : t('host.provisioningNetworkPanel.actionQueued', { label })
+      );
     } else {
-      setError(`${label} failed: ${result.message}`);
+      setError(t('host.provisioningNetworkPanel.actionFailed', { label, message: result.message }));
     }
     setLoading(false);
     // The 202 task does the work — refresh shortly after queueing.
@@ -87,7 +93,9 @@ const ProvisioningNetworkPanel = ({ server }) => {
 
   const componentDetail = value => {
     if (typeof value === 'boolean') {
-      return value ? 'OK' : 'Missing';
+      return value
+        ? t('host.provisioningNetworkPanel.ok')
+        : t('host.provisioningNetworkPanel.missing');
     }
     if (value && typeof value === 'object') {
       return Object.entries(value)
@@ -109,12 +117,14 @@ const ProvisioningNetworkPanel = ({ server }) => {
         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
           <h4 className="fs-6 fw-bold mb-0">
             <i className="fas fa-diagram-project me-2" />
-            Provisioning Network
+            {t('host.provisioningNetworkPanel.title')}
             {status && status.enabled !== false && (
               <span
                 className={`badge ms-2 ${status.ready ? 'text-bg-success' : 'text-bg-warning'}`}
               >
-                {status.ready ? 'Ready' : 'Not ready'}
+                {status.ready
+                  ? t('host.provisioningNetworkPanel.ready')
+                  : t('host.provisioningNetworkPanel.notReady')}
               </span>
             )}
           </h4>
@@ -130,22 +140,27 @@ const ProvisioningNetworkPanel = ({ server }) => {
             <button
               type="button"
               className="btn btn-sm btn-outline-secondary"
-              title="The subnet, host IP, and DHCP range live in the agent's provisioning.network settings"
+              title={t('host.provisioningNetworkPanel.editSettingsTitle')}
               onClick={() => navigate('/ui/settings/agent')}
             >
               <i className="fas fa-sliders me-2" />
-              Edit Settings
+              {t('host.provisioningNetworkPanel.editSettings')}
             </button>
             {status && status.enabled !== false && (
               <>
                 <button
                   type="button"
                   className="btn btn-sm btn-primary"
-                  onClick={() => runAction('Setup', setupProvisioningNetwork)}
+                  onClick={() =>
+                    runAction(
+                      t('host.provisioningNetworkPanel.setupLabel'),
+                      setupProvisioningNetwork
+                    )
+                  }
                   disabled={loading}
                 >
                   <i className="fas fa-play me-2" />
-                  Set Up
+                  {t('host.provisioningNetworkPanel.setUp')}
                 </button>
                 <button
                   type="button"
@@ -154,7 +169,7 @@ const ProvisioningNetworkPanel = ({ server }) => {
                   disabled={loading}
                 >
                   <i className="fas fa-trash me-2" />
-                  Tear Down
+                  {t('host.provisioningNetworkPanel.tearDown')}
                 </button>
               </>
             )}
@@ -167,8 +182,7 @@ const ProvisioningNetworkPanel = ({ server }) => {
         {status && status.enabled === false && (
           <div className="alert alert-info mb-0">
             <p className="mb-0">
-              {status.message ||
-                'The provisioning network is disabled in the agent settings (provisioning.network.enabled).'}
+              {status.message || t('host.provisioningNetworkPanel.disabledMessage')}
             </p>
           </div>
         )}
@@ -176,12 +190,13 @@ const ProvisioningNetworkPanel = ({ server }) => {
         {status && status.enabled !== false && (
           <>
             <p className="form-text text-muted mt-0">
-              To change the addressing: tear down, edit the <code>provisioning.network</code> values
-              in Agent Settings, then set up again.
+              {t('host.provisioningNetworkPanel.changeAddressingBefore')}{' '}
+              <code>provisioning.network</code>{' '}
+              {t('host.provisioningNetworkPanel.changeAddressingAfter')}
             </p>
             {components.length > 0 && (
               <div className="mb-3">
-                <h6 className="fw-bold">Components</h6>
+                <h6 className="fw-bold">{t('host.provisioningNetworkPanel.components')}</h6>
                 <div className="table-responsive">
                   <table className="table table-striped table-sm small mb-0">
                     <tbody>
@@ -222,7 +237,9 @@ const ProvisioningNetworkPanel = ({ server }) => {
             )}
           </>
         )}
-        {!status && !error && loading && <p className="text-muted mb-0">Loading…</p>}
+        {!status && !error && loading && (
+          <p className="text-muted mb-0">{t('host.provisioningNetworkPanel.loading')}</p>
+        )}
       </div>
 
       <ConfirmModal
@@ -230,11 +247,13 @@ const ProvisioningNetworkPanel = ({ server }) => {
         onClose={() => setConfirmTeardown(false)}
         onConfirm={() => {
           setConfirmTeardown(false);
-          runAction('Teardown', teardownProvisioningNetwork);
+          runAction(t('host.provisioningNetworkPanel.teardownLabel'), teardownProvisioningNetwork);
         }}
-        title="Tear Down Provisioning Network"
-        message={`Tear down the provisioning network on ${server.hostname}? Machines relying on it lose their provisioning transport until it is set up again.`}
-        confirmText="Tear Down"
+        title={t('host.provisioningNetworkPanel.teardownTitle')}
+        message={t('host.provisioningNetworkPanel.teardownMessage', {
+          hostname: server.hostname,
+        })}
+        confirmText={t('host.provisioningNetworkPanel.tearDown')}
         loading={loading}
       />
     </div>

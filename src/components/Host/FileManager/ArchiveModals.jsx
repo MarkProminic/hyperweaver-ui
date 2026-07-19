@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import FormModal from '../../common/FormModal';
 
@@ -9,6 +10,7 @@ import { getArchiveFormat } from './FileManagerTransforms';
  * Archive Creation Modal
  */
 const CreateArchiveModal = ({ isOpen, onClose, selectedFiles, currentPath, api, onSuccess }) => {
+  const { t } = useTranslation();
   const [archiveName, setArchiveName] = useState('');
   const [format, setFormat] = useState('tar.gz');
   const [destination, setDestination] = useState(currentPath);
@@ -31,7 +33,7 @@ const CreateArchiveModal = ({ isOpen, onClose, selectedFiles, currentPath, api, 
     e.preventDefault();
 
     if (!archiveName.trim()) {
-      setError('Archive name is required');
+      setError(t('fileManager.createArchiveModal.archiveNameRequired'));
       return;
     }
 
@@ -46,11 +48,15 @@ const CreateArchiveModal = ({ isOpen, onClose, selectedFiles, currentPath, api, 
         onSuccess(result);
         onClose();
       } else {
-        setError(result.message || 'Failed to create archive');
+        setError(result.message || t('fileManager.createArchiveModal.failedToCreateArchive'));
       }
     } catch (createErr) {
       console.error('Error creating archive:', createErr);
-      setError(`Failed to create archive: ${createErr.message}`);
+      setError(
+        t('fileManager.createArchiveModal.failedToCreateArchiveDetail', {
+          message: createErr.message,
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -68,9 +74,9 @@ const CreateArchiveModal = ({ isOpen, onClose, selectedFiles, currentPath, api, 
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create Archive"
+      title={t('fileManager.createArchiveModal.title')}
       icon="fas fa-file-archive"
-      submitText="Create Archive"
+      submitText={t('fileManager.createArchiveModal.submit')}
       submitVariant="is-primary"
       submitIcon="fas fa-plus"
       loading={loading}
@@ -79,12 +85,22 @@ const CreateArchiveModal = ({ isOpen, onClose, selectedFiles, currentPath, api, 
       {/* Selected files info */}
       <div className="mb-3">
         <div className="alert alert-info">
-          <strong>Creating archive from {selectedFiles.length} item(s):</strong>
+          <strong>
+            {t('fileManager.createArchiveModal.creatingArchiveFrom', {
+              count: selectedFiles.length,
+            })}
+          </strong>
           <ul className="mt-2">
             {selectedFiles.slice(0, 5).map(file => (
               <li key={file.path || file.name}>📁 {file.name}</li>
             ))}
-            {selectedFiles.length > 5 && <li>... and {selectedFiles.length - 5} more items</li>}
+            {selectedFiles.length > 5 && (
+              <li>
+                {t('fileManager.createArchiveModal.andMoreItems', {
+                  count: selectedFiles.length - 5,
+                })}
+              </li>
+            )}
           </ul>
         </div>
       </div>
@@ -100,7 +116,7 @@ const CreateArchiveModal = ({ isOpen, onClose, selectedFiles, currentPath, api, 
       {/* Archive name */}
       <div className="mb-3">
         <label htmlFor="archive-name" className="form-label">
-          Archive Name
+          {t('fileManager.createArchiveModal.archiveNameLabel')}
         </label>
         <input
           id="archive-name"
@@ -108,16 +124,18 @@ const CreateArchiveModal = ({ isOpen, onClose, selectedFiles, currentPath, api, 
           type="text"
           value={archiveName}
           onChange={e => setArchiveName(e.target.value)}
-          placeholder="Enter archive name..."
+          placeholder={t('fileManager.createArchiveModal.archiveNamePlaceholder')}
           required
         />
-        <p className="form-text text-muted">The archive will be created in the current directory</p>
+        <p className="form-text text-muted">
+          {t('fileManager.createArchiveModal.archiveNameHelp')}
+        </p>
       </div>
 
       {/* Format selection */}
       <div className="mb-3">
         <label htmlFor="archive-format" className="form-label">
-          Archive Format
+          {t('fileManager.createArchiveModal.archiveFormatLabel')}
         </label>
         <select
           id="archive-format"
@@ -136,7 +154,7 @@ const CreateArchiveModal = ({ isOpen, onClose, selectedFiles, currentPath, api, 
       {/* Destination path */}
       <div className="mb-3">
         <label htmlFor="archive-destination" className="form-label">
-          Destination Directory
+          {t('fileManager.createArchiveModal.destinationLabel')}
         </label>
         <input
           id="archive-destination"
@@ -147,7 +165,9 @@ const CreateArchiveModal = ({ isOpen, onClose, selectedFiles, currentPath, api, 
           placeholder="/path/to/destination"
           required
         />
-        <p className="form-text text-muted">Directory where the archive will be created</p>
+        <p className="form-text text-muted">
+          {t('fileManager.createArchiveModal.destinationHelp')}
+        </p>
       </div>
     </FormModal>
   );
@@ -166,6 +186,7 @@ CreateArchiveModal.propTypes = {
  * Archive Extraction Modal
  */
 const ExtractArchiveModal = ({ isOpen, onClose, archiveFile, currentPath, api, onSuccess }) => {
+  const { t } = useTranslation();
   const [destination, setDestination] = useState(currentPath);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -178,7 +199,7 @@ const ExtractArchiveModal = ({ isOpen, onClose, archiveFile, currentPath, api, o
     e.preventDefault();
 
     if (!destination.trim()) {
-      setError('Destination path is required');
+      setError(t('fileManager.extractArchiveModal.destinationRequired'));
       return;
     }
 
@@ -192,11 +213,15 @@ const ExtractArchiveModal = ({ isOpen, onClose, archiveFile, currentPath, api, o
         onSuccess(result);
         onClose();
       } else {
-        setError(result.message || 'Failed to extract archive');
+        setError(result.message || t('fileManager.extractArchiveModal.failedToExtractArchive'));
       }
     } catch (extractErr) {
       console.error('Error extracting archive:', extractErr);
-      setError(`Failed to extract archive: ${extractErr.message}`);
+      setError(
+        t('fileManager.extractArchiveModal.failedToExtractArchiveDetail', {
+          message: extractErr.message,
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -211,9 +236,9 @@ const ExtractArchiveModal = ({ isOpen, onClose, archiveFile, currentPath, api, o
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Extract Archive"
+      title={t('fileManager.extractArchiveModal.title')}
       icon="fas fa-file-archive"
-      submitText="Extract Archive"
+      submitText={t('fileManager.extractArchiveModal.submit')}
       submitVariant="is-success"
       submitIcon="fas fa-expand-arrows-alt"
       loading={loading}
@@ -224,14 +249,18 @@ const ExtractArchiveModal = ({ isOpen, onClose, archiveFile, currentPath, api, o
         <div className="alert alert-secondary">
           <div className="row align-items-center">
             <div className="col">
-              <strong>Archive:</strong> {archiveFile.name}
+              <strong>{t('fileManager.extractArchiveModal.archiveLabel')}</strong>{' '}
+              {archiveFile.name}
             </div>
             <div className="col">
-              <strong>Size:</strong>{' '}
-              {archiveFile.size ? `${Math.round(archiveFile.size / 1024)} KB` : 'Unknown'}
+              <strong>{t('fileManager.extractArchiveModal.sizeLabel')}</strong>{' '}
+              {archiveFile.size
+                ? `${Math.round(archiveFile.size / 1024)} KB`
+                : t('fileManager.extractArchiveModal.unknown')}
             </div>
             <div className="col">
-              <strong>Format:</strong> {getArchiveFormat(archiveFile.name)}
+              <strong>{t('fileManager.extractArchiveModal.formatLabel')}</strong>{' '}
+              {getArchiveFormat(archiveFile.name)}
             </div>
           </div>
         </div>
@@ -248,7 +277,7 @@ const ExtractArchiveModal = ({ isOpen, onClose, archiveFile, currentPath, api, o
       {/* Destination path */}
       <div className="mb-3">
         <label htmlFor="extract-destination" className="form-label">
-          Extract To Directory
+          {t('fileManager.extractArchiveModal.extractToLabel')}
         </label>
         <input
           id="extract-destination"
@@ -259,19 +288,17 @@ const ExtractArchiveModal = ({ isOpen, onClose, archiveFile, currentPath, api, o
           placeholder="/path/to/extraction/directory"
           required
         />
-        <p className="form-text text-muted">
-          Directory where the archive contents will be extracted
-        </p>
+        <p className="form-text text-muted">{t('fileManager.extractArchiveModal.extractToHelp')}</p>
       </div>
 
       {/* Quick destination options */}
       <div className="mb-3">
         <span className="form-label" aria-hidden="true">
-          Quick Options
+          {t('fileManager.extractArchiveModal.quickOptions')}
         </span>
         <div className="d-flex gap-2">
           <button type="button" className="btn btn-sm" onClick={() => setDestination(currentPath)}>
-            Current Directory ({currentPath})
+            {t('fileManager.extractArchiveModal.currentDirectory', { path: currentPath })}
           </button>
           <button
             type="button"
@@ -284,7 +311,9 @@ const ExtractArchiveModal = ({ isOpen, onClose, archiveFile, currentPath, api, o
               setDestination(`${currentPath}/${archiveNameWithoutExt}`);
             }}
           >
-            New Folder ({archiveFile.name.replace(/\.(?:tar\.gz|tar\.bz2|zip|tar|gz)$/i, '')})
+            {t('fileManager.extractArchiveModal.newFolder', {
+              name: archiveFile.name.replace(/\.(?:tar\.gz|tar\.bz2|zip|tar|gz)$/i, ''),
+            })}
           </button>
         </div>
       </div>

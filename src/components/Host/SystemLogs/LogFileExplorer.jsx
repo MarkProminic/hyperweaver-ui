@@ -1,6 +1,9 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const LogFileExplorer = ({ logFiles, selectedLog, onLogSelect, loading }) => {
+  const { t } = useTranslation();
+
   const getLogIcon = type => {
     switch (type) {
       case 'system':
@@ -29,25 +32,25 @@ const LogFileExplorer = ({ logFiles, selectedLog, onLogSelect, loading }) => {
     groupedLogs['fault-manager'] = [
       {
         name: 'faults',
-        displayName: 'Faults',
+        displayName: t('host.logFileExplorer.faults'),
         type: 'fault-manager',
         subtype: 'faults',
       },
       {
         name: 'errors',
-        displayName: 'Errors',
+        displayName: t('host.logFileExplorer.errors'),
         type: 'fault-manager',
         subtype: 'errors',
       },
       {
         name: 'info',
-        displayName: 'Info',
+        displayName: t('host.logFileExplorer.info'),
         type: 'fault-manager',
         subtype: 'info',
       },
       {
         name: 'info-hival',
-        displayName: 'Info (High Value)',
+        displayName: t('host.logFileExplorer.infoHival'),
         type: 'fault-manager',
         subtype: 'info-hival',
       },
@@ -59,13 +62,13 @@ const LogFileExplorer = ({ logFiles, selectedLog, onLogSelect, loading }) => {
       <div className="card-body">
         <h4 className="fs-6 fw-bold mb-3">
           <i className="fas fa-folder-open me-2" />
-          <span>Log Files</span>
+          <span>{t('host.logFileExplorer.logFiles')}</span>
         </h4>
 
         {loading ? (
           <div className="text-center p-4">
             <i className="fas fa-spinner fa-spin" />
-            <p className="mt-2 small">Loading...</p>
+            <p className="mt-2 small">{t('host.logFileExplorer.loading')}</p>
           </div>
         ) : (
           <div>

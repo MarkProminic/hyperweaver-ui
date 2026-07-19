@@ -1,5 +1,6 @@
 import { BaseEdge, EdgeLabelRenderer, getBezierPath } from '@xyflow/react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { getVlanColor } from '../utils/topologyAutoMapper';
 
@@ -14,6 +15,7 @@ const BandwidthEdge = ({
   data,
   markerEnd,
 }) => {
+  const { t } = useTranslation();
   const { type, bandwidth, vlanId, linkSpeed: dataLinkSpeed } = data || {};
 
   const [edgePath, labelX, labelY] = getBezierPath({
@@ -52,34 +54,34 @@ const BandwidthEdge = ({
       lightness = 55 + (utilization / 10) * 10;
     } else if (utilization <= 25) {
       // Blue to cyan (220° to 180°)
-      const t = (utilization - 10) / 15;
-      hue = 220 - t * 40;
+      const frac = (utilization - 10) / 15;
+      hue = 220 - frac * 40;
       saturation = 95;
-      lightness = 65 + t * 5;
+      lightness = 65 + frac * 5;
     } else if (utilization <= 50) {
       // Cyan to green (180° to 120°)
-      const t = (utilization - 25) / 25;
-      hue = 180 - t * 60;
-      saturation = 95 - t * 15;
+      const frac = (utilization - 25) / 25;
+      hue = 180 - frac * 60;
+      saturation = 95 - frac * 15;
       lightness = 70;
     } else if (utilization <= 75) {
       // Green to yellow (120° to 60°)
-      const t = (utilization - 50) / 25;
-      hue = 120 - t * 60;
-      saturation = 80 + t * 15;
-      lightness = 70 - t * 5;
+      const frac = (utilization - 50) / 25;
+      hue = 120 - frac * 60;
+      saturation = 80 + frac * 15;
+      lightness = 70 - frac * 5;
     } else if (utilization <= 90) {
       // Yellow to orange (60° to 30°)
-      const t = (utilization - 75) / 15;
-      hue = 60 - t * 30;
+      const frac = (utilization - 75) / 15;
+      hue = 60 - frac * 30;
       saturation = 95;
-      lightness = 65 - t * 5;
+      lightness = 65 - frac * 5;
     } else {
       // Orange to red (30° to 0°)
-      const t = (utilization - 90) / 10;
-      hue = 30 - t * 30;
-      saturation = 95 + t * 5;
-      lightness = 60 - t * 10;
+      const frac = (utilization - 90) / 10;
+      hue = 30 - frac * 30;
+      saturation = 95 + frac * 5;
+      lightness = 60 - frac * 10;
     }
 
     return `hsl(${Math.round(hue)}, ${Math.round(saturation)}%, ${Math.round(lightness)}%)`;
@@ -149,15 +151,15 @@ const BandwidthEdge = ({
   const getLabelText = () => {
     switch (type) {
       case 'vlan':
-        return `VLAN ${vlanId}`;
+        return t('hostTools.bandwidthEdge.vlanLabel', { vlanId });
       case 'aggregation':
-        return 'LACP Bond';
+        return t('hostTools.bandwidthEdge.lacpBond');
       case 'direct':
-        return 'Direct';
+        return t('hostTools.bandwidthEdge.direct');
       case 'assignment':
-        return 'Interface';
+        return t('hostTools.bandwidthEdge.interface');
       default:
-        return 'Connected';
+        return t('hostTools.bandwidthEdge.connected');
     }
   };
 
@@ -307,19 +309,19 @@ const BandwidthEdge = ({
                   color: getVlanColor(vlanId),
                 }}
               >
-                VLAN {vlanId}
+                {t('hostTools.bandwidthEdge.vlanLabel', { vlanId })}
               </div>
             )}
 
             {type === 'aggregation' && bandwidth && bandwidth.totalMbps > 0 && (
               <div className="hw-edge-label-secondary" style={{ color: '#3273dc' }}>
-                LACP
+                {t('hostTools.bandwidthEdge.lacp')}
               </div>
             )}
 
             {/* Idle indicator */}
             {bandwidth && bandwidth.totalMbps === 0 && (
-              <div className="hw-edge-label-idle">idle</div>
+              <div className="hw-edge-label-idle">{t('hostTools.bandwidthEdge.idle')}</div>
             )}
           </div>
         </div>

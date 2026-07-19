@@ -1,22 +1,24 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 
-const getModuleTypeLabel = moduleName => {
+const getModuleTypeLabel = (moduleName, t) => {
   if (moduleName.includes('retire')) {
-    return 'Retire Agent';
+    return t('host.faultManagerConfig.moduleTypeRetireAgent');
   }
   if (moduleName.includes('detector')) {
-    return 'Detector';
+    return t('host.faultManagerConfig.moduleTypeDetector');
   }
   if (moduleName.includes('response')) {
-    return 'Response';
+    return t('host.faultManagerConfig.moduleTypeResponse');
   }
-  return 'Module';
+  return t('host.faultManagerConfig.moduleTypeModule');
 };
 
 const FaultManagerConfig = ({ server }) => {
+  const { t } = useTranslation();
   const [config, setConfig] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -43,16 +45,16 @@ const FaultManagerConfig = ({ server }) => {
       if (result.success) {
         setConfig(result.data?.config || []);
       } else {
-        setError(result.message || 'Failed to load fault manager configuration');
+        setError(result.message || t('host.faultManagerConfig.errors.loadFailed'));
         setConfig([]);
       }
     } catch (err) {
-      setError(`Error loading fault manager configuration: ${err.message}`);
+      setError(t('host.faultManagerConfig.errors.loadError', { message: err.message }));
       setConfig([]);
     } finally {
       setLoading(false);
     }
-  }, [server, makeAgentRequest]);
+  }, [server, makeAgentRequest, t]);
 
   useEffect(() => {
     loadConfig();
@@ -93,7 +95,7 @@ const FaultManagerConfig = ({ server }) => {
         <div className="card-body">
           <div className="text-center p-4">
             <i className="fas fa-spinner fa-spin fa-2x" />
-            <p className="mt-2">Loading fault manager configuration...</p>
+            <p className="mt-2">{t('host.faultManagerConfig.loading')}</p>
           </div>
         </div>
       </div>
@@ -117,7 +119,7 @@ const FaultManagerConfig = ({ server }) => {
             <div className="d-flex align-items-center gap-2">
               <h4 className="fs-6 fw-bold">
                 <i className="fas fa-info-circle me-2" />
-                <span>Fault Manager Status</span>
+                <span>{t('host.faultManagerConfig.faultManagerStatus')}</span>
               </h4>
             </div>
             <div className="d-flex align-items-center gap-2">
@@ -128,7 +130,7 @@ const FaultManagerConfig = ({ server }) => {
                 disabled={loading}
               >
                 <i className="fas fa-sync-alt me-2" />
-                <span>Refresh</span>
+                <span>{t('host.faultManagerConfig.refresh')}</span>
               </button>
             </div>
           </div>
@@ -136,7 +138,7 @@ const FaultManagerConfig = ({ server }) => {
           <div className="row g-3">
             <div className="col">
               <div className="mb-3">
-                <span className="form-label">Total Modules</span>
+                <span className="form-label">{t('host.faultManagerConfig.totalModules')}</span>
                 <p>
                   <span className="badge text-bg-info">{config.length}</span>
                 </p>
@@ -144,7 +146,7 @@ const FaultManagerConfig = ({ server }) => {
             </div>
             <div className="col">
               <div className="mb-3">
-                <span className="form-label">Module Types</span>
+                <span className="form-label">{t('host.faultManagerConfig.moduleTypes')}</span>
                 <div>
                   <div className="d-flex flex-wrap gap-1">
                     {[...new Set(config.map(m => m.module.split('-').pop()))].map(type => (
@@ -158,11 +160,11 @@ const FaultManagerConfig = ({ server }) => {
             </div>
             <div className="col">
               <div className="mb-3">
-                <span className="form-label">Status</span>
+                <span className="form-label">{t('host.faultManagerConfig.status')}</span>
                 <p>
                   <span className="badge text-bg-success d-inline-flex align-items-center gap-1">
                     <i className="fas fa-check-circle" />
-                    <span>Active</span>
+                    <span>{t('host.faultManagerConfig.active')}</span>
                   </span>
                 </p>
               </div>
@@ -176,7 +178,7 @@ const FaultManagerConfig = ({ server }) => {
         <div className="card-body">
           <h4 className="fs-6 fw-bold mb-4">
             <i className="fas fa-puzzle-piece me-2" />
-            <span>Fault Management Modules</span>
+            <span>{t('host.faultManagerConfig.faultManagementModules')}</span>
           </h4>
 
           {config.length > 0 ? (
@@ -184,10 +186,10 @@ const FaultManagerConfig = ({ server }) => {
               <table className="table table-hover">
                 <thead>
                   <tr>
-                    <th>Module</th>
-                    <th>Version</th>
-                    <th>Description</th>
-                    <th>Type</th>
+                    <th>{t('host.faultManagerConfig.thModule')}</th>
+                    <th>{t('host.faultManagerConfig.thVersion')}</th>
+                    <th>{t('host.faultManagerConfig.thDescription')}</th>
+                    <th>{t('host.faultManagerConfig.thType')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -204,12 +206,12 @@ const FaultManagerConfig = ({ server }) => {
                       </td>
                       <td>
                         <span className="small">
-                          {module.description || 'No description available'}
+                          {module.description || t('host.faultManagerConfig.noDescription')}
                         </span>
                       </td>
                       <td>
                         <span className={`badge ${getModuleTypeTag(module.module)}`}>
-                          {getModuleTypeLabel(module.module)}
+                          {getModuleTypeLabel(module.module, t)}
                         </span>
                       </td>
                     </tr>
@@ -220,7 +222,7 @@ const FaultManagerConfig = ({ server }) => {
           ) : (
             <div className="text-center p-4">
               <i className="fas fa-puzzle-piece fa-2x text-muted" />
-              <p className="mt-2 text-muted">No fault manager modules found</p>
+              <p className="mt-2 text-muted">{t('host.faultManagerConfig.noModulesFound')}</p>
             </div>
           )}
         </div>
@@ -231,40 +233,43 @@ const FaultManagerConfig = ({ server }) => {
         <div className="card-body">
           <h4 className="fs-6 fw-bold mb-3">
             <i className="fas fa-question-circle me-2" />
-            <span>Fault Manager Information</span>
+            <span>{t('host.faultManagerConfig.faultManagerInformation')}</span>
           </h4>
 
           <div className="small">
             <div className="row g-3">
               <div className="col">
                 <p>
-                  <strong>Common Modules:</strong>
+                  <strong>{t('host.faultManagerConfig.commonModules')}</strong>
                 </p>
                 <ul>
                   <li>
-                    <strong>cpumem-retire:</strong> CPU and memory fault retirement
+                    <strong>cpumem-retire:</strong> {t('host.faultManagerConfig.cpumemRetireDesc')}
                   </li>
                   <li>
-                    <strong>disk-retire:</strong> Storage device fault retirement
+                    <strong>disk-retire:</strong> {t('host.faultManagerConfig.diskRetireDesc')}
                   </li>
                   <li>
-                    <strong>zfs-retire:</strong> ZFS pool and dataset fault management
+                    <strong>zfs-retire:</strong> {t('host.faultManagerConfig.zfsRetireDesc')}
                   </li>
                 </ul>
               </div>
               <div className="col">
                 <p>
-                  <strong>Module Types:</strong>
+                  <strong>{t('host.faultManagerConfig.moduleTypesTitle')}</strong>
                 </p>
                 <ul>
                   <li>
-                    <strong>Retire Agents:</strong> Handle faulty component retirement
+                    <strong>{t('host.faultManagerConfig.retireAgentsLabel')}</strong>{' '}
+                    {t('host.faultManagerConfig.retireAgentsDesc')}
                   </li>
                   <li>
-                    <strong>Detectors:</strong> Identify and diagnose faults
+                    <strong>{t('host.faultManagerConfig.detectorsLabel')}</strong>{' '}
+                    {t('host.faultManagerConfig.detectorsDesc')}
                   </li>
                   <li>
-                    <strong>Response Agents:</strong> Automated fault response actions
+                    <strong>{t('host.faultManagerConfig.responseAgentsLabel')}</strong>{' '}
+                    {t('host.faultManagerConfig.responseAgentsDesc')}
                   </li>
                 </ul>
               </div>

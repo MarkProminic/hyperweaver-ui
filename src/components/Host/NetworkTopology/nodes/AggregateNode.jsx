@@ -1,7 +1,9 @@
 import { Handle, Position } from '@xyflow/react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const AggregateNode = ({ data }) => {
+  const { t } = useTranslation();
   const { label, members, policy, lacpActivity, lacpTimeout, flags, bandwidth, ipAddresses } = data;
 
   const formatBandwidth = bw => {
@@ -15,14 +17,14 @@ const AggregateNode = ({ data }) => {
   };
 
   const tooltipContent = `
-${label} (Link Aggregate)
-Members: ${members?.join(', ') || 'None'}
-Policy: ${policy || 'Unknown'}
-LACP Activity: ${lacpActivity || 'N/A'}
-LACP Timeout: ${lacpTimeout || 'N/A'}
-${bandwidth ? `Bandwidth: ${formatBandwidth(bandwidth.totalMbps)} (↓${formatBandwidth(bandwidth.rxMbps)} ↑${formatBandwidth(bandwidth.txMbps)})` : 'No bandwidth data'}
-${ipAddresses?.length ? `IP: ${ipAddresses.map(ip => ip.ip_address).join(', ')}` : 'No IP addresses'}
-${flags && flags !== '--' ? `Flags: ${flags}` : ''}
+${label} (${t('hostTools.aggregateNode.typeCaption')})
+${t('hostTools.aggregateNode.membersLabel')}: ${members?.join(', ') || t('hostTools.aggregateNode.none')}
+${t('hostTools.aggregateNode.policyLabel')}: ${policy || t('hostTools.aggregateNode.unknown')}
+${t('hostTools.aggregateNode.lacpActivityLabel')}: ${lacpActivity || t('hostTools.aggregateNode.notAvailable')}
+${t('hostTools.aggregateNode.lacpTimeoutLabel')}: ${lacpTimeout || t('hostTools.aggregateNode.notAvailable')}
+${bandwidth ? `${t('hostTools.aggregateNode.bandwidthLabel')}: ${formatBandwidth(bandwidth.totalMbps)} (↓${formatBandwidth(bandwidth.rxMbps)} ↑${formatBandwidth(bandwidth.txMbps)})` : t('hostTools.aggregateNode.noBandwidthData')}
+${ipAddresses?.length ? `${t('hostTools.aggregateNode.ipLabel')}: ${ipAddresses.map(ip => ip.ip_address).join(', ')}` : t('hostTools.aggregateNode.noIpAddresses')}
+${flags && flags !== '--' ? `${t('hostTools.aggregateNode.flagsLabel')}: ${flags}` : ''}
   `.trim();
 
   return (

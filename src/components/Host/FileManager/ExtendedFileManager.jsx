@@ -1,6 +1,7 @@
 import { FileManager } from '@cubone/react-file-manager';
 import PropTypes from 'prop-types';
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import '@cubone/react-file-manager/dist/style.css';
 
 import { getAgentBasePath } from '../../../api/serverUtils';
@@ -19,6 +20,7 @@ import './HostFileManager.scss';
  * Properly integrates with cubone's internal systems for context menu and actions
  */
 const ExtendedFileManager = ({ server }) => {
+  const { t } = useTranslation();
   const [files, setFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPath, setCurrentPath] = useState('/');
@@ -113,7 +115,7 @@ const ExtendedFileManager = ({ server }) => {
   if (!server) {
     return (
       <div className="alert alert-info">
-        <p>Please select a server from the navbar to access the file manager.</p>
+        <p>{t('fileManager.extendedFileManager.selectServer')}</p>
       </div>
     );
   }

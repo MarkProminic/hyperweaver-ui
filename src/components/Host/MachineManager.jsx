@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,6 +8,7 @@ import { canCreateMachines } from '../../utils/permissions';
 import { resourceLabel } from '../../utils/resourceLabel';
 
 const MachineManager = ({ serverStats, currentServer, handleMachineAction }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const plural = resourceLabel(currentServer);
@@ -28,25 +30,31 @@ const MachineManager = ({ serverStats, currentServer, handleMachineAction }) => 
           <div>
             <h3 className="h5 mb-0 d-flex align-items-center gap-2">
               <i className="fas fa-server" />
-              <span>{singular} Management</span>
+              <span>{t('host.machineManager.management', { singular })}</span>
             </h3>
           </div>
           <div>
             <div className="d-flex gap-2 flex-wrap">
               <span className="d-inline-flex">
-                <span className="badge text-bg-secondary rounded-0">Total</span>
+                <span className="badge text-bg-secondary rounded-0">
+                  {t('host.machineManager.total')}
+                </span>
                 <span className="badge text-bg-info rounded-0">
                   {serverStats.allmachines?.length || 0}
                 </span>
               </span>
               <span className="d-inline-flex">
-                <span className="badge text-bg-secondary rounded-0">Running</span>
+                <span className="badge text-bg-secondary rounded-0">
+                  {t('host.machineManager.running')}
+                </span>
                 <span className="badge text-bg-success rounded-0">
                   {serverStats.runningmachines?.length || 0}
                 </span>
               </span>
               <span className="d-inline-flex">
-                <span className="badge text-bg-secondary rounded-0">Stopped</span>
+                <span className="badge text-bg-secondary rounded-0">
+                  {t('host.machineManager.stopped')}
+                </span>
                 <span className="badge text-bg-warning rounded-0">
                   {(serverStats.allmachines?.length || 0) -
                     (serverStats.runningmachines?.length || 0)}
@@ -59,7 +67,10 @@ const MachineManager = ({ serverStats, currentServer, handleMachineAction }) => 
         <div className="row g-3">
           <div className="col-12 col-lg-6">
             <h4 className="h6 mb-3">
-              {plural} on {currentServer.hostname}
+              {t('host.machineManager.pluralOnHost', {
+                plural,
+                hostname: currentServer.hostname,
+              })}
             </h4>
             {serverStats.allmachines && serverStats.allmachines.length > 0 ? (
               <>
@@ -78,23 +89,28 @@ const MachineManager = ({ serverStats, currentServer, handleMachineAction }) => 
                 </div>
                 {serverStats.allmachines.length > 12 && (
                   <p className="small text-muted mt-2">
-                    Showing 12 of {serverStats.allmachines.length} {plural.toLowerCase()}.
+                    {t('host.machineManager.showingCount', {
+                      count: serverStats.allmachines.length,
+                      plural: plural.toLowerCase(),
+                    })}
                     <a href="/ui/machines" className="ms-1">
-                      View all →
+                      {t('host.machineManager.viewAll')}
                     </a>
                   </p>
                 )}
               </>
             ) : (
-              <p className="text-muted">No {plural.toLowerCase()} configured on this host</p>
+              <p className="text-muted">
+                {t('host.machineManager.noneConfigured', { plural: plural.toLowerCase() })}
+              </p>
             )}
           </div>
           <div className="col-12 col-lg-6">
-            <h4 className="h6 mb-3">Quick Actions</h4>
+            <h4 className="h6 mb-3">{t('host.machineManager.quickActions')}</h4>
             <div className="d-flex flex-wrap gap-2">
               <a href="/ui/machines" className="btn btn-primary">
                 <i className="fas fa-eye me-2" />
-                <span>View All {plural}</span>
+                <span>{t('host.machineManager.viewAllPlural', { plural })}</span>
               </a>
               {createAvailable && (
                 <button
@@ -103,7 +119,7 @@ const MachineManager = ({ serverStats, currentServer, handleMachineAction }) => 
                   onClick={() => navigate('/ui/machines?create=1')}
                 >
                   <i className="fas fa-plus me-2" />
-                  <span>New {singular}</span>
+                  <span>{t('host.machineManager.newSingular', { singular })}</span>
                 </button>
               )}
               {(serverStats.allmachines?.length || 0) - (serverStats.runningmachines?.length || 0) >
@@ -114,7 +130,7 @@ const MachineManager = ({ serverStats, currentServer, handleMachineAction }) => 
                   onClick={() => handleMachineAction('startAll')}
                 >
                   <i className="fas fa-play me-2" />
-                  <span>Start All</span>
+                  <span>{t('host.machineManager.startAll')}</span>
                 </button>
               )}
               {(serverStats.runningmachines?.length || 0) > 0 && (
@@ -124,7 +140,7 @@ const MachineManager = ({ serverStats, currentServer, handleMachineAction }) => 
                   onClick={() => handleMachineAction('stopAll')}
                 >
                   <i className="fas fa-pause me-2" />
-                  <span>Stop All</span>
+                  <span>{t('host.machineManager.stopAll')}</span>
                 </button>
               )}
             </div>

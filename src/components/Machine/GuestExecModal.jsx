@@ -19,6 +19,7 @@ const GuestExecModal = ({
   machineName,
   isRunning,
   flavor = 'additions',
+  hypervisor,
 }) => {
   const { t } = useTranslation();
   const [path, setPath] = useState('');
@@ -31,7 +32,11 @@ const GuestExecModal = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const qga = flavor === 'qga';
+  // utm machines speak the guest-exec wire without credentials, but ONLY
+  // synchronously — wait:false 400s and there is no exec-status-by-pid, so
+  // the pid poller never engages on them.
+  const isUtm = hypervisor === 'utm';
+  const qga = flavor === 'qga' || isUtm;
 
   useEffect(() => {
     if (isOpen) {
@@ -114,7 +119,7 @@ const GuestExecModal = ({
       return;
     }
     const data = result.data || {};
-    if (qga && !data.exited) {
+    if (qga && !isUtm && !data.exited) {
       setPendingPid(data.pid);
       return;
     }
@@ -271,6 +276,7 @@ GuestExecModal.propTypes = {
   machineName: PropTypes.string,
   isRunning: PropTypes.bool,
   flavor: PropTypes.oneOf(['additions', 'qga']),
+  hypervisor: PropTypes.string,
 };
 
 export default GuestExecModal;

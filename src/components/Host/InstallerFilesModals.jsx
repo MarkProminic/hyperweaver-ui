@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   prepareArtifactUpload,
@@ -28,12 +29,13 @@ const LocationRoleFields = ({
   setRole,
   roleOptions,
 }) => {
+  const { t } = useTranslation();
   const needsRole = ROLE_TYPES.includes(locationType(locations, locationId));
   return (
     <div className="row g-3 mb-3">
       <div className="col-12 col-md-6">
         <label className="form-label" htmlFor={`${idPrefix}-location`}>
-          Storage Location
+          {t('host.installerFilesModals.storageLocation')}
         </label>
         <select
           id={`${idPrefix}-location`}
@@ -42,7 +44,7 @@ const LocationRoleFields = ({
           onChange={e => setLocationId(e.target.value)}
           required
         >
-          <option value="">Select…</option>
+          <option value="">{t('host.installerFilesModals.select')}</option>
           {locations
             .filter(entry => entry.enabled !== false)
             .map(entry => (
@@ -55,7 +57,7 @@ const LocationRoleFields = ({
       {needsRole && (
         <div className="col-12 col-md-6">
           <label className="form-label" htmlFor={`${idPrefix}-role`}>
-            Role
+            {t('host.installerFilesModals.role')}
           </label>
           <input
             id={`${idPrefix}-role`}
@@ -87,17 +89,18 @@ LocationRoleFields.propTypes = {
   roleOptions: PropTypes.arrayOf(PropTypes.string).isRequired,
 };
 
-const validTarget = (locations, locationId, role) => {
+const validTarget = (locations, locationId, role, t) => {
   if (!locationId) {
-    return 'Pick a storage location.';
+    return t('host.installerFilesModals.pickStorageLocation');
   }
   if (ROLE_TYPES.includes(locationType(locations, locationId)) && !role.trim()) {
-    return 'This location type stores per role — a role is required.';
+    return t('host.installerFilesModals.roleRequired');
   }
   return '';
 };
 
 export const UploadModal = ({ isOpen, onClose, server, locations, roleOptions, onDone }) => {
+  const { t } = useTranslation();
   const [locationId, setLocationId] = useState('');
   const [role, setRole] = useState('');
   const [file, setFile] = useState(null);
@@ -108,9 +111,9 @@ export const UploadModal = ({ isOpen, onClose, server, locations, roleOptions, o
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    const targetError = validTarget(locations, locationId, role);
+    const targetError = validTarget(locations, locationId, role, t);
     if (targetError || !file) {
-      setError(targetError || 'A file is required.');
+      setError(targetError || t('host.installerFilesModals.fileRequired'));
       return;
     }
     setLoading(true);
@@ -155,7 +158,10 @@ export const UploadModal = ({ isOpen, onClose, server, locations, roleOptions, o
     setProgress(null);
     if (result.success) {
       onDone(
-        `${result.data?.message || 'Upload queued'} (task ${prepared.data.task_id}) — the executor hashes and registers it`
+        t('host.installerFilesModals.uploadQueuedFull', {
+          message: result.data?.message || t('host.installerFilesModals.uploadQueuedDefault'),
+          taskId: prepared.data.task_id,
+        })
       );
       setFile(null);
       onClose();
@@ -169,9 +175,9 @@ export const UploadModal = ({ isOpen, onClose, server, locations, roleOptions, o
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Upload File"
+      title={t('host.installerFilesModals.uploadFile')}
       icon="fas fa-upload"
-      submitText="Upload"
+      submitText={t('host.installerFilesModals.upload')}
       loading={loading}
       showCancelButton
     >
@@ -187,7 +193,7 @@ export const UploadModal = ({ isOpen, onClose, server, locations, roleOptions, o
       />
       <div className="mb-3">
         <label className="form-label" htmlFor="artifact-upload-file">
-          File
+          {t('host.installerFilesModals.file')}
         </label>
         <input
           id="artifact-upload-file"
@@ -200,7 +206,7 @@ export const UploadModal = ({ isOpen, onClose, server, locations, roleOptions, o
       <div className="row g-3 mb-3">
         <div className="col-12 col-md-8">
           <label className="form-label" htmlFor="artifact-upload-checksum">
-            Expected SHA-256 (optional — mismatches fail the upload)
+            {t('host.installerFilesModals.expectedSha256Upload')}
           </label>
           <input
             id="artifact-upload-checksum"
@@ -223,7 +229,7 @@ export const UploadModal = ({ isOpen, onClose, server, locations, roleOptions, o
               disabled={loading}
             />
             <label className="form-check-label" htmlFor="artifact-upload-overwrite">
-              Overwrite existing
+              {t('host.installerFilesModals.overwriteExisting')}
             </label>
           </div>
         </div>
@@ -255,6 +261,7 @@ UploadModal.propTypes = {
 };
 
 export const RegisterModal = ({ isOpen, onClose, server, locations, roleOptions, onDone }) => {
+  const { t } = useTranslation();
   const [locationId, setLocationId] = useState('');
   const [role, setRole] = useState('');
   const [path, setPath] = useState('');
@@ -263,9 +270,9 @@ export const RegisterModal = ({ isOpen, onClose, server, locations, roleOptions,
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    const targetError = validTarget(locations, locationId, role);
+    const targetError = validTarget(locations, locationId, role, t);
     if (targetError || !path.trim()) {
-      setError(targetError || 'An agent-host file path is required.');
+      setError(targetError || t('host.installerFilesModals.filePathRequired'));
       return;
     }
     setLoading(true);
@@ -277,7 +284,7 @@ export const RegisterModal = ({ isOpen, onClose, server, locations, roleOptions,
     const result = await registerArtifact(server.hostname, server.port, server.protocol, body);
     setLoading(false);
     if (result.success) {
-      onDone(result.data?.message || 'Registered');
+      onDone(result.data?.message || t('host.installerFilesModals.registered'));
       setPath('');
       onClose();
     } else {
@@ -290,9 +297,9 @@ export const RegisterModal = ({ isOpen, onClose, server, locations, roleOptions,
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Register Local File"
+      title={t('host.installerFilesModals.registerLocalFile')}
       icon="fas fa-file-import"
-      submitText="Register"
+      submitText={t('host.installerFilesModals.register')}
       loading={loading}
       showCancelButton
     >
@@ -308,7 +315,7 @@ export const RegisterModal = ({ isOpen, onClose, server, locations, roleOptions,
       />
       <div className="mb-3">
         <label className="form-label" htmlFor="artifact-register-path">
-          Path (on the agent host)
+          {t('host.installerFilesModals.pathOnAgentHost')}
         </label>
         <PathInput
           id="artifact-register-path"
@@ -316,7 +323,7 @@ export const RegisterModal = ({ isOpen, onClose, server, locations, roleOptions,
           onChange={setPath}
           server={server}
           mode="file"
-          pickTitle="Pick the file to register"
+          pickTitle={t('host.installerFilesModals.pickFileToRegister')}
           disabled={loading}
         />
       </div>
@@ -331,7 +338,7 @@ export const RegisterModal = ({ isOpen, onClose, server, locations, roleOptions,
           disabled={loading}
         />
         <label className="form-check-label" htmlFor="artifact-register-move">
-          Move (delete the source after copying into the location)
+          {t('host.installerFilesModals.moveRegister')}
         </label>
       </div>
     </FormModal>
@@ -349,6 +356,7 @@ export const DownloadModal = ({
   resourceNames,
   onDone,
 }) => {
+  const { t } = useTranslation();
   const [locationId, setLocationId] = useState('');
   const [role, setRole] = useState('');
   const [url, setUrl] = useState('');
@@ -360,9 +368,9 @@ export const DownloadModal = ({
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    const targetError = validTarget(locations, locationId, role);
+    const targetError = validTarget(locations, locationId, role, t);
     if (targetError || !url.trim()) {
-      setError(targetError || 'A URL is required.');
+      setError(targetError || t('host.installerFilesModals.urlRequired'));
       return;
     }
     setLoading(true);
@@ -383,7 +391,12 @@ export const DownloadModal = ({
     const result = await downloadArtifact(server.hostname, server.port, server.protocol, body);
     setLoading(false);
     if (result.success) {
-      onDone(`${result.data?.message || 'Download queued'} (task ${result.data?.task_id})`);
+      onDone(
+        t('host.installerFilesModals.messageWithTask', {
+          message: result.data?.message || t('host.installerFilesModals.downloadQueuedDefault'),
+          taskId: result.data?.task_id,
+        })
+      );
       setUrl('');
       setFilename('');
       setChecksum('');
@@ -398,9 +411,9 @@ export const DownloadModal = ({
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Download From URL"
+      title={t('host.installerFilesModals.downloadFromUrl')}
       icon="fas fa-cloud-arrow-down"
-      submitText="Queue Download"
+      submitText={t('host.installerFilesModals.queueDownload')}
       loading={loading}
       showCancelButton
     >
@@ -416,7 +429,7 @@ export const DownloadModal = ({
       />
       <div className="mb-3">
         <label className="form-label" htmlFor="artifact-download-url">
-          URL
+          {t('host.installerFilesModals.url')}
         </label>
         <input
           id="artifact-download-url"
@@ -431,7 +444,7 @@ export const DownloadModal = ({
       <div className="row g-3 mb-3">
         <div className="col-12 col-md-5">
           <label className="form-label" htmlFor="artifact-download-filename">
-            Filename (blank = from URL)
+            {t('host.installerFilesModals.filenameBlankFromUrl')}
           </label>
           <input
             id="artifact-download-filename"
@@ -444,7 +457,7 @@ export const DownloadModal = ({
         </div>
         <div className="col-12 col-md-5">
           <label className="form-label" htmlFor="artifact-download-sha">
-            Expected SHA-256 (optional — mismatches are discarded)
+            {t('host.installerFilesModals.expectedSha256Download')}
           </label>
           <input
             id="artifact-download-sha"
@@ -467,14 +480,14 @@ export const DownloadModal = ({
               disabled={loading}
             />
             <label className="form-check-label" htmlFor="artifact-download-overwrite">
-              Overwrite
+              {t('host.installerFilesModals.overwrite')}
             </label>
           </div>
         </div>
       </div>
       <div className="mb-3">
         <label className="form-label" htmlFor="artifact-download-resource">
-          Mirror Credentials (custom_resource_url secret)
+          {t('host.installerFilesModals.mirrorCredentials')}
         </label>
         {resourceNames ? (
           <select
@@ -483,7 +496,7 @@ export const DownloadModal = ({
             value={resourceName}
             onChange={e => setResourceName(e.target.value)}
           >
-            <option value="">None (public URL)</option>
+            <option value="">{t('host.installerFilesModals.nonePublicUrl')}</option>
             {resourceNames.map(name => (
               <option key={name} value={name}>
                 {name}
@@ -495,7 +508,7 @@ export const DownloadModal = ({
             id="artifact-download-resource"
             className="form-control"
             type="text"
-            placeholder="custom_resource_url secret name (blank = public)"
+            placeholder={t('host.installerFilesModals.resourceNamePlaceholder')}
             value={resourceName}
             onChange={e => setResourceName(e.target.value)}
           />
@@ -515,6 +528,7 @@ DownloadModal.propTypes = {
 const HCL_KINDS = ['installer', 'fixpack', 'hotfix'];
 
 export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyNames, onDone }) => {
+  const { t } = useTranslation();
   const [role, setRole] = useState('');
   const [kind, setKind] = useState('installer');
   const [filename, setFilename] = useState('');
@@ -524,7 +538,7 @@ export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyN
 
   const handleSubmit = async () => {
     if (!role.trim() || !filename.trim() || !keyName.trim()) {
-      setError('A role, the exact catalog filename, and an HCL portal key are required.');
+      setError(t('host.installerFilesModals.hclFieldsRequired'));
       return;
     }
     setLoading(true);
@@ -537,7 +551,12 @@ export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyN
     });
     setLoading(false);
     if (result.success) {
-      onDone(`${result.data?.message || 'HCL download queued'} (task ${result.data?.task_id})`);
+      onDone(
+        t('host.installerFilesModals.messageWithTask', {
+          message: result.data?.message || t('host.installerFilesModals.hclDownloadQueuedDefault'),
+          taskId: result.data?.task_id,
+        })
+      );
       setFilename('');
       onClose();
     } else {
@@ -550,9 +569,9 @@ export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyN
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Download From HCL Portal"
+      title={t('host.installerFilesModals.downloadFromHclPortal')}
       icon="fas fa-cloud-arrow-down"
-      submitText="Queue Download"
+      submitText={t('host.installerFilesModals.queueDownload')}
       loading={loading}
       showCancelButton
     >
@@ -560,7 +579,7 @@ export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyN
       <div className="row g-3 mb-3">
         <div className="col-12 col-md-6">
           <label className="form-label" htmlFor="artifact-hcl-role">
-            Role
+            {t('host.installerFilesModals.role')}
           </label>
           <input
             id="artifact-hcl-role"
@@ -579,7 +598,7 @@ export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyN
         </div>
         <div className="col-12 col-md-6">
           <label className="form-label" htmlFor="artifact-hcl-kind">
-            Kind
+            {t('host.installerFilesModals.kind')}
           </label>
           <select
             id="artifact-hcl-kind"
@@ -597,7 +616,7 @@ export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyN
       </div>
       <div className="mb-3">
         <label className="form-label" htmlFor="artifact-hcl-filename">
-          Filename (must match the HCL catalog EXACTLY)
+          {t('host.installerFilesModals.hclFilename')}
         </label>
         <input
           id="artifact-hcl-filename"
@@ -610,7 +629,7 @@ export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyN
       </div>
       <div className="mb-3">
         <label className="form-label" htmlFor="artifact-hcl-key">
-          HCL Portal Key
+          {t('host.installerFilesModals.hclPortalKey')}
         </label>
         {hclKeyNames ? (
           <select
@@ -619,7 +638,7 @@ export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyN
             value={keyName}
             onChange={e => setKeyName(e.target.value)}
           >
-            <option value="">Select…</option>
+            <option value="">{t('host.installerFilesModals.select')}</option>
             {hclKeyNames.map(name => (
               <option key={name} value={name}>
                 {name}
@@ -631,16 +650,12 @@ export const HclDownloadModal = ({ isOpen, onClose, server, roleOptions, hclKeyN
             id="artifact-hcl-key"
             className="form-control"
             type="text"
-            placeholder="hcl_download_portal_api_keys secret name"
+            placeholder={t('host.installerFilesModals.hclKeyPlaceholder')}
             value={keyName}
             onChange={e => setKeyName(e.target.value)}
           />
         )}
-        <p className="form-text text-muted mb-0">
-          The catalog&apos;s sha256 is authoritative — it becomes the entry&apos;s expectation and
-          the download must reproduce it. The portal refresh token rotates on use; the agent
-          persists the rotation automatically.
-        </p>
+        <p className="form-text text-muted mb-0">{t('host.installerFilesModals.hclKeyHelp')}</p>
       </div>
     </FormModal>
   );

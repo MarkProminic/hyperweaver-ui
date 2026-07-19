@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { FormModal } from '../common';
 
 const CreateBEModal = ({ server, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -60,16 +62,14 @@ const CreateBEModal = ({ server, onClose, onSuccess, onError }) => {
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      onError('Boot environment name is required');
+      onError(t('host.createBEModal.errors.nameRequired'));
       return;
     }
 
     // Validate BE name format
     const beNameRegex = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
     if (!beNameRegex.test(formData.name.trim())) {
-      onError(
-        'Boot environment name must start with alphanumeric character and contain only letters, numbers, dots, underscores, and hyphens'
-      );
+      onError(t('host.createBEModal.errors.nameInvalid'));
       return;
     }
 
@@ -122,10 +122,10 @@ const CreateBEModal = ({ server, onClose, onSuccess, onError }) => {
       if (result.success) {
         onSuccess();
       } else {
-        onError(result.message || 'Failed to create boot environment');
+        onError(result.message || t('host.createBEModal.errors.createFailed'));
       }
     } catch (err) {
-      onError(`Error creating boot environment: ${err.message}`);
+      onError(t('host.createBEModal.errors.createError', { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -136,9 +136,9 @@ const CreateBEModal = ({ server, onClose, onSuccess, onError }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create Boot Environment"
+      title={t('host.createBEModal.title')}
       icon="fas fa-plus-circle"
-      submitText="Create Boot Environment"
+      submitText={t('host.createBEModal.title')}
       submitIcon="fas fa-plus"
       submitVariant="success"
       loading={loading}
@@ -146,35 +146,32 @@ const CreateBEModal = ({ server, onClose, onSuccess, onError }) => {
       {/* Basic Information */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Basic Information</h3>
+          <h3 className="fs-6 fw-bold">{t('host.createBEModal.basicInformation')}</h3>
 
           <div className="mb-3">
             <label htmlFor="be-name" className="form-label">
-              Boot Environment Name *
+              {t('host.createBEModal.nameLabel')} *
             </label>
             <input
               id="be-name"
               className="form-control"
               type="text"
-              placeholder="e.g., backup-before-update"
+              placeholder={t('host.createBEModal.namePlaceholder')}
               value={formData.name}
               onChange={e => handleInputChange('name', e.target.value)}
               required
             />
-            <p className="form-text text-muted">
-              Must start with alphanumeric character. Can contain letters, numbers, dots,
-              underscores, and hyphens.
-            </p>
+            <p className="form-text text-muted">{t('host.createBEModal.nameHelp')}</p>
           </div>
 
           <div className="mb-3">
             <label htmlFor="be-description" className="form-label">
-              Description (Optional)
+              {t('host.createBEModal.descriptionLabel')}
             </label>
             <textarea
               id="be-description"
               className="form-control"
-              placeholder="Brief description of this boot environment"
+              placeholder={t('host.createBEModal.descriptionPlaceholder')}
               value={formData.description}
               onChange={e => handleInputChange('description', e.target.value)}
               rows="2"
@@ -186,42 +183,40 @@ const CreateBEModal = ({ server, onClose, onSuccess, onError }) => {
       {/* Source Configuration */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Source Configuration</h3>
+          <h3 className="fs-6 fw-bold">{t('host.createBEModal.sourceConfiguration')}</h3>
 
           <div className="row g-3">
             <div className="col">
               <div className="mb-3">
                 <label htmlFor="be-source" className="form-label">
-                  Source Boot Environment
+                  {t('host.createBEModal.sourceBELabel')}
                 </label>
                 <input
                   id="be-source"
                   className="form-control"
                   type="text"
-                  placeholder="Leave empty to use current BE"
+                  placeholder={t('host.createBEModal.sourceBEPlaceholder')}
                   value={formData.sourceBE}
                   onChange={e => handleInputChange('sourceBE', e.target.value)}
                 />
-                <p className="form-text text-muted">
-                  Source BE to clone from (default: current active BE)
-                </p>
+                <p className="form-text text-muted">{t('host.createBEModal.sourceBEHelp')}</p>
               </div>
             </div>
 
             <div className="col">
               <div className="mb-3">
                 <label htmlFor="be-snapshot" className="form-label">
-                  Source Snapshot
+                  {t('host.createBEModal.sourceSnapshotLabel')}
                 </label>
                 <input
                   id="be-snapshot"
                   className="form-control"
                   type="text"
-                  placeholder="Snapshot name or path"
+                  placeholder={t('host.createBEModal.sourceSnapshotPlaceholder')}
                   value={formData.snapshot}
                   onChange={e => handleInputChange('snapshot', e.target.value)}
                 />
-                <p className="form-text text-muted">Create BE from specific snapshot</p>
+                <p className="form-text text-muted">{t('host.createBEModal.sourceSnapshotHelp')}</p>
               </div>
             </div>
           </div>
@@ -231,7 +226,7 @@ const CreateBEModal = ({ server, onClose, onSuccess, onError }) => {
       {/* Advanced Options */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Advanced Options</h3>
+          <h3 className="fs-6 fw-bold">{t('host.createBEModal.advancedOptions')}</h3>
 
           <div className="row g-3">
             <div className="col">
@@ -245,25 +240,25 @@ const CreateBEModal = ({ server, onClose, onSuccess, onError }) => {
                     onChange={e => handleInputChange('activate', e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="be-activate">
-                    <strong>Activate on Creation</strong> - Set as active boot environment for next
-                    reboot
+                    <strong>{t('host.createBEModal.activateTitle')}</strong>{' '}
+                    {t('host.createBEModal.activateHelp')}
                   </label>
                 </div>
               </div>
 
               <div className="mb-3">
                 <label htmlFor="be-zpool" className="form-label">
-                  ZFS Pool (Optional)
+                  {t('host.createBEModal.zpoolLabel')}
                 </label>
                 <input
                   id="be-zpool"
                   className="form-control"
                   type="text"
-                  placeholder="e.g., rpool"
+                  placeholder={t('host.createBEModal.zpoolPlaceholder')}
                   value={formData.zpool}
                   onChange={e => handleInputChange('zpool', e.target.value)}
                 />
-                <p className="form-text text-muted">Specify ZFS pool (default: system pool)</p>
+                <p className="form-text text-muted">{t('host.createBEModal.zpoolHelp')}</p>
               </div>
             </div>
           </div>
@@ -273,21 +268,21 @@ const CreateBEModal = ({ server, onClose, onSuccess, onError }) => {
       {/* Custom Properties */}
       <div className="card">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Custom Properties</h3>
+          <h3 className="fs-6 fw-bold">{t('host.createBEModal.customProperties')}</h3>
 
           {formData.properties.map(prop => (
             <div key={prop.id} className="input-group mb-3">
               <input
                 className="form-control"
                 type="text"
-                placeholder="Property name"
+                placeholder={t('host.createBEModal.propertyNamePlaceholder')}
                 value={prop.key}
                 onChange={e => handlePropertyKeyChange(prop.id, e.target.value)}
               />
               <input
                 className="form-control"
                 type="text"
-                placeholder="Property value"
+                placeholder={t('host.createBEModal.propertyValuePlaceholder')}
                 value={prop.value}
                 onChange={e => handlePropertyValueChange(prop.id, e.target.value)}
               />
@@ -303,11 +298,11 @@ const CreateBEModal = ({ server, onClose, onSuccess, onError }) => {
 
           <button type="button" className="btn btn-info" onClick={addProperty}>
             <i className="fas fa-plus me-2" />
-            <span>Add Property</span>
+            <span>{t('host.createBEModal.addProperty')}</span>
           </button>
 
           <p className="form-text text-muted mt-2">
-            Add custom ZFS properties to the boot environment (e.g., compression, mountpoint)
+            {t('host.createBEModal.customPropertiesHelp')}
           </p>
         </div>
       </div>

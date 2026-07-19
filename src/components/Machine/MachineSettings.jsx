@@ -574,6 +574,45 @@ const IMMEDIATE_KEYS = [
 const knobValuesOf = defaults => defaults?.knob_values || null;
 const sectionForTab = tab => SECTION_TABS.find(section => section.id === tab) || null;
 
+const seededUtmArgs = (knobCurrent, configuration) =>
+  (Array.isArray(knobCurrent?.utm?.qemu_args)
+    ? knobCurrent.utm.qemu_args
+    : configuration?.utm?.qemu_args || []
+  ).join('\n');
+
+/** The changed-only `utm` section (notes, qemu_args[]) — null when untouched. */
+const buildUtmSection = ({ knobCurrent, configuration, utmNotes, utmQemuArgs }) => {
+  const seededNotes = asFormString(knobCurrent?.utm?.notes ?? configuration?.utm?.notes);
+  const utmSection = {};
+  if (utmNotes !== seededNotes) {
+    utmSection.notes = utmNotes;
+  }
+  if (utmQemuArgs !== seededUtmArgs(knobCurrent, configuration)) {
+    utmSection.qemu_args = utmQemuArgs
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean);
+  }
+  return Object.keys(utmSection).length > 0 ? utmSection : null;
+};
+
+// DB-immediate keys alone need no task and no restart — skip the
+// stop/apply/start choice even while running. A nics/update_nics set that
+// ONLY flips remove-on-completion is DB-immediate too (both agents' stated
+// semantics).
+const flagOnlyEntries = list =>
+  Array.isArray(list) &&
+  list.every(entry =>
+    Object.keys(entry).every(key => ['physical', 'adapter', 'remove_on_completion'].includes(key))
+  );
+
+const immediateOnlyChanges = changes =>
+  Object.keys(changes).every(
+    key =>
+      IMMEDIATE_KEYS.includes(key) ||
+      ((key === 'update_nics' || key === 'nics') && flagOnlyEntries(changes[key]))
+  );
+
 // Apply-outcome message pieces. Agent messages end with their own period —
 // never double it.
 const warningsSuffix = (data, t) => {
@@ -659,9 +698,132 @@ PendingChangesPanel.propTypes = {
   onCancel: PropTypes.func.isRequired,
 };
 
+// The tab strip: utm machines take a fixed reduced set + the UTM tab; every
+// other machine takes the vbox/bhyve-gated full set.
+const visibleTabs = (isUtm, currentServer) => {
+  if (isUtm) {
+    return [
+      ...TABS.filter(entry => ['general', 'credentials', 'nics'].includes(entry.id)),
+      { id: 'utm', label: 'UTM' },
+    ];
+  }
+  return TABS.filter(entry => {
+    if (entry.vboxOnly) {
+      return hasHypervisor(currentServer, 'virtualbox');
+    }
+    if (entry.bhyveOnly) {
+      return hasHypervisor(currentServer, 'bhyve');
+    }
+    return true;
+  });
+};
+
+// The General tab's field list: utm takes ram/vcpus only; bhyve-only knobs
+// gate on the hypervisor. Labels/hints resolve at the call site.
+const editableFields = (isUtm, currentServer, t) =>
+  FIELDS.filter(field => {
+    if (isUtm) {
+      return field.key === 'ram' || field.key === 'vcpus';
+    }
+    return !field.bhyveOnly || hasHypervisor(currentServer, 'bhyve');
+  }).map(field => ({
+    ...field,
+    label: t(`machineEdit.machineSettings.field.${field.key}`),
+    ...(field.hint && { hint: t(`machineEdit.machineSettings.fieldHint.${field.key}`) }),
+  }));
+
+/** bhyve CPU-topology block under the General tab — self-gates on tab+bhyve. */
+const CpuTopologySection = ({
+  tab,
+  currentServer,
+  seed,
+  cpuMode,
+  setCpuMode,
+  cpuTopo,
+  setCpuTopo,
+  formDisabled,
+}) => {
+  const { t } = useTranslation();
+  if (tab !== 'general' || !hasHypervisor(currentServer, 'bhyve')) {
+    return null;
+  }
+  const currentTopo = seed.cpuTopology;
+  const currentTopoLabel = () => {
+    if (currentTopo) {
+      return t('machineEdit.machineSettings.cpuTopoComplex', {
+        sockets: currentTopo.sockets,
+        cores: currentTopo.cores,
+        threads: currentTopo.threads,
+      });
+    }
+    return seed.values.vcpus
+      ? t('machineEdit.machineSettings.cpuTopoSimpleWithVcpus', { vcpus: seed.values.vcpus })
+      : t('machineEdit.machineSettings.cpuTopoSimple');
+  };
+  return (
+    <div className="mt-3">
+      <h6 className="fw-bold">{t('machineEdit.machineSettings.cpuTopology')}</h6>
+      <p className="form-text text-muted mt-0 mb-2">
+        {t('machineEdit.machineSettings.cpuTopoCurrentPrefix')} {currentTopoLabel()}
+        {t('machineEdit.machineSettings.cpuTopoApplyNote')}
+      </p>
+      <div className="row g-3">
+        <div className="col-12 col-md-4">
+          <label className="form-label" htmlFor="machine-cpu-mode">
+            {t('machineEdit.machineSettings.mode')}
+          </label>
+          <select
+            id="machine-cpu-mode"
+            className="form-select"
+            value={cpuMode}
+            onChange={e => {
+              const mode = e.target.value;
+              setCpuMode(mode);
+              if (mode === 'complex' && !cpuTopo.sockets) {
+                setCpuTopo(
+                  currentTopo || {
+                    sockets: 1,
+                    cores: Number(seed.values.vcpus) || 1,
+                    threads: 1,
+                  }
+                );
+              }
+            }}
+            disabled={formDisabled}
+          >
+            <option value="">{t('machineEdit.machineSettings.unchanged')}</option>
+            <option value="simple">{t('machineEdit.machineSettings.simpleVcpus')}</option>
+            <option value="complex">{t('machineEdit.machineSettings.complexTopo')}</option>
+          </select>
+        </div>
+        {cpuMode === 'complex' && (
+          <CpuTopologyInputs
+            idPrefix="machine-cpu-topo"
+            topo={cpuTopo}
+            onField={(key, next) => setCpuTopo(prev => ({ ...prev, [key]: next }))}
+            disabled={formDisabled}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+CpuTopologySection.propTypes = {
+  tab: PropTypes.string.isRequired,
+  currentServer: PropTypes.object,
+  seed: PropTypes.object.isRequired,
+  cpuMode: PropTypes.string.isRequired,
+  setCpuMode: PropTypes.func.isRequired,
+  cpuTopo: PropTypes.object.isRequired,
+  setCpuTopo: PropTypes.func.isRequired,
+  formDisabled: PropTypes.bool,
+};
+
 const MachineSettings = ({
   currentServer,
   machineName,
+  hypervisor,
   configuration,
   knobCurrent,
   pendingChanges,
@@ -747,6 +909,15 @@ const MachineSettings = ({
 
   const formDisabled = loading || phase !== 'form';
 
+  // utm machines take the modify SUBSET only: ram/vcpus, the DB-immediate
+  // keys, add/remove NICs, and the `utm` section (notes, qemu_args[]). All
+  // disk/cdrom/controller changes 400, and the vbox knob surface does not
+  // exist — those tabs hide on utm MACHINES (a machine-level branch; the
+  // host-level vboxOnly gates still hold for VirtualBox machines beside them).
+  const isUtm = hypervisor === 'utm';
+  const [utmNotes, setUtmNotes] = useState('');
+  const [utmQemuArgs, setUtmQemuArgs] = useState('');
+
   // Details never poll mid-edit — configuration/knob_current only change on
   // machine switch or the post-apply reload, so re-seeding never wipes edits.
   const resetForm = useCallback(() => {
@@ -784,6 +955,8 @@ const MachineSettings = ({
     setRemoveZoneNics([]);
     setZoneNicEdits({});
     setCloudInit({});
+    setUtmNotes(asFormString(knobCurrent?.utm?.notes ?? configuration?.utm?.notes));
+    setUtmQemuArgs(seededUtmArgs(knobCurrent, configuration));
     setRevealPass(false);
     setPhase('form');
     setStagedChanges(null);
@@ -878,6 +1051,56 @@ const MachineSettings = ({
       return result.success ? (result.data?.tasks || []).find(task => task.id === taskId) : null;
     }, attempts);
 
+  const stopBeforeApply = async () => {
+    setStep(t('machineEdit.machineSettings.stoppingMachine', { machineName }));
+    const stopResult = await stopMachine(
+      currentServer.hostname,
+      currentServer.port,
+      currentServer.protocol,
+      machineName
+    );
+    if (!stopResult.success) {
+      throw new Error(
+        t('machineEdit.machineSettings.stopFailedError', { message: stopResult.message })
+      );
+    }
+    const stopped = await waitForStopped();
+    if (!stopped) {
+      throw new Error(t('machineEdit.machineSettings.stopTimeoutError', { machineName }));
+    }
+  };
+
+  const reportApplyOutcome = ({ data, task, warnings, base, queuedWhileRunning, immediate }) => {
+    if (queuedWhileRunning) {
+      onDone({
+        text: `${t('machineEdit.machineSettings.changesAcceptedQueued', { machineName })}${warnings}`,
+        warning: true,
+      });
+      return;
+    }
+    if (immediate) {
+      onDone({
+        text: `${base}.${warnings}`,
+        warning: warnings !== '',
+      });
+      return;
+    }
+    // A COMPLETED task means the change already applied (the machine was
+    // off, the task ran immediately) — the agent's queued-task wording
+    // ("must be powered off…") would be stale. requires_restart still
+    // beats flow-based wording for the take-effect note.
+    const applied =
+      task?.status === 'completed'
+        ? t('machineEdit.machineSettings.changesAppliedTo', { machineName })
+        : base;
+    const restartNote =
+      data.requires_restart === false ? '' : t('machineEdit.machineSettings.takeEffectOnStart');
+    onDone({
+      text: `${applied}${restartNote}.${warnings}`,
+      warning: warnings !== '',
+    });
+  };
+
   const applyChanges = async (
     changes,
     { restart = false, queuedWhileRunning = false, immediate = false } = {}
@@ -887,22 +1110,7 @@ const MachineSettings = ({
     setError('');
     try {
       if (restart) {
-        setStep(t('machineEdit.machineSettings.stoppingMachine', { machineName }));
-        const stopResult = await stopMachine(
-          currentServer.hostname,
-          currentServer.port,
-          currentServer.protocol,
-          machineName
-        );
-        if (!stopResult.success) {
-          throw new Error(
-            t('machineEdit.machineSettings.stopFailedError', { message: stopResult.message })
-          );
-        }
-        const stopped = await waitForStopped();
-        if (!stopped) {
-          throw new Error(t('machineEdit.machineSettings.stopTimeoutError', { machineName }));
-        }
+        await stopBeforeApply();
       }
 
       setStep(t('machineEdit.machineSettings.applyingChanges'));
@@ -961,31 +1169,8 @@ const MachineSettings = ({
           text: `${t('machineEdit.machineSettings.changesAppliedStarting', { machineName })}${warnings}`,
           warning: warnings !== '',
         });
-      } else if (queuedWhileRunning) {
-        onDone({
-          text: `${t('machineEdit.machineSettings.changesAcceptedQueued', { machineName })}${warnings}`,
-          warning: true,
-        });
-      } else if (immediate) {
-        onDone({
-          text: `${base}.${warnings}`,
-          warning: warnings !== '',
-        });
       } else {
-        // A COMPLETED task means the change already applied (the machine was
-        // off, the task ran immediately) — the agent's queued-task wording
-        // ("must be powered off…") would be stale. requires_restart still
-        // beats flow-based wording for the take-effect note.
-        const applied =
-          task?.status === 'completed'
-            ? t('machineEdit.machineSettings.changesAppliedTo', { machineName })
-            : base;
-        const restartNote =
-          data.requires_restart === false ? '' : t('machineEdit.machineSettings.takeEffectOnStart');
-        onDone({
-          text: `${applied}${restartNote}.${warnings}`,
-          warning: warnings !== '',
-        });
+        reportApplyOutcome({ data, task, warnings, base, queuedWhileRunning, immediate });
       }
       resetForm();
     } catch (err) {
@@ -997,17 +1182,24 @@ const MachineSettings = ({
     }
   };
 
-  const handleSubmit = () => {
-    if (phase !== 'form') {
-      return;
-    }
-    // Only CHANGED fields ride the request — the agent requires at least one.
+  // Only CHANGED scalar knobs ride the request; the utm section joins the
+  // same changed-only rule.
+  const buildScalarChanges = () => {
     const changes = {};
-    FIELDS.forEach(({ key }) => {
+    const diffableFields = isUtm
+      ? FIELDS.filter(field => field.key === 'ram' || field.key === 'vcpus')
+      : FIELDS;
+    diffableFields.forEach(({ key }) => {
       if (values[key] !== initial[key] && values[key] !== '') {
         changes[key] = values[key];
       }
     });
+    if (isUtm) {
+      const utmSection = buildUtmSection({ knobCurrent, configuration, utmNotes, utmQemuArgs });
+      if (utmSection) {
+        changes.utm = utmSection;
+      }
+    }
     if (autoboot !== '' && autoboot !== seed.autoboot) {
       changes.autoboot = autoboot === 'true';
     }
@@ -1017,34 +1209,8 @@ const MachineSettings = ({
     if (bootOrder.length > 0 && JSON.stringify(bootOrder) !== JSON.stringify(seed.bootOrder)) {
       changes.boot_order = bootOrder;
     }
-    let vboxPassthrough = null;
-    if (vboxJson.trim()) {
-      try {
-        vboxPassthrough = JSON.parse(vboxJson);
-      } catch {
-        setError(t('machineEdit.machineSettings.vboxJsonInvalid'));
-        return;
-      }
-    }
     if (bootPriority !== '' && bootPriority !== seed.bootPriority) {
       changes.boot_priority = Number(bootPriority);
-    }
-    // bhyve CPU topology — '' = unchanged; complex needs all three fields.
-    if (cpuMode === 'complex') {
-      if (!cpuTopo.sockets || !cpuTopo.cores || !cpuTopo.threads) {
-        setError(t('machineEdit.machineSettings.complexCpuTopologyRequired'));
-        return;
-      }
-      changes.cpu_configuration = 'complex';
-      changes.complex_cpu_conf = [
-        {
-          sockets: Number(cpuTopo.sockets),
-          cores: Number(cpuTopo.cores),
-          threads: Number(cpuTopo.threads),
-        },
-      ];
-    } else if (cpuMode === 'simple') {
-      changes.cpu_configuration = 'simple';
     }
     // consoleport pins the noVNC web port (typing "dynamic" clears the pin
     // back to the agent's pool); consolehost sets the bind address.
@@ -1059,6 +1225,31 @@ const MachineSettings = ({
     credsTouched.forEach(key => {
       changes[key] = creds[key] ?? '';
     });
+    return changes;
+  };
+
+  // bhyve CPU topology — '' = unchanged; complex needs all three fields.
+  // Returns the blocking error text, '' when fine.
+  const applyCpuChanges = changes => {
+    if (cpuMode === 'complex') {
+      if (!cpuTopo.sockets || !cpuTopo.cores || !cpuTopo.threads) {
+        return t('machineEdit.machineSettings.complexCpuTopologyRequired');
+      }
+      changes.cpu_configuration = 'complex';
+      changes.complex_cpu_conf = [
+        {
+          sockets: Number(cpuTopo.sockets),
+          cores: Number(cpuTopo.cores),
+          threads: Number(cpuTopo.threads),
+        },
+      ];
+    } else if (cpuMode === 'simple') {
+      changes.cpu_configuration = 'simple';
+    }
+    return '';
+  };
+
+  const applyFilesystemChanges = changes => {
     const filesystemAdds = filesystemEntries(addFilesystems);
     if (filesystemAdds.length > 0) {
       changes.add_filesystems = filesystemAdds;
@@ -1066,6 +1257,28 @@ const MachineSettings = ({
     if (removeFilesystems.length > 0) {
       changes.remove_filesystems = removeFilesystems;
     }
+  };
+
+  const handleSubmit = () => {
+    if (phase !== 'form') {
+      return;
+    }
+    const changes = buildScalarChanges();
+    let vboxPassthrough = null;
+    if (vboxJson.trim()) {
+      try {
+        vboxPassthrough = JSON.parse(vboxJson);
+      } catch {
+        setError(t('machineEdit.machineSettings.vboxJsonInvalid'));
+        return;
+      }
+    }
+    const cpuError = applyCpuChanges(changes);
+    if (cpuError) {
+      setError(cpuError);
+      return;
+    }
+    applyFilesystemChanges(changes);
     Object.assign(
       changes,
       buildZoneChanges({
@@ -1098,28 +1311,12 @@ const MachineSettings = ({
     }
     setError('');
     setErrorDetails([]);
-    // DB-immediate keys alone need no task and no restart — skip the
-    // stop/apply/start choice even while running. A nics/update_nics set
-    // that ONLY flips remove-on-completion is DB-immediate too (both
-    // agents' stated semantics).
-    const flagOnlyEntries = list =>
-      Array.isArray(list) &&
-      list.every(entry =>
-        Object.keys(entry).every(key =>
-          ['physical', 'adapter', 'remove_on_completion'].includes(key)
-        )
-      );
-    const immediateOnly = Object.keys(changes).every(
-      key =>
-        IMMEDIATE_KEYS.includes(key) ||
-        ((key === 'update_nics' || key === 'nics') && flagOnlyEntries(changes[key]))
-    );
-    if (isRunning && !immediateOnly) {
+    if (isRunning && !immediateOnlyChanges(changes)) {
       setStagedChanges(changes);
       setPhase('choice');
       return;
     }
-    applyChanges(changes, { immediate: immediateOnly });
+    applyChanges(changes, { immediate: immediateOnlyChanges(changes) });
   };
 
   const setHardwareValue = (sectionId, key, value) =>
@@ -1269,15 +1466,7 @@ const MachineSettings = ({
       />
 
       <ul className="nav nav-pills mb-3 flex-wrap gap-1">
-        {TABS.filter(entry => {
-          if (entry.vboxOnly) {
-            return hasHypervisor(currentServer, 'virtualbox');
-          }
-          if (entry.bhyveOnly) {
-            return hasHypervisor(currentServer, 'bhyve');
-          }
-          return true;
-        }).map(entry => (
+        {visibleTabs(isUtm, currentServer).map(entry => (
           <li key={entry.id} className="nav-item">
             <button
               type="button"
@@ -1295,13 +1484,7 @@ const MachineSettings = ({
 
       {tab === 'general' && (
         <GeneralSettingsTab
-          fields={FIELDS.filter(
-            field => !field.bhyveOnly || hasHypervisor(currentServer, 'bhyve')
-          ).map(field => ({
-            ...field,
-            label: t(`machineEdit.machineSettings.field.${field.key}`),
-            ...(field.hint && { hint: t(`machineEdit.machineSettings.fieldHint.${field.key}`) }),
-          }))}
+          fields={editableFields(isUtm, currentServer, t)}
           knobValues={knobValues}
           defaultsDoc={agentDefaults}
           osTypes={osTypes}
@@ -1327,76 +1510,21 @@ const MachineSettings = ({
           currentServer={currentServer}
           machineName={machineName}
           isRunning={isRunning}
+          isUtm={isUtm}
           formDisabled={formDisabled}
         />
       )}
 
-      {tab === 'general' &&
-        hasHypervisor(currentServer, 'bhyve') &&
-        (() => {
-          const currentTopo = seed.cpuTopology;
-          const currentTopoLabel = () => {
-            if (currentTopo) {
-              return t('machineEdit.machineSettings.cpuTopoComplex', {
-                sockets: currentTopo.sockets,
-                cores: currentTopo.cores,
-                threads: currentTopo.threads,
-              });
-            }
-            return seed.values.vcpus
-              ? t('machineEdit.machineSettings.cpuTopoSimpleWithVcpus', {
-                  vcpus: seed.values.vcpus,
-                })
-              : t('machineEdit.machineSettings.cpuTopoSimple');
-          };
-          return (
-            <div className="mt-3">
-              <h6 className="fw-bold">{t('machineEdit.machineSettings.cpuTopology')}</h6>
-              <p className="form-text text-muted mt-0 mb-2">
-                {t('machineEdit.machineSettings.cpuTopoCurrentPrefix')} {currentTopoLabel()}
-                {t('machineEdit.machineSettings.cpuTopoApplyNote')}
-              </p>
-              <div className="row g-3">
-                <div className="col-12 col-md-4">
-                  <label className="form-label" htmlFor="machine-cpu-mode">
-                    {t('machineEdit.machineSettings.mode')}
-                  </label>
-                  <select
-                    id="machine-cpu-mode"
-                    className="form-select"
-                    value={cpuMode}
-                    onChange={e => {
-                      const mode = e.target.value;
-                      setCpuMode(mode);
-                      if (mode === 'complex' && !cpuTopo.sockets) {
-                        setCpuTopo(
-                          currentTopo || {
-                            sockets: 1,
-                            cores: Number(seed.values.vcpus) || 1,
-                            threads: 1,
-                          }
-                        );
-                      }
-                    }}
-                    disabled={formDisabled}
-                  >
-                    <option value="">{t('machineEdit.machineSettings.unchanged')}</option>
-                    <option value="simple">{t('machineEdit.machineSettings.simpleVcpus')}</option>
-                    <option value="complex">{t('machineEdit.machineSettings.complexTopo')}</option>
-                  </select>
-                </div>
-                {cpuMode === 'complex' && (
-                  <CpuTopologyInputs
-                    idPrefix="machine-cpu-topo"
-                    topo={cpuTopo}
-                    onField={(key, next) => setCpuTopo(prev => ({ ...prev, [key]: next }))}
-                    disabled={formDisabled}
-                  />
-                )}
-              </div>
-            </div>
-          );
-        })()}
+      <CpuTopologySection
+        tab={tab}
+        currentServer={currentServer}
+        seed={seed}
+        cpuMode={cpuMode}
+        setCpuMode={setCpuMode}
+        cpuTopo={cpuTopo}
+        setCpuTopo={setCpuTopo}
+        formDisabled={formDisabled}
+      />
 
       {tab === 'credentials' && (
         <div className="row g-3">
@@ -1577,6 +1705,7 @@ const MachineSettings = ({
               },
             }))
           }
+          utmMode={isUtm}
           formDisabled={formDisabled}
         />
       )}
@@ -1599,6 +1728,41 @@ const MachineSettings = ({
           onRemoveChange={setRemoveFilesystems}
           disabled={formDisabled}
         />
+      )}
+
+      {tab === 'utm' && (
+        <div className="row g-3">
+          <div className="col-12 col-md-6">
+            <label className="form-label" htmlFor="machine-edit-utm-notes">
+              {t('machineEdit.machineSettings.utmNotes')}
+            </label>
+            <textarea
+              id="machine-edit-utm-notes"
+              className="form-control"
+              rows={3}
+              value={utmNotes}
+              onChange={e => setUtmNotes(e.target.value)}
+              disabled={formDisabled}
+            />
+          </div>
+          <div className="col-12 col-md-6">
+            <label className="form-label" htmlFor="machine-edit-utm-qemu-args">
+              {t('machineEdit.machineSettings.utmQemuArgs')}
+            </label>
+            <textarea
+              id="machine-edit-utm-qemu-args"
+              className="form-control font-monospace"
+              rows={3}
+              spellCheck={false}
+              value={utmQemuArgs}
+              onChange={e => setUtmQemuArgs(e.target.value)}
+              disabled={formDisabled}
+            />
+            <span className="form-text text-muted small">
+              {t('machineEdit.machineSettings.utmQemuArgsHint')}
+            </span>
+          </div>
+        </div>
       )}
 
       {tab === 'advanced' && (
@@ -1675,6 +1839,7 @@ const MachineSettings = ({
 MachineSettings.propTypes = {
   currentServer: PropTypes.object,
   machineName: PropTypes.string,
+  hypervisor: PropTypes.string,
   configuration: PropTypes.object,
   knobCurrent: PropTypes.object,
   pendingChanges: PropTypes.object,

@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import { isFieldVisible } from '../../utils/settingsUtils';
 
@@ -11,6 +12,7 @@ const FieldRenderer = ({
   onFieldChange,
   onSslFileUpload,
 }) => {
+  const { t } = useTranslation();
   // SSL file field renderer for certificate, key, and CA files
   const renderSSLFileField = sslField => {
     // Skip field if conditional logic says to hide it
@@ -27,7 +29,7 @@ const FieldRenderer = ({
     const getSSLFileConfig = path => {
       if (path.includes('ssl_key_path')) {
         return {
-          type: 'Private Key',
+          type: t('settings.fieldRenderer.privateKey'),
           icon: 'fas fa-key',
           color: 'danger',
           accept: '.key,.pem',
@@ -35,7 +37,7 @@ const FieldRenderer = ({
         };
       } else if (path.includes('ssl_cert_path')) {
         return {
-          type: 'Certificate',
+          type: t('settings.fieldRenderer.certificate'),
           icon: 'fas fa-certificate',
           color: 'success',
           accept: '.crt,.pem,.cer',
@@ -47,7 +49,7 @@ const FieldRenderer = ({
         path.includes('ca_certificate')
       ) {
         return {
-          type: 'CA Certificate',
+          type: t('settings.fieldRenderer.caCertificate'),
           icon: 'fas fa-shield-alt',
           color: 'info',
           accept: '.ca,.crt,.pem,.cer',
@@ -55,7 +57,7 @@ const FieldRenderer = ({
         };
       }
       return {
-        type: 'SSL File',
+        type: t('settings.fieldRenderer.sslFile'),
         icon: 'fas fa-file',
         color: 'primary',
         accept: '.pem,.crt,.key,.cer,.ca',
@@ -82,7 +84,7 @@ const FieldRenderer = ({
         {/* File path input - always visible */}
         <div className="mb-2">
           <label className="form-label small" htmlFor={`${sslField.path}-input`}>
-            File Path:
+            {t('settings.fieldRenderer.filePath')}
           </label>
           <input
             id={`${sslField.path}-input`}
@@ -90,13 +92,10 @@ const FieldRenderer = ({
             type="text"
             value={currentValue || ''}
             onChange={e => onFieldChange(sslField.path, e.target.value)}
-            placeholder={sslField.placeholder || 'Enter file path...'}
+            placeholder={sslField.placeholder || t('settings.fieldRenderer.enterFilePath')}
             disabled={loading}
           />
-          <p className="form-text">
-            Specify where the uploaded file should be saved. The upload will update this path
-            automatically.
-          </p>
+          <p className="form-text">{t('settings.fieldRenderer.filePathHelp')}</p>
         </div>
 
         {/* File upload */}
@@ -111,7 +110,7 @@ const FieldRenderer = ({
         {isUploading && (
           <p className="form-text">
             <i className="fas fa-spinner fa-pulse me-1" />
-            Uploading {config.type}…
+            {t('settings.fieldRenderer.uploading', { type: config.type })}
           </p>
         )}
 
@@ -137,7 +136,8 @@ const FieldRenderer = ({
             {sslField.description}
             <br />
             <small>
-              <strong>Supported formats:</strong> {config.accept.replace(/\./g, '').toUpperCase()}
+              <strong>{t('settings.fieldRenderer.supportedFormats')}</strong>{' '}
+              {config.accept.replace(/\./g, '').toUpperCase()}
             </small>
           </p>
         )}
@@ -221,11 +221,11 @@ const FieldRenderer = ({
                 // Special handling for CORS allow_origin field
                 if (fieldToRender.path === 'security.cors.allow_origin') {
                   if (optionValue === true) {
-                    optionLabel = 'Allow all origins in whitelist';
+                    optionLabel = t('settings.fieldRenderer.corsAllowAll');
                   } else if (optionValue === false) {
-                    optionLabel = 'Deny all origins';
+                    optionLabel = t('settings.fieldRenderer.corsDenyAll');
                   } else if (optionValue === 'specific') {
-                    optionLabel = 'Use exact whitelist matching';
+                    optionLabel = t('settings.fieldRenderer.corsSpecific');
                   }
                 }
 
@@ -262,7 +262,7 @@ const FieldRenderer = ({
           className="form-control"
           value={arrayValue}
           onChange={handleArrayChange}
-          placeholder={fieldToRender.placeholder || 'One item per line'}
+          placeholder={fieldToRender.placeholder || t('settings.fieldRenderer.oneItemPerLine')}
           disabled={fieldProps.disabled}
           rows={fieldToRender.validation?.rows || 4}
         />

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   getProvisioners,
@@ -67,6 +68,7 @@ const pollTask = (server, taskId, attempts) =>
  * more than one catalog source; blank = the agent's default.
  */
 const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }) => {
+  const { t } = useTranslation();
   const [sources, setSources] = useState([]);
   const [source, setSource] = useState(''); // '' = the agent's default source
   const [catalog, setCatalog] = useState(null); // null = loading
@@ -89,10 +91,10 @@ const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }
         setCatalog(result.data || {});
       } else {
         setCatalog({});
-        setError(`Catalog fetch failed: ${result.message}`);
+        setError(t('host.provisionerManagement.catalogFetchFailed', { message: result.message }));
       }
     },
-    [server]
+    [server, t]
   );
 
   useEffect(() => {
@@ -120,7 +122,7 @@ const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }
       onQueued(key, result.data?.task_id || null);
       onClose();
     } else {
-      setError(`Install failed: ${result.message}`);
+      setError(t('host.provisionerManagement.installFailed', { message: result.message }));
     }
   };
 
@@ -130,13 +132,13 @@ const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }
     <ContentModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Provisioner Catalog"
+      title={t('host.provisionerManagement.catalogTitle')}
       icon="fas fa-cloud-arrow-down"
     >
       {sources.length > 1 && (
         <div className="mb-3">
           <label className="form-label" htmlFor="catalog-source">
-            Catalog source
+            {t('host.provisionerManagement.catalogSource')}
           </label>
           <select
             id="catalog-source"
@@ -147,7 +149,7 @@ const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }
               loadCatalog(e.target.value);
             }}
           >
-            <option value="">Default</option>
+            <option value="">{t('host.provisionerManagement.default')}</option>
             {sources.map(entry => (
               <option key={entry.name} value={entry.name}>
                 {entry.name}
@@ -161,11 +163,11 @@ const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }
       {catalog === null && (
         <p className="text-muted mb-0">
           <i className="fas fa-spinner fa-spin me-2" />
-          Fetching the catalog…
+          {t('host.provisionerManagement.fetchingCatalog')}
         </p>
       )}
       {catalog !== null && families.length === 0 && !error && (
-        <p className="text-muted mb-0">The catalog lists no provisioners.</p>
+        <p className="text-muted mb-0">{t('host.provisionerManagement.noProvisionersInCatalog')}</p>
       )}
 
       {families.map(family => (
@@ -182,8 +184,8 @@ const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }
                 <table className="table table-striped table-sm mb-0">
                   <thead>
                     <tr>
-                      <th>Version</th>
-                      <th aria-label="Actions" />
+                      <th>{t('host.provisionerManagement.version')}</th>
+                      <th aria-label={t('host.provisionerManagement.actions')} />
                     </tr>
                   </thead>
                   <tbody>
@@ -195,7 +197,9 @@ const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }
                           <td>
                             <code className="small">{version.version}</code>
                             {installed && (
-                              <span className="badge text-bg-success ms-2">installed</span>
+                              <span className="badge text-bg-success ms-2">
+                                {t('host.provisionerManagement.installed')}
+                              </span>
                             )}
                           </td>
                           <td className="text-end">
@@ -206,8 +210,8 @@ const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }
                               disabled={installed || installing !== null}
                               title={
                                 installed
-                                  ? 'Already in the registry — versions are immutable'
-                                  : 'Download, verify, and import this version'
+                                  ? t('host.provisionerManagement.alreadyInstalledTitle')
+                                  : t('host.provisionerManagement.installVersionTitle')
                               }
                             >
                               {installing === key ? (
@@ -215,7 +219,7 @@ const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }
                               ) : (
                                 <>
                                   <i className="fas fa-download me-2" />
-                                  Install
+                                  {t('host.provisionerManagement.install')}
                                 </>
                               )}
                             </button>
@@ -227,7 +231,9 @@ const CatalogBrowseModal = ({ isOpen, onClose, server, installedKeys, onQueued }
                 </table>
               </div>
             ) : (
-              <p className="text-muted small mb-0">No versions published.</p>
+              <p className="text-muted small mb-0">
+                {t('host.provisionerManagement.noVersionsPublished')}
+              </p>
             )}
           </div>
         </div>
@@ -244,6 +250,7 @@ CatalogBrowseModal.propTypes = {
   onQueued: PropTypes.func.isRequired,
 };
 const ProvisionerManagement = ({ server }) => {
+  const { t } = useTranslation();
   const [provisioners, setProvisioners] = useState([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
@@ -276,10 +283,10 @@ const ProvisionerManagement = ({ server }) => {
     if (result.success) {
       setProvisioners(result.data?.provisioners || []);
     } else {
-      report(`Failed to load provisioners: ${result.message}`, 'danger');
+      report(t('host.provisionerManagement.loadFailed', { message: result.message }), 'danger');
     }
     setLoading(false);
-  }, [server]);
+  }, [server, t]);
 
   useEffect(() => {
     loadProvisioners();
@@ -336,7 +343,7 @@ const ProvisionerManagement = ({ server }) => {
     const body = { source_type: sourceType };
     if (sourceType === 'git') {
       if (!importUrl.trim()) {
-        report('A repository URL is required.', 'danger');
+        report(t('host.provisionerManagement.repoUrlRequired'), 'danger');
         return;
       }
       body.url = importUrl.trim();
@@ -348,7 +355,7 @@ const ProvisionerManagement = ({ server }) => {
       }
     } else {
       if (!importPath.trim()) {
-        report('A path on the agent host is required.', 'danger');
+        report(t('host.provisionerManagement.pathRequired'), 'danger');
         return;
       }
       body.path = importPath.trim();
@@ -360,7 +367,10 @@ const ProvisionerManagement = ({ server }) => {
     if (result.success) {
       setShowImport(false);
       report(
-        `${result.data?.message || 'Import queued'} (task ${result.data?.task_id}) — refresh once it completes`,
+        t('host.provisionerManagement.importQueued', {
+          message: result.data?.message || t('host.provisionerManagement.importQueuedDefault'),
+          taskId: result.data?.task_id,
+        }),
         'success'
       );
       setImportPath('');
@@ -368,7 +378,7 @@ const ProvisionerManagement = ({ server }) => {
       setImportBranch('');
       setTokenName('');
     } else {
-      report(`Import failed: ${result.message}`, 'danger');
+      report(t('host.provisionerManagement.importFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -376,26 +386,25 @@ const ProvisionerManagement = ({ server }) => {
   // registry list refreshes itself — no manual refresh.
   const trackInstall = async (label, taskId) => {
     if (!taskId) {
-      report(`Install of ${label} queued — refresh once it completes.`, 'success');
+      report(t('host.provisionerManagement.installQueued', { label }), 'success');
       return;
     }
-    report(`Installing ${label}… (task ${taskId})`, 'info');
+    report(t('host.provisionerManagement.installing', { label, taskId }), 'info');
     const task = await pollTask(server, taskId, 90);
     if (!task) {
-      report(
-        `Install of ${label} is still running (task ${taskId}) — refresh once it completes.`,
-        'warning'
-      );
+      report(t('host.provisionerManagement.installStillRunning', { label, taskId }), 'warning');
       return;
     }
     if (task.status === 'completed') {
-      report(`${label} installed.`, 'success');
+      report(t('host.provisionerManagement.installComplete', { label }), 'success');
       loadProvisioners();
     } else {
       report(
-        `Install of ${label} ${task.status.replace(/_/gu, ' ')}: ${
-          task.error_message || 'see the task log'
-        }`,
+        t('host.provisionerManagement.installFailedStatus', {
+          label,
+          status: task.status.replace(/_/gu, ' '),
+          error: task.error_message || t('host.provisionerManagement.seeTaskLog'),
+        }),
         'danger'
       );
     }
@@ -411,7 +420,7 @@ const ProvisionerManagement = ({ server }) => {
     if (result.success) {
       trackInstall(`${name}/${version}`, result.data?.task_id || null);
     } else {
-      report(`Update failed: ${result.message}`, 'danger');
+      report(t('host.provisionerManagement.updateFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -425,9 +434,15 @@ const ProvisionerManagement = ({ server }) => {
       name
     );
     if (result.success) {
-      trackInstall(`${name} (from source)`, result.data?.task_id || null);
+      trackInstall(
+        t('host.provisionerManagement.fromSourceLabel', { name }),
+        result.data?.task_id || null
+      );
     } else {
-      report(`Update from source failed: ${result.message}`, 'danger');
+      report(
+        t('host.provisionerManagement.updateFromSourceFailed', { message: result.message }),
+        'danger'
+      );
     }
   };
 
@@ -440,13 +455,19 @@ const ProvisionerManagement = ({ server }) => {
     setLoading(false);
     setDeleteTarget(null);
     if (result.success) {
-      report(result.data?.message || 'Deleted', 'success');
+      report(result.data?.message || t('host.provisionerManagement.deleted'), 'success');
       loadProvisioners();
     } else if (result.status === 409 && Array.isArray(result.data?.machines)) {
       // The in-use answer names the referencing machines — surface them.
-      report(`${result.message} — referenced by: ${result.data.machines.join(', ')}`, 'warning');
+      report(
+        t('host.provisionerManagement.referencedBy', {
+          message: result.message,
+          machines: result.data.machines.join(', '),
+        }),
+        'warning'
+      );
     } else {
-      report(`Delete failed: ${result.message}`, 'danger');
+      report(t('host.provisionerManagement.deleteFailed', { message: result.message }), 'danger');
     }
   };
 
@@ -461,7 +482,7 @@ const ProvisionerManagement = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-file-import me-2" />
-            Import Provisioner
+            {t('host.provisionerManagement.importProvisioner')}
           </button>
           <button
             type="button"
@@ -470,7 +491,7 @@ const ProvisionerManagement = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-cloud-arrow-down me-2" />
-            Browse Catalog
+            {t('host.provisionerManagement.browseCatalog')}
           </button>
           <button
             type="button"
@@ -479,18 +500,20 @@ const ProvisionerManagement = ({ server }) => {
             disabled={loading}
           >
             <i className="fas fa-sync-alt me-2" />
-            Refresh
+            {t('host.provisionerManagement.refresh')}
           </button>
         </div>
-        <span className="badge text-bg-secondary">{provisioners.length} families</span>
+        <span className="badge text-bg-secondary">
+          {t('host.provisionerManagement.familiesCount', { count: provisioners.length })}
+        </span>
       </div>
 
       {msg && <div className={`alert alert-${msgVariant} py-2`}>{msg}</div>}
-      {loading && provisioners.length === 0 && <p className="text-muted">Loading…</p>}
+      {loading && provisioners.length === 0 && (
+        <p className="text-muted">{t('host.provisionerManagement.loading')}</p>
+      )}
       {!loading && provisioners.length === 0 && (
-        <div className="alert alert-info">
-          No provisioners in this host&apos;s registry yet — import one to enable machine creation.
-        </div>
+        <div className="alert alert-info">{t('host.provisionerManagement.emptyRegistry')}</div>
       )}
 
       {provisioners.map(collection => {
@@ -510,10 +533,14 @@ const ProvisionerManagement = ({ server }) => {
                       <code className="small text-muted ms-2">{collection.name}</code>
                     )}
                     {!collection.valid && (
-                      <span className="badge text-bg-danger ms-2">Invalid</span>
+                      <span className="badge text-bg-danger ms-2">
+                        {t('host.provisionerManagement.invalid')}
+                      </span>
                     )}
                     {update && (
-                      <span className="badge text-bg-warning ms-2">{update} available</span>
+                      <span className="badge text-bg-warning ms-2">
+                        {t('host.provisionerManagement.updateAvailable', { version: update })}
+                      </span>
                     )}
                   </h5>
                   {collection.description && (
@@ -527,10 +554,10 @@ const ProvisionerManagement = ({ server }) => {
                       className="btn btn-sm btn-primary"
                       onClick={() => handleUpdate(collection.name, update)}
                       disabled={loading}
-                      title="Install the newer catalog version — existing versions and machines keep their pins"
+                      title={t('host.provisionerManagement.updateToTitle')}
                     >
                       <i className="fas fa-cloud-arrow-down me-2" />
-                      Update to {update}
+                      {t('host.provisionerManagement.updateTo', { version: update })}
                     </button>
                   )}
                   {collection.source?.source_type === 'git' && (
@@ -539,14 +566,19 @@ const ProvisionerManagement = ({ server }) => {
                       className="btn btn-sm btn-outline-primary"
                       onClick={() => handleRefreshSource(collection.name)}
                       disabled={loading}
-                      title={`Re-import from ${collection.source.url}${
+                      title={
                         collection.source.token_name
-                          ? ` (uses key ${collection.source.token_name})`
-                          : ''
-                      } — new versions land beside existing ones`}
+                          ? t('host.provisionerManagement.reimportFromWithKey', {
+                              url: collection.source.url,
+                              key: collection.source.token_name,
+                            })
+                          : t('host.provisionerManagement.reimportFrom', {
+                              url: collection.source.url,
+                            })
+                      }
                     >
                       <i className="fab fa-git-alt me-2" />
-                      Update from Source
+                      {t('host.provisionerManagement.updateFromSource')}
                     </button>
                   )}
                   <button
@@ -556,7 +588,7 @@ const ProvisionerManagement = ({ server }) => {
                     disabled={loading}
                   >
                     <i className="fas fa-trash me-2" />
-                    Delete Family
+                    {t('host.provisionerManagement.deleteFamily')}
                   </button>
                 </div>
               </div>
@@ -566,10 +598,10 @@ const ProvisionerManagement = ({ server }) => {
                   <table className="table table-striped table-sm mb-0">
                     <thead>
                       <tr>
-                        <th>Version</th>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th aria-label="Actions" />
+                        <th>{t('host.provisionerManagement.version')}</th>
+                        <th>{t('host.provisionerManagement.name')}</th>
+                        <th>{t('host.provisionerManagement.description')}</th>
+                        <th aria-label={t('host.provisionerManagement.actions')} />
                       </tr>
                     </thead>
                     <tbody>
@@ -607,15 +639,15 @@ const ProvisionerManagement = ({ server }) => {
         isOpen={showImport}
         onClose={() => setShowImport(false)}
         onSubmit={handleImport}
-        title="Import Provisioner"
+        title={t('host.provisionerManagement.importProvisioner')}
         icon="fas fa-file-import"
-        submitText="Import"
+        submitText={t('host.provisionerManagement.importSubmit')}
         loading={loading}
         showCancelButton
       >
         <div className="mb-3">
           <label className="form-label" htmlFor="import-source-type">
-            Source
+            {t('host.provisionerManagement.source')}
           </label>
           <select
             id="import-source-type"
@@ -623,16 +655,16 @@ const ProvisionerManagement = ({ server }) => {
             value={sourceType}
             onChange={e => setSourceType(e.target.value)}
           >
-            <option value="folder">Folder on the agent host</option>
-            <option value="archive">Archive on the agent host (.tar.gz / .tgz / .zip)</option>
-            <option value="git">Git repository (http/https)</option>
+            <option value="folder">{t('host.provisionerManagement.sourceFolder')}</option>
+            <option value="archive">{t('host.provisionerManagement.sourceArchive')}</option>
+            <option value="git">{t('host.provisionerManagement.sourceGit')}</option>
           </select>
         </div>
 
         {sourceType !== 'git' && (
           <div className="mb-3">
             <label className="form-label" htmlFor="import-path">
-              Path (on the agent host)
+              {t('host.provisionerManagement.pathOnAgentHost')}
             </label>
             <input
               id="import-path"
@@ -648,7 +680,7 @@ const ProvisionerManagement = ({ server }) => {
           <>
             <div className="mb-3">
               <label className="form-label" htmlFor="import-url">
-                Repository URL
+                {t('host.provisionerManagement.repositoryUrl')}
               </label>
               <input
                 id="import-url"
@@ -661,7 +693,7 @@ const ProvisionerManagement = ({ server }) => {
             </div>
             <div className="mb-3">
               <label className="form-label" htmlFor="import-branch">
-                Branch (blank = default)
+                {t('host.provisionerManagement.branch')}
               </label>
               <input
                 id="import-branch"
@@ -673,7 +705,7 @@ const ProvisionerManagement = ({ server }) => {
             </div>
             <div className="mb-3">
               <label className="form-label" htmlFor="import-token">
-                Git API Key (private repositories)
+                {t('host.provisionerManagement.gitApiKey')}
               </label>
               {gitKeyNames ? (
                 <select
@@ -682,7 +714,7 @@ const ProvisionerManagement = ({ server }) => {
                   value={tokenName}
                   onChange={e => setTokenName(e.target.value)}
                 >
-                  <option value="">None (public repository)</option>
+                  <option value="">{t('host.provisionerManagement.nonePublicRepo')}</option>
                   {gitKeyNames.map(keyName => (
                     <option key={keyName} value={keyName}>
                       {keyName}
@@ -694,14 +726,13 @@ const ProvisionerManagement = ({ server }) => {
                   id="import-token"
                   className="form-control"
                   type="text"
-                  placeholder="git_api_keys secret name (blank = public)"
+                  placeholder={t('host.provisionerManagement.gitApiKeyPlaceholder')}
                   value={tokenName}
                   onChange={e => setTokenName(e.target.value)}
                 />
               )}
               <p className="form-text text-muted mb-0">
-                Names an entry under Global Secrets → Git API Keys; the key itself never leaves the
-                agent.
+                {t('host.provisionerManagement.gitApiKeyHelp')}
               </p>
             </div>
           </>
@@ -727,13 +758,20 @@ const ProvisionerManagement = ({ server }) => {
           isOpen
           onClose={() => setDeleteTarget(null)}
           onConfirm={handleDelete}
-          title={deleteTarget.version ? 'Delete Provisioner Version' : 'Delete Provisioner Family'}
+          title={
+            deleteTarget.version
+              ? t('host.provisionerManagement.deleteVersionTitle')
+              : t('host.provisionerManagement.deleteFamilyTitle')
+          }
           message={
             deleteTarget.version
-              ? `Delete ${deleteTarget.name}/${deleteTarget.version}? The agent refuses while any machine references it.`
-              : `Delete the whole ${deleteTarget.name} family (every version)? The agent refuses while any machine references it.`
+              ? t('host.provisionerManagement.deleteVersionMessage', {
+                  name: deleteTarget.name,
+                  version: deleteTarget.version,
+                })
+              : t('host.provisionerManagement.deleteFamilyMessage', { name: deleteTarget.name })
           }
-          confirmText="Delete"
+          confirmText={t('host.provisionerManagement.delete')}
           icon="fas fa-trash"
           loading={loading}
         />

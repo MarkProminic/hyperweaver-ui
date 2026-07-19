@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { FormModal } from '../common';
 
 const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     interface: '',
     type: 'static',
@@ -105,26 +107,24 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
 
   const validateForm = () => {
     if (!formData.interface.trim()) {
-      onError('Interface name is required');
+      onError(t('host.ipAddressCreateModal.errors.interfaceRequired'));
       return false;
     }
 
     if (!formData.addrobj.trim()) {
-      onError('Address object name is required');
+      onError(t('host.ipAddressCreateModal.errors.addrobjRequired'));
       return false;
     }
 
     if (formData.type === 'static' && !formData.address.trim()) {
-      onError('IP address is required for static addresses');
+      onError(t('host.ipAddressCreateModal.errors.addressRequired'));
       return false;
     }
 
     // Validate address object format
     const addrobjRegex = /^[a-zA-Z][a-zA-Z0-9_/]*$/;
     if (!addrobjRegex.test(formData.addrobj)) {
-      onError(
-        'Address object name must start with a letter and contain only letters, numbers, underscores, and slashes'
-      );
+      onError(t('host.ipAddressCreateModal.errors.addrobjFormat'));
       return false;
     }
 
@@ -132,7 +132,7 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
     if (formData.type === 'static' && formData.address) {
       // Check if address contains CIDR notation (shouldn't when using separate fields)
       if (formData.address.includes('/')) {
-        onError('Please enter IP address without CIDR notation - use the separate netmask field');
+        onError(t('host.ipAddressCreateModal.errors.noCidr'));
         return false;
       }
 
@@ -141,7 +141,7 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
       const ipv6Regex = /^(?:[0-9a-fA-F:]+)$/;
 
       if (!ipv4Regex.test(formData.address) && !ipv6Regex.test(formData.address)) {
-        onError('Invalid IP address format');
+        onError(t('host.ipAddressCreateModal.errors.invalidIp'));
         return false;
       }
 
@@ -149,7 +149,7 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
       if (ipv4Regex.test(formData.address)) {
         const octets = formData.address.split('.').map(Number);
         if (octets.some(octet => octet < 0 || octet > 255)) {
-          onError('IPv4 address octets must be between 0 and 255');
+          onError(t('host.ipAddressCreateModal.errors.invalidOctets'));
           return false;
         }
       }
@@ -159,7 +159,7 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
     if (formData.type === 'static') {
       const netmask = parseInt(formData.netmask);
       if (isNaN(netmask) || netmask < 1 || netmask > 30) {
-        onError('Netmask must be between 1 and 30 (maximum /30)');
+        onError(t('host.ipAddressCreateModal.errors.netmaskRange'));
         return false;
       }
     }
@@ -203,10 +203,10 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
       if (result.success) {
         onSuccess();
       } else {
-        onError(result.message || 'Failed to create IP address');
+        onError(result.message || t('host.ipAddressCreateModal.errors.createFailed'));
       }
     } catch (err) {
-      onError(`Error creating IP address: ${err.message}`);
+      onError(t('host.ipAddressCreateModal.errors.createError', { message: err.message }));
     } finally {
       setCreating(false);
     }
@@ -217,15 +217,15 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create IP Address"
+      title={t('host.ipAddressCreateModal.title')}
       icon="fas fa-plus-circle"
-      submitText="Create Address"
+      submitText={t('host.ipAddressCreateModal.submit')}
       submitVariant="is-primary"
       loading={creating}
     >
       <div className="mb-3">
         <label className="form-label" htmlFor="interface-select">
-          Interface *
+          {t('host.ipAddressCreateModal.interfaceLabel')} *
         </label>
         <select
           id="interface-select"
@@ -236,21 +236,23 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
           required
         >
           <option value="">
-            {loadingInterfaces ? 'Loading interfaces...' : 'Select an interface'}
+            {loadingInterfaces
+              ? t('host.ipAddressCreateModal.loadingInterfaces')
+              : t('host.ipAddressCreateModal.selectInterface')}
           </option>
           {interfaces.map(iface => (
             <option key={iface.name} value={iface.name}>
               {iface.name} ({iface.type}
-              {iface.over ? ` over ${iface.over}` : ''})
+              {iface.over ? t('host.ipAddressCreateModal.over', { over: iface.over }) : ''})
             </option>
           ))}
         </select>
-        <p className="form-text text-muted">The network interface to assign the address to</p>
+        <p className="form-text text-muted">{t('host.ipAddressCreateModal.interfaceHelp')}</p>
       </div>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="addrobj-input">
-          Address Object Name *
+          {t('host.ipAddressCreateModal.addrobjLabel')} *
         </label>
         <input
           id="addrobj-input"
@@ -262,12 +264,12 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
           disabled={creating}
           required
         />
-        <p className="form-text text-muted">Unique name for this address object</p>
+        <p className="form-text text-muted">{t('host.ipAddressCreateModal.addrobjHelp')}</p>
       </div>
 
       <div className="mb-3">
         <label className="form-label" htmlFor="type-select">
-          Address Type
+          {t('host.ipAddressCreateModal.addressType')}
         </label>
         <select
           id="type-select"
@@ -276,9 +278,9 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
           onChange={e => handleInputChange('type', e.target.value)}
           disabled={creating}
         >
-          <option value="static">Static</option>
-          <option value="dhcp">DHCP</option>
-          <option value="addrconf">Auto Configuration</option>
+          <option value="static">{t('host.ipAddressCreateModal.typeStatic')}</option>
+          <option value="dhcp">{t('host.ipAddressCreateModal.typeDhcp')}</option>
+          <option value="addrconf">{t('host.ipAddressCreateModal.typeAddrconf')}</option>
         </select>
       </div>
 
@@ -288,7 +290,7 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
             <div className="col-12 col-lg-8">
               <div className="mb-3">
                 <label className="form-label" htmlFor="address-input">
-                  IP Address *
+                  {t('host.ipAddressCreateModal.ipAddressLabel')} *
                 </label>
                 <input
                   id="address-input"
@@ -300,13 +302,15 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
                   disabled={creating}
                   required
                 />
-                <p className="form-text text-muted">IP address without CIDR notation</p>
+                <p className="form-text text-muted">
+                  {t('host.ipAddressCreateModal.ipAddressHelp')}
+                </p>
               </div>
             </div>
             <div className="col">
               <div className="mb-3">
                 <label className="form-label" htmlFor="netmask-select">
-                  Netmask *
+                  {t('host.ipAddressCreateModal.netmaskLabel')} *
                 </label>
                 <select
                   id="netmask-select"
@@ -326,7 +330,7 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
                   <option value="29">/29 (255.255.255.248)</option>
                   <option value="30">/30 (255.255.255.252)</option>
                 </select>
-                <p className="form-text text-muted">Maximum /30</p>
+                <p className="form-text text-muted">{t('host.ipAddressCreateModal.netmaskHelp')}</p>
               </div>
             </div>
           </div>
@@ -337,7 +341,7 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
         <div className="col">
           <div className="mb-3">
             <label className="form-label" htmlFor="wait-input">
-              Wait Timeout (seconds)
+              {t('host.ipAddressCreateModal.waitTimeout')}
             </label>
             <input
               id="wait-input"
@@ -349,7 +353,7 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
               onChange={e => handleInputChange('wait', e.target.value)}
               disabled={creating}
             />
-            <p className="form-text text-muted">Timeout for address configuration</p>
+            <p className="form-text text-muted">{t('host.ipAddressCreateModal.waitHelp')}</p>
           </div>
         </div>
       </div>
@@ -365,7 +369,7 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
             disabled={creating}
           />
           <label className="form-check-label" htmlFor="primary-checkbox">
-            Primary address
+            {t('host.ipAddressCreateModal.primaryAddress')}
           </label>
         </div>
       </div>
@@ -381,7 +385,7 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
             disabled={creating}
           />
           <label className="form-check-label" htmlFor="temporary-checkbox">
-            Temporary (not persistent across reboots)
+            {t('host.ipAddressCreateModal.temporary')}
           </label>
         </div>
       </div>
@@ -397,7 +401,7 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
             disabled={creating}
           />
           <label className="form-check-label" htmlFor="down-checkbox">
-            Create in down state
+            {t('host.ipAddressCreateModal.downState')}
           </label>
         </div>
       </div>

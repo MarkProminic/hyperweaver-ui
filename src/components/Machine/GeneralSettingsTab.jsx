@@ -222,6 +222,239 @@ VcpusStepper.propTypes = {
   disabled: PropTypes.bool,
 };
 
+/** One field cell of the General grid — control choice per field key. */
+const GeneralFieldCell = ({
+  field,
+  values,
+  setValues,
+  knobValues,
+  defaultsDoc,
+  osTypes,
+  bhyveBootDevices,
+  customFields,
+  setCustomFields,
+  formDisabled,
+}) => {
+  // Served vocabulary wins; a field's own agent-stated option set
+  // (uefivars/rng on|off) keeps the control a select either way.
+  const vocabulary =
+    field.key === 'bootnext' && bhyveBootDevices.length > 0
+      ? bhyveBootDevices
+      : knobValues?.[`zones.${field.key}`] || field.options || null;
+  const value = values[field.key] ?? '';
+  const blankLabel = agentDefaultLabel(defaultsDoc, field.key);
+  const commit = next => setValues(prev => ({ ...prev, [field.key]: next }));
+  const setValue = next => setValues(prev => ({ ...prev, [field.key]: next ?? prev[field.key] }));
+  let control;
+  if (field.key === 'ram') {
+    control = (
+      <MemoryStepper
+        field={field}
+        value={value}
+        onSet={setValue}
+        blankLabel={blankLabel}
+        disabled={formDisabled}
+      />
+    );
+  } else if (field.key === 'vcpus') {
+    control = (
+      <VcpusStepper
+        field={field}
+        value={value}
+        onSet={setValue}
+        blankLabel={blankLabel}
+        disabled={formDisabled}
+      />
+    );
+  } else if (field.key === 'os_type' && osTypes) {
+    control = (
+      <OsTypeSelect
+        id={`machine-edit-${field.key}`}
+        osTypes={osTypes}
+        value={value}
+        onChange={e => commit(e.target.value)}
+        blankLabel={blankLabel}
+        disabled={formDisabled}
+      />
+    );
+  } else {
+    control = (
+      <FieldControl
+        field={field}
+        vocabulary={vocabulary}
+        value={value}
+        onValue={commit}
+        blankLabel={blankLabel}
+        isCustom={!!customFields[field.key]}
+        onToggleCustom={next => setCustomFields(prev => ({ ...prev, [field.key]: next }))}
+        disabled={formDisabled}
+      />
+    );
+  }
+  return (
+    <div className="col-12 col-md-4">
+      <label className="form-label" htmlFor={`machine-edit-${field.key}`}>
+        {field.label}
+      </label>
+      {control}
+      {field.hint && <span className="form-text text-muted small">{field.hint}</span>}
+    </div>
+  );
+};
+
+GeneralFieldCell.propTypes = {
+  field: PropTypes.object.isRequired,
+  values: PropTypes.object.isRequired,
+  setValues: PropTypes.func.isRequired,
+  knobValues: PropTypes.object,
+  defaultsDoc: PropTypes.object,
+  osTypes: PropTypes.array,
+  bhyveBootDevices: PropTypes.arrayOf(PropTypes.string),
+  customFields: PropTypes.object.isRequired,
+  setCustomFields: PropTypes.func.isRequired,
+  formDisabled: PropTypes.bool,
+};
+
+/** The bhyve cloud-init family editor — the `cloud_init` OBJECT wire. */
+const CloudInitEditor = ({
+  cloudInit,
+  setCloudInit,
+  cloudInitCurrent,
+  defaultsDoc,
+  ciCustomUrl,
+  setCiCustomUrl,
+  formDisabled,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="col-12">
+      <span className="form-label d-block">
+        {t('machineEdit.generalSettingsTab.cloudInit')}{' '}
+        <span className="text-muted small fw-normal">
+          {t('machineEdit.generalSettingsTab.cloudInitCurrent', {
+            current: cloudInitCurrent || 'off',
+          })}
+        </span>
+      </span>
+      <div className="row g-2">
+        <div className="col-12 col-md-4">
+          <label className="form-label small mb-1" htmlFor="machine-edit-ci-enabled">
+            {t('machineEdit.generalSettingsTab.enabled')}
+          </label>
+          {ciCustomUrl ? (
+            <>
+              <input
+                id="machine-edit-ci-enabled"
+                className="form-control"
+                type="text"
+                placeholder="https://…"
+                title={t('machineEdit.generalSettingsTab.cloudInitUrlHint')}
+                value={cloudInit.enabled ?? ''}
+                onChange={e => setCloudInit(prev => ({ ...prev, enabled: e.target.value }))}
+                disabled={formDisabled}
+              />
+              <button
+                type="button"
+                className="btn btn-link btn-sm p-0"
+                onClick={() => {
+                  setCiCustomUrl(false);
+                  setCloudInit(prev => ({ ...prev, enabled: '' }));
+                }}
+              >
+                {t('machineEdit.generalSettingsTab.backToOnOff')}
+              </button>
+            </>
+          ) : (
+            <VocabularySelect
+              id="machine-edit-ci-enabled"
+              value={cloudInit.enabled ?? ''}
+              entries={[
+                { value: 'on', label: t('machineEdit.generalSettingsTab.on') },
+                { value: 'off', label: t('machineEdit.generalSettingsTab.off') },
+              ]}
+              blankLabel={agentDefaultLabel(defaultsDoc, 'cloud_init')}
+              onChange={next => setCloudInit(prev => ({ ...prev, enabled: next }))}
+              onCustom={() => {
+                setCiCustomUrl(true);
+                setCloudInit(prev => ({ ...prev, enabled: '' }));
+              }}
+              customLabel={t('machineEdit.generalSettingsTab.configUrl')}
+              disabled={formDisabled}
+            />
+          )}
+        </div>
+        <div className="col-12 col-md-4">
+          <label className="form-label small mb-1" htmlFor="machine-edit-ci-domain">
+            {t('machineEdit.generalSettingsTab.dnsDomain')}
+          </label>
+          <input
+            id="machine-edit-ci-domain"
+            className="form-control"
+            type="text"
+            placeholder={t('machineEdit.generalSettingsTab.keepCurrent')}
+            value={cloudInit.dns_domain ?? ''}
+            onChange={e => setCloudInit(prev => ({ ...prev, dns_domain: e.target.value }))}
+            disabled={formDisabled}
+          />
+        </div>
+        <div className="col-12 col-md-4">
+          <label className="form-label small mb-1" htmlFor="machine-edit-ci-resolvers">
+            {t('machineEdit.generalSettingsTab.resolvers')}
+          </label>
+          <input
+            id="machine-edit-ci-resolvers"
+            className="form-control"
+            type="text"
+            placeholder="e.g. 1.1.1.1,8.8.8.8"
+            value={cloudInit.resolvers ?? ''}
+            onChange={e => setCloudInit(prev => ({ ...prev, resolvers: e.target.value }))}
+            disabled={formDisabled}
+          />
+        </div>
+        <div className="col-12 col-md-4">
+          <label className="form-label small mb-1" htmlFor="machine-edit-ci-password">
+            {t('machineEdit.generalSettingsTab.rootPassword')}
+          </label>
+          <input
+            id="machine-edit-ci-password"
+            className="form-control"
+            type="password"
+            autoComplete="new-password"
+            placeholder={t('machineEdit.generalSettingsTab.keepCurrent')}
+            value={cloudInit.password ?? ''}
+            onChange={e => setCloudInit(prev => ({ ...prev, password: e.target.value }))}
+            disabled={formDisabled}
+          />
+        </div>
+        <div className="col-12 col-md-8">
+          <label className="form-label small mb-1" htmlFor="machine-edit-ci-sshkey">
+            {t('machineEdit.generalSettingsTab.sshPublicKey')}
+          </label>
+          <input
+            id="machine-edit-ci-sshkey"
+            className="form-control font-monospace"
+            type="text"
+            placeholder="ssh-ed25519 AAAA… user@host"
+            value={cloudInit.sshkey ?? ''}
+            onChange={e => setCloudInit(prev => ({ ...prev, sshkey: e.target.value }))}
+            disabled={formDisabled}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+CloudInitEditor.propTypes = {
+  cloudInit: PropTypes.object,
+  setCloudInit: PropTypes.func,
+  cloudInitCurrent: PropTypes.string,
+  defaultsDoc: PropTypes.object,
+  ciCustomUrl: PropTypes.bool.isRequired,
+  setCiCustomUrl: PropTypes.func.isRequired,
+  formDisabled: PropTypes.bool,
+};
+
 const GeneralSettingsTab = ({
   fields,
   knobValues,
@@ -249,10 +482,15 @@ const GeneralSettingsTab = ({
   currentServer,
   machineName,
   isRunning,
+  isUtm = false,
   formDisabled,
 }) => {
   const { t } = useTranslation();
-  const isVbox = hasHypervisor(currentServer, 'virtualbox');
+  // hostVbox gates the bhyve-only blocks (VNC web-port pin, cloud-init) —
+  // host-level truth. isVbox gates the VirtualBox knob blocks (boot order,
+  // Secure Boot, autoboot) and must ALSO exclude utm MACHINES on that host.
+  const hostVbox = hasHypervisor(currentServer, 'virtualbox');
+  const isVbox = hostVbox && !isUtm;
   // Which freeText fields are in Custom-value input mode.
   const [customFields, setCustomFields] = useState({});
   // Cloud-init "Enabled" in config-URL input mode (vs the on/off select).
@@ -262,94 +500,43 @@ const GeneralSettingsTab = ({
   // plain field in the loop.
   const bootorderField = fields.find(field => field.key === 'bootorder') || null;
 
-  const setValue = key => next => setValues(prev => ({ ...prev, [key]: next ?? prev[key] }));
-
   return (
     <div className="row g-3">
       {fields
         .filter(field => field.key !== 'bootorder')
-        .map(field => {
-          // Served vocabulary wins; a field's own agent-stated option set
-          // (uefivars/rng on|off) keeps the control a select either way.
-          const vocabulary =
-            field.key === 'bootnext' && bhyveBootDevices.length > 0
-              ? bhyveBootDevices
-              : knobValues?.[`zones.${field.key}`] || field.options || null;
-          const value = values[field.key] ?? '';
-          const blankLabel = agentDefaultLabel(defaultsDoc, field.key);
-          const commit = next => setValues(prev => ({ ...prev, [field.key]: next }));
-          let control;
-          if (field.key === 'ram') {
-            control = (
-              <MemoryStepper
-                field={field}
-                value={value}
-                onSet={setValue(field.key)}
-                blankLabel={blankLabel}
-                disabled={formDisabled}
-              />
-            );
-          } else if (field.key === 'vcpus') {
-            control = (
-              <VcpusStepper
-                field={field}
-                value={value}
-                onSet={setValue(field.key)}
-                blankLabel={blankLabel}
-                disabled={formDisabled}
-              />
-            );
-          } else if (field.key === 'os_type' && osTypes) {
-            control = (
-              <OsTypeSelect
-                id={`machine-edit-${field.key}`}
-                osTypes={osTypes}
-                value={value}
-                onChange={e => commit(e.target.value)}
-                blankLabel={blankLabel}
-                disabled={formDisabled}
-              />
-            );
-          } else {
-            control = (
-              <FieldControl
-                field={field}
-                vocabulary={vocabulary}
-                value={value}
-                onValue={commit}
-                blankLabel={blankLabel}
-                isCustom={!!customFields[field.key]}
-                onToggleCustom={next => setCustomFields(prev => ({ ...prev, [field.key]: next }))}
-                disabled={formDisabled}
-              />
-            );
-          }
-          return (
-            <div className="col-12 col-md-4" key={field.key}>
-              <label className="form-label" htmlFor={`machine-edit-${field.key}`}>
-                {field.label}
-              </label>
-              {control}
-              {field.hint && <span className="form-text text-muted small">{field.hint}</span>}
-            </div>
-          );
-        })}
-      <div className="col-12 col-md-4">
-        <label className="form-label" htmlFor="machine-edit-autoboot">
-          {t('machineEdit.generalSettingsTab.autoboot')}
-        </label>
-        <select
-          id="machine-edit-autoboot"
-          className="form-select"
-          value={autoboot}
-          onChange={e => setAutoboot(e.target.value)}
-          disabled={formDisabled}
-        >
-          <option value="">{agentDefaultLabel(defaultsDoc, 'autoboot')}</option>
-          <option value="true">{t('machineEdit.generalSettingsTab.on')}</option>
-          <option value="false">{t('machineEdit.generalSettingsTab.off')}</option>
-        </select>
-      </div>
+        .map(field => (
+          <GeneralFieldCell
+            key={field.key}
+            field={field}
+            values={values}
+            setValues={setValues}
+            knobValues={knobValues}
+            defaultsDoc={defaultsDoc}
+            osTypes={osTypes}
+            bhyveBootDevices={bhyveBootDevices}
+            customFields={customFields}
+            setCustomFields={setCustomFields}
+            formDisabled={formDisabled}
+          />
+        ))}
+      {!isUtm && (
+        <div className="col-12 col-md-4">
+          <label className="form-label" htmlFor="machine-edit-autoboot">
+            {t('machineEdit.generalSettingsTab.autoboot')}
+          </label>
+          <select
+            id="machine-edit-autoboot"
+            className="form-select"
+            value={autoboot}
+            onChange={e => setAutoboot(e.target.value)}
+            disabled={formDisabled}
+          >
+            <option value="">{agentDefaultLabel(defaultsDoc, 'autoboot')}</option>
+            <option value="true">{t('machineEdit.generalSettingsTab.on')}</option>
+            <option value="false">{t('machineEdit.generalSettingsTab.off')}</option>
+          </select>
+        </div>
+      )}
       {seed.guestAgent !== null && (
         <div className="col-12 col-md-4">
           <div className="form-check form-switch mt-4">
@@ -390,7 +577,7 @@ const GeneralSettingsTab = ({
           {t('machineEdit.generalSettingsTab.appliesImmediatelyNoRestart')}
         </span>
       </div>
-      {!isVbox && (
+      {!hostVbox && (
         <>
           <div className="col-12 col-md-4">
             <label className="form-label" htmlFor="machine-edit-consoleport">
@@ -477,122 +664,16 @@ const GeneralSettingsTab = ({
             </div>
           );
         })()}
-      {!isVbox && (
-        <div className="col-12">
-          <span className="form-label d-block">
-            {t('machineEdit.generalSettingsTab.cloudInit')}{' '}
-            <span className="text-muted small fw-normal">
-              {t('machineEdit.generalSettingsTab.cloudInitCurrent', {
-                current: cloudInitCurrent || 'off',
-              })}
-            </span>
-          </span>
-          <div className="row g-2">
-            <div className="col-12 col-md-4">
-              <label className="form-label small mb-1" htmlFor="machine-edit-ci-enabled">
-                {t('machineEdit.generalSettingsTab.enabled')}
-              </label>
-              {ciCustomUrl ? (
-                <>
-                  <input
-                    id="machine-edit-ci-enabled"
-                    className="form-control"
-                    type="text"
-                    placeholder="https://…"
-                    title={t('machineEdit.generalSettingsTab.cloudInitUrlHint')}
-                    value={cloudInit.enabled ?? ''}
-                    onChange={e => setCloudInit(prev => ({ ...prev, enabled: e.target.value }))}
-                    disabled={formDisabled}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-link btn-sm p-0"
-                    onClick={() => {
-                      setCiCustomUrl(false);
-                      setCloudInit(prev => ({ ...prev, enabled: '' }));
-                    }}
-                  >
-                    {t('machineEdit.generalSettingsTab.backToOnOff')}
-                  </button>
-                </>
-              ) : (
-                <VocabularySelect
-                  id="machine-edit-ci-enabled"
-                  value={cloudInit.enabled ?? ''}
-                  entries={[
-                    { value: 'on', label: t('machineEdit.generalSettingsTab.on') },
-                    { value: 'off', label: t('machineEdit.generalSettingsTab.off') },
-                  ]}
-                  blankLabel={agentDefaultLabel(defaultsDoc, 'cloud_init')}
-                  onChange={next => setCloudInit(prev => ({ ...prev, enabled: next }))}
-                  onCustom={() => {
-                    setCiCustomUrl(true);
-                    setCloudInit(prev => ({ ...prev, enabled: '' }));
-                  }}
-                  customLabel={t('machineEdit.generalSettingsTab.configUrl')}
-                  disabled={formDisabled}
-                />
-              )}
-            </div>
-            <div className="col-12 col-md-4">
-              <label className="form-label small mb-1" htmlFor="machine-edit-ci-domain">
-                {t('machineEdit.generalSettingsTab.dnsDomain')}
-              </label>
-              <input
-                id="machine-edit-ci-domain"
-                className="form-control"
-                type="text"
-                placeholder={t('machineEdit.generalSettingsTab.keepCurrent')}
-                value={cloudInit.dns_domain ?? ''}
-                onChange={e => setCloudInit(prev => ({ ...prev, dns_domain: e.target.value }))}
-                disabled={formDisabled}
-              />
-            </div>
-            <div className="col-12 col-md-4">
-              <label className="form-label small mb-1" htmlFor="machine-edit-ci-resolvers">
-                {t('machineEdit.generalSettingsTab.resolvers')}
-              </label>
-              <input
-                id="machine-edit-ci-resolvers"
-                className="form-control"
-                type="text"
-                placeholder="e.g. 1.1.1.1,8.8.8.8"
-                value={cloudInit.resolvers ?? ''}
-                onChange={e => setCloudInit(prev => ({ ...prev, resolvers: e.target.value }))}
-                disabled={formDisabled}
-              />
-            </div>
-            <div className="col-12 col-md-4">
-              <label className="form-label small mb-1" htmlFor="machine-edit-ci-password">
-                {t('machineEdit.generalSettingsTab.rootPassword')}
-              </label>
-              <input
-                id="machine-edit-ci-password"
-                className="form-control"
-                type="password"
-                autoComplete="new-password"
-                placeholder={t('machineEdit.generalSettingsTab.keepCurrent')}
-                value={cloudInit.password ?? ''}
-                onChange={e => setCloudInit(prev => ({ ...prev, password: e.target.value }))}
-                disabled={formDisabled}
-              />
-            </div>
-            <div className="col-12 col-md-8">
-              <label className="form-label small mb-1" htmlFor="machine-edit-ci-sshkey">
-                {t('machineEdit.generalSettingsTab.sshPublicKey')}
-              </label>
-              <input
-                id="machine-edit-ci-sshkey"
-                className="form-control font-monospace"
-                type="text"
-                placeholder="ssh-ed25519 AAAA… user@host"
-                value={cloudInit.sshkey ?? ''}
-                onChange={e => setCloudInit(prev => ({ ...prev, sshkey: e.target.value }))}
-                disabled={formDisabled}
-              />
-            </div>
-          </div>
-        </div>
+      {!hostVbox && (
+        <CloudInitEditor
+          cloudInit={cloudInit}
+          setCloudInit={setCloudInit}
+          cloudInitCurrent={cloudInitCurrent}
+          defaultsDoc={defaultsDoc}
+          ciCustomUrl={ciCustomUrl}
+          setCiCustomUrl={setCiCustomUrl}
+          formDisabled={formDisabled}
+        />
       )}
       {isVbox && (
         <div className="col-12">
@@ -636,6 +717,7 @@ GeneralSettingsTab.propTypes = {
   currentServer: PropTypes.object,
   machineName: PropTypes.string,
   isRunning: PropTypes.bool,
+  isUtm: PropTypes.bool,
   formDisabled: PropTypes.bool,
 };
 

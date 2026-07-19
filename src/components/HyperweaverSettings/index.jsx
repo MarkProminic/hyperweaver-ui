@@ -1,5 +1,6 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -19,6 +20,7 @@ import TestingPanel from './TestingPanel';
  * Manages configuration, servers, backups, and testing functionality
  */
 const HyperweaverSettings = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const serverContext = useServers();
@@ -157,21 +159,25 @@ const HyperweaverSettings = () => {
       <div className="hw-page-content-scrollable">
         <Helmet>
           <meta charSet="utf-8" />
-          <title>System Settings - Hyperweaver</title>
+          <title>{t('settings.hyperweaverSettings.pageTitleDenied')}</title>
           <link rel="canonical" href={window.location.origin} />
         </Helmet>
         <div className="container-fluid p-0">
           <div className="card">
             <div className="card-header d-flex justify-content-between align-items-center">
-              <strong>Access Denied</strong>
+              <strong>{t('settings.hyperweaverSettings.accessDeniedTitle')}</strong>
             </div>
             <div className="card-body">
               <div className="alert alert-danger mb-0">
-                <h2 className="fs-4 fw-bold">Super Admin Access Required</h2>
-                <p>Only super administrators can modify Hyperweaver system settings.</p>
+                <h2 className="fs-4 fw-bold">
+                  {t('settings.hyperweaverSettings.superAdminRequired')}
+                </h2>
+                <p>{t('settings.hyperweaverSettings.superAdminOnly')}</p>
                 <p className="mt-2">
-                  Your current role:{' '}
-                  <span className="badge text-bg-warning">{user?.role || 'Unknown'}</span>
+                  {t('settings.hyperweaverSettings.yourCurrentRole')}{' '}
+                  <span className="badge text-bg-warning">
+                    {user?.role || t('settings.hyperweaverSettings.unknownRole')}
+                  </span>
                 </p>
               </div>
             </div>
@@ -185,14 +191,14 @@ const HyperweaverSettings = () => {
     <div className="hw-page-content-scrollable">
       <Helmet>
         <meta charSet="utf-8" />
-        <title>Hyperweaver Settings - Hyperweaver</title>
+        <title>{t('settings.hyperweaverSettings.pageTitle')}</title>
         <link rel="canonical" href={window.location.origin} />
       </Helmet>
       <div className="container-fluid p-0">
         <div className="card">
           {/* Title bar with action buttons */}
           <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <strong>Hyperweaver System Settings</strong>
+            <strong>{t('settings.hyperweaverSettings.systemSettings')}</strong>
             {activeTab !== 'servers' && Object.keys(sections).length > 0 && (
               <div className="d-flex gap-2 flex-wrap">
                 <button
@@ -202,7 +208,7 @@ const HyperweaverSettings = () => {
                   disabled={loading || !Object.keys(values).length}
                 >
                   <i className="fas fa-save me-2" />
-                  Save
+                  {t('settings.hyperweaverSettings.save')}
                 </button>
                 <button
                   type="button"
@@ -211,7 +217,7 @@ const HyperweaverSettings = () => {
                   disabled={loading}
                 >
                   <i className="fas fa-download me-2" />
-                  Backup
+                  {t('settings.hyperweaverSettings.backup')}
                 </button>
                 <button
                   type="button"
@@ -220,7 +226,7 @@ const HyperweaverSettings = () => {
                   disabled={loading}
                 >
                   <i className="fas fa-history me-2" />
-                  Restore
+                  {t('settings.hyperweaverSettings.restore')}
                 </button>
                 <button
                   type="button"
@@ -229,7 +235,7 @@ const HyperweaverSettings = () => {
                   disabled={loading}
                 >
                   <i className="fas fa-redo me-2" />
-                  Restart
+                  {t('settings.hyperweaverSettings.restart')}
                 </button>
               </div>
             )}
@@ -246,7 +252,7 @@ const HyperweaverSettings = () => {
                 aria-selected={activeTab === 'servers'}
               >
                 <i className="fas fa-server me-2" />
-                API Servers
+                {t('settings.hyperweaverSettings.apiServers')}
               </button>
             </li>
             {Object.entries(sections).map(([sectionName, section]) => (
@@ -351,8 +357,8 @@ const HyperweaverSettings = () => {
             {/* Restart Warning */}
             {requiresRestart && activeTab !== 'servers' && (
               <div className="alert alert-warning mt-4">
-                <h3 className="h6">Server Restart Required</h3>
-                <p>Some of your changes require a server restart to take effect.</p>
+                <h3 className="h6">{t('settings.hyperweaverSettings.restartRequiredTitle')}</h3>
+                <p>{t('settings.hyperweaverSettings.restartRequiredText')}</p>
                 <div className="mt-3">
                   <button
                     type="button"
@@ -361,7 +367,7 @@ const HyperweaverSettings = () => {
                     disabled={loading}
                   >
                     <i className="fas fa-power-off me-2" />
-                    Restart Server Now
+                    {t('settings.hyperweaverSettings.restartServerNow')}
                   </button>
                 </div>
               </div>
@@ -382,21 +388,24 @@ const HyperweaverSettings = () => {
           {activeTab !== 'servers' && Object.keys(sections).length > 0 && (
             <div className="card mx-4 mb-4">
               <div className="card-body">
-                <h2 className="h6">Settings Information</h2>
+                <h2 className="h6">{t('settings.hyperweaverSettings.settingsInformation')}</h2>
                 <div className="small">
                   <p>
-                    <strong>Important:</strong> These settings affect the entire Hyperweaver
-                    application for all users.
+                    <strong>{t('settings.hyperweaverSettings.importantLabel')}</strong>{' '}
+                    {t('settings.hyperweaverSettings.importantText')}
                   </p>
                   <ul>
-                    <li>Changes require super-admin privileges and take effect immediately</li>
-                    <li>Some settings may require users to refresh their browsers</li>
-                    <li>Performance settings affect resource usage and responsiveness</li>
-                    <li>Security settings impact user sessions and authentication</li>
+                    <li>{t('settings.hyperweaverSettings.changesRequireAdmin')}</li>
+                    <li>{t('settings.hyperweaverSettings.refreshBrowsers')}</li>
+                    <li>{t('settings.hyperweaverSettings.performanceSettings')}</li>
+                    <li>{t('settings.hyperweaverSettings.securitySettings')}</li>
                   </ul>
                   <p className="mt-3">
-                    <strong>Current User:</strong> {user.username}{' '}
-                    <span className="badge text-bg-danger">Super Admin</span>
+                    <strong>{t('settings.hyperweaverSettings.currentUserLabel')}</strong>{' '}
+                    {user.username}{' '}
+                    <span className="badge text-bg-danger">
+                      {t('settings.hyperweaverSettings.superAdmin')}
+                    </span>
                   </p>
                 </div>
               </div>
@@ -413,9 +422,9 @@ const HyperweaverSettings = () => {
           setShowRestartConfirm(false);
           executeRestart();
         }}
-        title="Restart Server"
-        message="Are you sure you want to restart the server? This will briefly interrupt service for all users."
-        confirmText="Restart Server"
+        title={t('settings.hyperweaverSettings.restartServerTitle')}
+        message={t('settings.hyperweaverSettings.restartConfirmMessage')}
+        confirmText={t('settings.hyperweaverSettings.restartServerTitle')}
         confirmVariant="is-danger"
         icon="fas fa-redo"
         loading={loading}

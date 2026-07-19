@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const VncActionsSubmenu = ({
   vncRef,
@@ -13,6 +14,7 @@ const VncActionsSubmenu = ({
   calculateSubmenuPosition,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [showActions, setShowActions] = useState(false);
 
   const handleScreenshot = () => {
@@ -69,7 +71,7 @@ const VncActionsSubmenu = ({
     >
       <div className="d-flex align-items-center">
         <i className="fas fa-tools me-2" />
-        <span>Actions</span>
+        <span>{t('console.vncActionsSubmenu.actions')}</span>
       </div>
       <i className="fas fa-chevron-right" />
 
@@ -92,10 +94,18 @@ const VncActionsSubmenu = ({
                   }
                   role="button"
                   tabIndex={0}
-                  title={isReadOnly ? 'Enable interactive mode' : 'Enable read-only mode'}
+                  title={
+                    isReadOnly
+                      ? t('console.vncActionsSubmenu.enableInteractiveTitle')
+                      : t('console.vncActionsSubmenu.enableReadOnlyTitle')
+                  }
                 >
                   <i className={`fas ${isReadOnly ? 'fa-edit' : 'fa-eye'} me-2`} />
-                  <span>{isReadOnly ? 'Enable Interactive' : 'Set Read-Only'}</span>
+                  <span>
+                    {isReadOnly
+                      ? t('console.vncActionsSubmenu.enableInteractive')
+                      : t('console.vncActionsSubmenu.setReadOnly')}
+                  </span>
                 </div>
                 <hr className="dropdown-divider" />
               </>
@@ -130,7 +140,7 @@ const VncActionsSubmenu = ({
                   tabIndex={0}
                 >
                   <i className="fas fa-paste me-2" />
-                  <span>Paste from Browser Clipboard</span>
+                  <span>{t('console.vncActionsSubmenu.pasteFromClipboard')}</span>
                 </div>
                 <hr className="dropdown-divider" />
               </>
@@ -144,7 +154,7 @@ const VncActionsSubmenu = ({
               tabIndex={0}
             >
               <i className="fas fa-camera me-2" />
-              <span>Take Screenshot</span>
+              <span>{t('console.vncActionsSubmenu.takeScreenshot')}</span>
             </div>
 
             {onFullScreen && (
@@ -156,7 +166,7 @@ const VncActionsSubmenu = ({
                 tabIndex={0}
               >
                 <i className="fas fa-expand me-2" />
-                <span>Full Screen</span>
+                <span>{t('console.vncActionsSubmenu.fullScreen')}</span>
               </div>
             )}
 
@@ -169,7 +179,7 @@ const VncActionsSubmenu = ({
                 tabIndex={0}
               >
                 <i className="fas fa-external-link-alt me-2" />
-                <span>Open in New Tab</span>
+                <span>{t('console.vncActionsSubmenu.openInNewTab')}</span>
               </div>
             )}
           </div>

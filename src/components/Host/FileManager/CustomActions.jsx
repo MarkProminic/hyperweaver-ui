@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ArchiveModals from './ArchiveModals';
 import { isTextFile, isArchiveFile } from './FileManagerTransforms';
@@ -19,6 +20,7 @@ const CustomActions = ({
   setError,
   permissions,
 }) => {
+  const { t } = useTranslation();
   // Modal states
   const [showTextEditor, setShowTextEditor] = useState(false);
   const [textEditorFile, setTextEditorFile] = useState(null);
@@ -36,10 +38,10 @@ const CustomActions = ({
         setTextEditorFile(file);
         setShowTextEditor(true);
       } else {
-        setError('This file cannot be edited as text');
+        setError(t('fileManager.customActions.cannotEditAsText'));
       }
     },
-    [setError]
+    [setError, t]
   );
 
   const handleCloseTextEditor = () => {
@@ -61,11 +63,11 @@ const CustomActions = ({
         setTextEditorFile(null);
         await loadFiles();
       } else {
-        setError(result.message || 'Failed to save file');
+        setError(result.message || t('fileManager.customActions.failedToSaveFile'));
       }
     } catch (saveErr) {
       console.error('Error saving file:', saveErr);
-      setError(`Failed to save file: ${saveErr.message}`);
+      setError(t('fileManager.customActions.failedToSaveFileDetail', { message: saveErr.message }));
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +128,7 @@ const CustomActions = ({
         setTextEditorFile(file);
         setShowTextEditor(true);
       } else {
-        setError('This file cannot be edited as text');
+        setError(t('fileManager.customActions.cannotEditAsText'));
       }
     };
 
@@ -136,7 +138,7 @@ const CustomActions = ({
         setArchiveFileForExtract(file);
         setShowExtractArchiveModal(true);
       } else {
-        setError('This file cannot be extracted');
+        setError(t('fileManager.customActions.cannotExtract'));
       }
     };
 
@@ -155,7 +157,7 @@ const CustomActions = ({
       document.removeEventListener('hyperweaver-extract-archive', handleExtractArchiveEvent);
       document.removeEventListener('hyperweaver-show-properties', handleShowPropertiesEvent);
     };
-  }, [setError]);
+  }, [setError, t]);
 
   // Inject custom CSS for context menu integration
   useEffect(() => {
@@ -267,7 +269,7 @@ const CustomActions = ({
       // Edit File (for text files)
       if (isTextFile(file) && permissions.edit) {
         customItems.push({
-          text: 'Edit File',
+          text: t('fileManager.customActions.editFile'),
           icon: '📝',
           onClick: () => handleEditFile(file),
           className: 'edit-file-item',
@@ -277,7 +279,7 @@ const CustomActions = ({
       // Extract Archive (for archive files)
       if (isArchiveFile(file) && permissions.archive) {
         customItems.push({
-          text: 'Extract Archive',
+          text: t('fileManager.customActions.extractArchive'),
           icon: '📦',
           onClick: () => handleExtractArchive(file),
           className: 'extract-archive-item',
@@ -294,7 +296,7 @@ const CustomActions = ({
           .filter(Boolean);
 
         customItems.push({
-          text: `Create Archive (${selectedFiles.length})`,
+          text: t('fileManager.customActions.createArchive', { count: selectedFiles.length }),
           icon: '🗜️',
           onClick: () => handleCreateArchive(selectedFiles),
           className: 'create-archive-item',
@@ -304,7 +306,7 @@ const CustomActions = ({
       // Properties (always available for admin)
       if (permissions.properties) {
         customItems.push({
-          text: 'Properties',
+          text: t('fileManager.customActions.properties'),
           icon: '⚙️',
           onClick: () => handleShowProperties(file),
           className: 'properties-item',
@@ -362,7 +364,7 @@ const CustomActions = ({
     return () => {
       observer.disconnect();
     };
-  }, [files, permissions, handleEditFile]);
+  }, [files, permissions, handleEditFile, t]);
 
   return (
     <>

@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { FormModal } from '../common';
 
 const EtherstubCreateModal = ({ server, existingEtherstubs, onClose, onSuccess, onError }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     temporary: false,
@@ -62,16 +64,14 @@ const EtherstubCreateModal = ({ server, existingEtherstubs, onClose, onSuccess, 
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      onError('Etherstub name is required');
+      onError(t('host.etherstubCreateModal.errors.nameRequired'));
       return false;
     }
 
     // Validate etherstub name format
     const nameRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
     if (!nameRegex.test(formData.name)) {
-      onError(
-        'Etherstub name must start with a letter and contain only letters, numbers, and underscores'
-      );
+      onError(t('host.etherstubCreateModal.errors.nameFormat'));
       return false;
     }
 
@@ -104,10 +104,10 @@ const EtherstubCreateModal = ({ server, existingEtherstubs, onClose, onSuccess, 
       if (result.success) {
         onSuccess();
       } else {
-        onError(result.message || 'Failed to create etherstub');
+        onError(result.message || t('host.etherstubCreateModal.errors.createFailed'));
       }
     } catch (err) {
-      onError(`Error creating etherstub: ${err.message}`);
+      onError(t('host.etherstubCreateModal.errors.createError', { message: err.message }));
     } finally {
       setCreating(false);
     }
@@ -118,15 +118,15 @@ const EtherstubCreateModal = ({ server, existingEtherstubs, onClose, onSuccess, 
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Create Etherstub"
+      title={t('host.etherstubCreateModal.title')}
       icon="fas fa-plus-circle"
-      submitText="Create Etherstub"
+      submitText={t('host.etherstubCreateModal.title')}
       submitVariant="is-primary"
       loading={creating}
     >
       <div className="mb-3">
         <label htmlFor="etherstub-name" className="form-label">
-          Etherstub Name *
+          {t('host.etherstubCreateModal.etherstubNameLabel')} *
         </label>
         <input
           id="etherstub-name"
@@ -138,9 +138,7 @@ const EtherstubCreateModal = ({ server, existingEtherstubs, onClose, onSuccess, 
           disabled={creating}
           required
         />
-        <p className="form-text text-muted">
-          Must start with a letter and contain only letters, numbers, and underscores
-        </p>
+        <p className="form-text text-muted">{t('host.etherstubCreateModal.nameHelp')}</p>
       </div>
 
       <div className="mb-3">
@@ -154,23 +152,17 @@ const EtherstubCreateModal = ({ server, existingEtherstubs, onClose, onSuccess, 
             disabled={creating}
           />
           <label className="form-check-label" htmlFor="etherstub-temporary">
-            Temporary (not persistent across reboots)
+            {t('host.etherstubCreateModal.temporary')}
           </label>
         </div>
-        <p className="form-text text-muted">
-          If checked, the etherstub will be removed when the system reboots
-        </p>
+        <p className="form-text text-muted">{t('host.etherstubCreateModal.temporaryHelp')}</p>
       </div>
 
       <div className="alert alert-info mt-4">
         <p>
-          <strong>About Etherstubs:</strong>
+          <strong>{t('host.etherstubCreateModal.aboutTitle')}</strong>
         </p>
-        <p>
-          Etherstubs provide a virtual Layer 2 switch that allows VNICs to communicate with each
-          other without requiring a physical network interface. They are useful for creating
-          isolated virtual networks within a system.
-        </p>
+        <p>{t('host.etherstubCreateModal.aboutBody')}</p>
       </div>
     </FormModal>
   );

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import FormModal from '../../common/FormModal';
 
@@ -10,6 +11,7 @@ import { isTextFile } from './FileManagerTransforms';
  * Provides a modal interface for editing text files
  */
 const TextFileEditor = ({ file, api, onClose, onSave }) => {
+  const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [originalContent, setOriginalContent] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +21,7 @@ const TextFileEditor = ({ file, api, onClose, onSave }) => {
 
   const loadFileContent = useCallback(async () => {
     if (!file || !isTextFile(file)) {
-      setError('This file cannot be edited as text');
+      setError(t('fileManager.textFileEditor.cannotEditAsText'));
       return;
     }
 
@@ -34,15 +36,15 @@ const TextFileEditor = ({ file, api, onClose, onSave }) => {
         setContent(fileContent);
         setOriginalContent(fileContent);
       } else {
-        setError(result.message || 'Failed to load file content');
+        setError(result.message || t('fileManager.textFileEditor.failedToLoadContent'));
       }
     } catch (err) {
       console.error('Error loading file content:', err);
-      setError(`Failed to load file content: ${err.message}`);
+      setError(t('fileManager.textFileEditor.failedToLoadContentDetail', { message: err.message }));
     } finally {
       setLoading(false);
     }
-  }, [api, file]);
+  }, [api, file, t]);
 
   // Load file content on mount
   useEffect(() => {
@@ -70,7 +72,7 @@ const TextFileEditor = ({ file, api, onClose, onSave }) => {
       // onSave will handle closing the modal and error handling
     } catch (err) {
       console.error('Error saving file:', err);
-      setError(`Failed to save file: ${err.message}`);
+      setError(t('fileManager.textFileEditor.failedToSaveDetail', { message: err.message }));
       setLoading(false);
     }
   };
@@ -100,7 +102,7 @@ const TextFileEditor = ({ file, api, onClose, onSave }) => {
       // 100MB limit for text editing
       return {
         warning: true,
-        message: 'File size exceeds 100MB. Large files may cause performance issues.',
+        message: t('fileManager.textFileEditor.fileSizeExceeds'),
       };
     }
     return { warning: false, message: '' };
@@ -113,35 +115,48 @@ const TextFileEditor = ({ file, api, onClose, onSave }) => {
       isOpen
       onClose={handleClose}
       onSubmit={handleSave}
-      title={`Edit: ${file?.name || 'Unknown File'}`}
+      title={t('fileManager.textFileEditor.editTitle', {
+        name: file?.name || t('fileManager.textFileEditor.unknownFile'),
+      })}
       icon="fas fa-edit"
-      submitText={hasChanges ? 'Save Changes' : 'Close'}
+      submitText={
+        hasChanges
+          ? t('fileManager.textFileEditor.saveChanges')
+          : t('fileManager.textFileEditor.close')
+      }
       submitVariant={hasChanges ? 'is-primary' : 'is-info'}
       submitIcon={hasChanges ? 'fas fa-save' : null}
       loading={loading}
       disabled={false}
       showCancelButton={hasChanges}
-      cancelText="Cancel"
+      cancelText={t('fileManager.textFileEditor.cancel')}
     >
       <div className="mb-3">
         {/* File info */}
         <div className="alert alert-secondary mb-4">
           <div className="row">
             <div className="col">
-              <strong>File:</strong> {file?.path || 'Unknown'}
+              <strong>{t('fileManager.textFileEditor.fileLabel')}</strong>{' '}
+              {file?.path || t('fileManager.textFileEditor.unknown')}
             </div>
             <div className="col">
-              <strong>Size:</strong> {file?.size ? `${Math.round(file.size / 1024)} KB` : 'Unknown'}
+              <strong>{t('fileManager.textFileEditor.sizeLabel')}</strong>{' '}
+              {file?.size
+                ? `${Math.round(file.size / 1024)} KB`
+                : t('fileManager.textFileEditor.unknown')}
             </div>
             <div className="col">
-              <strong>Modified:</strong>{' '}
-              {file?.updatedAt ? new Date(file.updatedAt).toLocaleString() : 'Unknown'}
+              <strong>{t('fileManager.textFileEditor.modifiedLabel')}</strong>{' '}
+              {file?.updatedAt
+                ? new Date(file.updatedAt).toLocaleString()
+                : t('fileManager.textFileEditor.unknown')}
             </div>
           </div>
 
           {hasChanges && (
             <div className="alert alert-warning small mt-2">
-              <strong>Unsaved Changes:</strong> You have made changes to this file.
+              <strong>{t('fileManager.textFileEditor.unsavedChangesLabel')}</strong>{' '}
+              {t('fileManager.textFileEditor.unsavedChangesText')}
             </div>
           )}
         </div>
@@ -149,7 +164,7 @@ const TextFileEditor = ({ file, api, onClose, onSave }) => {
         {/* Size warning */}
         {sizeInfo.warning && (
           <div className="alert alert-warning mb-4">
-            <strong>Warning:</strong> {sizeInfo.message}
+            <strong>{t('fileManager.textFileEditor.warningLabel')}</strong> {sizeInfo.message}
           </div>
         )}
 
@@ -157,13 +172,13 @@ const TextFileEditor = ({ file, api, onClose, onSave }) => {
         {error && (
           <div className="alert alert-danger mb-4">
             <button type="button" className="btn-close" onClick={() => setError('')} />
-            <strong>Error:</strong> {error}
+            <strong>{t('fileManager.textFileEditor.errorLabel')}</strong> {error}
           </div>
         )}
 
         {/* Content editor */}
         <label className="form-label" htmlFor="file-content-textarea">
-          File Content
+          {t('fileManager.textFileEditor.fileContentLabel')}
         </label>
         <div>
           <textarea
@@ -172,7 +187,7 @@ const TextFileEditor = ({ file, api, onClose, onSave }) => {
             rows="25"
             value={content}
             onChange={handleContentChange}
-            placeholder="File content will appear here..."
+            placeholder={t('fileManager.textFileEditor.fileContentPlaceholder')}
             disabled={loading || !!error}
             style={{
               fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
@@ -184,8 +199,11 @@ const TextFileEditor = ({ file, api, onClose, onSave }) => {
 
         {/* Content stats */}
         <p className="form-text text-muted">
-          Lines: {content.split('\n').length} | Characters: {content.length} | Size: ~
-          {Math.round(new Blob([content]).size / 1024)} KB
+          {t('fileManager.textFileEditor.contentStats', {
+            lines: content.split('\n').length,
+            characters: content.length,
+            size: Math.round(new Blob([content]).size / 1024),
+          })}
         </p>
       </div>
 
@@ -193,23 +211,23 @@ const TextFileEditor = ({ file, api, onClose, onSave }) => {
       <div className="mb-3">
         <div className="alert alert-info">
           <div className="small">
-            <strong>Keyboard Shortcuts:</strong>
+            <strong>{t('fileManager.textFileEditor.keyboardShortcutsLabel')}</strong>
             <br />
             <div className="row">
               <div className="col">
-                <kbd>Ctrl</kbd> + <kbd>S</kbd> - Save
+                <kbd>Ctrl</kbd> + <kbd>S</kbd> - {t('fileManager.textFileEditor.save')}
                 <br />
-                <kbd>Ctrl</kbd> + <kbd>Z</kbd> - Undo
+                <kbd>Ctrl</kbd> + <kbd>Z</kbd> - {t('fileManager.textFileEditor.undo')}
               </div>
               <div className="col">
-                <kbd>Ctrl</kbd> + <kbd>Y</kbd> - Redo
+                <kbd>Ctrl</kbd> + <kbd>Y</kbd> - {t('fileManager.textFileEditor.redo')}
                 <br />
-                <kbd>Ctrl</kbd> + <kbd>A</kbd> - Select All
+                <kbd>Ctrl</kbd> + <kbd>A</kbd> - {t('fileManager.textFileEditor.selectAll')}
               </div>
               <div className="col">
-                <kbd>Ctrl</kbd> + <kbd>F</kbd> - Find
+                <kbd>Ctrl</kbd> + <kbd>F</kbd> - {t('fileManager.textFileEditor.find')}
                 <br />
-                <kbd>Tab</kbd> - Insert tab
+                <kbd>Tab</kbd> - {t('fileManager.textFileEditor.insertTab')}
               </div>
             </div>
           </div>
@@ -222,15 +240,18 @@ const TextFileEditor = ({ file, api, onClose, onSave }) => {
           <div className="alert alert-secondary small">
             <div className="row align-items-center">
               <div className="col">
-                <strong>Detected Type:</strong> {file._hwMetadata.mimeType || 'text/plain'}
+                <strong>{t('fileManager.textFileEditor.detectedTypeLabel')}</strong>{' '}
+                {file._hwMetadata.mimeType || 'text/plain'}
               </div>
               {file._hwMetadata.syntax && (
                 <div className="col">
-                  <strong>Syntax:</strong> {file._hwMetadata.syntax}
+                  <strong>{t('fileManager.textFileEditor.syntaxLabel')}</strong>{' '}
+                  {file._hwMetadata.syntax}
                 </div>
               )}
               <div className="col">
-                <strong>Permissions:</strong> {file._hwMetadata.permissions?.octal || 'Unknown'}
+                <strong>{t('fileManager.textFileEditor.permissionsLabel')}</strong>{' '}
+                {file._hwMetadata.permissions?.octal || t('fileManager.textFileEditor.unknown')}
               </div>
             </div>
           </div>
@@ -243,18 +264,19 @@ const TextFileEditor = ({ file, api, onClose, onSave }) => {
           isOpen
           onClose={() => setShowCloseConfirm(false)}
           onSubmit={confirmClose}
-          title="Unsaved Changes"
+          title={t('fileManager.textFileEditor.unsavedChangesTitle')}
           icon="fas fa-exclamation-triangle"
-          submitText="Discard Changes"
+          submitText={t('fileManager.textFileEditor.discardChanges')}
           submitVariant="is-danger"
-          cancelText="Keep Editing"
+          cancelText={t('fileManager.textFileEditor.keepEditing')}
         >
           <div className="alert alert-warning">
             <p>
-              <strong>Warning:</strong> You have unsaved changes that will be lost.
+              <strong>{t('fileManager.textFileEditor.warningLabel')}</strong>{' '}
+              {t('fileManager.textFileEditor.unsavedChangesWarning')}
             </p>
           </div>
-          <p>Are you sure you want to close without saving?</p>
+          <p>{t('fileManager.textFileEditor.confirmClose')}</p>
         </FormModal>
       )}
     </FormModal>

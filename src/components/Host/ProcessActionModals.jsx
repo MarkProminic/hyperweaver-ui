@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { FormModal } from '../common';
 
 // Kill Process Confirmation Modal
 const KillProcessModal = ({ process, onClose, onConfirm }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [force, setForce] = useState(false);
 
@@ -28,9 +30,9 @@ const KillProcessModal = ({ process, onClose, onConfirm }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Kill Process"
+      title={t('host.killProcessModal.title')}
       icon="fas fa-times"
-      submitText={loading ? 'Killing...' : 'Kill Process'}
+      submitText={loading ? t('host.killProcessModal.killing') : t('host.killProcessModal.title')}
       submitVariant="is-danger"
       loading={loading}
       showCancelButton
@@ -38,33 +40,33 @@ const KillProcessModal = ({ process, onClose, onConfirm }) => {
       {/* Process Information */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Process Information</h3>
+          <h3 className="fs-6 fw-bold">{t('host.killProcessModal.processInformation')}</h3>
           <div className="table-responsive">
             <table className="table">
               <tbody>
                 <tr>
                   <td>
-                    <strong>PID</strong>
+                    <strong>{t('host.killProcessModal.pid')}</strong>
                   </td>
                   <td className="font-monospace">{process.pid}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>User</strong>
+                    <strong>{t('host.killProcessModal.user')}</strong>
                   </td>
                   <td>{process.username}</td>
                 </tr>
                 {process.zone && (
                   <tr>
                     <td>
-                      <strong>Zone</strong>
+                      <strong>{t('host.killProcessModal.zone')}</strong>
                     </td>
                     <td>{process.zone}</td>
                   </tr>
                 )}
                 <tr>
                   <td>
-                    <strong>Command</strong>
+                    <strong>{t('host.killProcessModal.command')}</strong>
                   </td>
                   <td className="font-monospace small">{process.command}</td>
                 </tr>
@@ -77,18 +79,16 @@ const KillProcessModal = ({ process, onClose, onConfirm }) => {
       {/* Warning */}
       <div className="alert alert-danger">
         <p>
-          <strong>Warning:</strong> This will terminate the process.
+          <strong>{t('host.killProcessModal.warningLabel')}</strong>{' '}
+          {t('host.killProcessModal.warningText')}
         </p>
-        <p className="mt-2">
-          The process will first receive SIGTERM for graceful shutdown. If it doesn&apos;t respond,
-          SIGKILL will be sent to force termination.
-        </p>
+        <p className="mt-2">{t('host.killProcessModal.warningDetail')}</p>
       </div>
 
       {/* Options */}
       <div className="card">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Kill Options</h3>
+          <h3 className="fs-6 fw-bold">{t('host.killProcessModal.killOptions')}</h3>
 
           <div className="mb-3">
             <div className="form-check">
@@ -100,12 +100,11 @@ const KillProcessModal = ({ process, onClose, onConfirm }) => {
                 onChange={e => setForce(e.target.checked)}
               />
               <label className="form-check-label" htmlFor="kill-force">
-                <strong>Force Kill</strong> - Send SIGKILL immediately (not recommended)
+                <strong>{t('host.killProcessModal.forceKillLabel')}</strong>{' '}
+                {t('host.killProcessModal.forceKillHelp')}
               </label>
             </div>
-            <p className="form-text text-muted">
-              If unchecked, the process will first receive SIGTERM for graceful shutdown.
-            </p>
+            <p className="form-text text-muted">{t('host.killProcessModal.forceKillNote')}</p>
           </div>
         </div>
       </div>
@@ -126,19 +125,20 @@ KillProcessModal.propTypes = {
 
 // Send Signal Modal
 const SendSignalModal = ({ process, onClose, onConfirm, limitedSignals }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [signal, setSignal] = useState('TERM');
 
   const allSignals = [
-    { value: 'TERM', label: 'SIGTERM - Graceful termination' },
-    { value: 'KILL', label: 'SIGKILL - Force kill (cannot be ignored)' },
-    { value: 'HUP', label: 'SIGHUP - Hangup (reload configuration)' },
-    { value: 'INT', label: 'SIGINT - Interrupt (Ctrl+C)' },
-    { value: 'QUIT', label: 'SIGQUIT - Quit with core dump' },
-    { value: 'USR1', label: 'SIGUSR1 - User defined signal 1' },
-    { value: 'USR2', label: 'SIGUSR2 - User defined signal 2' },
-    { value: 'STOP', label: 'SIGSTOP - Stop process (cannot be ignored)' },
-    { value: 'CONT', label: 'SIGCONT - Continue stopped process' },
+    { value: 'TERM', label: t('host.sendSignalModal.signalTerm') },
+    { value: 'KILL', label: t('host.sendSignalModal.signalKill') },
+    { value: 'HUP', label: t('host.sendSignalModal.signalHup') },
+    { value: 'INT', label: t('host.sendSignalModal.signalInt') },
+    { value: 'QUIT', label: t('host.sendSignalModal.signalQuit') },
+    { value: 'USR1', label: t('host.sendSignalModal.signalUsr1') },
+    { value: 'USR2', label: t('host.sendSignalModal.signalUsr2') },
+    { value: 'STOP', label: t('host.sendSignalModal.signalStop') },
+    { value: 'CONT', label: t('host.sendSignalModal.signalCont') },
   ];
   // A Windows-host agent delivers only TERM/KILL — anything else 400s.
   const signals = limitedSignals
@@ -165,9 +165,11 @@ const SendSignalModal = ({ process, onClose, onConfirm, limitedSignals }) => {
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Send Signal to Process"
+      title={t('host.sendSignalModal.title')}
       icon="fas fa-bolt"
-      submitText={loading ? 'Sending...' : 'Send Signal'}
+      submitText={
+        loading ? t('host.sendSignalModal.sending') : t('host.sendSignalModal.sendSignal')
+      }
       submitVariant="is-warning"
       loading={loading}
       showCancelButton
@@ -175,33 +177,33 @@ const SendSignalModal = ({ process, onClose, onConfirm, limitedSignals }) => {
       {/* Process Information */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Process Information</h3>
+          <h3 className="fs-6 fw-bold">{t('host.sendSignalModal.processInformation')}</h3>
           <div className="table-responsive">
             <table className="table">
               <tbody>
                 <tr>
                   <td>
-                    <strong>PID</strong>
+                    <strong>{t('host.sendSignalModal.pid')}</strong>
                   </td>
                   <td className="font-monospace">{process.pid}</td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>User</strong>
+                    <strong>{t('host.sendSignalModal.user')}</strong>
                   </td>
                   <td>{process.username}</td>
                 </tr>
                 {process.zone && (
                   <tr>
                     <td>
-                      <strong>Zone</strong>
+                      <strong>{t('host.sendSignalModal.zone')}</strong>
                     </td>
                     <td>{process.zone}</td>
                   </tr>
                 )}
                 <tr>
                   <td>
-                    <strong>Command</strong>
+                    <strong>{t('host.sendSignalModal.command')}</strong>
                   </td>
                   <td className="font-monospace small">{process.command}</td>
                 </tr>
@@ -214,11 +216,11 @@ const SendSignalModal = ({ process, onClose, onConfirm, limitedSignals }) => {
       {/* Signal Selection */}
       <div className="card">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Signal Selection</h3>
+          <h3 className="fs-6 fw-bold">{t('host.sendSignalModal.signalSelection')}</h3>
 
           <div className="mb-3">
             <label className="form-label" htmlFor="signal-select">
-              Signal to Send
+              {t('host.sendSignalModal.signalToSend')}
             </label>
             <select
               id="signal-select"
@@ -232,9 +234,7 @@ const SendSignalModal = ({ process, onClose, onConfirm, limitedSignals }) => {
                 </option>
               ))}
             </select>
-            <p className="form-text text-muted">
-              Choose the appropriate signal based on your intent.
-            </p>
+            <p className="form-text text-muted">{t('host.sendSignalModal.signalToSendHelp')}</p>
           </div>
         </div>
       </div>
@@ -242,20 +242,21 @@ const SendSignalModal = ({ process, onClose, onConfirm, limitedSignals }) => {
       {/* Signal Information */}
       <div className="alert alert-info">
         <p>
-          <strong>Note:</strong> Different signals have different effects on processes.
+          <strong>{t('host.sendSignalModal.noteLabel')}</strong>{' '}
+          {t('host.sendSignalModal.noteText')}
         </p>
         <ul className="mt-2">
           <li>
-            • <strong>SIGTERM:</strong> Requests graceful termination - processes can handle cleanup
+            • <strong>SIGTERM:</strong> {t('host.sendSignalModal.sigtermDesc')}
           </li>
           <li>
-            • <strong>SIGKILL:</strong> Forces immediate termination - cannot be ignored or handled
+            • <strong>SIGKILL:</strong> {t('host.sendSignalModal.sigkillDesc')}
           </li>
           <li>
-            • <strong>SIGHUP:</strong> Often used to reload configuration files
+            • <strong>SIGHUP:</strong> {t('host.sendSignalModal.sighupDesc')}
           </li>
           <li>
-            • <strong>SIGSTOP/SIGCONT:</strong> Pause and resume process execution
+            • <strong>SIGSTOP/SIGCONT:</strong> {t('host.sendSignalModal.sigstopContDesc')}
           </li>
         </ul>
       </div>
@@ -277,6 +278,7 @@ SendSignalModal.propTypes = {
 
 // Batch Kill Modal
 const BatchKillModal = ({ onClose, onConfirm, availableZones, limitedSignals }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [pattern, setPattern] = useState('');
   const [zone, setZone] = useState('');
@@ -308,9 +310,11 @@ const BatchKillModal = ({ onClose, onConfirm, availableZones, limitedSignals }) 
       isOpen
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Batch Kill Processes"
+      title={t('host.batchKillModal.title')}
       icon="fas fa-stop-circle"
-      submitText={loading ? 'Processing...' : 'Kill Processes'}
+      submitText={
+        loading ? t('host.batchKillModal.processing') : t('host.batchKillModal.killProcesses')
+      }
       submitVariant="is-danger"
       loading={loading}
       disabled={!pattern.trim()}
@@ -319,39 +323,37 @@ const BatchKillModal = ({ onClose, onConfirm, availableZones, limitedSignals }) 
       {/* Warning */}
       <div className="alert alert-danger mb-4">
         <p>
-          <strong>Warning:</strong> This will affect multiple processes matching the pattern.
+          <strong>{t('host.batchKillModal.warningLabel')}</strong>{' '}
+          {t('host.batchKillModal.warningText')}
         </p>
-        <p className="mt-2">Use this feature carefully. Test with a specific pattern first.</p>
+        <p className="mt-2">{t('host.batchKillModal.warningDetail')}</p>
       </div>
 
       {/* Pattern Selection */}
       <div className="card mb-4">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Process Selection</h3>
+          <h3 className="fs-6 fw-bold">{t('host.batchKillModal.processSelection')}</h3>
 
           <div className="mb-3">
             <label className="form-label" htmlFor="batch-kill-pattern">
-              Command Pattern <span className="text-danger">*</span>
+              {t('host.batchKillModal.commandPatternLabel')} <span className="text-danger">*</span>
             </label>
             <input
               id="batch-kill-pattern"
               className="form-control"
               type="text"
-              placeholder="e.g., apache, bhyve, nginx..."
+              placeholder={t('host.batchKillModal.commandPatternPlaceholder')}
               value={pattern}
               onChange={e => setPattern(e.target.value)}
               required
             />
-            <p className="form-text text-muted">
-              Enter a command name pattern to match processes. This will match processes whose
-              command contains this text.
-            </p>
+            <p className="form-text text-muted">{t('host.batchKillModal.commandPatternHelp')}</p>
           </div>
 
           {availableZones.length > 0 && (
             <div className="mb-3">
               <label className="form-label" htmlFor="batch-kill-zone-filter">
-                Zone Filter (Optional)
+                {t('host.batchKillModal.zoneFilterLabel')}
               </label>
               <select
                 id="batch-kill-zone-filter"
@@ -359,16 +361,14 @@ const BatchKillModal = ({ onClose, onConfirm, availableZones, limitedSignals }) 
                 value={zone}
                 onChange={e => setZone(e.target.value)}
               >
-                <option value="">All Zones</option>
+                <option value="">{t('host.batchKillModal.allZones')}</option>
                 {availableZones.map(zoneName => (
                   <option key={zoneName} value={zoneName}>
                     {zoneName}
                   </option>
                 ))}
               </select>
-              <p className="form-text text-muted">
-                Optionally limit the operation to processes in a specific zone.
-              </p>
+              <p className="form-text text-muted">{t('host.batchKillModal.zoneFilterHelp')}</p>
             </div>
           )}
         </div>
@@ -377,11 +377,11 @@ const BatchKillModal = ({ onClose, onConfirm, availableZones, limitedSignals }) 
       {/* Signal Selection */}
       <div className="card">
         <div className="card-body">
-          <h3 className="fs-6 fw-bold">Signal Options</h3>
+          <h3 className="fs-6 fw-bold">{t('host.batchKillModal.signalOptions')}</h3>
 
           <div className="mb-3">
             <label className="form-label" htmlFor="batch-kill-signal">
-              Signal to Send
+              {t('host.batchKillModal.signalToSend')}
             </label>
             <select
               id="batch-kill-signal"
@@ -391,14 +391,12 @@ const BatchKillModal = ({ onClose, onConfirm, availableZones, limitedSignals }) 
             >
               {signals.map(sig => (
                 <option key={sig} value={sig}>
-                  SIG{sig} {sig === 'TERM' && '(Graceful)'}
-                  {sig === 'KILL' && '(Force)'}
+                  SIG{sig} {sig === 'TERM' && t('host.batchKillModal.graceful')}
+                  {sig === 'KILL' && t('host.batchKillModal.force')}
                 </option>
               ))}
             </select>
-            <p className="form-text text-muted">
-              SIGTERM is recommended for graceful shutdown. SIGKILL for force termination.
-            </p>
+            <p className="form-text text-muted">{t('host.batchKillModal.signalHelp')}</p>
           </div>
         </div>
       </div>
@@ -406,20 +404,20 @@ const BatchKillModal = ({ onClose, onConfirm, availableZones, limitedSignals }) 
       {/* Examples */}
       <div className="alert alert-info">
         <p>
-          <strong>Pattern Examples:</strong>
+          <strong>{t('host.batchKillModal.patternExamples')}</strong>
         </p>
         <ul className="mt-2">
           <li>
-            • <code>apache</code> - Matches all Apache processes
+            • <code>apache</code> - {t('host.batchKillModal.exampleApache')}
           </li>
           <li>
-            • <code>bhyve</code> - Matches all VM processes
+            • <code>bhyve</code> - {t('host.batchKillModal.exampleBhyve')}
           </li>
           <li>
-            • <code>java</code> - Matches all Java applications
+            • <code>java</code> - {t('host.batchKillModal.exampleJava')}
           </li>
           <li>
-            • <code>python</code> - Matches all Python scripts
+            • <code>python</code> - {t('host.batchKillModal.examplePython')}
           </li>
         </ul>
       </div>

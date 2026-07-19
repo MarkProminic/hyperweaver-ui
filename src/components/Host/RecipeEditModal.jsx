@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { createRecipe, updateRecipe } from '../../api/provisioningAPI';
 import { FormModal } from '../common';
@@ -56,63 +57,66 @@ const buildVariables = variableRows =>
   );
 
 /** Key/value rows — the recipe `variables` map editor (shared by the test panel). */
-export const VariableRowsEditor = ({ rows, onRowsChange, idPrefix, disabled }) => (
-  <div className="d-flex flex-column gap-1">
-    {rows.map(row => (
-      <div className="d-flex gap-1" key={row.key}>
-        <input
-          className="form-control form-control-sm"
-          aria-label="Variable name"
-          placeholder="name"
-          value={row.name}
-          onChange={e =>
-            onRowsChange(
-              rows.map(entry =>
-                entry.key === row.key ? { ...entry, name: e.target.value } : entry
+export const VariableRowsEditor = ({ rows, onRowsChange, idPrefix, disabled }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="d-flex flex-column gap-1">
+      {rows.map(row => (
+        <div className="d-flex gap-1" key={row.key}>
+          <input
+            className="form-control form-control-sm"
+            aria-label={t('host.recipeEditModal.variableName')}
+            placeholder={t('host.recipeEditModal.namePlaceholder')}
+            value={row.name}
+            onChange={e =>
+              onRowsChange(
+                rows.map(entry =>
+                  entry.key === row.key ? { ...entry, name: e.target.value } : entry
+                )
               )
-            )
-          }
-          disabled={disabled}
-        />
-        <input
-          className="form-control form-control-sm"
-          aria-label="Variable value"
-          placeholder="value"
-          value={row.value}
-          onChange={e =>
-            onRowsChange(
-              rows.map(entry =>
-                entry.key === row.key ? { ...entry, value: e.target.value } : entry
+            }
+            disabled={disabled}
+          />
+          <input
+            className="form-control form-control-sm"
+            aria-label={t('host.recipeEditModal.variableValue')}
+            placeholder={t('host.recipeEditModal.valuePlaceholder')}
+            value={row.value}
+            onChange={e =>
+              onRowsChange(
+                rows.map(entry =>
+                  entry.key === row.key ? { ...entry, value: e.target.value } : entry
+                )
               )
-            )
-          }
-          disabled={disabled}
-        />
+            }
+            disabled={disabled}
+          />
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-danger"
+            aria-label={t('host.recipeEditModal.dropVariable')}
+            onClick={() => onRowsChange(rows.filter(entry => entry.key !== row.key))}
+            disabled={disabled}
+          >
+            <i className="fas fa-trash" />
+          </button>
+        </div>
+      ))}
+      <div>
         <button
           type="button"
-          className="btn btn-sm btn-outline-danger"
-          aria-label="Drop this variable"
-          onClick={() => onRowsChange(rows.filter(entry => entry.key !== row.key))}
+          id={`${idPrefix}-add-variable`}
+          className="btn btn-sm btn-outline-secondary"
+          onClick={() => onRowsChange([...rows, { key: newRowKey(), name: '', value: '' }])}
           disabled={disabled}
         >
-          <i className="fas fa-trash" />
+          <i className="fas fa-plus me-1" />
+          {t('host.recipeEditModal.variable')}
         </button>
       </div>
-    ))}
-    <div>
-      <button
-        type="button"
-        id={`${idPrefix}-add-variable`}
-        className="btn btn-sm btn-outline-secondary"
-        onClick={() => onRowsChange([...rows, { key: newRowKey(), name: '', value: '' }])}
-        disabled={disabled}
-      >
-        <i className="fas fa-plus me-1" />
-        Variable
-      </button>
     </div>
-  </div>
-);
+  );
+};
 
 VariableRowsEditor.propTypes = {
   rows: PropTypes.array.isRequired,
@@ -121,110 +125,121 @@ VariableRowsEditor.propTypes = {
   disabled: PropTypes.bool,
 };
 
-const StepRow = ({ row, index, count, onPatch, onMove, onDrop, disabled }) => (
-  <div className="border rounded p-2">
-    <div className="d-flex gap-1 align-items-center mb-1">
-      <span className="badge text-bg-secondary">{index + 1}</span>
-      <select
-        className="form-select form-select-sm w-auto"
-        aria-label="Step type"
-        value={row.type}
-        onChange={e => onPatch({ type: e.target.value })}
-        disabled={disabled}
-      >
-        {STEP_TYPES.map(type => (
-          <option key={type} value={type}>
-            {type}
-          </option>
-        ))}
-      </select>
-      <span className="ms-auto d-inline-flex gap-1">
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-secondary py-0"
-          aria-label="Move step up"
-          onClick={() => onMove(-1)}
-          disabled={disabled || index === 0}
-        >
-          <i className="fas fa-arrow-up" />
-        </button>
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-secondary py-0"
-          aria-label="Move step down"
-          onClick={() => onMove(1)}
-          disabled={disabled || index === count - 1}
-        >
-          <i className="fas fa-arrow-down" />
-        </button>
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-danger py-0"
-          aria-label="Drop this step"
-          onClick={onDrop}
+const StepRow = ({ row, index, count, onPatch, onMove, onDrop, disabled }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="border rounded p-2">
+      <div className="d-flex gap-1 align-items-center mb-1">
+        <span className="badge text-bg-secondary">{index + 1}</span>
+        <select
+          className="form-select form-select-sm w-auto"
+          aria-label={t('host.recipeEditModal.stepType')}
+          value={row.type}
+          onChange={e => onPatch({ type: e.target.value })}
           disabled={disabled}
         >
-          <i className="fas fa-trash" />
-        </button>
-      </span>
-    </div>
-    {row.type === 'wait' && (
-      <input
-        className="form-control form-control-sm"
-        aria-label="Pattern to wait for"
-        placeholder="pattern to wait for on the console — e.g. login:"
-        value={row.pattern}
-        onChange={e => onPatch({ pattern: e.target.value })}
-        disabled={disabled}
-      />
-    )}
-    {(row.type === 'send' || row.type === 'command') && (
-      <input
-        className="form-control form-control-sm font-monospace"
-        aria-label={row.type === 'send' ? 'Text to send' : 'Command to run'}
-        placeholder={
-          row.type === 'send' ? 'raw text sent to the console' : 'command run at the shell prompt'
-        }
-        value={row.value}
-        onChange={e => onPatch({ value: e.target.value })}
-        disabled={disabled}
-      />
-    )}
-    {row.type === 'template' && (
-      <>
-        <textarea
-          className="form-control form-control-sm font-monospace"
-          aria-label="Template content"
-          rows={4}
-          placeholder={'file content — {{variables}} resolve before writing'}
-          value={row.content}
-          onChange={e => onPatch({ content: e.target.value })}
-          disabled={disabled}
-        />
+          {STEP_TYPES.map(type => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+        <span className="ms-auto d-inline-flex gap-1">
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary py-0"
+            aria-label={t('host.recipeEditModal.moveStepUp')}
+            onClick={() => onMove(-1)}
+            disabled={disabled || index === 0}
+          >
+            <i className="fas fa-arrow-up" />
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary py-0"
+            aria-label={t('host.recipeEditModal.moveStepDown')}
+            onClick={() => onMove(1)}
+            disabled={disabled || index === count - 1}
+          >
+            <i className="fas fa-arrow-down" />
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-danger py-0"
+            aria-label={t('host.recipeEditModal.dropStep')}
+            onClick={onDrop}
+            disabled={disabled}
+          >
+            <i className="fas fa-trash" />
+          </button>
+        </span>
+      </div>
+      {row.type === 'wait' && (
         <input
-          className="form-control form-control-sm font-monospace mt-1"
-          aria-label="Destination path in the guest"
-          placeholder="destination path in the guest — e.g. /etc/netplan/99-hyperweaver.yaml"
-          value={row.dest}
-          onChange={e => onPatch({ dest: e.target.value })}
+          className="form-control form-control-sm"
+          aria-label={t('host.recipeEditModal.patternToWaitFor')}
+          placeholder={t('host.recipeEditModal.patternPlaceholder')}
+          value={row.pattern}
+          onChange={e => onPatch({ pattern: e.target.value })}
           disabled={disabled}
         />
-      </>
-    )}
-    {row.type === 'delay' && (
-      <input
-        className="form-control form-control-sm w-auto"
-        aria-label="Seconds to wait"
-        type="number"
-        min="1"
-        placeholder="seconds"
-        value={row.seconds}
-        onChange={e => onPatch({ seconds: e.target.value })}
-        disabled={disabled}
-      />
-    )}
-  </div>
-);
+      )}
+      {(row.type === 'send' || row.type === 'command') && (
+        <input
+          className="form-control form-control-sm font-monospace"
+          aria-label={
+            row.type === 'send'
+              ? t('host.recipeEditModal.textToSend')
+              : t('host.recipeEditModal.commandToRun')
+          }
+          placeholder={
+            row.type === 'send'
+              ? t('host.recipeEditModal.sendPlaceholder')
+              : t('host.recipeEditModal.commandPlaceholder')
+          }
+          value={row.value}
+          onChange={e => onPatch({ value: e.target.value })}
+          disabled={disabled}
+        />
+      )}
+      {row.type === 'template' && (
+        <>
+          <textarea
+            className="form-control form-control-sm font-monospace"
+            aria-label={t('host.recipeEditModal.templateContent')}
+            rows={4}
+            placeholder={t('host.recipeEditModal.templateContentPlaceholder', {
+              token: '{{variables}}',
+            })}
+            value={row.content}
+            onChange={e => onPatch({ content: e.target.value })}
+            disabled={disabled}
+          />
+          <input
+            className="form-control form-control-sm font-monospace mt-1"
+            aria-label={t('host.recipeEditModal.destPath')}
+            placeholder={t('host.recipeEditModal.destPlaceholder')}
+            value={row.dest}
+            onChange={e => onPatch({ dest: e.target.value })}
+            disabled={disabled}
+          />
+        </>
+      )}
+      {row.type === 'delay' && (
+        <input
+          className="form-control form-control-sm w-auto"
+          aria-label={t('host.recipeEditModal.secondsToWait')}
+          type="number"
+          min="1"
+          placeholder={t('host.recipeEditModal.secondsPlaceholder')}
+          value={row.seconds}
+          onChange={e => onPatch({ seconds: e.target.value })}
+          disabled={disabled}
+        />
+      )}
+    </div>
+  );
+};
 
 StepRow.propTypes = {
   row: PropTypes.object.isRequired,
@@ -237,6 +252,7 @@ StepRow.propTypes = {
 };
 
 const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [osFamily, setOsFamily] = useState('linux');
@@ -285,11 +301,11 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      setError('A recipe needs a name.');
+      setError(t('host.recipeEditModal.nameRequired'));
       return;
     }
     if (stepRows.length === 0) {
-      setError('A recipe needs at least one step.');
+      setError(t('host.recipeEditModal.stepRequired'));
       return;
     }
     const body = {
@@ -315,7 +331,11 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
       setError(result.message);
       return;
     }
-    onSaved(`Recipe "${body.name}" ${recipe?.id ? 'updated' : 'created'}.`);
+    onSaved(
+      recipe?.id
+        ? t('host.recipeEditModal.recipeUpdated', { name: body.name })
+        : t('host.recipeEditModal.recipeCreated', { name: body.name })
+    );
     onClose();
   };
 
@@ -324,9 +344,13 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={recipe?.id ? `Edit Recipe: ${recipe.name}` : 'New Recipe'}
+      title={
+        recipe?.id
+          ? t('host.recipeEditModal.editRecipeTitle', { name: recipe.name })
+          : t('host.recipeEditModal.newRecipe')
+      }
       icon="fas fa-scroll"
-      submitText={recipe?.id ? 'Save' : 'Create'}
+      submitText={recipe?.id ? t('host.recipeEditModal.save') : t('host.recipeEditModal.create')}
       loading={loading}
       showCancelButton
     >
@@ -334,7 +358,7 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
       <div className="row g-3">
         <div className="col-12 col-md-4">
           <label className="form-label" htmlFor="recipe-name">
-            Name
+            {t('host.recipeEditModal.name')}
           </label>
           <input
             id="recipe-name"
@@ -346,7 +370,7 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
         </div>
         <div className="col-6 col-md-4">
           <label className="form-label" htmlFor="recipe-os-family">
-            OS Family
+            {t('host.recipeEditModal.osFamily')}
           </label>
           <select
             id="recipe-os-family"
@@ -363,7 +387,7 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
         </div>
         <div className="col-6 col-md-4">
           <label className="form-label" htmlFor="recipe-brand">
-            Brand
+            {t('host.recipeEditModal.brand')}
           </label>
           <select
             id="recipe-brand"
@@ -380,7 +404,7 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
         </div>
         <div className="col-12">
           <label className="form-label" htmlFor="recipe-description">
-            Description
+            {t('host.recipeEditModal.description')}
           </label>
           <input
             id="recipe-description"
@@ -400,26 +424,26 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
               onChange={e => setIsDefault(e.target.checked)}
             />
             <label className="form-check-label" htmlFor="recipe-default">
-              Default recipe for this OS family + brand — what <code>zone_setup</code> picks
-              (setting it unsets the previous default)
+              {t('host.recipeEditModal.defaultRecipeBefore')} <code>zone_setup</code>{' '}
+              {t('host.recipeEditModal.defaultRecipeAfter')}
             </label>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <label className="form-label" htmlFor="recipe-boot-string">
-            Boot string
+            {t('host.recipeEditModal.bootString')}
           </label>
           <input
             id="recipe-boot-string"
             className="form-control"
-            placeholder="pattern meaning the OS is up"
+            placeholder={t('host.recipeEditModal.bootStringPlaceholder')}
             value={bootString}
             onChange={e => setBootString(e.target.value)}
           />
         </div>
         <div className="col-6 col-md-3">
           <label className="form-label" htmlFor="recipe-login-prompt">
-            Login prompt
+            {t('host.recipeEditModal.loginPrompt')}
           </label>
           <input
             id="recipe-login-prompt"
@@ -431,7 +455,7 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
         </div>
         <div className="col-6 col-md-3">
           <label className="form-label" htmlFor="recipe-shell-prompt">
-            Shell prompt
+            {t('host.recipeEditModal.shellPrompt')}
           </label>
           <input
             id="recipe-shell-prompt"
@@ -443,7 +467,7 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
         </div>
         <div className="col-6 col-md-3">
           <label className="form-label" htmlFor="recipe-timeout">
-            Timeout (seconds)
+            {t('host.recipeEditModal.timeoutSeconds')}
           </label>
           <input
             id="recipe-timeout"
@@ -456,10 +480,10 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
           />
         </div>
         <div className="col-12">
-          <span className="form-label d-block">Variables</span>
+          <span className="form-label d-block">{t('host.recipeEditModal.variables')}</span>
           <p className="form-text text-muted mt-0 mb-1">
-            Referenced as <code>{'{{name}}'}</code> in step strings; call-time variables merge over
-            these.
+            {t('host.recipeEditModal.variablesHelpBefore')} <code>{'{{name}}'}</code>{' '}
+            {t('host.recipeEditModal.variablesHelpAfter')}
           </p>
           <VariableRowsEditor
             rows={variableRows}
@@ -468,7 +492,7 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
           />
         </div>
         <div className="col-12">
-          <span className="form-label d-block">Steps (run in order)</span>
+          <span className="form-label d-block">{t('host.recipeEditModal.stepsRunInOrder')}</span>
           <div className="d-flex flex-column gap-2">
             {stepRows.map((row, index) => (
               <StepRow
@@ -501,7 +525,7 @@ const RecipeEditModal = ({ isOpen, onClose, server, recipe, onSaved }) => {
                 }
               >
                 <i className="fas fa-plus me-1" />
-                Step
+                {t('host.recipeEditModal.step')}
               </button>
             </div>
           </div>

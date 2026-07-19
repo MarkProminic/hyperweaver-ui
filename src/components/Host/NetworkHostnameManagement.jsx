@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
 import { hasFeature } from '../../utils/capabilities';
@@ -20,23 +21,64 @@ import VnicManagement from './VnicManagement';
 // surfaces exist wherever it does); their own tokens light them up on
 // agents that ship the surfaces individually (sync ask 2026-07-17).
 const SECTIONS = [
-  { key: 'hostname', label: 'Hostname', icon: 'fa-server', features: ['hostname', 'vnics'] },
-  { key: 'hosts', label: 'Hosts File', icon: 'fa-address-book', features: ['hosts-file'] },
-  { key: 'dns', label: 'DNS', icon: 'fa-route', features: ['dns', 'vnics'] },
-  { key: 'vnics', label: 'VNICs', icon: 'fa-network-wired', features: ['vnics'] },
-  { key: 'vlans', label: 'VLANs', icon: 'fa-tags', features: ['vnics'] },
+  {
+    key: 'hostname',
+    labelKey: 'host.networkHostnameManagement.sectionHostname',
+    icon: 'fa-server',
+    features: ['hostname', 'vnics'],
+  },
+  {
+    key: 'hosts',
+    labelKey: 'host.networkHostnameManagement.sectionHosts',
+    icon: 'fa-address-book',
+    features: ['hosts-file'],
+  },
+  {
+    key: 'dns',
+    labelKey: 'host.networkHostnameManagement.sectionDns',
+    icon: 'fa-route',
+    features: ['dns', 'vnics'],
+  },
+  {
+    key: 'vnics',
+    labelKey: 'host.networkHostnameManagement.sectionVnics',
+    icon: 'fa-network-wired',
+    features: ['vnics'],
+  },
+  {
+    key: 'vlans',
+    labelKey: 'host.networkHostnameManagement.sectionVlans',
+    icon: 'fa-tags',
+    features: ['vnics'],
+  },
   {
     key: 'addresses',
-    label: 'IP Addresses',
+    labelKey: 'host.networkHostnameManagement.sectionAddresses',
     icon: 'fa-globe',
     features: ['ip-addresses', 'vnics'],
   },
-  { key: 'aggregates', label: 'Link Aggregates', icon: 'fa-link', features: ['vnics'] },
-  { key: 'bridges', label: 'Bridges', icon: 'fa-bridge-water', features: ['vnics'] },
-  { key: 'etherstubs', label: 'Etherstubs', icon: 'fa-ethernet', features: ['vnics'] },
+  {
+    key: 'aggregates',
+    labelKey: 'host.networkHostnameManagement.sectionAggregates',
+    icon: 'fa-link',
+    features: ['vnics'],
+  },
+  {
+    key: 'bridges',
+    labelKey: 'host.networkHostnameManagement.sectionBridges',
+    icon: 'fa-bridge-water',
+    features: ['vnics'],
+  },
+  {
+    key: 'etherstubs',
+    labelKey: 'host.networkHostnameManagement.sectionEtherstubs',
+    icon: 'fa-ethernet',
+    features: ['vnics'],
+  },
 ];
 
 const NetworkHostnameManagement = ({ server }) => {
+  const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState('hostname');
   const [error, setError] = useState('');
 
@@ -45,7 +87,7 @@ const NetworkHostnameManagement = ({ server }) => {
   if (!server || !makeAgentRequest) {
     return (
       <div className="alert alert-info">
-        <p>Please select a server to manage network configuration.</p>
+        <p>{t('host.networkHostnameManagement.selectServer')}</p>
       </div>
     );
   }
@@ -71,7 +113,7 @@ const NetworkHostnameManagement = ({ server }) => {
               onClick={() => setActiveSection(section.key)}
             >
               <i className={`fas ${section.icon} me-2`} />
-              {section.label}
+              {t(section.labelKey)}
             </button>
           </li>
         ))}

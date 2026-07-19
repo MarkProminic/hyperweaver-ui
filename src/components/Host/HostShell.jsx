@@ -6,6 +6,7 @@ import { SerializeAddon } from '@xterm/addon-serialize';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useXTerm } from 'react-xtermjs';
 
 import { useFooter } from '../../contexts/FooterContext';
@@ -16,6 +17,7 @@ import { useFooter } from '../../contexts/FooterContext';
 const PTY_CTRL_PREFIX = String.fromCharCode(0);
 
 const HostShell = () => {
+  const { t } = useTranslation();
   const { session } = useFooter();
 
   const { instance, ref } = useXTerm();
@@ -161,8 +163,8 @@ const HostShell = () => {
       <div className="h-100 w-100 d-flex align-items-center justify-content-center text-white-50">
         <div className="text-center">
           <i className="fas fa-terminal fa-2x mb-2" />
-          <p>No session available</p>
-          <p className="small text-muted">Select a server to start terminal</p>
+          <p>{t('host.hostShell.noSession')}</p>
+          <p className="small text-muted">{t('host.hostShell.selectServer')}</p>
         </div>
       </div>
     );
@@ -173,8 +175,8 @@ const HostShell = () => {
       <div className="h-100 w-100 d-flex align-items-center justify-content-center text-white-50">
         <div className="text-center">
           <i className="fas fa-terminal fa-2x fa-pulse mb-2" />
-          <p>Loading terminal...</p>
-          <p className="small text-muted">Initializing xterm.js</p>
+          <p>{t('host.hostShell.loadingTerminal')}</p>
+          <p className="small text-muted">{t('host.hostShell.initializing')}</p>
         </div>
       </div>
     );
@@ -188,8 +190,8 @@ const HostShell = () => {
         <div className="alert alert-dark p-2 float-end mt-1 me-1">
           <i className="fas fa-plug fa-pulse me-1" />
           {session?.websocket?.readyState === WebSocket.CONNECTING
-            ? 'Connecting...'
-            : 'Waiting for server'}
+            ? t('host.hostShell.connecting')
+            : t('host.hostShell.waitingForServer')}
         </div>
       )}
     </div>
