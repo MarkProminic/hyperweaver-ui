@@ -75,7 +75,8 @@ const emptyDiskConfig = () => ({
   // in (zoneweaver executor: pool||'rpool', dataset||'zones').
   bootPool: '',
   bootDataset: '',
-  bootCloneStrategy: '',
+  // copy is the ruled default — legal same-pool, cross-pool, and on vbox.
+  bootCloneStrategy: 'copy',
   // VBox attachment placement for the boot entry (controller/port ride
   // every entry on the frozen wire).
   bootController: '',
@@ -261,6 +262,25 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     }),
     [bridgeOptions, templates]
   );
+
+  // Clone-strategy pool feed: the selected LOCAL template row's
+  // available_pools; a not-yet-downloaded box lands deterministically on
+  // config.template_pool. null = no pool knowledge, the set stays clone|copy.
+  const templateAvailablePools = useMemo(() => {
+    const row =
+      templates.find(
+        t =>
+          `${t.organization}/${t.box_name}` === settings.box &&
+          (!settings.box_version || t.version === settings.box_version)
+      ) ||
+      templates.find(t => `${t.organization}/${t.box_name}` === settings.box) ||
+      null;
+    if (row?.available_pools) {
+      return row.available_pools;
+    }
+    const landingPool = agentDefaults?.config?.template_pool;
+    return landingPool ? [landingPool] : null;
+  }, [templates, settings.box, settings.box_version, agentDefaults]);
 
   const resetForm = useCallback(() => {
     setError('');
@@ -652,9 +672,11 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
         if (diskConfig.bootDataset.trim()) {
           boot.dataset = diskConfig.bootDataset.trim();
         }
-        if (bootSource === 'template' && diskConfig.bootCloneStrategy) {
-          boot.clone_strategy = diskConfig.bootCloneStrategy;
-        }
+      }
+      // Converged key on BOTH hypervisors (bhyve clone|copy|localize, vbox
+      // clone|copy) — always spelled on template boots, copy default.
+      if (bootSource === 'template' && diskConfig.bootCloneStrategy) {
+        boot.clone_strategy = diskConfig.bootCloneStrategy;
       }
       // VBox file placement — created disks only (blank/template).
       if (vbox && diskConfig.bootDirectory.trim()) {
@@ -785,10 +807,22 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     if (parallel.length > 0) {
       hardwarePayload.parallel = parallel;
     }
-    // zones.* System fields — empty means "agent default", never sent.
-    const zoneFields = Object.fromEntries(
-      Object.entries(zones).filter(([, value]) => value !== '' && value !== undefined)
-    );
+    // Per-hypervisor sections (Mark's ruling): zones.* rides bhyve creates
+    // ONLY; everything VirtualBox-specific — the knob tree, serial/parallel,
+    // guest_agent, the raw passthrough — merges into ONE `vbox` section.
+    // Empty means "agent default", never sent.
+    const zoneFields = bhyve
+      ? Object.fromEntries(
+          Object.entries(zones).filter(([, value]) => value !== '' && value !== undefined)
+        )
+      : {};
+    const vboxSection = vbox
+      ? {
+          ...hardwarePayload,
+          ...(zones.guest_agent === true && { guest_agent: true }),
+          ...(vboxPassthrough || {}),
+        }
+      : vboxPassthrough || {};
     const tags = tagsInput
       .split(',')
       .map(tag => tag.trim())
@@ -834,9 +868,8 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       ...(disks && { disks }),
       ...(filesystems.length > 0 && { filesystems }),
       ...(Object.keys(zoneFields).length > 0 && { zones: zoneFields }),
-      ...(Object.keys(hardwarePayload).length > 0 && { hardware: hardwarePayload }),
+      ...(Object.keys(vboxSection).length > 0 && { vbox: vboxSection }),
       ...(builtCloudInit && { cloud_init: builtCloudInit }),
-      ...(vboxPassthrough && { vbox: vboxPassthrough }),
       ...(tags.length > 0 && { tags }),
       ...(notes.trim() && { notes: notes.trim() }),
       networks: cleanedNetworks,
@@ -1117,6 +1150,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           zfsDatasets={zfsDatasets}
           zfsVolumes={zfsVolumes}
           vboxMedia={vboxMedia}
+          availablePools={templateAvailablePools}
           advanced={showAdvanced}
           loading={loading}
         />

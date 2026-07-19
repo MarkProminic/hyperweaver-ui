@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 
-// hardware.<section>.<key> — mirrors the agent vocabulary (hyperweaver-agent
-// internal/machines/hardware.go). kind: onoff | int | string. `suggest`
+// vbox.<section>.<key> — the VirtualBox knob tree (per-hypervisor `vbox`
+// document section, Mark's ruling). kind: onoff | int | string. `suggest`
 // feeds a datalist; values ride unvalidated — VirtualBox's own errors answer.
 export const HARDWARE_SECTIONS = [
   {
@@ -106,6 +106,7 @@ export const HARDWARE_SECTIONS = [
     label: 'Platform',
     fields: [
       { key: 'chipset', kind: 'string', suggest: ['piix3', 'ich9', 'armv8virtual'] },
+      { key: 'acpi', kind: 'onoff' },
       { key: 'iommu', kind: 'string', suggest: ['none', 'automatic', 'amd', 'intel'] },
       { key: 'tpm_type', kind: 'string', suggest: ['none', '1.2', '2.0', 'host', 'swtpm'] },
       { key: 'tpm_location', kind: 'string' },
@@ -296,7 +297,7 @@ HardwareFieldControl.propTypes = {
 /**
  * One hardware section as a compact grid. Blank = not sent. `knobValues` is
  * the agent's whole knob_values map (flat dotted keys) — presence of
- * `hardware.<section>.<key>` means dropdown.
+ * `vbox.<section>.<key>` means dropdown.
  */
 export const HardwareSectionForm = ({
   section,
@@ -319,7 +320,7 @@ export const HardwareSectionForm = ({
             sectionId={section.id}
             field={field}
             value={values[field.key] ?? ''}
-            enumValues={knobValues?.[`hardware.${section.id}.${field.key}`] || null}
+            enumValues={knobValues?.[`vbox.${section.id}.${field.key}`] || null}
             onChange={onChange}
             blankLabel={blankLabel}
             disabled={disabled}

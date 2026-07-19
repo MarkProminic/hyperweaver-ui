@@ -53,15 +53,17 @@ export const useMachineDetails = (currentServer, currentMachine) => {
   );
 
   const loadMachineDetails = useCallback(
-    async (server, machineName) => {
+    async (server, machineName, background = false) => {
       if (!server || !machineName) {
         setMachineDetails({});
         return;
       }
 
       try {
-        setLoading(true);
-        setError('');
+        if (!background) {
+          setLoading(true);
+          setError('');
+        }
 
         const result = await makeAgentRequest(
           server.hostname,
@@ -176,16 +178,24 @@ export const useMachineDetails = (currentServer, currentMachine) => {
                 }
               : machineData
           );
+        } else if (background) {
+          // A transient failure mid-poll keeps the stale-but-working view —
+          // never blank the page or kill live consoles over one bad answer.
+          console.warn(`Background detail refresh failed for ${machineName}: ${result.message}`);
         } else {
           setError(`Failed to fetch details for ${machineName}: ${result.message}`);
           setMachineDetails({});
         }
       } catch (err) {
         console.error('Error fetching machine details:', err);
-        setError(`Error fetching details for ${machineName}`);
-        setMachineDetails({});
+        if (!background) {
+          setError(`Error fetching details for ${machineName}`);
+          setMachineDetails({});
+        }
       } finally {
-        setLoading(false);
+        if (!background) {
+          setLoading(false);
+        }
       }
     },
     [makeAgentRequest, loadMonitoringData, initializeSessionFromExisting]
@@ -198,6 +208,20 @@ export const useMachineDetails = (currentServer, currentMachine) => {
       setMachineDetails({});
       setMonitoringHealth({});
     }
+  }, [currentServer, currentMachine, loadMachineDetails]);
+
+  // Machine detail is a POLL surface (no push channel): discovery refreshes
+  // guest_info / system_status / knob_current server-side, so the viewed
+  // machine refetches on an interval. Same-machine reloads preserve live
+  // ssh/rdp sessions; VNC/zlogin re-detect from the agent each pass.
+  useEffect(() => {
+    if (!currentServer || !currentMachine) {
+      return undefined;
+    }
+    const timer = setInterval(() => {
+      loadMachineDetails(currentServer, currentMachine, true);
+    }, 30000);
+    return () => clearInterval(timer);
   }, [currentServer, currentMachine, loadMachineDetails]);
 
   return {

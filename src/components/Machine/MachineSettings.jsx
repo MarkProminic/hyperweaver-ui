@@ -43,7 +43,7 @@ import ZvolManageModal from './ZvolManageModal';
  * Machine Settings tab — the PUT modify contract, changed fields only.
  * Edits are cached until Apply; a running machine gets the choice of
  * stop/apply/start or apply-on-next-power-cycle. Tabs cover the full
- * hardware.<section>.<key> vocabulary plus per-NIC tuning and serial/
+ * vbox.<section>.<key> vocabulary plus per-NIC tuning and serial/
  * parallel ports. Fields prefill from the agent's `knob_current` (current
  * values in the PUT vocabulary; absence = unset or unknowable, those stay
  * blank) and only values that DIFFER from the seed ride the wire.
@@ -140,7 +140,7 @@ const prefillFrom = (configuration, knobCurrent) =>
 const seedHardwareValues = knobCurrent => {
   const seeded = {};
   HARDWARE_SECTIONS.forEach(section => {
-    const current = knobCurrent?.hardware?.[section.id];
+    const current = knobCurrent?.vbox?.[section.id];
     if (!current) {
       return;
     }
@@ -235,8 +235,8 @@ const buildSeed = (configuration, knobCurrent) => ({
   bootOrder: Array.isArray(knobCurrent?.boot_order) ? knobCurrent.boot_order : [],
   cpuTopology: knobCurrent?.cpu_topology ?? null,
   hardware: seedHardwareValues(knobCurrent),
-  serialRows: seedSerialRows(knobCurrent?.hardware?.serial),
-  parallelRows: seedParallelRows(knobCurrent?.hardware?.parallel),
+  serialRows: seedSerialRows(knobCurrent?.vbox?.serial),
+  parallelRows: seedParallelRows(knobCurrent?.vbox?.parallel),
   nicRows: seedNicRows(knobCurrent?.nics),
   creds: seedCreds(configuration, knobCurrent),
 });
@@ -407,7 +407,7 @@ const changedNicEntries = (rows, seededRows, removedAdapters) =>
     .filter(entry => Object.keys(entry).length > 1);
 
 /**
- * hardware.* + nics families of the PUT body — CHANGED vs the seed only.
+ * vbox.* + nics families of the PUT body — CHANGED vs the seed only.
  * Port row families (serial/parallel) ride whole when any row differs;
  * re-applying identical port-addressed values is idempotent on the wire.
  * NIC tuning diffs per adapter.
@@ -428,7 +428,7 @@ const buildHardwareChanges = state => {
     }
   }
   if (Object.keys(hardware).length > 0) {
-    changes.hardware = hardware;
+    changes.vbox = hardware;
   }
   const nics = changedNicEntries(state.nicRows, state.seed.nicRows, state.removeNicAdapters);
   if (nics.length > 0) {
@@ -525,8 +525,8 @@ const buildZoneChanges = state => {
 
 const SECTION_TABS = HARDWARE_SECTIONS.filter(section => section.id !== 'autostart');
 
-// The hardware.<section>.<key> knob surface, serial/parallel ports, and the
-// raw `vbox` passthrough are the VirtualBox modifyvm vocabulary — dead on
+// The vbox.<section>.<key> knob surface, serial/parallel ports, and the
+// raw passthrough are the VirtualBox modifyvm vocabulary — dead on
 // bhyve (nothing seeds them, nothing consumes them), so those tabs hide there.
 const TABS = [
   { id: 'general', label: 'General' },
@@ -683,7 +683,7 @@ const MachineSettings = ({
   const [removeAttachments, setRemoveAttachments] = useState([]);
   const [removeControllerNames, setRemoveControllerNames] = useState([]);
   const [removeNicAdapters, setRemoveNicAdapters] = useState([]);
-  // hardware.<section>.<key> values — blank means unchanged, never sent.
+  // vbox.<section>.<key> values — blank means unchanged, never sent.
   const [hardware, setHardware] = useState({});
   const [serialRows, setSerialRows] = useState([]);
   const [parallelRows, setParallelRows] = useState([]);
@@ -995,9 +995,10 @@ const MachineSettings = ({
     if (bootOrder.length > 0 && JSON.stringify(bootOrder) !== JSON.stringify(seed.bootOrder)) {
       changes.boot_order = bootOrder;
     }
+    let vboxPassthrough = null;
     if (vboxJson.trim()) {
       try {
-        changes.vbox = JSON.parse(vboxJson);
+        vboxPassthrough = JSON.parse(vboxJson);
       } catch {
         setError('The VBox passthrough section is not valid JSON.');
         return;
@@ -1064,6 +1065,11 @@ const MachineSettings = ({
       }),
       buildHardwareChanges({ hardware, serialRows, parallelRows, nicRows, removeNicAdapters, seed })
     );
+    // The raw passthrough merges into the SAME `vbox` section as the knob
+    // diff (one per-hypervisor key); passthrough wins on collision.
+    if (vboxPassthrough) {
+      changes.vbox = { ...(changes.vbox || {}), ...vboxPassthrough };
+    }
     if (Object.keys(changes).length === 0) {
       setError('Nothing changed.');
       return;

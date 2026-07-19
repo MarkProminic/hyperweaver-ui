@@ -115,6 +115,20 @@ export const ZoneTerminalProvider = ({ children }) => {
     [currentServer, getZoneKey, initializeZoneAddons]
   );
 
+  // Size the zone's terminal to its current container — the per-zone
+  // FitAddon is shared, so this fits whichever ZoneShell (preview or modal)
+  // currently hosts the terminal.
+  const fitZoneTerminal = useCallback(
+    zoneName => {
+      const zoneKey = getZoneKey(currentServer, zoneName);
+      const fitAddon = zoneKey ? fitAddonsMap.current.get(zoneKey) : null;
+      if (fitAddon) {
+        fitAddon.fit();
+      }
+    },
+    [currentServer, getZoneKey]
+  );
+
   // Get terminal options for a specific zone
   const getZoneOptions = useCallback(
     (readOnly = false) => ({
@@ -369,6 +383,7 @@ export const ZoneTerminalProvider = ({ children }) => {
       // React-xtermjs specific methods
       getZoneAddons,
       getZoneOptions,
+      fitZoneTerminal,
 
       // Session management methods (for compatibility)
       forceZoneSessionCleanup,
@@ -383,6 +398,7 @@ export const ZoneTerminalProvider = ({ children }) => {
     [
       getZoneAddons,
       getZoneOptions,
+      fitZoneTerminal,
       forceZoneSessionCleanup,
       startZloginSessionExplicitly,
       initializeSessionFromExisting,

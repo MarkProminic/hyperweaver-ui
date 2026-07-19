@@ -798,11 +798,79 @@ BootOrderEditor.propTypes = {
   loading: PropTypes.bool,
 };
 
+// Clone-strategy vocabulary (converged wire, both agents): the LEGAL SET is
+// pool-aware on bhyve — target pool holds the template → clone|copy, else
+// copy|localize — and a fixed clone|copy on VirtualBox. copy is legal
+// everywhere and pre-selected; the agent refuses illegal picks itself.
+const CLONE_STRATEGY_LABELS = { clone: 'Clone', copy: 'Copy', localize: 'Localize' };
+const CLONE_STRATEGY_HINTS = {
+  clone: 'thin clone — instant, shares storage with the template',
+  copy: 'full independent copy of the template',
+  localize: 'copies the template onto this pool once, then thin-clones from it',
+};
+
+const CloneStrategySelect = ({ value, strategies, onChange, disabled }) => {
+  const current = strategies.includes(value) ? value : 'copy';
+  return (
+    <div className="col-6 col-md-4">
+      <label className="form-label" htmlFor="machine-disk-clone-strategy">
+        Clone Strategy
+      </label>
+      <select
+        id="machine-disk-clone-strategy"
+        className="form-select"
+        value={current}
+        onChange={e => onChange(e.target.value)}
+        disabled={disabled}
+      >
+        {strategies.map(strategy => (
+          <option key={strategy} value={strategy}>
+            {CLONE_STRATEGY_LABELS[strategy]}
+          </option>
+        ))}
+      </select>
+      <span className="form-text text-muted">{CLONE_STRATEGY_HINTS[current]}</span>
+    </div>
+  );
+};
+
+CloneStrategySelect.propTypes = {
+  value: PropTypes.string.isRequired,
+  strategies: PropTypes.arrayOf(PropTypes.string).isRequired,
+  onChange: PropTypes.func.isRequired,
+  disabled: PropTypes.bool,
+};
+
 // Boot-zvol ZFS placement (bhyve) — live pool/dataset pickers with the
-// Custom… escape.
-const BootZfsPlacement = ({ disks, setDisks, zfsPools, zfsDatasets, showClone, loading }) => {
+// Custom… escape. availablePools = where the selected template already
+// lives (its row's available_pools, or the landing pool for a
+// not-yet-downloaded box); a pool outside it flips the strategy set.
+const BootZfsPlacement = ({
+  disks,
+  setDisks,
+  zfsPools,
+  zfsDatasets,
+  showClone,
+  availablePools,
+  defaultPool,
+  loading,
+}) => {
+  const fallbackPool = defaultPool || 'rpool';
   const poolOptions = zfsPoolOptions(zfsPools);
-  const datasetOptions = zfsDatasetOptions(zfsDatasets, (disks.bootPool || '').trim() || 'rpool');
+  const datasetOptions = zfsDatasetOptions(
+    zfsDatasets,
+    (disks.bootPool || '').trim() || fallbackPool
+  );
+  const strategiesFor = pool =>
+    availablePools && !availablePools.includes(pool) ? ['copy', 'localize'] : ['clone', 'copy'];
+  const strategies = strategiesFor((disks.bootPool || '').trim() || fallbackPool);
+  const handlePoolChange = next => {
+    const patch = { bootPool: next };
+    if (!strategiesFor((next || '').trim() || fallbackPool).includes(disks.bootCloneStrategy)) {
+      patch.bootCloneStrategy = 'copy';
+    }
+    setDisks(patch);
+  };
   return (
     <>
       <div className="col-6 col-md-4">
@@ -812,9 +880,9 @@ const BootZfsPlacement = ({ disks, setDisks, zfsPools, zfsDatasets, showClone, l
         <PickOrType
           id="machine-disk-boot-pool"
           value={disks.bootPool}
-          onChange={next => setDisks({ bootPool: next })}
+          onChange={handlePoolChange}
           options={poolOptions}
-          blankLabel="rpool"
+          blankLabel={fallbackPool}
           placeholder="pool name"
           disabled={loading}
         />
@@ -837,22 +905,12 @@ const BootZfsPlacement = ({ disks, setDisks, zfsPools, zfsDatasets, showClone, l
         </span>
       </div>
       {showClone && (
-        <div className="col-6 col-md-4">
-          <label className="form-label" htmlFor="machine-disk-clone-strategy">
-            Clone Strategy
-          </label>
-          <select
-            id="machine-disk-clone-strategy"
-            className="form-select"
-            value={disks.bootCloneStrategy}
-            onChange={e => setDisks({ bootCloneStrategy: e.target.value })}
-            disabled={loading}
-          >
-            <option value="">clone</option>
-            <option value="clone">clone — thin ZFS clone of the template</option>
-            <option value="copy">copy — full independent send/recv</option>
-          </select>
-        </div>
+        <CloneStrategySelect
+          value={disks.bootCloneStrategy}
+          strategies={strategies}
+          onChange={next => setDisks({ bootCloneStrategy: next })}
+          disabled={loading}
+        />
       )}
     </>
   );
@@ -864,6 +922,8 @@ BootZfsPlacement.propTypes = {
   zfsPools: PropTypes.array.isRequired,
   zfsDatasets: PropTypes.array.isRequired,
   showClone: PropTypes.bool,
+  availablePools: PropTypes.arrayOf(PropTypes.string),
+  defaultPool: PropTypes.string,
   loading: PropTypes.bool,
 };
 
@@ -881,6 +941,8 @@ const BootDiskSection = ({
   mediaOptions,
   zfsPools,
   zfsDatasets,
+  availablePools,
+  defaultPool,
   advanced,
   loading,
 }) => (
@@ -1006,7 +1068,17 @@ const BootDiskSection = ({
                 zfsPools={zfsPools}
                 zfsDatasets={zfsDatasets}
                 showClone={bootSource === 'template'}
+                availablePools={availablePools}
+                defaultPool={defaultPool}
                 loading={loading}
+              />
+            )}
+            {vbox && bootSource === 'template' && (
+              <CloneStrategySelect
+                value={disks.bootCloneStrategy}
+                strategies={['clone', 'copy']}
+                onChange={next => setDisks({ bootCloneStrategy: next })}
+                disabled={loading}
               />
             )}
           </>
@@ -1088,9 +1160,68 @@ BootDiskSection.propTypes = {
   mediaOptions: PropTypes.array.isRequired,
   zfsPools: PropTypes.array.isRequired,
   zfsDatasets: PropTypes.array.isRequired,
+  availablePools: PropTypes.arrayOf(PropTypes.string),
+  defaultPool: PropTypes.string,
   advanced: PropTypes.bool,
   loading: PropTypes.bool,
 };
+
+// Volume rows carry in_use_by (machine name | null) — an in-use zvol
+// stays pickable (the agent refuses; `force: true` is the override) but
+// the label says who holds it.
+const buildVolumeOptions = zfsVolumes =>
+  zfsVolumes.map(volume => ({
+    value: volume.name,
+    label: volume.in_use_by ? `${volume.name} — in use by ${volume.in_use_by}` : volume.name,
+  }));
+
+// GET /media rows (frozen wire): in_use_by is an ARRAY (VBox media can
+// multi-attach); size_bytes numeric.
+const buildMediaOptions = vboxMedia =>
+  vboxMedia.map(medium => {
+    const size = Number.isFinite(medium.size_bytes) ? ` — ${humanSize(medium.size_bytes)}` : '';
+    const holders =
+      Array.isArray(medium.in_use_by) && medium.in_use_by.length > 0
+        ? ` · in use by ${medium.in_use_by.join(', ')}`
+        : '';
+    return { value: medium.path, label: `${medium.path}${size}${holders}` };
+  });
+
+// Known media directories (from registered-media paths, both separators —
+// the agent host may be Windows) — the `directory` datalist feed.
+const buildMediaDirs = vboxMedia => [
+  ...new Set(
+    vboxMedia
+      .map(medium => {
+        const path = String(medium.path || '');
+        const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+        return cut > 0 ? path.slice(0, cut) : '';
+      })
+      .filter(Boolean)
+  ),
+];
+
+const existingDiskPickerFor = (bhyve, volumeOptions, mediaOptions) => {
+  if (bhyve) {
+    return {
+      options: volumeOptions,
+      blankLabel: 'Select a zvol…',
+      placeholder: 'e.g. rpool/vols/data',
+    };
+  }
+  return mediaOptions.length > 0
+    ? {
+        options: mediaOptions,
+        blankLabel: 'Select a registered disk image…',
+        placeholder: 'path on the agent host',
+      }
+    : null;
+};
+
+const diskifOptionsFrom = knobValues => knobValues?.['zones.diskif'] || DISKIF_OPTIONS;
+
+const controllerTypeOptionsFrom = knobValues =>
+  knobValues?.['disks.controller_type'] || [...DISKIF_OPTIONS, 'usb', 'floppy'];
 
 export const DisksStep = ({
   bootSource,
@@ -1110,6 +1241,7 @@ export const DisksStep = ({
   zfsDatasets = [],
   zfsVolumes = [],
   vboxMedia = [],
+  availablePools = null,
   advanced,
   loading,
 }) => {
@@ -1118,53 +1250,12 @@ export const DisksStep = ({
   // The rows share the boot placement's pickers (Mark: same treatment
   // everywhere) — per-row dataset options follow that ROW's pool.
   const poolOptions = zfsPoolOptions(zfsPools);
-  // Volume rows carry in_use_by (machine name | null) — an in-use zvol
-  // stays pickable (the agent refuses; `force: true` is the override) but
-  // the label says who holds it.
-  const volumeOptions = zfsVolumes.map(volume => ({
-    value: volume.name,
-    label: volume.in_use_by ? `${volume.name} — in use by ${volume.in_use_by}` : volume.name,
-  }));
-  // GET /media rows (frozen wire): in_use_by is an ARRAY (VBox media can
-  // multi-attach); size_bytes numeric.
-  const mediaOptions = vboxMedia.map(medium => {
-    const size = Number.isFinite(medium.size_bytes) ? ` — ${humanSize(medium.size_bytes)}` : '';
-    const holders =
-      Array.isArray(medium.in_use_by) && medium.in_use_by.length > 0
-        ? ` · in use by ${medium.in_use_by.join(', ')}`
-        : '';
-    return { value: medium.path, label: `${medium.path}${size}${holders}` };
-  });
-  // Known media directories (from registered-media paths, both separators —
-  // the agent host may be Windows) — the `directory` datalist feed.
-  const mediaDirs = [
-    ...new Set(
-      vboxMedia
-        .map(medium => {
-          const path = String(medium.path || '');
-          const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-          return cut > 0 ? path.slice(0, cut) : '';
-        })
-        .filter(Boolean)
-    ),
-  ];
-  const mediaPicker =
-    mediaOptions.length > 0
-      ? {
-          options: mediaOptions,
-          blankLabel: 'Select a registered disk image…',
-          placeholder: 'path on the agent host',
-        }
-      : null;
-  const existingDiskPicker = bhyve
-    ? { options: volumeOptions, blankLabel: 'Select a zvol…', placeholder: 'e.g. rpool/vols/data' }
-    : mediaPicker;
-  const diskifOptions = knobValues?.['zones.diskif'] || DISKIF_OPTIONS;
-  const controllerTypeOptions = knobValues?.['disks.controller_type'] || [
-    ...DISKIF_OPTIONS,
-    'usb',
-    'floppy',
-  ];
+  const volumeOptions = buildVolumeOptions(zfsVolumes);
+  const mediaOptions = buildMediaOptions(vboxMedia);
+  const mediaDirs = buildMediaDirs(vboxMedia);
+  const existingDiskPicker = existingDiskPickerFor(bhyve, volumeOptions, mediaOptions);
+  const diskifOptions = diskifOptionsFrom(knobValues);
+  const controllerTypeOptions = controllerTypeOptionsFrom(knobValues);
   const controllerNames = (disks.controllers || []).map(row => row.name.trim()).filter(Boolean);
   const isoList = isoOptions || [];
   const setController = (index, patch) =>
@@ -1195,6 +1286,8 @@ export const DisksStep = ({
         mediaOptions={mediaOptions}
         zfsPools={zfsPools}
         zfsDatasets={zfsDatasets}
+        availablePools={availablePools}
+        defaultPool={agentDefaults?.disks?.boot?.pool || null}
         advanced={advanced}
         loading={loading}
       />
@@ -1544,25 +1637,27 @@ export const DisksStep = ({
 
       {advanced && (
         <>
-          <div className="row g-3 mt-1 mb-3">
-            <div className="col-12 col-md-4">
-              <label className="form-label" htmlFor="machine-zones-diskif">
-                Default Controller Type
-              </label>
-              <VocabularySelect
-                id="machine-zones-diskif"
-                value={diskif}
-                entries={diskifOptions}
-                blankLabel={diskifDefault}
-                onChange={setDiskif}
-                disabled={loading}
-              />
-              <span className="form-text text-muted">
-                The single-controller shape — create-only; VirtualBox fixes the type once media
-                attach. For MULTIPLE controllers use the rows below instead.
-              </span>
+          {bhyve && (
+            <div className="row g-3 mt-1 mb-3">
+              <div className="col-12 col-md-4">
+                <label className="form-label" htmlFor="machine-zones-diskif">
+                  Default Controller Type
+                </label>
+                <VocabularySelect
+                  id="machine-zones-diskif"
+                  value={diskif}
+                  entries={diskifOptions}
+                  blankLabel={diskifDefault}
+                  onChange={setDiskif}
+                  disabled={loading}
+                />
+                <span className="form-text text-muted">
+                  The single-controller shape (zones.diskif, bhyve) — on VirtualBox use the
+                  controller rows below instead.
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
           {vbox && (
             <>
@@ -1708,12 +1803,14 @@ DisksStep.propTypes = {
   zfsDatasets: PropTypes.array,
   zfsVolumes: PropTypes.array,
   vboxMedia: PropTypes.array,
+  availablePools: PropTypes.arrayOf(PropTypes.string),
   advanced: PropTypes.bool,
   loading: PropTypes.bool,
 };
 
-// zones.* create vocabulary — the same names both agents declare,
-// translated per hypervisor agent-side. Empty = agent default, never sent.
+// zones.* create vocabulary — Solaris/bhyve ONLY (Mark's ruling): vbox never
+// reads the zones section; its knobs live under settings./hardware./disks./
+// networks. Empty = agent default, never sent.
 const SYSTEM_FIELDS = [
   { key: 'bootrom', label: 'Firmware / Boot ROM', options: ['efi', 'bios'] },
   { key: 'hostbridge', label: 'Host Bridge / Chipset', options: ['i440fx'], freeText: true },
@@ -1813,47 +1910,48 @@ export const SystemStep = ({
         exactly what is sent.
       </p>
       <div className="row g-3 mb-3">
-        {SYSTEM_FIELDS.map(field => {
-          // knob_values (flat dotted keys) presence means dropdown; the
-          // hardcoded list is the fallback for agents without the map.
-          const vocabulary = knobValues?.[`zones.${field.key}`] || null;
-          const current = zones[field.key] ?? '';
-          return (
-            <div className="col-6 col-md-4" key={field.key}>
-              <label className="form-label" htmlFor={`machine-zones-${field.key}`}>
-                {field.label}
-              </label>
-              {field.freeText && !vocabulary ? (
-                <>
-                  <input
+        {bhyve &&
+          SYSTEM_FIELDS.map(field => {
+            // knob_values (flat dotted keys) presence means dropdown; the
+            // hardcoded list is the fallback for agents without the map.
+            const vocabulary = knobValues?.[`zones.${field.key}`] || null;
+            const current = zones[field.key] ?? '';
+            return (
+              <div className="col-6 col-md-4" key={field.key}>
+                <label className="form-label" htmlFor={`machine-zones-${field.key}`}>
+                  {field.label}
+                </label>
+                {field.freeText && !vocabulary ? (
+                  <>
+                    <input
+                      id={`machine-zones-${field.key}`}
+                      className="form-control"
+                      type="text"
+                      list={`machine-zones-${field.key}-options`}
+                      placeholder={defaultLabel(field.key)}
+                      value={current}
+                      onChange={e => setZone(field.key, e.target.value)}
+                      disabled={loading}
+                    />
+                    <datalist id={`machine-zones-${field.key}-options`}>
+                      {field.options.map(option => (
+                        <option key={option} value={option} />
+                      ))}
+                    </datalist>
+                  </>
+                ) : (
+                  <VocabularySelect
                     id={`machine-zones-${field.key}`}
-                    className="form-control"
-                    type="text"
-                    list={`machine-zones-${field.key}-options`}
-                    placeholder={defaultLabel(field.key)}
                     value={current}
-                    onChange={e => setZone(field.key, e.target.value)}
+                    entries={vocabulary || field.options}
+                    blankLabel={defaultLabel(field.key)}
+                    onChange={next => setZone(field.key, next)}
                     disabled={loading}
                   />
-                  <datalist id={`machine-zones-${field.key}-options`}>
-                    {field.options.map(option => (
-                      <option key={option} value={option} />
-                    ))}
-                  </datalist>
-                </>
-              ) : (
-                <VocabularySelect
-                  id={`machine-zones-${field.key}`}
-                  value={current}
-                  entries={vocabulary || field.options}
-                  blankLabel={defaultLabel(field.key)}
-                  onChange={next => setZone(field.key, next)}
-                  disabled={loading}
-                />
-              )}
-            </div>
-          );
-        })}
+                )}
+              </div>
+            );
+          })}
         <div className="col-6 col-md-4">
           <div className="form-check form-switch mt-4">
             <input
@@ -1873,6 +1971,21 @@ export const SystemStep = ({
             Wires the guest-agent channel (live IPs, guest facts) — the guest runs qemu-ga.
           </span>
         </div>
+        {vbox && (
+          <div className="col-6 col-md-4">
+            <label className="form-label" htmlFor="machine-system-firmware">
+              Firmware
+            </label>
+            <VocabularySelect
+              id="machine-system-firmware"
+              value={settings.firmware_type ?? ''}
+              entries={knobValues?.['settings.firmware_type'] || ['BIOS', 'UEFI']}
+              blankLabel={defaultLabel('firmware_type')}
+              onChange={next => setSetting('firmware_type', next)}
+              disabled={loading}
+            />
+          </div>
+        )}
         <div className="col-6 col-md-4">
           <label className="form-label" htmlFor="machine-setting-os_type">
             Guest OS Type
@@ -2056,8 +2169,8 @@ export const SystemStep = ({
           <h6 className="fw-bold">Hardware</h6>
           <p className="form-text text-muted mt-0">
             The full hypervisor knob surface — blank = VirtualBox default. Values ride{' '}
-            <code>hardware.&lt;section&gt;.&lt;key&gt;</code> unvalidated; a bad value fails the
-            create with VirtualBox&apos;s own error.
+            <code>vbox.&lt;section&gt;.&lt;key&gt;</code> unvalidated; a bad value fails the create
+            with VirtualBox&apos;s own error.
           </p>
           {HARDWARE_SECTIONS.map(section => (
             <details className="mb-2" key={section.id}>
@@ -2593,9 +2706,8 @@ export const ConfirmStep = ({ spec }) => {
       : []),
     ...(spec.tags?.length ? [['Tags', spec.tags.join(', ')]] : []),
     ...(spec.notes ? [['Notes', '(set)']] : []),
-    ...(spec.hardware ? [['Hardware', Object.keys(spec.hardware).join(', ')]] : []),
+    ...(spec.vbox ? [['VirtualBox (vbox)', Object.keys(spec.vbox).join(', ')]] : []),
     ...(spec.cloud_init ? [['Cloud-init', 'enabled']] : []),
-    ...(spec.vbox ? [['VBox passthrough', '(set — see full body)']] : []),
     ...Object.entries(spec.settings || {}).map(([key, value]) => [key, String(value)]),
     ...(spec.networks || []).map((network, index) => [
       `network ${index + 1}`,

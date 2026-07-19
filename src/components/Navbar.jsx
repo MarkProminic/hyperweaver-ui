@@ -554,6 +554,19 @@ const Navbar = () => {
             Manage Host
           </Dropdown.Item>
 
+          {hasFeature(currentServer, 'machine-create') &&
+            hasFeature(currentServer, 'provisioner-registry') &&
+            canCreateMachines(userRole) && (
+              <Dropdown.Item
+                as="button"
+                type="button"
+                onClick={() => navigate('/ui/machines?create=1')}
+              >
+                <i className="fas fa-plus text-success me-2" />
+                New {machineNoun}
+              </Dropdown.Item>
+            )}
+
           {canPowerOffHosts(userRole) && hostPowerAvailable && (
             <>
               <Dropdown.Divider />
