@@ -18,7 +18,7 @@ import { ContentModal, FormModal } from '../common';
 
 import { shortDevice } from './ZfsDiskActionModal';
 import ZfsPropertiesEditor, { propertyEdits } from './ZfsPropertiesEditor';
-import { healthBadgeClass, parsePropertyLines, parseZpoolStatus, queuedMessage } from './zfsUtils';
+import { healthBadgeClass, parsePropertyLines, queuedMessage } from './zfsUtils';
 
 const VDEV_TYPES = [
   { value: '', label: 'stripe', note: 'no redundancy — data stripes across these disks' },
@@ -680,26 +680,27 @@ ImportPoolModal.propTypes = {
   onQueued: PropTypes.func.isRequired,
 };
 
-export const PoolStatusModal = ({ isOpen, onClose, server, pool }) => {
-  const [status, setStatus] = useState(null);
+export const PoolStatusModal = ({ isOpen, onClose, server, pool, health }) => {
+  const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!isOpen || !pool) {
       return;
     }
-    setStatus(null);
+    setData(null);
     setError('');
     getZfsPoolStatus(server.hostname, server.port, server.protocol, pool).then(result => {
       if (result.success) {
-        setStatus(result.data?.status || '');
+        setData(result.data || {});
       } else {
         setError(result.message);
       }
     });
   }, [isOpen, server, pool]);
 
-  const parsed = status === null ? null : parseZpoolStatus(status);
+  const groups = Array.isArray(data?.parsed?.vdevs) ? data.parsed.vdevs : [];
+  const scan = data?.parsed?.scan || null;
 
   return (
     <ContentModal
@@ -709,39 +710,24 @@ export const PoolStatusModal = ({ isOpen, onClose, server, pool }) => {
       icon="fas fa-heart-pulse"
     >
       {error && <div className="alert alert-danger py-2">{error}</div>}
-      {!error && status === null && (
+      {!error && data === null && (
         <p className="text-muted mb-0">
           <i className="fas fa-spinner fa-pulse me-2" />
           Loading…
         </p>
       )}
-      {parsed && (
+      {data && (
         <>
           <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
-            {parsed.fields.state && (
-              <span className={`badge ${healthBadgeClass(parsed.fields.state)}`}>
-                {parsed.fields.state}
-              </span>
-            )}
-            {parsed.fields.errors && (
-              <span className="small">
-                <strong>Errors:</strong> {parsed.fields.errors}
+            {health && <span className={`badge ${healthBadgeClass(health)}`}>{health}</span>}
+            {scan && (
+              <span className="small text-muted">
+                <i className="fas fa-broom me-1" />
+                {scan.action} — {scan.pct}%
               </span>
             )}
           </div>
-          {parsed.fields.status && <p className="small mb-1">{parsed.fields.status}</p>}
-          {parsed.fields.action && (
-            <p className="small mb-1">
-              <strong>Action:</strong> {parsed.fields.action}
-            </p>
-          )}
-          {parsed.fields.scan && (
-            <p className="small text-muted mb-2">
-              <i className="fas fa-broom me-1" />
-              {parsed.fields.scan}
-            </p>
-          )}
-          {parsed.rows.length > 0 && (
+          {groups.length > 0 && (
             <div className="table-responsive">
               <table className="table table-sm small align-middle mb-2">
                 <thead>
@@ -761,30 +747,55 @@ export const PoolStatusModal = ({ isOpen, onClose, server, pool }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {parsed.rows.map(row => (
-                    <tr key={`${row.depth}-${row.name}`}>
-                      <td style={{ paddingLeft: `${row.depth * 1.25 + 0.5}rem` }}>
-                        <i
-                          className={`fas ${row.isDevice ? 'fa-hard-drive' : 'fa-layer-group'} text-muted me-2`}
-                        />
-                        <code className="small">{row.name}</code>
-                      </td>
-                      <td>
-                        <span className={`badge ${healthBadgeClass(row.state)}`}>{row.state}</span>
-                      </td>
-                      <td className="text-end">{row.read}</td>
-                      <td className="text-end">{row.write}</td>
-                      <td className="text-end">{row.cksum}</td>
-                      <td className="text-muted small">{row.note}</td>
-                    </tr>
-                  ))}
+                  {groups.flatMap((group, index) => {
+                    const bare = group.type === 'disk';
+                    const header = bare
+                      ? []
+                      : [
+                          <tr key={`group-${index}`}>
+                            <td>
+                              <i className="fas fa-layer-group text-muted me-2" />
+                              <code className="small">{group.type}</code>
+                            </td>
+                            <td>
+                              <span className={`badge ${healthBadgeClass(group.state)}`}>
+                                {group.state}
+                              </span>
+                            </td>
+                            <td className="text-end" />
+                            <td className="text-end" />
+                            <td className="text-end" />
+                            <td />
+                          </tr>,
+                        ];
+                    return [
+                      ...header,
+                      ...group.devices.map(device => (
+                        <tr key={`group-${index}-${device.name}`}>
+                          <td style={{ paddingLeft: bare ? undefined : '1.75rem' }}>
+                            <i className="fas fa-hard-drive text-muted me-2" />
+                            <code className="small">{device.name}</code>
+                          </td>
+                          <td>
+                            <span className={`badge ${healthBadgeClass(device.state)}`}>
+                              {device.state}
+                            </span>
+                          </td>
+                          <td className="text-end">{device.read}</td>
+                          <td className="text-end">{device.write}</td>
+                          <td className="text-end">{device.cksum}</td>
+                          <td className="text-muted small">{device.note}</td>
+                        </tr>
+                      )),
+                    ];
+                  })}
                 </tbody>
               </table>
             </div>
           )}
           <details>
             <summary className="small text-muted">Raw zpool status</summary>
-            <pre className="small border rounded p-2 mt-1 mb-0">{status}</pre>
+            <pre className="small border rounded p-2 mt-1 mb-0">{data.status}</pre>
           </details>
         </>
       )}
@@ -797,6 +808,7 @@ PoolStatusModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   server: PropTypes.object,
   pool: PropTypes.string,
+  health: PropTypes.string,
 };
 
 export const PoolPropertiesModal = ({ isOpen, onClose, server, pool, onQueued }) => {

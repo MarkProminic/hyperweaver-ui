@@ -24,14 +24,12 @@ import {
   PoolStatusModal,
 } from './ZfsPoolModals';
 import {
-  buildVdevGroups,
   capacityVariant,
+  flatVdevDevices,
   healthBadgeClass,
   healthTextClass,
   humanSize,
-  parseZpoolStatus,
   queuedMessage,
-  scanPercent,
 } from './zfsUtils';
 
 /**
@@ -237,28 +235,28 @@ const PoolTopology = ({ parsed, onDiskClick }) => {
       </p>
     );
   }
-  const groups = buildVdevGroups(parsed.rows);
+  const groups = Array.isArray(parsed.vdevs) ? parsed.vdevs : [];
   if (groups.length === 0) {
     return null;
   }
-  const scanPct = scanPercent(parsed.fields.scan);
+  const scan = parsed.scan || null;
   return (
     <div className="mb-2">
-      {scanPct !== null && (
+      {scan && (
         <div
           className="progress hw-scan-bar mb-2"
-          title={parsed.fields.scan}
+          title={scan.action}
           role="progressbar"
           aria-label="Scrub/resilver progress"
-          aria-valuenow={scanPct}
+          aria-valuenow={scan.pct}
           aria-valuemin={0}
           aria-valuemax={100}
         >
           <div
             className="progress-bar progress-bar-striped progress-bar-animated bg-info fw-semibold"
-            style={{ width: `${Math.max(scanPct, 8)}%` }}
+            style={{ width: `${Math.max(scan.pct, 8)}%` }}
           >
-            {scanPct}%
+            {scan.pct}%
           </div>
         </div>
       )}
@@ -266,41 +264,41 @@ const PoolTopology = ({ parsed, onDiskClick }) => {
           same line always; an over-wide row scrolls inside itself. Multiple
           vdevs stack as the pool's real layers. */}
       <div className="d-flex flex-column gap-2">
-        {groups.map(group => (
-          <div className="hw-vdev" key={group.name}>
-            <div className="hw-vdev-head">
-              <i className={`fas ${group.bare ? 'fa-hard-drive' : 'fa-layer-group'} text-muted`} />
-              <span>{group.bare ? 'stripe' : group.name}</span>
-              <span className={`badge ${healthBadgeClass(group.state)} ms-auto`}>
-                {group.state}
-              </span>
+        {groups.map((group, index) => {
+          const bare = group.type === 'disk';
+          return (
+            <div className="hw-vdev" key={`${group.type}-${index}`}>
+              <div className="hw-vdev-head">
+                <i className={`fas ${bare ? 'fa-hard-drive' : 'fa-layer-group'} text-muted`} />
+                <span>{bare ? 'stripe' : group.type}</span>
+                <span className={`badge ${healthBadgeClass(group.state)} ms-auto`}>
+                  {group.state}
+                </span>
+              </div>
+              <div className="hw-vdev-drives">
+                {group.devices.map(device => (
+                  <button
+                    type="button"
+                    className="hw-drive"
+                    key={device.name}
+                    title={`${device.name} — ${device.state} · read ${device.read} · write ${device.write} · cksum ${device.cksum}${device.note ? ` · ${device.note}` : ''} — click for details and actions`}
+                    onClick={() => onDiskClick(device)}
+                  >
+                    <i className={`fas fa-circle hw-drive-led ${healthTextClass(device.state)}`} />
+                    <i className="fas fa-hard-drive hw-drive-glyph" />
+                    <span className="hw-drive-name">{shortDevice(device.name)}</span>
+                    {device.note && <i className="fas fa-triangle-exclamation text-warning" />}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="hw-vdev-drives">
-              {group.devices.map(device => (
-                <button
-                  type="button"
-                  className="hw-drive"
-                  key={device.name}
-                  title={`${device.name} — ${device.state} · read ${device.read} · write ${device.write} · cksum ${device.cksum}${device.note ? ` · ${device.note}` : ''} — click for details and actions`}
-                  onClick={() => onDiskClick(device)}
-                >
-                  <i className={`fas fa-circle hw-drive-led ${healthTextClass(device.state)}`} />
-                  <i className="fas fa-hard-drive hw-drive-glyph" />
-                  <span className="hw-drive-name">{shortDevice(device.name)}</span>
-                  {device.note && <i className="fas fa-triangle-exclamation text-warning" />}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-      {(parsed.fields.scan || parsed.fields.scrub) && (
-        <div
-          className="small text-muted text-truncate mt-1"
-          title={parsed.fields.scan || parsed.fields.scrub}
-        >
+      {scan && (
+        <div className="small text-muted text-truncate mt-1" title={scan.action}>
           <i className="fas fa-broom me-1" />
-          {parsed.fields.scan || parsed.fields.scrub}
+          {scan.action}
         </div>
       )}
     </div>
@@ -374,7 +372,7 @@ const PoolCard = ({ pool, topology, accent, busy, onAction, onModal, onDiskClick
           <button
             type="button"
             className="btn btn-sm btn-outline-info"
-            onClick={() => onModal({ kind: 'status', pool: pool.name })}
+            onClick={() => onModal({ kind: 'status', pool: pool.name, health: pool.health })}
             disabled={busy}
           >
             <i className="fas fa-heart-pulse me-1" />
@@ -508,7 +506,7 @@ const ZfsPoolsPanel = ({ server }) => {
             if (statusResult.success) {
               setStatuses(prev => ({
                 ...prev,
-                [pool.name]: parseZpoolStatus(statusResult.data?.status),
+                [pool.name]: statusResult.data?.parsed || null,
               }));
             }
           }
@@ -655,8 +653,7 @@ const ZfsPoolsPanel = ({ server }) => {
           rescanning={rescanning}
           onRescan={rescanDisks}
           onDiskClick={disk => {
-            const parsed = statuses[disk.pool_assignment];
-            const row = parsed?.rows.find(
+            const row = flatVdevDevices(statuses[disk.pool_assignment]).find(
               entry => entry.name === disk.device_name || entry.name.startsWith(disk.device_name)
             );
             setModal({
@@ -692,6 +689,7 @@ const ZfsPoolsPanel = ({ server }) => {
         onClose={() => setModal(null)}
         server={server}
         pool={modal?.pool}
+        health={modal?.health}
       />
       <PoolPropertiesModal
         isOpen={modal?.kind === 'properties'}
