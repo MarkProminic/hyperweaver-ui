@@ -4863,7 +4863,13 @@
       "info": "Info",
       "infoHival": "Info (valor alto)",
       "logFiles": "Archivos de registro",
-      "loading": "Cargando..."
+      "loading": "Cargando...",
+      "logType": {
+        "system": "Sistema",
+        "authentication": "Autenticación",
+        "fault-manager": "Gestor de Fallas"
+      },
+      "typeLogs": "Registros de {{type}}"
     },
     "logViewer": {
       "connectingStream": "Conectando a la transmisión de registros...",

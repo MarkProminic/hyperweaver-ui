@@ -4,6 +4,13 @@ import { useTranslation } from 'react-i18next';
 const LogFileExplorer = ({ logFiles, selectedLog, onLogSelect, loading }) => {
   const { t } = useTranslation();
 
+  const typeHeading = type =>
+    t('host.logFileExplorer.typeLogs', {
+      type: t(`host.logFileExplorer.logType.${type}`, {
+        defaultValue: type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      }),
+    });
+
   const getLogIcon = type => {
     switch (type) {
       case 'system':
@@ -74,9 +81,7 @@ const LogFileExplorer = ({ logFiles, selectedLog, onLogSelect, loading }) => {
           <div>
             {Object.entries(groupedLogs).map(([type, logs]) => (
               <div key={type} className="mb-3">
-                <p className="text-uppercase small fw-semibold text-muted">
-                  {type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Logs
-                </p>
+                <p className="text-uppercase small fw-semibold text-muted">{typeHeading(type)}</p>
                 <div className="list-group">
                   {logs.map(log => (
                     <button

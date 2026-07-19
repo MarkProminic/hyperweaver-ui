@@ -4863,7 +4863,13 @@
       "info": "Info",
       "infoHival": "Info (High Value)",
       "logFiles": "Log Files",
-      "loading": "Loading..."
+      "loading": "Loading...",
+      "logType": {
+        "system": "System",
+        "authentication": "Authentication",
+        "fault-manager": "Fault Manager"
+      },
+      "typeLogs": "{{type}} Logs"
     },
     "logViewer": {
       "connectingStream": "Connecting to log stream...",
