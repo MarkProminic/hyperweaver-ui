@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
+import { hasHypervisor } from '../../utils/capabilities';
 import { FormModal } from '../common';
 
 import IpAddressCreateModal from './IpAddressCreateModal';
@@ -16,6 +17,9 @@ const IpAddressManagement = ({ server, onError }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [disableConfirm, setDisableConfirm] = useState(null);
+  const [wireNote, setWireNote] = useState('');
+  const isGoAgent = hasHypervisor(server, 'virtualbox') || hasHypervisor(server, 'utm');
   const [filters, setFilters] = useState({
     interface: '',
     ip_version: '',
@@ -59,10 +63,12 @@ const IpAddressManagement = ({ server, onError }) => {
       );
 
       if (result.success) {
-        // Deduplicate IP addresses by addrobj to avoid duplicate entries
+        // Dedupe by addrobj + address: the Go agent's synthetic <if>/v4|v6
+        // addrobj covers several addresses — addrobj alone hid siblings.
         const rawAddresses = result.data?.addresses || [];
+        const rowKey = addr => `${addr.addrobj}|${addr.ip_address || addr.addr || ''}`;
         const uniqueAddresses = rawAddresses.filter(
-          (addr, index, self) => index === self.findIndex(a => a.addrobj === addr.addrobj)
+          (addr, index, self) => index === self.findIndex(a => rowKey(a) === rowKey(addr))
         );
         setAddresses(uniqueAddresses);
       } else {
@@ -91,8 +97,8 @@ const IpAddressManagement = ({ server, onError }) => {
     loadAddresses();
   }, [loadAddresses]);
 
-  const handleDeleteAddress = addrobj => {
-    setAddressToDelete(addrobj);
+  const handleDeleteAddress = address => {
+    setAddressToDelete(address);
     setShowDeleteModal(true);
   };
 
@@ -105,35 +111,37 @@ const IpAddressManagement = ({ server, onError }) => {
       setDeleting(true);
       onError('');
 
-      // Use query parameters instead of request body for DELETE request
+      const siblingCount = addresses.filter(a => a.addrobj === addressToDelete.addrobj).length;
+      const bareAddress =
+        addressToDelete.ip_address || (addressToDelete.addr || '').split('/')[0] || '';
+      const params = { release: false };
+      if (isGoAgent && siblingCount > 1 && bareAddress) {
+        params.address = bareAddress;
+      }
       const result = await makeAgentRequest(
         server.hostname,
         server.port,
         server.protocol,
-        `network/addresses/${encodeURIComponent(addressToDelete)}`,
+        `network/addresses/${encodeURIComponent(addressToDelete.addrobj)}`,
         'DELETE',
-        null, // No request body to avoid parsing issues
-        {
-          // Query parameters instead
-          release: false,
-        }
+        null,
+        params
       );
 
       if (result.success) {
         setShowDeleteModal(false);
         setAddressToDelete(null);
-        // Refresh addresses list after deletion
         await loadAddresses();
       } else {
         onError(
           result.message ||
-            t('host.ipAddressManagement.errors.deleteFailed', { name: addressToDelete })
+            t('host.ipAddressManagement.errors.deleteFailed', { name: addressToDelete.addrobj })
         );
       }
     } catch (err) {
       onError(
         t('host.ipAddressManagement.errors.deleteError', {
-          name: addressToDelete,
+          name: addressToDelete.addrobj,
           message: err.message,
         })
       );
@@ -142,11 +150,7 @@ const IpAddressManagement = ({ server, onError }) => {
     }
   };
 
-  const handleToggleAddress = async (address, action) => {
-    if (!server || !makeAgentRequest) {
-      return;
-    }
-
+  const runToggle = async (address, action) => {
     try {
       setLoading(true);
       onError('');
@@ -160,7 +164,9 @@ const IpAddressManagement = ({ server, onError }) => {
       );
 
       if (result.success) {
-        // Refresh addresses list after action
+        if (result.data?.note) {
+          setWireNote(result.data.note);
+        }
         await loadAddresses();
       } else {
         onError(
@@ -179,6 +185,17 @@ const IpAddressManagement = ({ server, onError }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleToggleAddress = async (address, action) => {
+    if (!server || !makeAgentRequest) {
+      return;
+    }
+    if (isGoAgent && action === 'disable') {
+      setDisableConfirm(address);
+      return;
+    }
+    await runToggle(address, action);
   };
 
   const handleFilterChange = (field, value) => {
@@ -322,6 +339,15 @@ const IpAddressManagement = ({ server, onError }) => {
         </div>
       </div>
 
+      {wireNote && (
+        <div className="alert alert-info d-flex justify-content-between align-items-center">
+          <span>{wireNote}</span>
+          <button type="button" className="btn btn-sm btn-light" onClick={() => setWireNote('')}>
+            <i className="fas fa-times" />
+          </button>
+        </div>
+      )}
+
       {/* IP Addresses Table */}
       <div className="card">
         <div className="card-body">
@@ -394,9 +420,36 @@ const IpAddressManagement = ({ server, onError }) => {
           </div>
           <p className="mb-4">
             {t('host.ipAddressManagement.deletePrompt')}{' '}
-            <strong className="font-monospace">{addressToDelete}</strong>?
+            <strong className="font-monospace">
+              {addressToDelete.addrobj}
+              {addressToDelete.ip_address ? ` (${addressToDelete.ip_address})` : ''}
+            </strong>
+            ?
           </p>
           <p className="text-muted small">{t('host.ipAddressManagement.deleteNote')}</p>
+        </FormModal>
+      )}
+
+      {disableConfirm && (
+        <FormModal
+          isOpen
+          onClose={() => setDisableConfirm(null)}
+          onSubmit={async () => {
+            const target = disableConfirm;
+            setDisableConfirm(null);
+            await runToggle(target, 'disable');
+          }}
+          title={t('host.ipAddressManagement.goDisableTitle')}
+          icon="fas fa-pause"
+          submitText={t('host.ipAddressManagement.goDisableConfirm')}
+          submitVariant="is-warning"
+          loading={loading}
+        >
+          <div className="alert alert-warning">
+            <p className="mb-0">
+              {t('host.ipAddressManagement.goDisableBody', { iface: disableConfirm.interface })}
+            </p>
+          </div>
         </FormModal>
       )}
     </div>

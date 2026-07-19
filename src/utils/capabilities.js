@@ -76,6 +76,16 @@ export const hasMachines = server => hasFeature(server, 'machines');
 export const hasHypervisor = (server, name) =>
   (server?.capabilities?.hypervisors ?? []).includes(name);
 
+/**
+ * The agent's host OS as /api/status advertises it (e.g. 'windows', 'darwin',
+ * 'linux'); null when unknown. Data, not a gate — used only where an agent's
+ * own wire documents per-OS behavior (e.g. the Go agent's address-create
+ * rules).
+ * @param {Object} server - Server object (registry row or Direct self-server)
+ * @returns {string|null}
+ */
+export const agentPlatform = server => server?.capabilities?.platform || null;
+
 // The Manage page's sub-tab tokens — keep in sync with TABS in HostManage.jsx (the
 // same parallel-list convention as Navbar's HOST_CONTROL_ROUTES ↔ ContextTabs'
 // HOST_TABS). Used to hide the Manage navbar tab when an agent offers none of them.

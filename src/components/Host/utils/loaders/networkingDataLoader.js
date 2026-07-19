@@ -147,6 +147,7 @@ export const fetchNetworkData = async (currentServer, makeAgentRequest) => {
   // topology fetches below (aggregates/etherstubs/vnics/machines) are not, so a
   // vnics-capable agent without host monitoring still draws its topology.
   const monitoringAvailable = hasFeature(currentServer, 'monitoring');
+  const spacesAvailable = hasFeature(currentServer, 'network-spaces');
   const skipped = Promise.resolve({ success: false, message: 'monitoring not advertised' });
 
   const [
@@ -158,6 +159,7 @@ export const fetchNetworkData = async (currentServer, makeAgentRequest) => {
     etherstubsResult,
     vnicsResult,
     zonesResult,
+    spacesResult,
   ] = await Promise.allSettled([
     monitoringAvailable
       ? makeAgentRequest(
@@ -215,9 +217,23 @@ export const fetchNetworkData = async (currentServer, makeAgentRequest) => {
       currentServer.protocol,
       'machines'
     ),
+    spacesAvailable
+      ? makeAgentRequest(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          'network/spaces'
+        )
+      : skipped,
   ]);
 
+  const networkSpaces =
+    spacesResult.status === 'fulfilled'
+      ? spacesResult.value?.data?.spaces || spacesResult.value?.spaces || []
+      : [];
+
   return {
+    networkSpaces,
     networkInterfaces: processNetworkInterfaces(interfacesResult),
     networkUsage: processNetworkUsage(usageResult),
     ipAddresses: processIpAddresses(ipResult),

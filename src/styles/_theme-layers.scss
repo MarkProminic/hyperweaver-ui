@@ -18,15 +18,22 @@
   --hw-chart-background: #{$hw-chart-bg-l};
   --hw-chart-border: #{$hw-chart-border-l};
 
-  // Network topology node colors - Light theme
-  --hw-zone-active: #{$hw-zone-active}; // Zone running state
-  --hw-zone-inactive: #{$hw-zone-inactive}; // Zone stopped state
-  --hw-nic-active: #{$hw-nic-active}; // NIC up state
-  --hw-nic-inactive: #{$hw-nic-inactive}; // NIC down state
-  --hw-vnic-color: #{$hw-vnic}; // VNIC nodes
-  --hw-aggregate-color: #{$hw-aggregate}; // Aggregate nodes
-  --hw-etherstub-color: #{$hw-etherstub}; // Etherstub nodes
-  --hw-node-text: #{$hw-node-text-l}; // Node labels
+  // Network topology palette - Light theme
+  --hw-topo-up: #{$hw-topo-up-l};
+  --hw-topo-down: #{$hw-topo-down-l};
+  --hw-topo-tx: #{$hw-topo-tx-l};
+  --hw-topo-pending: #{$hw-topo-pending-l};
+  --hw-topo-idle-flow: #{$hw-topo-idle-flow};
+  --hw-topo-ghost: #{$hw-topo-ghost-l};
+  --hw-topo-net-internal: #{$hw-topo-net-internal-l};
+  --hw-topo-net-1: #{$hw-topo-net-1};
+  --hw-topo-net-2: #{$hw-topo-net-2};
+  --hw-topo-net-3: #{$hw-topo-net-3-l};
+  --hw-topo-net-4: #{$hw-topo-net-4};
+  --hw-topo-net-5: #{$hw-topo-net-5};
+  --hw-topo-net-6: #{$hw-topo-net-6-l};
+  --hw-topo-net-7: #{$hw-topo-net-7};
+  --hw-topo-net-8: #{$hw-topo-net-8-l};
 
   // UI chrome colors - Light theme
   --hw-border-light: #{$hw-border-light-l}; // Component borders
@@ -45,15 +52,22 @@
   --hw-chart-background: #{$hw-chart-bg-d};
   --hw-chart-border: #{$hw-chart-border-d};
 
-  // Network topology node colors - Dark theme
-  --hw-zone-active: #{$hw-zone-active}; // Zone running state
-  --hw-zone-inactive: #{$hw-zone-inactive}; // Zone stopped state
-  --hw-nic-active: #{$hw-nic-active}; // NIC up state
-  --hw-nic-inactive: #{$hw-nic-inactive}; // NIC down state
-  --hw-vnic-color: #{$hw-vnic}; // VNIC nodes
-  --hw-aggregate-color: #{$hw-aggregate}; // Aggregate nodes
-  --hw-etherstub-color: #{$hw-etherstub}; // Etherstub nodes
-  --hw-node-text: #{$hw-node-text-d}; // Node labels (lighter for dark theme)
+  // Network topology palette - Dark theme
+  --hw-topo-up: #{$hw-topo-up-d};
+  --hw-topo-down: #{$hw-topo-down-d};
+  --hw-topo-tx: #{$hw-topo-tx-d};
+  --hw-topo-pending: #{$hw-topo-pending-d};
+  --hw-topo-idle-flow: #{$hw-topo-idle-flow};
+  --hw-topo-ghost: #{$hw-topo-ghost-d};
+  --hw-topo-net-internal: #{$hw-topo-net-internal-d};
+  --hw-topo-net-1: #{$hw-topo-net-1};
+  --hw-topo-net-2: #{$hw-topo-net-2};
+  --hw-topo-net-3: #{$hw-topo-net-3-d};
+  --hw-topo-net-4: #{$hw-topo-net-4};
+  --hw-topo-net-5: #{$hw-topo-net-5};
+  --hw-topo-net-6: #{$hw-topo-net-6-d};
+  --hw-topo-net-7: #{$hw-topo-net-7};
+  --hw-topo-net-8: #{$hw-topo-net-8-d};
 
   // UI chrome colors - Dark theme
   --hw-border-light: #{$hw-border-light-d}; // Darker borders for dark theme
@@ -78,9 +92,6 @@
   --hw-slider-primary: #{$hw-slider-primary};
   --hw-slider-info: #{$hw-slider-info};
   --hw-slider-track: #{$hw-slider-track};
-  --hw-vlan-badge: #{$hw-vlan-badge};
-  --hw-edge-label-bg: #{$hw-edge-label-bg};
-  --hw-edge-label-border: #{$hw-edge-label-border};
 }
 
 [data-bs-theme='dark'] {

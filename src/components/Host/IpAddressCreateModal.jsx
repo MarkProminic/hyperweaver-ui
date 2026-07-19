@@ -3,10 +3,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useServers } from '../../contexts/ServerContext';
+import { agentPlatform, hasHypervisor } from '../../utils/capabilities';
 import { FormModal } from '../common';
 
 const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
   const { t } = useTranslation();
+  const isGoAgent = hasHypervisor(server, 'virtualbox') || hasHypervisor(server, 'utm');
+  const platform = agentPlatform(server);
+  const dhcpAvailable = !isGoAgent || platform === 'windows';
+  const addrconfAvailable = !isGoAgent;
   const [formData, setFormData] = useState({
     interface: '',
     type: 'static',
@@ -87,6 +92,15 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
   useEffect(() => {
     loadInterfaces();
   }, [loadInterfaces]);
+
+  useEffect(() => {
+    if (
+      (formData.type === 'dhcp' && !dhcpAvailable) ||
+      (formData.type === 'addrconf' && !addrconfAvailable)
+    ) {
+      setFormData(prev => ({ ...prev, type: 'static' }));
+    }
+  }, [formData.type, dhcpAvailable, addrconfAvailable]);
 
   // Auto-generate address object name when interface or type changes
   useEffect(() => {
@@ -279,9 +293,14 @@ const IpAddressCreateModal = ({ server, onClose, onSuccess, onError }) => {
           disabled={creating}
         >
           <option value="static">{t('host.ipAddressCreateModal.typeStatic')}</option>
-          <option value="dhcp">{t('host.ipAddressCreateModal.typeDhcp')}</option>
-          <option value="addrconf">{t('host.ipAddressCreateModal.typeAddrconf')}</option>
+          {dhcpAvailable && <option value="dhcp">{t('host.ipAddressCreateModal.typeDhcp')}</option>}
+          {addrconfAvailable && (
+            <option value="addrconf">{t('host.ipAddressCreateModal.typeAddrconf')}</option>
+          )}
         </select>
+        {isGoAgent && (
+          <p className="form-text text-muted">{t('host.ipAddressCreateModal.goTypeHelp')}</p>
+        )}
       </div>
 
       {formData.type === 'static' && (

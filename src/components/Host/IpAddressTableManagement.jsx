@@ -12,7 +12,7 @@ const IpAddressTable = ({ addresses, loading, onDelete, onToggle }) => {
 
     try {
       if (action === 'delete') {
-        await onDelete(address.addrobj);
+        await onDelete(address);
       } else {
         await onToggle(address, action);
       }
@@ -142,7 +142,7 @@ const IpAddressTable = ({ addresses, loading, onDelete, onToggle }) => {
             const deleteLoading = actionLoading[`${address.addrobj}-delete`];
 
             return (
-              <tr key={address.addrobj}>
+              <tr key={`${address.addrobj}|${address.ip_address || address.addr || ''}`}>
                 <td>
                   <div className="d-flex align-items-center">
                     {getStateIcon(address.state)}

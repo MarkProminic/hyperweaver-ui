@@ -1,230 +1,726 @@
-// Network topology viewer: node shapes, edge labels, the viewer/fullscreen containers,
-// the bandwidth legend, and the shared chart container. Node/edge palette flows through
-// the `--hw-*` custom properties (see _theme-layers.scss).
+// Network topology renderer (cards + SVG connector overlay) and the shared
+// chart container. Palette flows through the `--hw-topo-*` custom properties
+// published in _theme-layers.scss; state colors and network colors are
+// separate palettes by design.
 
-// Chart container styling
+// Chart container styling (shared by the bandwidth/host charts)
 .hw-chart-container {
-  background-color: var(--hw-chart-background) !important;
-  border: 1px solid var(--hw-chart-border) !important;
-  padding: 5px !important;
+  background-color: var(--hw-chart-background);
+  border: 1px solid var(--hw-chart-border);
+  padding: 5px;
 }
 
-// Network topology edge label styling
-.hw-edge-label {
-  position: absolute !important;
-  background: var(--hw-edge-label-bg) !important;
-  border: 1px solid var(--hw-edge-label-border) !important;
-  border-radius: 4px !important;
-  font-size: 10px !important;
-  font-weight: bold !important;
-  padding: 2px 4px !important;
-  pointer-events: all !important;
+// ---------- layout ----------
+
+.hw-topo-canvas {
+  position: relative;
 }
 
-// Floating edge label styling (smaller variant)
-.hw-floating-edge-label {
-  position: absolute !important;
-  background: var(--hw-edge-label-bg) !important;
-  border-radius: 3px !important;
-  font-size: 9px !important;
-  font-weight: bold !important;
-  padding: 1px 3px !important;
-  pointer-events: all !important;
-  min-width: 20px !important;
-  text-align: center !important;
+.hw-topo-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
 }
 
-// Network topology node base styles
-.hw-node-base {
-  width: 46px !important;
-  height: 46px !important;
-  border-radius: 23px !important;
-  border: 2px solid white !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  cursor: pointer !important;
+.hw-topo-wire-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  stroke-linecap: round;
+  pointer-events: stroke;
+  cursor: pointer;
 }
 
-// VLAN badge positioning
-.hw-vlan-badge {
-  position: absolute !important;
-  top: -8px !important;
-  right: -8px !important;
-  background-color: var(--hw-vlan-badge) !important;
-  color: white !important;
-  border-radius: 8px !important;
-  font-size: 8px !important;
-  padding: 2px 4px !important;
-  font-weight: bold !important;
-  min-width: 16px !important;
-  text-align: center !important;
+.hw-topo-columns {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(280px, 1.3fr) minmax(200px, 1fr) minmax(240px, 1.1fr);
+  gap: 12px 90px;
+  align-items: start;
 }
 
-// Zone status indicator
-.hw-zone-status-indicator {
-  position: absolute !important;
-  top: -4px !important;
-  right: -4px !important;
-  width: 14px !important;
-  height: 14px !important;
-  border-radius: 50% !important;
-  border: 2px solid white !important;
+.hw-topo-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
 }
 
-.hw-node-handle {
-  border: 2px solid white !important;
-  width: 8px !important;
-  height: 8px !important;
+.hw-topo-col-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
 }
 
-.hw-node-icon {
-  color: white !important;
-  font-size: 18px !important;
+.hw-topo-host {
+  margin-top: 12px;
 }
 
-.hw-node-label {
-  position: absolute !important;
-  top: 48px !important;
-  font-size: 10px !important;
-  font-weight: bold !important;
-  color: var(--hw-node-text) !important;
-  text-align: center !important;
-  width: 60px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
+.hw-topo-host-title {
+  font-weight: 700;
+  font-size: 14px;
+  margin: 6px 0 10px;
 }
 
-// Network Topology Viewer Styling Classes
-.hw-topology-container-normal {
-  width: 100% !important;
-  height: 500px !important;
-  position: relative !important;
-  top: auto !important;
-  left: auto !important;
-  background-color: transparent !important;
+.hw-topo-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1055;
+  overflow-y: auto;
+  background: var(--bs-body-bg);
+  padding: 1rem;
 }
 
-.hw-topology-container-fullscreen {
-  width: 100% !important;
-  height: 100vh !important;
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  background-color: white !important;
+// ---------- cards ----------
+
+.hw-topo-card {
+  position: relative;
+  background: var(--bs-body-bg);
+  border: 1px solid var(--hw-border-light);
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: opacity 0.2s ease, border-color 0.2s ease;
 }
 
-.hw-topology-header-normal {
-  padding: 0 !important;
+.hw-topo-slot {
+  transition: opacity 0.2s ease;
 }
 
-.hw-topology-header-fullscreen {
-  padding: 1rem !important;
+.hw-topo-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
-.hw-topology-filters-normal {
-  padding: 0 !important;
+.hw-topo-card-title {
+  font-weight: 600;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.hw-topology-filters-fullscreen {
-  padding: 0 1rem !important;
+.hw-topo-card-meta {
+  font-size: 11px;
+  color: var(--bs-secondary-color);
+  white-space: nowrap;
 }
 
-.hw-topology-content-normal {
-  height: 500px !important;
-  padding: 0 !important;
-  position: relative !important;
+.hw-topo-card-sub {
+  font-size: 11.5px;
+  color: var(--bs-secondary-color);
+  margin-top: 2px;
 }
 
-.hw-topology-content-fullscreen {
-  height: calc(100vh - 280px) !important;
-  padding: 0 1rem 0 1rem !important;
-  position: relative !important;
+.hw-topo-mono {
+  font-family: var(--bs-font-monospace);
+  font-size: 11px;
 }
 
-// Bandwidth Legend Styling Classes
-.hw-bandwidth-tag {
-  color: white !important;
+.hw-topo-open {
+  background: none;
+  border: none;
+  color: var(--bs-secondary-color);
+  padding: 2px 6px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--bs-primary);
+  }
 }
 
-.hw-bandwidth-tag-vertical {
-  color: white !important;
-  min-width: 60px !important;
+.hw-topo-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
 }
 
-.hw-traffic-line-16 {
-  width: 16px !important;
-  height: 2px !important;
+.hw-topo-dot-up {
+  background: var(--hw-topo-up);
 }
 
-.hw-traffic-line-20 {
-  width: 20px !important;
-  height: 3px !important;
+.hw-topo-dot-down {
+  background: var(--hw-topo-down);
 }
 
-.hw-traffic-line-dashed {
-  border-style: dashed !important;
+.hw-topo-dot-ghost {
+  background: transparent;
+  border: 2px solid var(--hw-topo-down);
 }
 
-.hw-traffic-line-solid {
-  border-style: solid !important;
+.hw-topo-ghost {
+  border-style: dashed;
+  opacity: 0.75;
 }
 
-.hw-traffic-line-thick {
-  border-width: 3px !important;
+.hw-topo-empty {
+  border-style: dashed;
 }
 
-.hw-traffic-line-normal {
-  border-width: 1px !important;
+.hw-topo-quiet {
+  opacity: 0.6;
 }
 
-.hw-traffic-line-thick-16 {
-  border-width: 2px !important;
+.hw-topo-downgroup {
+  border-style: dashed;
 }
 
-// Combined typography helpers for edge labels
-.hw-edge-label-secondary {
-  color: var(--hw-aggregate-color) !important;
-  font-size: 7px !important;
-  font-weight: bold !important;
-  margin-top: 1px !important;
+// ---------- nic chips ----------
+
+.hw-topo-chip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
 }
 
-.hw-edge-label-idle {
-  font-size: 7px !important;
-  font-style: italic !important;
-  margin-top: 1px !important;
+.hw-topo-chip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 8px;
+  text-align: left;
+  background: var(--hw-editor-head-bg);
+  border: 1px solid var(--hw-border-light);
+  border-radius: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--bs-primary);
+  }
+
+  &.hw-topo-ghost {
+    background: transparent;
+  }
 }
 
-// Conditional CSS Variable Classes for Network Topology Nodes
-.hw-zone-running {
-  background-color: var(--hw-zone-active) !important;
+.hw-topo-chip-name {
+  font-family: var(--bs-font-monospace);
+  font-size: 11px;
+  color: var(--bs-body-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.hw-zone-stopped {
-  background-color: var(--hw-zone-inactive) !important;
+.hw-topo-chip-net {
+  grid-column: 1;
+  font-family: var(--bs-font-monospace);
+  font-size: 10px;
+  font-weight: 700;
 }
 
-.hw-nic-active-bg {
-  background-color: var(--hw-nic-active) !important;
+.hw-topo-chip-rate {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-family: var(--bs-font-monospace);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.hw-nic-inactive-bg {
-  background-color: var(--hw-nic-inactive) !important;
+.hw-topo-rate {
+  color: var(--hw-topo-up);
+  font-variant-numeric: tabular-nums;
 }
 
-.hw-aggregate-bg {
-  background-color: var(--hw-aggregate-color) !important;
+.hw-topo-rate-idle,
+.hw-topo-rate-nofeed {
+  color: var(--bs-secondary-color);
 }
 
-.hw-etherstub-bg {
-  background-color: var(--hw-etherstub-color) !important;
+// ---------- adapter members ----------
+
+.hw-topo-members {
+  margin-top: 6px;
 }
 
-.hw-vnic-bg {
-  background-color: var(--hw-vnic-color) !important;
+.hw-topo-expand {
+  background: none;
+  border: none;
+  color: var(--bs-secondary-color);
+  font-size: 11px;
+  padding: 0;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--bs-primary);
+  }
 }
 
-.hw-zone-active-bg {
-  background-color: var(--hw-zone-active) !important;
+.hw-topo-member-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 0 2px;
+}
+
+// ---------- network cards ----------
+
+.hw-topo-network {
+  padding-left: 18px;
+}
+
+.hw-topo-net-band {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  border-radius: 8px 0 0 8px;
+}
+
+// ---------- overlay wires ----------
+
+.hw-topo-wire {
+  fill: none;
+  stroke-linecap: round;
+  transition: opacity 0.2s ease;
+}
+
+.hw-topo-wire-ghost {
+  stroke-dasharray: 5 5;
+  stroke-opacity: 0.45;
+}
+
+.hw-topo-river {
+  stroke-dasharray: 12 9;
+  animation: hw-topo-flow linear infinite;
+}
+
+.hw-topo-river-rx {
+  stroke: var(--hw-topo-up);
+  opacity: 0.55;
+  animation-direction: reverse;
+}
+
+.hw-topo-wire-struck {
+  stroke-dasharray: 3 6;
+  stroke-opacity: 0.3;
+}
+
+.hw-topo-wire-pending {
+  stroke: var(--hw-topo-pending);
+  stroke-width: 4;
+  stroke-dasharray: 8 6;
+  animation: hw-topo-flow 1.2s linear infinite;
+}
+
+@keyframes hw-topo-flow {
+  to {
+    stroke-dashoffset: -21;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-topo-river,
+  .hw-topo-wire-pending {
+    animation: none;
+  }
+}
+
+.hw-topo-pulse-glow {
+  fill: var(--hw-topo-pending);
+  opacity: 0.35;
+}
+
+.hw-topo-flowlabel text {
+  font-family: var(--bs-font-monospace);
+  font-size: 9.5px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: var(--bs-body-bg);
+  stroke-width: 3px;
+}
+
+.hw-topo-flowlabel-rx {
+  fill: var(--hw-topo-up);
+}
+
+.hw-topo-flowlabel-tx {
+  fill: var(--hw-topo-tx);
+}
+
+.hw-topo-cap {
+  fill: var(--bs-body-bg);
+  stroke-width: 2;
+}
+
+.hw-topo-particle-rx {
+  fill: var(--hw-topo-up);
+}
+
+.hw-topo-particle-tx {
+  fill: var(--hw-topo-tx);
+}
+
+// ---------- trace / lenses ----------
+
+.hw-topo-traced .hw-topo-dim {
+  opacity: 0.22;
+}
+
+.hw-topo-slot.hw-topo-hot > .hw-topo-card {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 1px var(--bs-primary);
+}
+
+.hw-topo-chip-hot {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 1px var(--bs-primary);
+}
+
+.hw-topo-lens-dim {
+  opacity: 0.3;
+}
+
+// ---------- groups (density roll-ups) ----------
+
+.hw-topo-group {
+  border: 1px solid var(--hw-border-light);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hw-topo-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  border-left: 4px solid transparent;
+  border-radius: 4px;
+  padding: 4px 6px;
+  cursor: pointer;
+  color: var(--bs-body-color);
+}
+
+.hw-topo-group-band {
+  width: 8px;
+  height: 16px;
+  border-radius: 3px;
+}
+
+.hw-topo-group-preview {
+  color: var(--bs-secondary-color);
+  padding: 0 8px 4px;
+}
+
+// ---------- header / drill / legend ----------
+
+.hw-topo-header {
+  margin-bottom: 10px;
+}
+
+.hw-topo-pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--bs-secondary-color);
+}
+
+.hw-topo-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--hw-topo-down);
+}
+
+.hw-topo-pulse-live .hw-topo-pulse-dot {
+  background: var(--hw-topo-up);
+  animation: hw-topo-pulse 2s ease-in-out infinite;
+}
+
+@keyframes hw-topo-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-topo-pulse-live .hw-topo-pulse-dot {
+    animation: none;
+  }
+}
+
+.hw-topo-nofeed-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 4px 12px;
+  border: 1px dashed var(--hw-border-light);
+  border-radius: 14px;
+  font-size: 11px;
+  color: var(--bs-secondary-color);
+}
+
+.hw-topo-cap-inline {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--bs-secondary-color);
+}
+
+.hw-topo-chip-draggable {
+  cursor: grab;
+}
+
+.hw-topo-chip-pending {
+  border-color: var(--hw-topo-pending);
+  border-style: dashed;
+}
+
+.hw-topo-pending-badge {
+  background: var(--hw-topo-pending);
+  color: #14171b;
+  border-radius: 8px;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.hw-topo-shared-badge {
+  border: 1px solid var(--hw-topo-up);
+  color: var(--hw-topo-up);
+  border-radius: 8px;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.hw-topo-drop-valid {
+  box-shadow: 0 0 0 2px var(--hw-topo-pending);
+}
+
+.hw-topo-drop-over {
+  box-shadow: 0 0 0 3px var(--hw-topo-pending), 0 0 14px var(--hw-topo-pending);
+}
+
+.hw-topo-unused-note {
+  color: var(--hw-topo-pending);
+  font-weight: 600;
+}
+
+.hw-topo-columns-4 {
+  grid-template-columns:
+    minmax(280px, 1.3fr) minmax(200px, 1fr) minmax(240px, 1.1fr)
+    minmax(150px, 0.6fr);
+}
+
+.hw-topo-upstream {
+  border-style: dashed;
+  opacity: 0.75;
+}
+
+.hw-topo-filter {
+  font-family: var(--bs-font-monospace);
+  font-size: 12px;
+}
+
+.hw-topo-tray {
+  border: 1px solid var(--hw-topo-pending);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+
+.hw-topo-tray-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.hw-topo-tray-row {
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.hw-topo-tray-fail {
+  color: var(--bs-danger);
+}
+
+.hw-topo-tray-note {
+  font-size: 11px;
+  color: var(--bs-secondary-color);
+  margin-top: 6px;
+}
+
+.hw-topo-chipbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.hw-topo-netchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bs-body-bg);
+  border: 1px solid var(--hw-border-light);
+  border-radius: 14px;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-family: var(--bs-font-monospace);
+  color: var(--bs-body-color);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--bs-primary);
+  }
+}
+
+.hw-topo-netchip-active {
+  border-color: var(--hw-topo-pending);
+  background: color-mix(in srgb, var(--hw-topo-pending) 12%, transparent);
+}
+
+.hw-topo-netchip-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.hw-topo-netchip-count {
+  color: var(--bs-secondary-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.hw-topo-shared-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--hw-topo-up);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.hw-topo-issues-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--hw-topo-pending);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.hw-topo-drill {
+  border: 1px solid var(--hw-border-light);
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 10px;
+}
+
+.hw-topo-drill-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  padding-left: 12px;
+
+  .hw-topo-net-band {
+    border-radius: 3px;
+    width: 6px;
+  }
+}
+
+.hw-topo-drill-rows {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hw-topo-drill-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.9fr) minmax(0, 1fr) minmax(120px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.hw-topo-drill-name {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--bs-body-color);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--bs-primary);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.hw-topo-drill-links {
+  color: var(--bs-secondary-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hw-topo-drill-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hw-topo-bar {
+  height: 6px;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.hw-topo-bar-rx {
+  background: var(--hw-topo-up);
+}
+
+.hw-topo-bar-tx {
+  background: var(--hw-topo-tx);
+}
+
+.hw-topo-drill-rate {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hw-topo-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  margin-top: 14px;
+  font-size: 11.5px;
+  color: var(--bs-secondary-color);
+}
+
+.hw-topo-slice .hw-topo-columns {
+  gap: 10px 60px;
 }

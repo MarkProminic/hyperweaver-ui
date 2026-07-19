@@ -17,6 +17,7 @@ import { resourceLabel } from '../utils/resourceLabel';
 
 import { DismissibleAlert } from './common';
 import ConsoleDisplay from './ConsoleDisplay';
+import MachineTopologySlice from './Host/NetworkTopology/MachineTopologySlice';
 import CloneMachineModal from './Machine/CloneMachineModal';
 import ConvertToTemplateModal from './Machine/ConvertToTemplateModal';
 import { currentHardwareOf } from './Machine/CurrentHardware';
@@ -225,6 +226,8 @@ const OverviewGrid = ({
         hypervisor={machineDetails.machine_info?.hypervisor}
         colClass="col-12 col-lg-6 col-xxl-4"
       />
+
+      <MachineTopologySlice machineName={selectedMachine} colClass="col-12" />
 
       {hasFeature(currentServer, 'monitoring') && hasHypervisor(currentServer, 'bhyve') && (
         <MachineResourceCharts

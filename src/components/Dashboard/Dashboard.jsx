@@ -7,6 +7,7 @@ import { useMode } from '../../contexts/ModeContext';
 import { useServers } from '../../contexts/ServerContext';
 import { hasMachines } from '../../utils/capabilities';
 import { resourceLabel } from '../../utils/resourceLabel';
+import TopologyPanel from '../Host/NetworkTopology/TopologyPanel';
 
 import DashboardHealthModal from './DashboardHealthModal';
 import DashboardQuickActions from './DashboardQuickActions';
@@ -285,6 +286,18 @@ const Dashboard = () => {
             servers={infrastructureData.servers || []}
             onNavigateToServer={navigateToServer}
           />
+
+          {!isDirect && servers.length > 0 && (
+            <div className="card mb-3">
+              <div className="card-body">
+                <h2 className="fs-5 fw-bold mb-3">
+                  <i className="fas fa-project-diagram me-2" />
+                  {t('dashboard.dashboard.datacenterTopology')}
+                </h2>
+                <TopologyPanel fixedScope="all" />
+              </div>
+            </div>
+          )}
 
           <DashboardHealthModal
             isOpen={showHealthModal}

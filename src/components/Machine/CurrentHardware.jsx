@@ -105,9 +105,9 @@ AttachmentRow.propTypes = {
   entry: PropTypes.object.isRequired,
 };
 
-/** A NIC's identity line (mode/bridge/MAC), shared by panel and editor. */
+/** A NIC's identity line (mode/network/MAC), shared by panel and editor. */
 export const nicSummary = nic =>
-  [nic.mode, nic.bridge ? `on ${nic.bridge}` : '', nic.mac].filter(Boolean).join(' · ');
+  [nic.mode, nic.network ? `on ${nic.network}` : '', nic.mac].filter(Boolean).join(' · ');
 
 /** A zone NIC's identity line (vnic/allowed-address/MAC). */
 export const zoneNicSummary = nic =>

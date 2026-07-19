@@ -110,15 +110,6 @@ export default defineConfig({
             return 'rdp-console';
           }
 
-          // Flow/diagram libraries (large, independent)
-          if (
-            id.includes('node_modules/@xyflow') ||
-            id.includes('node_modules/elkjs') ||
-            id.includes('node_modules/dagre')
-          ) {
-            return 'flow-diagrams';
-          }
-
           // React-Bootstrap UI framework + its runtime deps. Used app-wide (shared modals,
           // dropdowns, forms, tabs, etc.), so split it out of vendor to keep that chunk
           // under the size limit.

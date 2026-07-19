@@ -9,17 +9,12 @@ import InterfacesTable from './Host/InterfacesTable';
 import IpAddressTable from './Host/IpAddressTable';
 import NetworkingHeader from './Host/NetworkingHeader';
 import NetworkSummary from './Host/NetworkSummary';
-import BandwidthLegend from './Host/NetworkTopology/BandwidthLegend';
-import NetworkTopologyViewer from './Host/NetworkTopology/NetworkTopologyViewer';
+import TopologyPanel from './Host/NetworkTopology/TopologyPanel';
 import RoutingTable from './Host/RoutingTable';
 import { useHostNetworkingData } from './Host/useHostNetworkingData';
 
 const HostNetworking = () => {
   const { t } = useTranslation();
-  console.log('🐛 DEBUG: HostNetworking component starting render');
-
-  // ALWAYS call hooks first, before any conditional logic or early returns
-  console.log('🐛 DEBUG: About to call useHostNetworkingData hook');
   const {
     networkInterfaces,
     networkUsage,
@@ -62,19 +57,26 @@ const HostNetworking = () => {
     chartSortBy,
     setChartSortBy,
     getSortedChartEntries,
-    user,
     getServers,
     loadNetworkData,
   } = useHostNetworkingData();
-  console.log(
-    '🐛 DEBUG: Hook data destructured successfully, user:',
-    !!user,
-    'getServers type:',
-    typeof getServers
-  );
 
   // Use useMemo to prevent getServers() calls on every render
   const serverList = useMemo(() => getServers(), [getServers]);
+
+  const preloadedTopology = useMemo(
+    () => ({
+      networkInterfaces: networkInterfaces || [],
+      networkUsage: networkUsage || [],
+      ipAddresses: ipAddresses || [],
+      routes: routes || [],
+      aggregates: aggregates || [],
+      etherstubs: etherstubs || [],
+      vnics: vnics || [],
+      zones: zones || [],
+    }),
+    [networkInterfaces, networkUsage, ipAddresses, routes, aggregates, etherstubs, vnics, zones]
+  );
 
   // Network monitoring is accessible to all authenticated users
   // No permission check needed - removed the user access restriction
@@ -176,39 +178,9 @@ const HostNetworking = () => {
               </div>
 
               {!sectionsCollapsed.topology && (
-                <div className="has-min-height-600">
-                  <NetworkTopologyViewer
-                    networkData={{
-                      networkInterfaces: networkInterfaces || [],
-                      networkUsage: networkUsage || [],
-                      ipAddresses: ipAddresses || [],
-                      aggregates: aggregates || [],
-                      etherstubs: etherstubs || [],
-                      vnics: vnics || [],
-                      zones: zones || [],
-                    }}
-                    server={selectedServer}
-                    onNodeClick={node => {
-                      console.log('Network node clicked:', node);
-                      // TODO: Add node details modal or action
-                    }}
-                    onEdgeClick={edge => {
-                      console.log('Network edge clicked:', edge);
-                      // TODO: Add edge details modal or action
-                    }}
-                  />
-                </div>
+                <TopologyPanel preloaded={preloadedTopology} reloadPreloaded={loadNetworkData} />
               )}
             </div>
-
-            {/* Network Topology Legend */}
-            {!sectionsCollapsed.topology && (
-              <div className="card mb-4">
-                <div>
-                  <BandwidthLegend horizontal />
-                </div>
-              </div>
-            )}
 
             <IpAddressTable
               ipAddresses={ipAddresses}
@@ -242,6 +214,7 @@ const HostNetworking = () => {
               toggleSection={toggleSection}
             />
 
+            <div id="hw-network-charts" />
             <BandwidthCharts
               chartData={chartData}
               sectionsCollapsed={sectionsCollapsed}

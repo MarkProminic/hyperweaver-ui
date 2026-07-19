@@ -49,20 +49,33 @@ $hw-chart-border-l: #dee2e6 !default;
 $hw-chart-bg-d: #1e2a3a !default; // dark blue-gray background
 $hw-chart-border-d: #37474f !default; // darker border for contrast
 
-// --- Network topology palette (same in both themes today; split like the pairs above if
-// a theme ever needs it) ---
-$hw-zone-active: #f14668 !default; // zone/machine running state
-$hw-zone-inactive: #6b7280 !default; // zone/machine stopped state
-$hw-nic-active: #48c78e !default; // NIC up state
-$hw-nic-inactive: #6b7280 !default; // NIC down state
-$hw-vnic: #ff9f43 !default; // VNIC nodes
-$hw-aggregate: #3273dc !default; // aggregate nodes (also edge-label secondary text)
-$hw-etherstub: #ffdd57 !default; // etherstub nodes
-$hw-node-text-l: #374151 !default; // node labels (light theme)
-$hw-node-text-d: #f8f9fa !default; // node labels (dark theme)
-$hw-vlan-badge: #e74c3c !default; // VLAN badge on topology nodes
-$hw-edge-label-bg: rgba(255, 255, 255, 0.9) !default;
-$hw-edge-label-border: #d1d5db !default;
+// --- Network topology palette ---
+// State colors (up/down/pending/tx) never double as network colors; the eight
+// network hues are assigned per screen, largest network first (topologyPalette.js).
+$hw-topo-up-d: #48c78e !default;
+$hw-topo-up-l: #1d8a5a !default;
+$hw-topo-down-d: #6b7280 !default;
+$hw-topo-down-l: #98a2ad !default;
+$hw-topo-tx-d: #4aa3ff !default;
+$hw-topo-tx-l: #2276cc !default;
+$hw-topo-pending-d: #e8b93e !default;
+$hw-topo-pending-l: #a37f10 !default;
+$hw-topo-idle-flow: #3b82f6 !default;
+$hw-topo-ghost-d: #8b95a1 !default;
+$hw-topo-ghost-l: #93989e !default;
+$hw-topo-net-internal-d: #8b95a1 !default;
+$hw-topo-net-internal-l: #6f7a85 !default;
+$hw-topo-net-1: #e05572 !default; // rose
+$hw-topo-net-2: #4aa3ff !default; // blue
+$hw-topo-net-3-d: #35b57f !default; // green
+$hw-topo-net-3-l: #1d8a5a !default;
+$hw-topo-net-4: #b07ce8 !default; // purple
+$hw-topo-net-5: #ff9f43 !default; // orange
+$hw-topo-net-6-d: #2fbfbf !default; // teal
+$hw-topo-net-6-l: #188f8f !default;
+$hw-topo-net-7: #e87bb4 !default; // pink
+$hw-topo-net-8-d: #c9b458 !default; // khaki
+$hw-topo-net-8-l: #8f7d1f !default;
 
 // --- Console surfaces (deliberately theme-INDEPENDENT: terminals stay dark either way,
 // published as --hw-* custom properties so a theme may still override them) ---
