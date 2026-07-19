@@ -1812,7 +1812,6 @@ DisksStep.propTypes = {
 // reads the zones section; its knobs live under settings./hardware./disks./
 // networks. Empty = agent default, never sent.
 const SYSTEM_FIELDS = [
-  { key: 'bootrom', label: 'Firmware / Boot ROM', options: ['efi', 'bios'] },
   { key: 'hostbridge', label: 'Host Bridge / Chipset', options: ['i440fx'], freeText: true },
   { key: 'vnc', label: 'VNC Console', options: ['on', 'off'] },
   { key: 'acpi', label: 'ACPI', options: ['on', 'off'] },
@@ -1901,6 +1900,17 @@ export const SystemStep = ({
   const knobValues = agentDefaults?.knob_values || null;
   const cpuTopo = Array.isArray(zones.complex_cpu_conf) ? zones.complex_cpu_conf[0] || {} : {};
   const setCpuTopo = patch => setZone('complex_cpu_conf', [{ ...cpuTopo, ...patch }]);
+  // firmware_type ↔ bootrom linkage (converged contract): a non-CSM ROM
+  // boots UEFI only → picking one LOCKS Firmware to UEFI; Firmware BIOS
+  // filters the ROM list to *_CSM entries; explicit bootrom wins agent-side.
+  const bootromValue = String(zones.bootrom ?? '').trim();
+  const bootromLocksUefi =
+    bhyve && bootromValue !== '' && !bootromValue.toUpperCase().endsWith('_CSM');
+  const bootromList = knobValues?.['zones.bootrom'] || [];
+  const bootromChoices =
+    settings.firmware_type === 'BIOS'
+      ? bootromList.filter(rom => String(rom).toUpperCase().endsWith('_CSM'))
+      : bootromList;
 
   return (
     <>
@@ -1971,19 +1981,47 @@ export const SystemStep = ({
             Wires the guest-agent channel (live IPs, guest facts) — the guest runs qemu-ga.
           </span>
         </div>
-        {vbox && (
+        <div className="col-6 col-md-4">
+          <label className="form-label" htmlFor="machine-system-firmware">
+            Firmware
+          </label>
+          <VocabularySelect
+            id="machine-system-firmware"
+            value={settings.firmware_type ?? ''}
+            entries={
+              bootromLocksUefi ? ['UEFI'] : knobValues?.['settings.firmware_type'] || ['UEFI', 'BIOS']
+            }
+            blankLabel={defaultLabel('firmware_type')}
+            onChange={next => setSetting('firmware_type', next)}
+            disabled={loading}
+          />
+          {bootromLocksUefi && (
+            <span className="form-text text-muted">
+              Locked to UEFI — the chosen Boot ROM cannot boot BIOS-style.
+            </span>
+          )}
+        </div>
+        {advanced && bhyve && (
           <div className="col-6 col-md-4">
-            <label className="form-label" htmlFor="machine-system-firmware">
-              Firmware
+            <label className="form-label" htmlFor="machine-zones-bootrom">
+              Boot ROM (override)
             </label>
             <VocabularySelect
-              id="machine-system-firmware"
-              value={settings.firmware_type ?? ''}
-              entries={knobValues?.['settings.firmware_type'] || ['BIOS', 'UEFI']}
-              blankLabel={defaultLabel('firmware_type')}
-              onChange={next => setSetting('firmware_type', next)}
+              id="machine-zones-bootrom"
+              value={zones.bootrom ?? ''}
+              entries={bootromChoices}
+              blankLabel={defaultLabel('bootrom')}
+              onChange={next => {
+                setZone('bootrom', next);
+                if (next && !next.toUpperCase().endsWith('_CSM')) {
+                  setSetting('firmware_type', 'UEFI');
+                }
+              }}
               disabled={loading}
             />
+            <span className="form-text text-muted">
+              Explicit ROM wins over Firmware. BIOS firmware offers only *_CSM ROMs.
+            </span>
           </div>
         )}
         <div className="col-6 col-md-4">
@@ -2484,14 +2522,6 @@ export const ProvisioningStep = ({
           rendered document; blank keeps the package default.
         </p>
         <div className="row g-3">
-          <SettingInput
-            id="machine-setting-firmware_type"
-            label="Firmware Type"
-            placeholder="n/a"
-            value={settings.firmware_type}
-            onChange={e => setSetting('firmware_type', e.target.value)}
-            disabled={loading}
-          />
           <SettingInput
             id="machine-setting-provider_type"
             label="Provider Type"

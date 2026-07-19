@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useServers } from '../contexts/ServerContext';
-import { hasFeature } from '../utils/capabilities';
+import { hasFeature, hasHypervisor } from '../utils/capabilities';
 
 import BootEnvironmentManagement from './Host/BootEnvironmentManagement';
 import DatabasePanel from './Host/DatabasePanel';
@@ -18,6 +18,7 @@ import PackageManagement from './Host/Package/Management';
 import ProcessManagement from './Host/ProcessManagement';
 import ProvisionerManagement from './Host/ProvisionerManagement';
 import ProvisioningNetworkPanel from './Host/ProvisioningNetworkPanel';
+import RecipesManagement from './Host/RecipesManagement';
 import ServiceManagement from './Host/ServiceManagement';
 import StorageManagement from './Host/StorageManagement';
 import TemplatesManagement from './Host/TemplatesManagement';
@@ -74,6 +75,15 @@ const TABS = [
     icon: 'fas fa-diagram-project',
     feature: 'provisioning',
   },
+  // zlogin console recipes — a zoneweaver/bhyve-only capability (platform-
+  // scoped per its sync entry; no token exists), never shown on vbox hosts.
+  {
+    id: 'recipes',
+    label: 'Recipes',
+    icon: 'fas fa-scroll',
+    feature: 'provisioning',
+    bhyveOnly: true,
+  },
   { id: 'templates', label: 'Templates', icon: 'fas fa-compact-disc', feature: 'templates' },
   // Host-level ordered boot/shutdown (catalog §8) — rides `machines`.
   {
@@ -103,6 +113,9 @@ const HostManage = () => {
   const navigate = useNavigate();
 
   const visibleTabs = TABS.filter(tab => {
+    if (tab.bhyveOnly && !hasHypervisor(currentServer, 'bhyve')) {
+      return false;
+    }
     // featuresAny: a tab whose SECTIONS gate individually shows when any
     // of their tokens is live.
     if (tab.featuresAny) {
@@ -366,6 +379,22 @@ const HostManage = () => {
                 </div>
 
                 <ProvisioningNetworkPanel server={currentServer} />
+              </div>
+            )}
+
+            {/* Recipes Tab */}
+            {effectiveTab === 'recipes' && (
+              <div>
+                <div className="mb-4">
+                  <p>
+                    zlogin console recipes on <strong>{currentServer.hostname}</strong> —
+                    early-boot guest automation the <code>zone_setup</code> step runs over the
+                    console before SSH answers. The default recipe per OS family and brand is what
+                    setup picks.
+                  </p>
+                </div>
+
+                <RecipesManagement server={currentServer} />
               </div>
             )}
 

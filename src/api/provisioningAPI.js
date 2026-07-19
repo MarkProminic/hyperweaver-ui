@@ -117,6 +117,39 @@ export const refreshProvisionerFromSource = async (hostname, port, protocol, nam
   );
 
 /**
+ * zlogin recipe registry (zoneweaver/bhyve-only surface — the zone_setup
+ * early-boot console automation). filters = {os_family?, brand?}.
+ */
+export const getRecipes = async (hostname, port, protocol, filters = null) =>
+  await makeAgentRequest(hostname, port, protocol, 'provisioning/recipes', 'GET', null, filters);
+
+export const createRecipe = async (hostname, port, protocol, body) =>
+  await makeAgentRequest(hostname, port, protocol, 'provisioning/recipes', 'POST', body);
+
+/** Partial update — is_default: true auto-unsets the family+brand's previous default. */
+export const updateRecipe = async (hostname, port, protocol, recipeId, body) =>
+  await makeAgentRequest(hostname, port, protocol, `provisioning/recipes/${recipeId}`, 'PUT', body);
+
+export const deleteRecipe = async (hostname, port, protocol, recipeId) =>
+  await makeAgentRequest(hostname, port, protocol, `provisioning/recipes/${recipeId}`, 'DELETE');
+
+/**
+ * Test a recipe. body = {machine_name, variables?, dry_run?}. dry_run
+ * answers {resolved_steps, unresolved_variables} with NO execution; live
+ * EXECUTES over zlogin against the named running machine → {output, errors,
+ * log}.
+ */
+export const testRecipe = async (hostname, port, protocol, recipeId, body) =>
+  await makeAgentRequest(
+    hostname,
+    port,
+    protocol,
+    `provisioning/recipes/${recipeId}/test`,
+    'POST',
+    body
+  );
+
+/**
  * The global secrets document (admin-only; six SHI categories, plain values
  * by design — Mark's ruling).
  */
