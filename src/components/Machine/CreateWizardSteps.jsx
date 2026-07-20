@@ -2385,6 +2385,7 @@ export const ProvisioningStep = ({
   showSafeId,
   settings,
   setSetting,
+  agentDefaults = null,
   fieldConfig,
   answers,
   fieldErrors,
@@ -2405,6 +2406,7 @@ export const ProvisioningStep = ({
   loading,
 }) => {
   const { t } = useTranslation();
+  const defaultLabel = key => agentDefaultLabel(agentDefaults, key);
   return (
     <>
       <div className="row g-3 mb-3">
@@ -2585,7 +2587,7 @@ export const ProvisioningStep = ({
             <SettingInput
               id="machine-setting-provider_type"
               label={t('machineEdit.createWizardSteps.providerType')}
-              placeholder={t('machineEdit.common.na')}
+              placeholder={defaultLabel('provider_type')}
               value={settings.provider_type}
               onChange={e => setSetting('provider_type', e.target.value)}
               disabled={loading}
@@ -2594,7 +2596,7 @@ export const ProvisioningStep = ({
               id="machine-setting-setup_wait"
               label={t('machineEdit.createWizardSteps.setupWaitSeconds')}
               type="number"
-              placeholder={t('machineEdit.common.na')}
+              placeholder={defaultLabel('setup_wait')}
               value={settings.setup_wait}
               onChange={e => setSetting('setup_wait', e.target.value)}
               disabled={loading}
@@ -2610,7 +2612,7 @@ export const ProvisioningStep = ({
                 onChange={e => setSetting('show_console', e.target.value)}
                 disabled={loading}
               >
-                <option value="">{t('machineEdit.common.na')}</option>
+                <option value="">{defaultLabel('show_console')}</option>
                 <option value="true">{t('machineEdit.createWizardSteps.trueValue')}</option>
                 <option value="false">{t('machineEdit.createWizardSteps.falseValue')}</option>
               </select>
@@ -2626,7 +2628,7 @@ export const ProvisioningStep = ({
                 onChange={e => setSetting('debug_build', e.target.value)}
                 disabled={loading}
               >
-                <option value="">{t('machineEdit.common.na')}</option>
+                <option value="">{defaultLabel('debug_build')}</option>
                 <option value="true">{t('machineEdit.createWizardSteps.trueValue')}</option>
                 <option value="false">{t('machineEdit.createWizardSteps.falseValue')}</option>
               </select>
@@ -2642,7 +2644,7 @@ export const ProvisioningStep = ({
                 onChange={e => setSetting('post_provision', e.target.value)}
                 disabled={loading}
               >
-                <option value="">{t('machineEdit.common.na')}</option>
+                <option value="">{defaultLabel('post_provision')}</option>
                 <option value="true">{t('machineEdit.createWizardSteps.trueValue')}</option>
                 <option value="false">{t('machineEdit.createWizardSteps.falseValue')}</option>
               </select>
@@ -2653,7 +2655,7 @@ export const ProvisioningStep = ({
               type="number"
               min={1025}
               max={65535}
-              placeholder={t('machineEdit.common.na')}
+              placeholder={defaultLabel('consoleport')}
               value={settings.consoleport}
               onChange={e => setSetting('consoleport', e.target.value)}
               disabled={loading}
@@ -2661,7 +2663,7 @@ export const ProvisioningStep = ({
             <SettingInput
               id="machine-setting-vagrant_user"
               label={t('machineEdit.createWizardSteps.guestSshUser')}
-              placeholder={t('machineEdit.common.na')}
+              placeholder={defaultLabel('vagrant_user')}
               value={settings.vagrant_user}
               onChange={e => setSetting('vagrant_user', e.target.value)}
               disabled={loading}
@@ -2675,7 +2677,7 @@ export const ProvisioningStep = ({
                 className="form-control"
                 type="password"
                 autoComplete="new-password"
-                placeholder={t('machineEdit.common.na')}
+                placeholder={defaultLabel('vagrant_user_pass')}
                 value={settings.vagrant_user_pass ?? ''}
                 onChange={e => setSetting('vagrant_user_pass', e.target.value)}
                 disabled={loading}
@@ -2692,7 +2694,7 @@ export const ProvisioningStep = ({
                 onChange={e => setSetting('vagrant_ssh_insert_key', e.target.value)}
                 disabled={loading}
               >
-                <option value="">{t('machineEdit.common.na')}</option>
+                <option value="">{defaultLabel('vagrant_ssh_insert_key')}</option>
                 <option value="true">{t('machineEdit.createWizardSteps.trueValue')}</option>
                 <option value="false">{t('machineEdit.createWizardSteps.falseValue')}</option>
               </select>
@@ -2719,6 +2721,7 @@ ProvisioningStep.propTypes = {
   showSafeId: PropTypes.bool,
   settings: PropTypes.object.isRequired,
   setSetting: PropTypes.func.isRequired,
+  agentDefaults: PropTypes.object,
   fieldConfig: PropTypes.object,
   answers: PropTypes.object.isRequired,
   fieldErrors: PropTypes.object,

@@ -62,10 +62,6 @@ const buildNetworkChartData = interfaceGroups => {
         parseFloat((rxMbps + txMbps).toFixed(3)),
       ]);
     });
-
-    console.log(
-      `📊 HISTORICAL CHARTS: Built ${sortedRecords.length} historical points for network ${interfaceName}`
-    );
   });
   return newNetworkChartData;
 };
@@ -115,11 +111,6 @@ const processNetworkHistoricalData = (
 ) => {
   if (networkResult.status === 'fulfilled' && networkResult.value?.success) {
     const networkData = networkResult.value.data?.usage || [];
-    console.log(
-      '📊 HISTORICAL CHARTS: Processing',
-      networkData.length,
-      'historical network records'
-    );
 
     if (isRealtimeResult(networkResult) && updateNetworkChartData) {
       if (networkData.length > 0) {
@@ -150,11 +141,6 @@ const processPoolIOHistoricalData = (
 ) => {
   if (poolIOResult.status === 'fulfilled' && poolIOResult.value?.success) {
     const poolIOData = poolIOResult.value.data?.poolio || [];
-    console.log(
-      '📊 HISTORICAL CHARTS: Processing',
-      poolIOData.length,
-      'historical pool I/O records'
-    );
 
     if (isRealtimeResult(poolIOResult) && updatePoolIOChartData) {
       if (poolIOData.length > 0) {
@@ -189,7 +175,6 @@ const processPoolIOHistoricalData = (
 const processARCHistoricalData = (arcResult, setArcChartData, setArcStats, updateARCChartData) => {
   if (arcResult.status === 'fulfilled' && arcResult.value?.success) {
     const arcData = arcResult.value.data?.arc || [];
-    console.log('📊 HISTORICAL CHARTS: Processing', arcData.length, 'historical ARC records');
 
     arcData.sort((a, b) => new Date(a.scan_timestamp) - new Date(b.scan_timestamp));
 
@@ -250,7 +235,6 @@ const processCPUHistoricalDataHelper = (
 ) => {
   if (cpuResult.status === 'fulfilled' && cpuResult.value?.success) {
     const cpuData = cpuResult.value.data?.cpu || [];
-    console.log('📊 HISTORICAL CHARTS: Processing', cpuData.length, 'historical CPU records');
 
     if (isRealtimeResult(cpuResult) && updateCPUChartData && updateCPUCoreChartData) {
       if (cpuData.length > 0) {
@@ -279,7 +263,6 @@ const processMemoryHistoricalDataHelper = (
 ) => {
   if (memoryResult.status === 'fulfilled' && memoryResult.value?.success) {
     const memoryData = memoryResult.value.data?.memory || [];
-    console.log('📊 HISTORICAL CHARTS: Processing', memoryData.length, 'historical memory records');
 
     if (isRealtimeResult(memoryResult) && updateMemoryChartData) {
       if (memoryData.length > 0) {
@@ -389,10 +372,11 @@ export const loadHistoricalChartData = async ({
   }
 
   try {
-    console.log('📊 HISTORICAL CHARTS: Loading historical data for time window:', timeWindow);
-
     const historicalTimestamp = getHistoricalTimestamp(timeWindow);
-    console.log('📊 HISTORICAL CHARTS: Requesting data since:', historicalTimestamp);
+    // Pool-I/O and ARC are ZFS-shaped wires — agents without the `zfs`
+    // token are never asked (their charts hide for the same reason).
+    const zfsAvailable = hasFeature(currentServer, 'zfs');
+    const skipped = Promise.resolve({ success: false, message: 'token not advertised' });
 
     const results = await Promise.allSettled([
       makeAgentRequest(
@@ -401,18 +385,22 @@ export const loadHistoricalChartData = async ({
         currentServer.protocol,
         `monitoring/network/usage?since=${encodeURIComponent(historicalTimestamp)}&limit=${getResolutionLimit(resolution)}&per_interface=true`
       ),
-      makeAgentRequest(
-        currentServer.hostname,
-        currentServer.port,
-        currentServer.protocol,
-        `monitoring/storage/pool-io?limit=${getResolutionLimit(resolution)}&per_pool=true&since=${encodeURIComponent(historicalTimestamp)}`
-      ),
-      makeAgentRequest(
-        currentServer.hostname,
-        currentServer.port,
-        currentServer.protocol,
-        `monitoring/storage/arc?limit=${getResolutionLimit(resolution)}&since=${encodeURIComponent(historicalTimestamp)}`
-      ),
+      zfsAvailable
+        ? makeAgentRequest(
+            currentServer.hostname,
+            currentServer.port,
+            currentServer.protocol,
+            `monitoring/storage/pool-io?limit=${getResolutionLimit(resolution)}&per_pool=true&since=${encodeURIComponent(historicalTimestamp)}`
+          )
+        : skipped,
+      zfsAvailable
+        ? makeAgentRequest(
+            currentServer.hostname,
+            currentServer.port,
+            currentServer.protocol,
+            `monitoring/storage/arc?limit=${getResolutionLimit(resolution)}&since=${encodeURIComponent(historicalTimestamp)}`
+          )
+        : skipped,
       makeAgentRequest(
         currentServer.hostname,
         currentServer.port,
@@ -450,8 +438,6 @@ export const loadHistoricalChartData = async ({
       setMemoryStats,
       updateMemoryChartData
     );
-
-    console.log('📊 HISTORICAL CHARTS: Completed loading historical data for all chart types');
 
     updateLastChartTimestampsFromResults(results, setLastChartTimestamps);
   } catch (error) {

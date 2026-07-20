@@ -586,7 +586,7 @@ export const ImportPoolModal = ({ isOpen, onClose, server, onQueued }) => {
     });
   }, [isOpen, server, t]);
 
-  const names = Array.isArray(importable?.pools) ? importable.pools : [];
+  const pools = Array.isArray(importable?.pools) ? importable.pools : [];
 
   const handleSubmit = async () => {
     if (!poolName.trim()) {
@@ -636,7 +636,7 @@ export const ImportPoolModal = ({ isOpen, onClose, server, onQueued }) => {
             <label className="form-label" htmlFor="zpool-import-name">
               {t('host.importPoolModal.poolLabel')} <span className="text-danger">*</span>
             </label>
-            {names.length > 0 ? (
+            {pools.length > 0 ? (
               <select
                 id="zpool-import-name"
                 className="form-select"
@@ -645,9 +645,11 @@ export const ImportPoolModal = ({ isOpen, onClose, server, onQueued }) => {
                 disabled={loading}
               >
                 <option value="">{t('host.importPoolModal.selectPoolPlaceholder')}</option>
-                {names.map(entry => (
-                  <option key={entry} value={entry}>
-                    {entry}
+                {pools.map(entry => (
+                  <option key={entry.id || entry.name} value={entry.name}>
+                    {entry.name}
+                    {entry.state ? ` — ${entry.state}` : ''}
+                    {entry.id ? ` · ${entry.id}` : ''}
                   </option>
                 ))}
               </select>

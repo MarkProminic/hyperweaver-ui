@@ -309,11 +309,6 @@ export const useHostData = currentServer => {
 
   // Load data when server changes - sequential loading pattern
   useEffect(() => {
-    console.log('🔍 HOST: Server changed effect triggered', {
-      currentServer: currentServer?.hostname,
-      hasRequest: !!makeAgentRequest,
-    });
-
     if (currentServer && makeAgentRequest) {
       // Re-seed chart state from the session cache when the agent changes (or
       // the hook remounts), so realtime charts pick their history back up
@@ -337,7 +332,6 @@ export const useHostData = currentServer => {
       loadHostData(currentServer).then(() => {
         setInitialDataLoaded(true);
         initialLoadDone.current = true;
-        console.log('🔍 HOST: Initial data loading completed - preventing duplicate calls');
       });
     }
   }, [currentServer, makeAgentRequest, loadHistoricalChartData, loadHostData]);
@@ -367,14 +361,9 @@ export const useHostData = currentServer => {
   // Load historical chart data when time window or resolution changes
   useEffect(() => {
     if (currentServer && makeAgentRequest && initialLoadDone.current) {
-      console.log(
-        '📊 HISTORICAL CHARTS: Time window or resolution changed, loading historical data'
-      );
       // Reset timestamps when time window or resolution changes
       setLastChartTimestamps(emptyChartTimestamps);
       loadHistoricalChartData();
-    } else if (!initialLoadDone.current) {
-      console.log('📊 HISTORICAL CHARTS: Skipping settings change during initial load');
     }
   }, [timeWindow, resolution, currentServer, makeAgentRequest, loadHistoricalChartData]);
 
@@ -385,12 +374,8 @@ export const useHostData = currentServer => {
         return;
       }
 
-      console.log('🔄 REFRESH: Starting combined refresh for host data and charts');
-
       // Run both in parallel
       await Promise.all([loadHostData(server), loadRecentChartData()]);
-
-      console.log('🔄 REFRESH: Completed combined refresh');
     },
     [currentServer, loadHostData, loadRecentChartData]
   );
@@ -398,20 +383,14 @@ export const useHostData = currentServer => {
   // Auto-refresh effect - wait for initial data to load before starting
   useEffect(() => {
     if (!refreshInterval || refreshInterval === 0 || !currentServer || !initialDataLoaded) {
-      if (!initialDataLoaded) {
-        console.log('🔄 HOST: Auto-refresh waiting for initial data load to complete');
-      }
       return undefined;
     }
 
-    console.log('🔄 HOST: Setting up auto-refresh every', refreshInterval, 'seconds');
     const interval = setInterval(() => {
-      console.log('🔄 HOST: Auto-refreshing host data and charts...');
       refreshAllData(currentServer);
     }, refreshInterval * 1000);
 
     return () => {
-      console.log('🔄 HOST: Cleaning up auto-refresh interval');
       clearInterval(interval);
     };
   }, [refreshInterval, currentServer, initialDataLoaded, refreshAllData]);

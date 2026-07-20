@@ -1248,6 +1248,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           showSafeId={needsSafeId}
           settings={settings}
           setSetting={setSetting}
+          agentDefaults={agentDefaults}
           fieldConfig={fieldConfig}
           answers={properties}
           fieldErrors={fieldErrors}

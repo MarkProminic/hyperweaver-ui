@@ -369,6 +369,13 @@
       "registrationFailed": "Falló el registro",
       "passwordChangeFailed": "Falló el cambio de contraseña",
       "getProfileFailed": "Fallo al obtener el perfil"
+    },
+    "errorBoundary": {
+      "chunkTitle": "Se ha desplegado una nueva versión",
+      "chunkBody": "Esta pestaña ejecuta una compilación antigua y no pudo cargar parte de la aplicación actualizada. Recargar toma la nueva versión.",
+      "crashTitle": "Algo salió mal",
+      "crashBody": "La página encontró un error inesperado. Recargar suele recuperarla.",
+      "reload": "Recargar"
     }
   },
   "artifacts": {

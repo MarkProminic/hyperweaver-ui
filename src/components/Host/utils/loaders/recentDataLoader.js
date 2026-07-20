@@ -6,7 +6,6 @@ import { hasFeature } from '../../../../utils/capabilities';
 const processNetworkRecentData = (networkResult, updateNetworkChartData) => {
   if (networkResult.status === 'fulfilled' && networkResult.value?.success) {
     const networkData = networkResult.value.data?.usage || [];
-    console.log('🔄 RECENT CHARTS: Processing', networkData.length, 'recent network records');
 
     if (networkData.length > 0) {
       updateNetworkChartData(networkData);
@@ -36,7 +35,6 @@ const processNetworkRecentData = (networkResult, updateNetworkChartData) => {
 const processPoolIORecentData = (poolIOResult, updatePoolIOChartData) => {
   if (poolIOResult.status === 'fulfilled' && poolIOResult.value?.success) {
     const poolIOData = poolIOResult.value.data?.poolio || [];
-    console.log('🔄 RECENT CHARTS: Processing', poolIOData.length, 'recent pool I/O records');
 
     if (poolIOData.length > 0) {
       updatePoolIOChartData(poolIOData);
@@ -56,7 +54,6 @@ const processPoolIORecentData = (poolIOResult, updatePoolIOChartData) => {
 const processARCRecentData = (arcResult, updateARCChartData) => {
   if (arcResult.status === 'fulfilled' && arcResult.value?.success) {
     const arcData = arcResult.value.data?.arc || [];
-    console.log('🔄 RECENT CHARTS: Processing', arcData.length, 'recent ARC records');
 
     if (arcData.length > 0) {
       updateARCChartData(arcData);
@@ -76,7 +73,6 @@ const processARCRecentData = (arcResult, updateARCChartData) => {
 const processCPURecentData = (cpuResult, updateCPUChartData, updateCPUCoreChartData) => {
   if (cpuResult.status === 'fulfilled' && cpuResult.value?.success) {
     const cpuData = cpuResult.value.data?.cpu || [];
-    console.log('🔄 RECENT CHARTS: Processing', cpuData.length, 'recent CPU records');
 
     if (cpuData.length > 0) {
       updateCPUChartData(cpuData);
@@ -97,7 +93,6 @@ const processCPURecentData = (cpuResult, updateCPUChartData, updateCPUCoreChartD
 const processMemoryRecentData = (memoryResult, updateMemoryChartData) => {
   if (memoryResult.status === 'fulfilled' && memoryResult.value?.success) {
     const memoryData = memoryResult.value.data?.memory || [];
-    console.log('🔄 RECENT CHARTS: Processing', memoryData.length, 'recent memory records');
 
     if (memoryData.length > 0) {
       updateMemoryChartData(memoryData);
@@ -135,11 +130,8 @@ export const loadRecentChartData = async ({
   }
 
   try {
-    console.log('🔄 RECENT CHARTS: Loading recent chart data for refresh');
-
     const hasTimestamps = Object.values(lastChartTimestamps).some(timestamp => timestamp !== null);
     if (!hasTimestamps) {
-      console.log('🔄 RECENT CHARTS: No timestamps found, falling back to historical load');
       loadHistoricalChartDataFn();
       return;
     }
@@ -223,8 +215,6 @@ export const loadRecentChartData = async ({
     if (Object.keys(newTimestamps).length > 0) {
       setLastChartTimestamps(prev => ({ ...prev, ...newTimestamps }));
     }
-
-    console.log('🔄 RECENT CHARTS: Completed loading recent data for all chart types');
   } catch (error) {
     console.error('🔄 RECENT CHARTS: Error loading recent chart data:', error);
   }

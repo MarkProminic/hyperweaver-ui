@@ -65,23 +65,20 @@ export const useMachineDetails = (currentServer, currentMachine) => {
           setError('');
         }
 
-        const result = await makeAgentRequest(
-          server.hostname,
-          server.port,
-          server.protocol,
-          `machines/${machineName}`
-        );
-
-        if (result.success) {
-          const machineData = { ...result.data };
-
-          // Fire off monitoring data load in the background
-          loadMonitoringData(server);
-
-          // Automatically poll VNC session info — only on agents advertising the vnc console
-          if (hasConsole(server, 'vnc')) {
-            try {
-              const vncResult = await makeAgentRequest(
+        // The detail fetch and the console-session auto-polls (VNC on the
+        // `vnc` console token, zlogin on `zlogin`) are independent — ONE
+        // parallel fan-out instead of three serial round-trips per select
+        // and per 30s poll.
+        const skipped = Promise.resolve(null);
+        const [detailSettled, vncSettled, zloginSettled] = await Promise.allSettled([
+          makeAgentRequest(
+            server.hostname,
+            server.port,
+            server.protocol,
+            `machines/${machineName}`
+          ),
+          hasConsole(server, 'vnc')
+            ? makeAgentRequest(
                 server.hostname,
                 server.port,
                 server.protocol,
@@ -89,36 +86,11 @@ export const useMachineDetails = (currentServer, currentMachine) => {
                 'GET',
                 null,
                 null,
-                true // bypass cache
-              );
-
-              if (vncResult.success && vncResult.data && vncResult.data.active_vnc_session) {
-                // Use VNC-specific data instead of the basic machine API flag
-                machineData.active_vnc_session = vncResult.data.active_vnc_session;
-                machineData.vnc_session_info = vncResult.data.vnc_session_info;
-              } else {
-                // Clear any stale VNC flags from the basic machine API
-                machineData.active_vnc_session = false;
-                machineData.vnc_session_info = null;
-              }
-            } catch (vncError) {
-              console.warn(
-                `⚠️ VNC AUTO-POLL: Failed to check VNC session for ${machineName}:`,
-                vncError
-              );
-              // Clear VNC flags on polling failure to prevent stale data
-              machineData.active_vnc_session = false;
-              machineData.vnc_session_info = null;
-            }
-          } else {
-            machineData.active_vnc_session = false;
-            machineData.vnc_session_info = null;
-          }
-
-          // Automatically poll zlogin sessions — only on agents advertising the zlogin console
-          if (hasConsole(server, 'zlogin')) {
-            try {
-              const zloginResult = await makeAgentRequest(
+                true
+              )
+            : skipped,
+          hasConsole(server, 'zlogin')
+            ? makeAgentRequest(
                 server.hostname,
                 server.port,
                 server.protocol,
@@ -126,41 +98,47 @@ export const useMachineDetails = (currentServer, currentMachine) => {
                 'GET',
                 null,
                 null,
-                true // bypass cache
-              );
+                true
+              )
+            : skipped,
+        ]);
 
-              if (zloginResult.success && zloginResult.data) {
-                const activeSessions = Array.isArray(zloginResult.data)
-                  ? zloginResult.data
-                  : zloginResult.data.sessions || [];
+        const result = detailSettled.status === 'fulfilled' ? detailSettled.value : null;
+        if (result?.success) {
+          const machineData = { ...result.data };
 
-                const activeMachineSession = activeSessions.find(
-                  session => session.machine_name === machineName && session.status === 'active'
-                );
+          // Fire off monitoring data load in the background
+          loadMonitoringData(server);
 
-                if (activeMachineSession) {
-                  machineData.zlogin_session = activeMachineSession;
-                  machineData.active_zlogin_session = true;
+          const vncResult = vncSettled.status === 'fulfilled' ? vncSettled.value : null;
+          if (vncResult?.success && vncResult.data?.active_vnc_session) {
+            // Use VNC-specific data instead of the basic machine API flag
+            machineData.active_vnc_session = vncResult.data.active_vnc_session;
+            machineData.vnc_session_info = vncResult.data.vnc_session_info;
+          } else {
+            // Clear any stale VNC flags from the basic machine API
+            machineData.active_vnc_session = false;
+            machineData.vnc_session_info = null;
+          }
 
-                  // Initialize ZoneTerminalContext with the existing session
-                  initializeSessionFromExisting(server, machineName, activeMachineSession);
-                } else {
-                  machineData.zlogin_session = null;
-                  machineData.active_zlogin_session = false;
-                }
-              } else {
-                machineData.zlogin_session = null;
-                machineData.active_zlogin_session = false;
-              }
-            } catch (zloginError) {
-              console.warn(
-                `⚠️ ZLOGIN AUTO-POLL: Failed to check zlogin sessions for ${machineName}:`,
-                zloginError
-              );
-              // Clear zlogin flags on polling failure
-              machineData.zlogin_session = null;
-              machineData.active_zlogin_session = false;
+          const zloginResult = zloginSettled.status === 'fulfilled' ? zloginSettled.value : null;
+          const activeSessions = (() => {
+            if (!zloginResult?.success || !zloginResult.data) {
+              return [];
             }
+            return Array.isArray(zloginResult.data)
+              ? zloginResult.data
+              : zloginResult.data.sessions || [];
+          })();
+          const activeMachineSession = activeSessions.find(
+            session => session.machine_name === machineName && session.status === 'active'
+          );
+          if (activeMachineSession) {
+            machineData.zlogin_session = activeMachineSession;
+            machineData.active_zlogin_session = true;
+
+            // Initialize ZoneTerminalContext with the existing session
+            initializeSessionFromExisting(server, machineName, activeMachineSession);
           } else {
             machineData.zlogin_session = null;
             machineData.active_zlogin_session = false;
@@ -181,9 +159,13 @@ export const useMachineDetails = (currentServer, currentMachine) => {
         } else if (background) {
           // A transient failure mid-poll keeps the stale-but-working view —
           // never blank the page or kill live consoles over one bad answer.
-          console.warn(`Background detail refresh failed for ${machineName}: ${result.message}`);
+          console.warn(
+            `Background detail refresh failed for ${machineName}: ${result?.message || 'request failed'}`
+          );
         } else {
-          setError(`Failed to fetch details for ${machineName}: ${result.message}`);
+          setError(
+            `Failed to fetch details for ${machineName}: ${result?.message || 'request failed'}`
+          );
           setMachineDetails({});
         }
       } catch (err) {

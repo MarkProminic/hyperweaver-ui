@@ -369,6 +369,13 @@
       "registrationFailed": "Registration failed",
       "passwordChangeFailed": "Password change failed",
       "getProfileFailed": "Failed to get profile"
+    },
+    "errorBoundary": {
+      "chunkTitle": "A new version was deployed",
+      "chunkBody": "This tab is running an older build and could not load part of the updated app. Reloading picks up the new version.",
+      "crashTitle": "Something went wrong",
+      "crashBody": "The page hit an unexpected error. Reloading usually recovers it.",
+      "reload": "Reload"
     }
   },
   "artifacts": {

@@ -123,21 +123,7 @@ export const createAxiosConfig = ({
   return config;
 };
 
-/**
- * Make a request to a Agent through the proxy
- * @param {string} hostname - Server hostname
- * @param {number} port - Server port
- * @param {string} protocol - Server protocol
- * @param {string} path - API path
- * @param {string} method - HTTP method (GET, POST, DELETE, etc.)
- * @param {Object} data - Request body data
- * @param {Object} params - URL parameters
- * @param {boolean} bypassCache - Force bypass cache for this request
- * @param {Function} onUploadProgress - Upload progress callback for FormData
- * @param {string} responseType - Response type ('json', 'blob', 'text', etc.)
- * @returns {Promise<Object>} Request result
- */
-export const makeAgentRequest = async (...args) => {
+const performAgentRequest = async (...args) => {
   // Destructure arguments to maintain backward compatibility while satisfying max-params rule
   const [
     hostname,
@@ -190,7 +176,7 @@ export const makeAgentRequest = async (...args) => {
         const bustingPath = path.includes('?')
           ? `${path}&_cb=${Date.now()}`
           : `${path}?_cb=${Date.now()}`;
-        return await makeAgentRequest(
+        return await performAgentRequest(
           hostname,
           port,
           protocol,
@@ -218,6 +204,62 @@ export const makeAgentRequest = async (...args) => {
       data: error.response?.data,
     };
   }
+};
+
+// Concurrent IDENTICAL plain GETs share one in-flight request — several
+// widgets asking the same agent for the same path in the same tick (e.g.
+// /stats from the machine list, host overview, and dashboard) cost one
+// round-trip instead of N. Mutations, cache-bypassed reads, uploads,
+// non-JSON responses, and ws-ticket (single-use mint) never share.
+const inflightGets = new Map();
+
+/**
+ * Make a request to a Agent through the proxy
+ * @param {string} hostname - Server hostname
+ * @param {number} port - Server port
+ * @param {string} protocol - Server protocol
+ * @param {string} path - API path
+ * @param {string} method - HTTP method (GET, POST, DELETE, etc.)
+ * @param {Object} data - Request body data
+ * @param {Object} params - URL parameters
+ * @param {boolean} bypassCache - Force bypass cache for this request
+ * @param {Function} onUploadProgress - Upload progress callback for FormData
+ * @param {string} responseType - Response type ('json', 'blob', 'text', etc.)
+ * @returns {Promise<Object>} Request result
+ */
+export const makeAgentRequest = (...args) => {
+  const [
+    hostname,
+    port,
+    protocol,
+    path,
+    method = 'GET',
+    data = null,
+    params = null,
+    bypassCache = false,
+    onUploadProgress = null,
+    responseType = 'json',
+  ] = args;
+  const shareable =
+    method === 'GET' &&
+    !data &&
+    !bypassCache &&
+    !onUploadProgress &&
+    responseType === 'json' &&
+    path !== 'ws-ticket';
+  if (!shareable) {
+    return performAgentRequest(...args);
+  }
+  const key = `${protocol}:${hostname}:${port}:${path}:${params ? JSON.stringify(params) : ''}`;
+  const existing = inflightGets.get(key);
+  if (existing) {
+    return existing;
+  }
+  const request = performAgentRequest(...args).finally(() => {
+    inflightGets.delete(key);
+  });
+  inflightGets.set(key, request);
+  return request;
 };
 
 /**
