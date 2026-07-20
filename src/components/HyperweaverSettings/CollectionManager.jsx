@@ -59,17 +59,22 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
       if (response.data.success) {
         setItems(response.data.items);
       } else {
-        setMsg(
-          t('settings.collectionManager.failedToLoad', { label, message: response.data.message })
-        );
+        setMsg({
+          text: t('settings.collectionManager.failedToLoad', {
+            label,
+            message: response.data.message,
+          }),
+          variant: 'danger',
+        });
       }
     } catch (error) {
-      setMsg(
-        t('settings.collectionManager.errorLoading', {
+      setMsg({
+        text: t('settings.collectionManager.errorLoading', {
           label,
           error: error.response?.data?.message || error.message,
-        })
-      );
+        }),
+        variant: 'danger',
+      });
     } finally {
       setListLoading(false);
     }
@@ -138,7 +143,7 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
       e.preventDefault();
       const err = validate();
       if (err) {
-        setMsg(err);
+        setMsg({ text: err, variant: 'warning' });
         return;
       }
       const isEdit = editingKey !== null;
@@ -151,27 +156,29 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
           : await axios.post(endpoint, { key: itemKey, values: itemValues });
 
         if (response.data.success) {
-          setMsg(response.data.message);
+          setMsg({ text: response.data.message, variant: 'success' });
           if (response.data.requiresRestart) {
             setRequiresRestart(true);
           }
           setShowModal(false);
           await loadItems();
         } else {
-          setMsg(
-            t('settings.collectionManager.failedToSave', {
+          setMsg({
+            text: t('settings.collectionManager.failedToSave', {
               itemNoun,
               message: response.data.message,
-            })
-          );
+            }),
+            variant: 'danger',
+          });
         }
       } catch (error) {
-        setMsg(
-          t('settings.collectionManager.errorSaving', {
+        setMsg({
+          text: t('settings.collectionManager.errorSaving', {
             itemNoun,
             error: error.response?.data?.message || error.message,
-          })
-        );
+          }),
+          variant: 'danger',
+        });
       } finally {
         setSubmitting(false);
       }
@@ -197,26 +204,28 @@ const CollectionManager = ({ field, setMsg, setRequiresRestart, loading }) => {
       setSubmitting(true);
       const response = await axios.delete(`${endpoint}/${encodeURIComponent(key)}`);
       if (response.data.success) {
-        setMsg(response.data.message);
+        setMsg({ text: response.data.message, variant: 'success' });
         if (response.data.requiresRestart) {
           setRequiresRestart(true);
         }
         await loadItems();
       } else {
-        setMsg(
-          t('settings.collectionManager.failedToDelete', {
+        setMsg({
+          text: t('settings.collectionManager.failedToDelete', {
             itemNoun,
             message: response.data.message,
-          })
-        );
+          }),
+          variant: 'danger',
+        });
       }
     } catch (error) {
-      setMsg(
-        t('settings.collectionManager.errorDeleting', {
+      setMsg({
+        text: t('settings.collectionManager.errorDeleting', {
           itemNoun,
           error: error.response?.data?.message || error.message,
-        })
-      );
+        }),
+        variant: 'danger',
+      });
     } finally {
       setSubmitting(false);
     }

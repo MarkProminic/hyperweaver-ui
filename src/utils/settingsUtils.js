@@ -279,7 +279,7 @@ export const processConfig = config => {
           // Add to main section
           organizedSections[section].fields.push(fieldData);
         }
-      } else if (isNestedObject(value)) {
+      } else if (isNestedObject(value) && !Object.hasOwn(value, 'value')) {
         // This is a nested object, recurse with section inference
         const inferredSection = inferSection(fullPath) || sectionName;
         processObject(value, fullPath, inferredSection);

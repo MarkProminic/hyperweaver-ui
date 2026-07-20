@@ -1,5 +1,7 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import Dropdown from 'react-bootstrap/Dropdown';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,6 +17,8 @@ import DashboardQuickActions from './DashboardQuickActions';
 import DashboardServerCards from './DashboardServerCards';
 import DashboardSummaryCards from './DashboardSummaryCards';
 import { calculateInfrastructureSummary } from './dashboardUtils';
+import DashboardWidget from './DashboardWidget';
+import useDashboardLayout from './useDashboardLayout';
 
 /**
  * Multi-Host Application Overview Dashboard
@@ -40,6 +44,8 @@ const Dashboard = () => {
   } = useServers();
   const { isDirect } = useMode();
   const navigate = useNavigate();
+  const { layout, draggingId, setDraggingId, moveWidget, toggleCollapsed, toggleHidden } =
+    useDashboardLayout();
 
   const topologyFeed = useTopologyFeed({ scope: 'all' });
   const topologyByHost = useMemo(
@@ -208,6 +214,47 @@ const Dashboard = () => {
 
   const { summary } = infrastructureData;
 
+  const widgetAvailable = id => (id === 'topology' ? !isDirect && servers.length > 0 : true);
+
+  const widgetBody = id => {
+    if (id === 'summary') {
+      return summary ? (
+        <DashboardSummaryCards
+          summary={summary}
+          onShowHealthModal={() => setShowHealthModal(true)}
+        />
+      ) : null;
+    }
+    if (id === 'quickActions') {
+      return (
+        <DashboardQuickActions
+          servers={infrastructureData.servers || []}
+          summary={summary || {}}
+          onNavigateZoneRegister={navigateToZoneRegister}
+          onNavigateZones={navigateToZones}
+          onNavigateServerRegister={navigateToServerRegister}
+          onNavigateSettings={navigateToSettings}
+        />
+      );
+    }
+    if (id === 'serverCards') {
+      return (
+        <DashboardServerCards
+          servers={infrastructureData.servers || []}
+          onNavigateToServer={navigateToServer}
+          topologyByHost={topologyByHost}
+        />
+      );
+    }
+    return (
+      <div className="card mb-0">
+        <div className="card-body">
+          <TopologyPanel fixedScope="all" sharedFeed={topologyFeed} />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="hw-page-content-scrollable">
       <Helmet>
@@ -247,7 +294,31 @@ const Dashboard = () => {
                     )}
                   </p>
                 </div>
-                <div>
+                <div className="d-flex gap-2">
+                  <Dropdown as={ButtonGroup} align="end" autoClose="outside">
+                    <Dropdown.Toggle variant="outline-secondary" size="sm">
+                      <i className="fas fa-table-columns me-2" />
+                      {t('dashboard.widgets.menu')}
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu>
+                      {layout
+                        .filter(row => widgetAvailable(row.id))
+                        .map(row => (
+                          <label
+                            key={row.id}
+                            className="dropdown-item d-flex align-items-center gap-2 mb-0 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              className="form-check-input m-0"
+                              checked={!row.hidden}
+                              onChange={() => toggleHidden(row.id)}
+                            />
+                            {t(`dashboard.widgets.${row.id}`)}
+                          </label>
+                        ))}
+                    </Dropdown.Menu>
+                  </Dropdown>
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-secondary"
@@ -276,39 +347,27 @@ const Dashboard = () => {
             </div>
           )}
 
-          {summary && (
-            <DashboardSummaryCards
-              summary={summary}
-              onShowHealthModal={() => setShowHealthModal(true)}
-            />
-          )}
-
-          <DashboardQuickActions
-            servers={infrastructureData.servers || []}
-            summary={summary || {}}
-            onNavigateZoneRegister={navigateToZoneRegister}
-            onNavigateZones={navigateToZones}
-            onNavigateServerRegister={navigateToServerRegister}
-            onNavigateSettings={navigateToSettings}
-          />
-
-          <DashboardServerCards
-            servers={infrastructureData.servers || []}
-            onNavigateToServer={navigateToServer}
-            topologyByHost={topologyByHost}
-          />
-
-          {!isDirect && servers.length > 0 && (
-            <div className="card mb-3">
-              <div className="card-body">
-                <h2 className="fs-5 fw-bold mb-3">
-                  <i className="fas fa-project-diagram me-2" />
-                  {t('dashboard.dashboard.datacenterTopology')}
-                </h2>
-                <TopologyPanel fixedScope="all" sharedFeed={topologyFeed} />
-              </div>
-            </div>
-          )}
+          {layout
+            .filter(row => widgetAvailable(row.id) && !row.hidden)
+            .map(row => (
+              <DashboardWidget
+                key={row.id}
+                id={row.id}
+                title={t(`dashboard.widgets.${row.id}`)}
+                collapsed={row.collapsed}
+                dragging={draggingId === row.id}
+                onDragStart={setDraggingId}
+                onDragEnd={() => setDraggingId(null)}
+                onDropOn={targetId => {
+                  moveWidget(draggingId, targetId);
+                  setDraggingId(null);
+                }}
+                onToggleCollapsed={toggleCollapsed}
+                onHide={toggleHidden}
+              >
+                {widgetBody(row.id)}
+              </DashboardWidget>
+            ))}
 
           <DashboardHealthModal
             isOpen={showHealthModal}

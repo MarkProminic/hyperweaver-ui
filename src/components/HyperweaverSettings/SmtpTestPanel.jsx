@@ -17,14 +17,14 @@ const SmtpTestPanel = ({
   const testMailConnection = useCallback(async () => {
     const testKey = 'mail';
     if (!testEmail) {
-      setMsg(t('settings.smtpTestPanel.enterEmail'));
+      setMsg({ text: t('settings.smtpTestPanel.enterEmail'), variant: 'warning' });
       return;
     }
 
     try {
       setTestLoading(prev => ({ ...prev, [testKey]: true }));
       setTestResults(prev => ({ ...prev, [testKey]: null }));
-      setMsg(t('settings.smtpTestPanel.testing'));
+      setMsg({ text: t('settings.smtpTestPanel.testing'), variant: 'info' });
 
       const response = await axios.post('/api/mail/test', { testEmail });
 
@@ -37,7 +37,7 @@ const SmtpTestPanel = ({
             details: response.data.details,
           },
         }));
-        setMsg(t('settings.smtpTestPanel.testSuccess'));
+        setMsg({ text: t('settings.smtpTestPanel.testSuccess'), variant: 'success' });
       } else {
         setTestResults(prev => ({
           ...prev,
@@ -47,7 +47,10 @@ const SmtpTestPanel = ({
             error: response.data.error,
           },
         }));
-        setMsg(t('settings.smtpTestPanel.testFailed', { message: response.data.message }));
+        setMsg({
+          text: t('settings.smtpTestPanel.testFailed', { message: response.data.message }),
+          variant: 'danger',
+        });
       }
     } catch (error) {
       console.error('Mail test error:', error);
@@ -59,11 +62,12 @@ const SmtpTestPanel = ({
           error: error.response?.data?.error || error.message,
         },
       }));
-      setMsg(
-        t('settings.smtpTestPanel.testError', {
+      setMsg({
+        text: t('settings.smtpTestPanel.testError', {
           error: error.response?.data?.message || error.message,
-        })
-      );
+        }),
+        variant: 'danger',
+      });
     } finally {
       setTestLoading(prev => ({ ...prev, [testKey]: false }));
     }

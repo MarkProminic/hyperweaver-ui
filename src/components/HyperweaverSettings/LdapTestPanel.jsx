@@ -20,7 +20,7 @@ const LdapTestPanel = ({
     try {
       setTestLoading(prev => ({ ...prev, [testKey]: true }));
       setTestResults(prev => ({ ...prev, [testKey]: null }));
-      setMsg(t('settings.ldapTestPanel.testing'));
+      setMsg({ text: t('settings.ldapTestPanel.testing'), variant: 'info' });
 
       const payload = {};
       if (ldapTestCredentials.testUsername && ldapTestCredentials.testPassword) {
@@ -39,7 +39,7 @@ const LdapTestPanel = ({
             details: response.data.details,
           },
         }));
-        setMsg(t('settings.ldapTestPanel.testSuccess'));
+        setMsg({ text: t('settings.ldapTestPanel.testSuccess'), variant: 'success' });
       } else {
         setTestResults(prev => ({
           ...prev,
@@ -49,7 +49,10 @@ const LdapTestPanel = ({
             error: response.data.error,
           },
         }));
-        setMsg(t('settings.ldapTestPanel.testFailed', { message: response.data.message }));
+        setMsg({
+          text: t('settings.ldapTestPanel.testFailed', { message: response.data.message }),
+          variant: 'danger',
+        });
       }
     } catch (error) {
       console.error('LDAP test error:', error);
@@ -61,11 +64,12 @@ const LdapTestPanel = ({
           error: error.response?.data?.error || error.message,
         },
       }));
-      setMsg(
-        t('settings.ldapTestPanel.testError', {
+      setMsg({
+        text: t('settings.ldapTestPanel.testError', {
           error: error.response?.data?.message || error.message,
-        })
-      );
+        }),
+        variant: 'danger',
+      });
     } finally {
       setTestLoading(prev => ({ ...prev, [testKey]: false }));
     }

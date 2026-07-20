@@ -54,7 +54,7 @@ const ServerManagementTab = ({
     setUseExistingApiKey(false);
     setAllowInsecure(false);
     setTestResult(null);
-    setMsg('');
+    setMsg(null);
   }, [
     setHostname,
     setPort,
@@ -71,15 +71,18 @@ const ServerManagementTab = ({
     async serverId => {
       try {
         setLoading(true);
-        setMsg('');
+        setMsg(null);
         const result = await removeServer(serverId);
         if (result.success) {
-          setMsg(t('settings.serverManagementTab.serverRemoved'));
+          setMsg({ text: t('settings.serverManagementTab.serverRemoved'), variant: 'success' });
         } else {
-          setMsg(result.message || t('settings.serverManagementTab.failedRemove'));
+          setMsg({
+            text: result.message || t('settings.serverManagementTab.failedRemove'),
+            variant: 'danger',
+          });
         }
       } catch {
-        setMsg(t('settings.serverManagementTab.errorRemoving'));
+        setMsg({ text: t('settings.serverManagementTab.errorRemoving'), variant: 'danger' });
       } finally {
         setLoading(false);
         setConfirmDelete(null);
@@ -105,19 +108,23 @@ const ServerManagementTab = ({
     async server => {
       try {
         setLoading(true);
-        setMsg('');
+        setMsg(null);
         const result = await updateServer(server.id, !server.allow_insecure);
         if (result.success) {
-          setMsg(
-            server.allow_insecure
+          setMsg({
+            text: server.allow_insecure
               ? t('settings.serverManagementTab.insecureRevoked', { hostname: server.hostname })
-              : t('settings.serverManagementTab.insecureAccepted', { hostname: server.hostname })
-          );
+              : t('settings.serverManagementTab.insecureAccepted', { hostname: server.hostname }),
+            variant: 'success',
+          });
         } else {
-          setMsg(result.message || t('settings.serverManagementTab.failedUpdate'));
+          setMsg({
+            text: result.message || t('settings.serverManagementTab.failedUpdate'),
+            variant: 'danger',
+          });
         }
       } catch {
-        setMsg(t('settings.serverManagementTab.errorUpdating'));
+        setMsg({ text: t('settings.serverManagementTab.errorUpdating'), variant: 'danger' });
       } finally {
         setLoading(false);
       }
@@ -128,12 +135,12 @@ const ServerManagementTab = ({
   // Handle connection test
   const handleTestConnection = useCallback(async () => {
     if (!hostname || !port || !protocol) {
-      setMsg(t('settings.serverManagementTab.fillHostPortProtocol'));
+      setMsg({ text: t('settings.serverManagementTab.fillHostPortProtocol'), variant: 'warning' });
       return;
     }
     try {
       setLoading(true);
-      setMsg(t('settings.serverManagementTab.testingConnection'));
+      setMsg({ text: t('settings.serverManagementTab.testingConnection'), variant: 'info' });
       setTestResult(null);
       const result = await testServer({
         hostname,
@@ -143,14 +150,17 @@ const ServerManagementTab = ({
       });
       if (result.success) {
         setTestResult('success');
-        setMsg(t('settings.serverManagementTab.testSuccess'));
+        setMsg({ text: t('settings.serverManagementTab.testSuccess'), variant: 'success' });
       } else {
         setTestResult('error');
-        setMsg(t('settings.serverManagementTab.testFailed', { message: result.message }));
+        setMsg({
+          text: t('settings.serverManagementTab.testFailed', { message: result.message }),
+          variant: 'danger',
+        });
       }
     } catch {
       setTestResult('error');
-      setMsg(t('settings.serverManagementTab.testFailedGeneric'));
+      setMsg({ text: t('settings.serverManagementTab.testFailedGeneric'), variant: 'danger' });
     } finally {
       setLoading(false);
     }
@@ -161,15 +171,18 @@ const ServerManagementTab = ({
     async e => {
       e.preventDefault();
       if (!hostname || !port || !protocol) {
-        setMsg(t('settings.serverManagementTab.hostPortProtocolRequired'));
+        setMsg({
+          text: t('settings.serverManagementTab.hostPortProtocolRequired'),
+          variant: 'warning',
+        });
         return;
       }
       if (useExistingApiKey && !apiKey) {
-        setMsg(t('settings.serverManagementTab.apiKeyRequired'));
+        setMsg({ text: t('settings.serverManagementTab.apiKeyRequired'), variant: 'warning' });
         return;
       }
       if (!useExistingApiKey && !entityName) {
-        setMsg(t('settings.serverManagementTab.entityNameRequired'));
+        setMsg({ text: t('settings.serverManagementTab.entityNameRequired'), variant: 'warning' });
         return;
       }
       const isDuplicate = servers.some(
@@ -180,12 +193,15 @@ const ServerManagementTab = ({
       );
       if (isDuplicate) {
         setTestResult('error');
-        setMsg(t('settings.serverManagementTab.duplicateServer', { protocol, hostname, port }));
+        setMsg({
+          text: t('settings.serverManagementTab.duplicateServer', { protocol, hostname, port }),
+          variant: 'danger',
+        });
         return;
       }
       try {
         setLoading(true);
-        setMsg('');
+        setMsg(null);
         setTestResult(null);
         const serverData = {
           hostname,
@@ -200,17 +216,17 @@ const ServerManagementTab = ({
         const result = await addServer(serverData);
         if (result.success) {
           setTestResult('success');
-          setMsg(t('settings.serverManagementTab.serverAdded'));
+          setMsg({ text: t('settings.serverManagementTab.serverAdded'), variant: 'success' });
           await refreshServers();
           setShowAddForm(false);
           resetForm();
         } else {
           setTestResult('error');
-          setMsg(result.message);
+          setMsg({ text: result.message, variant: 'danger' });
         }
       } catch {
         setTestResult('error');
-        setMsg(t('settings.serverManagementTab.unexpectedError'));
+        setMsg({ text: t('settings.serverManagementTab.unexpectedError'), variant: 'danger' });
       } finally {
         setLoading(false);
       }

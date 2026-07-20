@@ -11,7 +11,7 @@ const useSettingsState = () => {
   const [activeTab, setActiveTab] = useState('');
   const [sections, setSections] = useState({});
   const [values, setValues] = useState({});
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(false);
   const [requiresRestart, setRequiresRestart] = useState(false);
 

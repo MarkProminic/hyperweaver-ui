@@ -273,20 +273,11 @@ const HyperweaverSettings = () => {
 
           {/* Message banner */}
           <div className="p-4">
-            {msg &&
-              (() => {
-                let messageClass = 'alert-warning';
-                if (msg.includes('successfully')) {
-                  messageClass = 'alert-success';
-                } else if (msg.includes('Error')) {
-                  messageClass = 'alert-danger';
-                }
-                return (
-                  <div className={`alert ${messageClass} mb-4`}>
-                    <p className="mb-0">{msg}</p>
-                  </div>
-                );
-              })()}
+            {msg && (
+              <div className={`alert alert-${msg.variant || 'warning'} mb-4`}>
+                <p className="mb-0">{msg.text}</p>
+              </div>
+            )}
 
             {/* Server Management Tab */}
             {activeTab === 'servers' && (

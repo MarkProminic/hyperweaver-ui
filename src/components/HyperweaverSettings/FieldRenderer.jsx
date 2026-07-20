@@ -123,7 +123,7 @@ const FieldRenderer = ({
                   <strong>{uploadedFile.name}</strong> ({(uploadedFile.size / 1024).toFixed(1)} KB)
                 </p>
                 <p className="small text-muted mb-0">
-                  Uploaded to: <code>{uploadedFile.uploadedPath}</code>
+                  {t('settings.fieldRenderer.uploadedTo')} <code>{uploadedFile.uploadedPath}</code>
                 </p>
               </div>
               <i className="fas fa-check-circle text-success" />

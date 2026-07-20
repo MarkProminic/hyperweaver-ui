@@ -25,15 +25,19 @@ const BackupManager = ({
       if (response.data.success) {
         setBackups(response.data.backups);
       } else {
-        setMsg(t('settings.backupManager.failedToLoad', { message: response.data.message }));
+        setMsg({
+          text: t('settings.backupManager.failedToLoad', { message: response.data.message }),
+          variant: 'danger',
+        });
       }
     } catch (error) {
       console.error('Error loading backups:', error);
-      setMsg(
-        t('settings.backupManager.errorLoading', {
+      setMsg({
+        text: t('settings.backupManager.errorLoading', {
           error: error.response?.data?.message || error.message,
-        })
-      );
+        }),
+        variant: 'danger',
+      });
     } finally {
       setLoading(false);
     }
@@ -53,12 +57,15 @@ const BackupManager = ({
 
     try {
       setLoading(true);
-      setMsg(t('settings.backupManager.restoring', { filename: backupFilename }));
+      setMsg({
+        text: t('settings.backupManager.restoring', { filename: backupFilename }),
+        variant: 'info',
+      });
 
       const response = await axios.post(`/api/settings/restore/${backupFilename}`);
 
       if (response.data.success) {
-        setMsg(t('settings.backupManager.restoreSuccess'));
+        setMsg({ text: t('settings.backupManager.restoreSuccess'), variant: 'success' });
         setTimeout(() => {
           if (onBackupRestore) {
             onBackupRestore();
@@ -66,15 +73,19 @@ const BackupManager = ({
           window.location.reload();
         }, 1000);
       } else {
-        setMsg(t('settings.backupManager.failedToRestore', { message: response.data.message }));
+        setMsg({
+          text: t('settings.backupManager.failedToRestore', { message: response.data.message }),
+          variant: 'danger',
+        });
       }
     } catch (error) {
       console.error('Error restoring backup:', error);
-      setMsg(
-        t('settings.backupManager.errorRestoring', {
+      setMsg({
+        text: t('settings.backupManager.errorRestoring', {
           error: error.response?.data?.message || error.message,
-        })
-      );
+        }),
+        variant: 'danger',
+      });
     } finally {
       setLoading(false);
     }
@@ -94,23 +105,30 @@ const BackupManager = ({
 
     try {
       setLoading(true);
-      setMsg(t('settings.backupManager.deleting', { filename: backupFilename }));
+      setMsg({
+        text: t('settings.backupManager.deleting', { filename: backupFilename }),
+        variant: 'info',
+      });
 
       const response = await axios.delete(`/api/settings/backups/${backupFilename}`);
 
       if (response.data.success) {
-        setMsg(t('settings.backupManager.deleteSuccess'));
+        setMsg({ text: t('settings.backupManager.deleteSuccess'), variant: 'success' });
         await loadBackups();
       } else {
-        setMsg(t('settings.backupManager.failedToDelete', { message: response.data.message }));
+        setMsg({
+          text: t('settings.backupManager.failedToDelete', { message: response.data.message }),
+          variant: 'danger',
+        });
       }
     } catch (error) {
       console.error('Error deleting backup:', error);
-      setMsg(
-        t('settings.backupManager.errorDeleting', {
+      setMsg({
+        text: t('settings.backupManager.errorDeleting', {
           error: error.response?.data?.message || error.message,
-        })
-      );
+        }),
+        variant: 'danger',
+      });
     } finally {
       setLoading(false);
     }

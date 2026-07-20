@@ -1396,6 +1396,16 @@
       "systemFault": "{{faultCount}} {{faultWord}} del sistema ({{severity}})",
       "rebootRequiredBadge": "Reinicio requerido",
       "title": "Problemas de salud de la infraestructura"
+    },
+    "widgets": {
+      "menu": "Widgets",
+      "summary": "Resumen",
+      "quickActions": "Acciones rápidas",
+      "serverCards": "Hosts",
+      "topology": "Topología del centro de datos",
+      "collapse": "Contraer",
+      "expand": "Expandir",
+      "hide": "Ocultar widget"
     }
   },
   "fileManager": {
@@ -7704,7 +7714,8 @@
       "corsAllowAll": "Permitir todos los orígenes en la lista blanca",
       "corsDenyAll": "Denegar todos los orígenes",
       "corsSpecific": "Usar coincidencia exacta de la lista blanca",
-      "oneItemPerLine": "Un elemento por línea"
+      "oneItemPerLine": "Un elemento por línea",
+      "uploadedTo": "Subido a:"
     },
     "ldapTestPanel": {
       "testing": "Probando la conexión LDAP...",
@@ -7810,6 +7821,28 @@
     "subsectionRenderer": {
       "settingCount": "{{count}} ajuste",
       "settingCount_plural": "{{count}} ajustes"
+    },
+    "settingsApi": {
+      "loadFailed": "Error al cargar la configuración: {{message}}",
+      "loadError": "Error al cargar la configuración: {{error}}",
+      "backupsLoadFailed": "Error al cargar las copias de seguridad: {{message}}",
+      "backupsLoadError": "Error al cargar las copias de seguridad: {{error}}",
+      "saved": "Configuración guardada",
+      "saveFailed": "Error al guardar la configuración: {{message}}",
+      "saveError": "Error al guardar la configuración: {{error}}",
+      "checkingHealth": "Comprobando el estado del servidor… ({{attempts}}/{{max}})",
+      "restartComplete": "Reinicio del servidor completado — recargando la página…",
+      "restartTimeout": "El reinicio del servidor agotó el tiempo — actualiza la página manualmente.",
+      "restartInitiating": "Iniciando el reinicio del servidor…",
+      "restartMonitoring": "Reinicio del servidor iniciado — supervisando el estado…",
+      "restartFailed": "Error al reiniciar el servidor: {{message}}",
+      "restartError": "Error al reiniciar el servidor: {{error}}",
+      "backupCreating": "Creando copia de seguridad…",
+      "backupCreated": "Copia de seguridad creada",
+      "backupError": "Error al crear la copia de seguridad: {{error}}",
+      "sslUploaded": "Certificado SSL subido: {{name}}",
+      "sslUploadFailed": "Error al subir el certificado SSL: {{message}}",
+      "sslUploadError": "Error al subir el certificado SSL: {{error}}"
     }
   },
   "tasks": {

@@ -1396,6 +1396,16 @@
       "systemFault": "{{faultCount}} system {{faultWord}} ({{severity}})",
       "rebootRequiredBadge": "Reboot Required",
       "title": "Infrastructure Health Issues"
+    },
+    "widgets": {
+      "menu": "Widgets",
+      "summary": "Summary",
+      "quickActions": "Quick actions",
+      "serverCards": "Hosts",
+      "topology": "Datacenter topology",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "hide": "Hide widget"
     }
   },
   "fileManager": {
@@ -7704,7 +7714,8 @@
       "corsAllowAll": "Allow all origins in whitelist",
       "corsDenyAll": "Deny all origins",
       "corsSpecific": "Use exact whitelist matching",
-      "oneItemPerLine": "One item per line"
+      "oneItemPerLine": "One item per line",
+      "uploadedTo": "Uploaded to:"
     },
     "ldapTestPanel": {
       "testing": "Testing LDAP connection...",
@@ -7810,6 +7821,28 @@
     "subsectionRenderer": {
       "settingCount": "{{count}} setting",
       "settingCount_plural": "{{count}} settings"
+    },
+    "settingsApi": {
+      "loadFailed": "Failed to load settings: {{message}}",
+      "loadError": "Error loading settings: {{error}}",
+      "backupsLoadFailed": "Failed to load backups: {{message}}",
+      "backupsLoadError": "Error loading backups: {{error}}",
+      "saved": "Settings saved",
+      "saveFailed": "Failed to save settings: {{message}}",
+      "saveError": "Error saving settings: {{error}}",
+      "checkingHealth": "Checking server health… ({{attempts}}/{{max}})",
+      "restartComplete": "Server restart completed — reloading page…",
+      "restartTimeout": "Server restart timed out — refresh the page manually.",
+      "restartInitiating": "Initiating server restart…",
+      "restartMonitoring": "Server restart initiated — monitoring health…",
+      "restartFailed": "Failed to restart server: {{message}}",
+      "restartError": "Error restarting server: {{error}}",
+      "backupCreating": "Creating backup…",
+      "backupCreated": "Backup created",
+      "backupError": "Error creating backup: {{error}}",
+      "sslUploaded": "SSL certificate uploaded: {{name}}",
+      "sslUploadFailed": "Failed to upload SSL certificate: {{message}}",
+      "sslUploadError": "Error uploading SSL certificate: {{error}}"
     }
   },
   "tasks": {
