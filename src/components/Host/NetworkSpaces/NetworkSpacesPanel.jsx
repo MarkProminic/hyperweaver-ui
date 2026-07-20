@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../../../contexts/AuthContext';
+import { agentPlatform } from '../../../utils/capabilities';
 import { canStartStopMachines } from '../../../utils/permissions';
 import { ConfirmModal } from '../../common';
 
@@ -119,6 +120,14 @@ const NetworkSpacesPanel = ({ server, onChanged = null }) => {
   const natNets = spaces.filter(space => space.type === 'natnetwork');
   const intnets = spaces.filter(space => space.type === 'intnet');
 
+  // Platform split (agent ruling): VBox 7 on macOS removed host-only
+  // ADAPTERS — darwin agents carry hostonlynet ONLY; every other host
+  // carries hostonly ONLY and 400s the hostonlynet verbs. Unknown platform
+  // keeps both families visible.
+  const platform = agentPlatform(server);
+  const showHostonlyIfs = platform !== 'darwin';
+  const showHostonlyNets = platform === 'darwin' || platform === null;
+
   const stateBadge = on => (
     <span className={`badge ${on ? 'text-bg-success' : 'text-bg-secondary'}`}>
       {on ? t('host.networkSpaces.enabledLabel') : t('host.networkSpaces.disabledLabel')}
@@ -202,47 +211,55 @@ const NetworkSpacesPanel = ({ server, onChanged = null }) => {
         <div className="px-1">
           {loadError && <div className="alert alert-warning py-2">{loadError}</div>}
 
-          {sectionHead(t('host.networkSpaces.sectionHostonlyIfs'), 'hostonly')}
-          <table className="table table-sm align-middle">
-            <tbody>
-              {hostonlyIfs.map(space => (
-                <tr key={space.name}>
-                  <td className="hw-topo-mono">{space.name}</td>
-                  <td className="hw-topo-mono">
-                    {space.ip_address} / {space.network_mask}
-                  </td>
-                  <td>
-                    {space.dhcp?.exists
-                      ? t('host.networkSpaces.dhcpRange', {
-                          lower: space.dhcp.lower_ip,
-                          upper: space.dhcp.upper_ip,
-                        })
-                      : t('host.networkSpaces.dhcpOff')}
-                  </td>
-                  {rowActions({ kind: 'hostonly', space }, { kind: 'delete-hostonly', space })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {showHostonlyIfs && (
+            <>
+              {sectionHead(t('host.networkSpaces.sectionHostonlyIfs'), 'hostonly')}
+              <table className="table table-sm align-middle">
+                <tbody>
+                  {hostonlyIfs.map(space => (
+                    <tr key={space.name}>
+                      <td className="hw-topo-mono">{space.name}</td>
+                      <td className="hw-topo-mono">
+                        {space.ip_address} / {space.network_mask}
+                      </td>
+                      <td>
+                        {space.dhcp?.exists
+                          ? t('host.networkSpaces.dhcpRange', {
+                              lower: space.dhcp.lower_ip,
+                              upper: space.dhcp.upper_ip,
+                            })
+                          : t('host.networkSpaces.dhcpOff')}
+                      </td>
+                      {rowActions({ kind: 'hostonly', space }, { kind: 'delete-hostonly', space })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
 
-          {sectionHead(t('host.networkSpaces.sectionHostonlyNets'), 'hostonlynet')}
-          <table className="table table-sm align-middle">
-            <tbody>
-              {hostonlyNets.map(space => (
-                <tr key={space.name}>
-                  <td className="hw-topo-mono">{space.name}</td>
-                  <td className="hw-topo-mono">
-                    {space.network_mask} · {space.lower_ip}–{space.upper_ip}
-                  </td>
-                  <td>{stateBadge(space.enabled !== false)}</td>
-                  {rowActions(
-                    { kind: 'hostonlynet', space },
-                    { kind: 'delete-hostonlynet', space }
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {showHostonlyNets && (
+            <>
+              {sectionHead(t('host.networkSpaces.sectionHostonlyNets'), 'hostonlynet')}
+              <table className="table table-sm align-middle">
+                <tbody>
+                  {hostonlyNets.map(space => (
+                    <tr key={space.name}>
+                      <td className="hw-topo-mono">{space.name}</td>
+                      <td className="hw-topo-mono">
+                        {space.network_mask} · {space.lower_ip}–{space.upper_ip}
+                      </td>
+                      <td>{stateBadge(space.enabled !== false)}</td>
+                      {rowActions(
+                        { kind: 'hostonlynet', space },
+                        { kind: 'delete-hostonlynet', space }
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
 
           {sectionHead(t('host.networkSpaces.sectionNat'), 'natnetwork')}
           <table className="table table-sm align-middle">

@@ -403,12 +403,16 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
         setBridgeOptions(rows.map(entry => entry.name));
         setBridgeChoices(
           rows.map(entry => {
-            const kind = entry.class
-              ? ` (${entry.class}${entry.provisioning ? ' · provisioning' : ''})`
-              : '';
+            const traits = [
+              entry.class,
+              entry.provisioning ? 'provisioning' : '',
+              entry.wireless ? 'wifi' : '',
+            ]
+              .filter(Boolean)
+              .join(' · ');
             return {
               value: entry.name,
-              label: `${entry.name}${kind}`,
+              label: traits ? `${entry.name} (${traits})` : entry.name,
               provisioning: entry.provisioning,
             };
           })

@@ -363,6 +363,9 @@ const TaskDetailModal = ({ task, onClose }) => {
     if (!metadata) {
       return null;
     }
+    if (typeof metadata === 'object') {
+      return metadata;
+    }
     try {
       return JSON.parse(metadata);
     } catch {

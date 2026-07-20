@@ -8,8 +8,9 @@ import { FormModal } from '../../common';
  * The NAT-network editor: knobs (cidr/enabled/dhcp/ipv6) plus the
  * port-forward manager. Existing forwards mark for removal; new rows stage
  * an add — the PUT carries remove_port_forwards then add_port_forwards, so a
- * same-named rule replaces in one call. Loopbacks stay raw rule strings (the
- * wire's own form).
+ * same-named rule replaces in one call. Loopback mappings ride the wire as
+ * {address, offset, ipv6} objects (agent structured-JSON pass) — not
+ * surfaced here yet.
  */
 const NatNetworkModal = ({ space = null, busy, error, onSave, onClose }) => {
   const { t } = useTranslation();

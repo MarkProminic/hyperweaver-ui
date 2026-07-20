@@ -15,8 +15,8 @@ import { makeAgentRequest } from '../api/serverUtils';
  * - Latency: timed GET /status through the same mode-aware path the session
  *   rides (VRDE has no in-protocol RTT; the bridge→VRDE hop is LAN-local).
  * - Verdict/history: derived client-side from ping + paint freshness.
- * - guestFacts (console target only): showvminfo's video_mode +
- *   additions_run_level, fetched once by the start preflight.
+ * - guestFacts (console target only): showvminfo's video {width, height,
+ *   depth} + additions_run_level, fetched once by the start preflight.
  */
 
 const HISTORY_SECONDS = 15 * 60;
@@ -316,7 +316,7 @@ const RdpConnectionPanel = ({
       color_depth: settings.colorDepth,
       lossy_compression: settings.lossy,
       sound: settings.audio,
-      guest_video_mode: guestFacts?.video_mode ?? null,
+      guest_video: guestFacts?.video ?? null,
       guest_additions_run_level: guestFacts?.additions_run_level ?? null,
       history_5s_scores: history.map(sample => LEVELS[sample.score]),
     };
@@ -406,10 +406,10 @@ const RdpConnectionPanel = ({
               value={negotiated.resizeMode}
             />
           )}
-          {guestFacts?.video_mode && (
+          {guestFacts?.video && (
             <DetailRow
               label={t('console.rdpConnectionPanel.guestDisplay')}
-              value={guestFacts.video_mode}
+              value={`${guestFacts.video.width}×${guestFacts.video.height}×${guestFacts.video.depth}`}
             />
           )}
           {typeof guestFacts?.additions_run_level === 'number' && (
@@ -458,7 +458,11 @@ RdpConnectionPanel.propTypes = {
     audio: PropTypes.bool,
   }).isRequired,
   guestFacts: PropTypes.shape({
-    video_mode: PropTypes.string,
+    video: PropTypes.shape({
+      width: PropTypes.number,
+      height: PropTypes.number,
+      depth: PropTypes.number,
+    }),
     additions_run_level: PropTypes.number,
   }),
 };

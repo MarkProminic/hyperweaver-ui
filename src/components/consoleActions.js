@@ -211,8 +211,8 @@ export const startRdpPreview = async ({
         setError('The machine must be running for the RDP console.');
         return;
       }
-      if (info.data.video_mode) {
-        facts.video_mode = info.data.video_mode;
+      if (info.data.video) {
+        facts.video = info.data.video;
       }
       if (typeof info.data.additions_run_level === 'number') {
         facts.additions_run_level = info.data.additions_run_level;

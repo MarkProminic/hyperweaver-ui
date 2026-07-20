@@ -41,8 +41,10 @@ export const flattenBridgedInterfaces = data => {
       name: entry.name || entry.device || '',
       class: entry.class || '',
       provisioning: entry.provisioning === true,
+      status: typeof entry.status === 'string' ? entry.status.toLowerCase() : '',
+      wireless: entry.wireless === true,
     }))
-    .filter(entry => entry.name);
+    .filter(entry => entry.name && entry.status !== 'down');
 };
 
 export const parseConfiguration = holder => {
