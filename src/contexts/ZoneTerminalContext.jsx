@@ -10,6 +10,7 @@ import React, { createContext, useContext, useCallback, useRef } from 'react';
 
 import { getAgentBasePath, makeAgentRequest, fetchWsTicket } from '../api/serverUtils';
 import { buildWsUrl } from '../utils/websocket';
+import { loadXtermPrefs } from '../utils/xtermPrefs';
 
 import { useServers } from './ServerContext';
 
@@ -129,23 +130,22 @@ export const ZoneTerminalProvider = ({ children }) => {
     [currentServer, getZoneKey]
   );
 
-  // Get terminal options for a specific zone
-  const getZoneOptions = useCallback(
-    (readOnly = false) => ({
-      cursorBlink: !readOnly,
+  // Get terminal options for a specific zone — user knobs from the shared
+  // xterm prefs, read at build time so new terminals honor fresh saves.
+  const getZoneOptions = useCallback((readOnly = false) => {
+    const prefs = loadXtermPrefs();
+    return {
+      ...prefs,
+      cursorBlink: !readOnly && prefs.cursorBlink,
       theme: {
         background: '#000000',
         foreground: '#ffffff',
       },
-      scrollback: 10000,
-      fontSize: 12,
-      fontFamily: '"Cascadia Code", Consolas, "Liberation Mono", Menlo, Courier, monospace',
       allowTransparency: false,
       disableStdin: readOnly,
       convertEol: false,
-    }),
-    []
-  );
+    };
+  }, []);
 
   // Create or reuse terminal session (simplified for react-xtermjs)
   const createOrReuseTerminalSession = useCallback(

@@ -3,22 +3,15 @@ import { useTranslation } from 'react-i18next';
 
 import { hasMachines } from '../../utils/capabilities';
 import { resourceLabel } from '../../utils/resourceLabel';
+import TopologyMini from '../Host/NetworkTopology/TopologyMini';
 
 import { getServerHealthStatus, getStatusColor } from './dashboardUtils';
 
-/**
- * Individual server status cards with health indicators.
- */
-const ServerCard = ({ serverResult, onNavigateToServer }) => {
-  const { t } = useTranslation();
-  const { server, success, data, error: serverError } = serverResult;
-  const status = getServerHealthStatus(serverResult);
-  const statusColor = getStatusColor(status);
-
-  let statusTooltip = t('dashboard.serverCards.hostHealthy');
+const statusTooltipFor = (status, serverError, data, t) => {
   if (status === 'offline') {
-    statusTooltip = serverError || t('dashboard.serverCards.connectionFailed');
-  } else if (status === 'warning') {
+    return serverError || t('dashboard.serverCards.connectionFailed');
+  }
+  if (status === 'warning') {
     const issues = [];
     if (data?.loadavg?.[0] > 2) {
       issues.push(t('dashboard.serverCards.highCpuLoad'));
@@ -26,8 +19,63 @@ const ServerCard = ({ serverResult, onNavigateToServer }) => {
     if (data?.totalmem && data?.freemem && data.freemem / data.totalmem < 0.1) {
       issues.push(t('dashboard.serverCards.lowMemory'));
     }
-    statusTooltip = issues.join(', ');
+    return issues.join(', ');
   }
+  return t('dashboard.serverCards.hostHealthy');
+};
+
+const OfflineBody = ({ server, onNavigateToServer }) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      <p className="text-muted mb-3">{t('dashboard.serverCards.connectionFailedFull')}</p>
+
+      <div className="row mb-3">
+        <div className="col text-center">
+          <div className="text-uppercase small fw-semibold text-muted">{resourceLabel(server)}</div>
+          <div className="fs-4 fw-bold text-muted">-</div>
+        </div>
+        <div className="col text-center">
+          <div className="text-uppercase small fw-semibold text-muted">
+            {t('dashboard.serverCards.cpuLoad')}
+          </div>
+          <div className="fs-4 fw-bold text-muted">-</div>
+        </div>
+        <div className="col text-center">
+          <div className="text-uppercase small fw-semibold text-muted">
+            {t('dashboard.serverCards.memory')}
+          </div>
+          <div className="fs-4 fw-bold text-muted">-</div>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        className="btn btn-primary w-100"
+        onClick={() => onNavigateToServer(server)}
+        disabled
+      >
+        <i className="fas fa-arrow-right me-2" />
+        {t('dashboard.serverCards.viewDetails')}
+      </button>
+    </>
+  );
+};
+
+OfflineBody.propTypes = {
+  server: PropTypes.object.isRequired,
+  onNavigateToServer: PropTypes.func.isRequired,
+};
+
+/**
+ * Individual server status cards with health indicators.
+ */
+const ServerCard = ({ serverResult, onNavigateToServer, topologyGraph = null }) => {
+  const { t } = useTranslation();
+  const { server, success, data, error: serverError } = serverResult;
+  const status = getServerHealthStatus(serverResult);
+  const statusColor = getStatusColor(status);
+  const statusTooltip = statusTooltipFor(status, serverError, data, t);
 
   return (
     <div className="col-12 col-xl-6">
@@ -84,6 +132,12 @@ const ServerCard = ({ serverResult, onNavigateToServer }) => {
                 </div>
               </div>
 
+              {topologyGraph && (
+                <div className="d-flex justify-content-center mb-3">
+                  <TopologyMini graph={topologyGraph} />
+                </div>
+              )}
+
               <button
                 type="button"
                 className="btn btn-primary w-100"
@@ -94,40 +148,7 @@ const ServerCard = ({ serverResult, onNavigateToServer }) => {
               </button>
             </>
           ) : (
-            <>
-              <p className="text-muted mb-3">{t('dashboard.serverCards.connectionFailedFull')}</p>
-
-              <div className="row mb-3">
-                <div className="col text-center">
-                  <div className="text-uppercase small fw-semibold text-muted">
-                    {resourceLabel(server)}
-                  </div>
-                  <div className="fs-4 fw-bold text-muted">-</div>
-                </div>
-                <div className="col text-center">
-                  <div className="text-uppercase small fw-semibold text-muted">
-                    {t('dashboard.serverCards.cpuLoad')}
-                  </div>
-                  <div className="fs-4 fw-bold text-muted">-</div>
-                </div>
-                <div className="col text-center">
-                  <div className="text-uppercase small fw-semibold text-muted">
-                    {t('dashboard.serverCards.memory')}
-                  </div>
-                  <div className="fs-4 fw-bold text-muted">-</div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="btn btn-primary w-100"
-                onClick={() => onNavigateToServer(server)}
-                disabled
-              >
-                <i className="fas fa-arrow-right me-2" />
-                {t('dashboard.serverCards.viewDetails')}
-              </button>
-            </>
+            <OfflineBody server={server} onNavigateToServer={onNavigateToServer} />
           )}
         </div>
       </div>
@@ -143,15 +164,19 @@ ServerCard.propTypes = {
     error: PropTypes.string,
   }).isRequired,
   onNavigateToServer: PropTypes.func.isRequired,
+  topologyGraph: PropTypes.object,
 };
 
-const DashboardServerCards = ({ servers, onNavigateToServer }) => (
+const DashboardServerCards = ({ servers, onNavigateToServer, topologyByHost = null }) => (
   <div className="row g-2 mb-0">
     {servers?.map(serverResult => (
       <ServerCard
         key={`${serverResult.server.hostname}-${serverResult.server.port}-card`}
         serverResult={serverResult}
         onNavigateToServer={onNavigateToServer}
+        topologyGraph={
+          topologyByHost?.get(`${serverResult.server.hostname}:${serverResult.server.port}`) || null
+        }
       />
     ))}
   </div>
@@ -160,6 +185,7 @@ const DashboardServerCards = ({ servers, onNavigateToServer }) => (
 DashboardServerCards.propTypes = {
   servers: PropTypes.arrayOf(PropTypes.object).isRequired,
   onNavigateToServer: PropTypes.func.isRequired,
+  topologyByHost: PropTypes.instanceOf(Map),
 };
 
 export default DashboardServerCards;

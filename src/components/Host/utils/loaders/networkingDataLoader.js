@@ -141,14 +141,13 @@ const processGenericNetworkItems = (result, key, idField = 'name') => {
 };
 
 export const fetchNetworkData = async (currentServer, makeAgentRequest) => {
-  console.log('🔍 NETWORKING: Loading complete network data for', currentServer.hostname);
-
-  // The monitoring/network/* fetches are token-gated (sync OPEN ITEM 4b) — the
-  // topology fetches below (aggregates/etherstubs/vnics/machines) are not, so a
-  // vnics-capable agent without host monitoring still draws its topology.
+  // The monitoring/network/* fetches are token-gated (sync OPEN ITEM 4b); the
+  // bhyve link-stack fetches (aggregates/etherstubs/vnics) gate on `vnics` so
+  // a spaces-only agent isn't probed with 404s every cycle.
   const monitoringAvailable = hasFeature(currentServer, 'monitoring');
   const spacesAvailable = hasFeature(currentServer, 'network-spaces');
-  const skipped = Promise.resolve({ success: false, message: 'monitoring not advertised' });
+  const vnicsAvailable = hasFeature(currentServer, 'vnics');
+  const skipped = Promise.resolve({ success: false, message: 'capability not advertised' });
 
   const [
     interfacesResult,
@@ -193,24 +192,30 @@ export const fetchNetworkData = async (currentServer, makeAgentRequest) => {
           'monitoring/network/routes'
         )
       : skipped,
-    makeAgentRequest(
-      currentServer.hostname,
-      currentServer.port,
-      currentServer.protocol,
-      'network/aggregates'
-    ),
-    makeAgentRequest(
-      currentServer.hostname,
-      currentServer.port,
-      currentServer.protocol,
-      'network/etherstubs'
-    ),
-    makeAgentRequest(
-      currentServer.hostname,
-      currentServer.port,
-      currentServer.protocol,
-      'network/vnics'
-    ),
+    vnicsAvailable
+      ? makeAgentRequest(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          'network/aggregates'
+        )
+      : skipped,
+    vnicsAvailable
+      ? makeAgentRequest(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          'network/etherstubs'
+        )
+      : skipped,
+    vnicsAvailable
+      ? makeAgentRequest(
+          currentServer.hostname,
+          currentServer.port,
+          currentServer.protocol,
+          'network/vnics'
+        )
+      : skipped,
     makeAgentRequest(
       currentServer.hostname,
       currentServer.port,

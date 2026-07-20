@@ -2,16 +2,14 @@ import PropTypes from 'prop-types';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ConsumerCard, AdapterCard, SwitchCard, NetworkCard } from './TopologyCards';
+import { ConsumerCard, AdapterCard, SwitchCard } from './TopologyCards';
 import { FlowEffects, FlowLabel } from './TopologyFlow';
-import { assignNetworkColors, widthForCount, motionState, MOTION_NO_FEED } from './topologyPalette';
+import { buildTopologyPaths, plannedNetworksFor } from './topologyMeasure';
+import { NetworkCard } from './TopologyNetworkCard';
+import { assignNetworkColors, MOTION_NO_FEED } from './topologyPalette';
+import WireSparkline from './TopologySparkline';
 
 const DENSE_THRESHOLD = 16;
-
-const bezier = (x1, y1, x2, y2) => {
-  const mid = (x1 + x2) / 2;
-  return `M${x1},${y1} C ${mid},${y1} ${mid},${y2} ${x2},${y2}`;
-};
 
 const TopologyCanvas = ({
   host,
@@ -25,9 +23,13 @@ const TopologyCanvas = ({
   pendingMoves = [],
   onDragNic = () => {},
   onDropNic = () => {},
+  onDropCarrier = () => {},
   onOpenNetworking = null,
+  onOpenSettings = null,
   onWireChart = null,
   sharedNetIds = null,
+  effectStyle = 'comets',
+  pulse = 0,
 }) => {
   const { t } = useTranslation();
   const { graph } = host;
@@ -38,6 +40,7 @@ const TopologyCanvas = ({
   const [traceNets, setTraceNets] = useState([]);
   const [layoutTick, setLayoutTick] = useState(0);
   const [filterText, setFilterText] = useState('');
+  const [hoverWire, setHoverWire] = useState(null);
 
   const colors = useMemo(() => assignNetworkColors(graph.networks), [graph.networks]);
   const reducedMotion = useMemo(
@@ -52,6 +55,10 @@ const TopologyCanvas = ({
     [pendingMoves]
   );
   const pendingLinks = useMemo(() => new Set(pendingByNic.keys()), [pendingByNic]);
+  const plannedNetworks = useMemo(
+    () => plannedNetworksFor(graph, pendingMoves),
+    [graph, pendingMoves]
+  );
 
   const registerAnchor = useCallback((key, el) => {
     if (el) {
@@ -112,90 +119,19 @@ const TopologyCanvas = ({
     if (!container) {
       return;
     }
-    const box = container.getBoundingClientRect();
-    const anchorPoint = (key, side) => {
-      const el = anchorsRef.current.get(key);
-      if (!el || !el.isConnected) {
-        return null;
-      }
-      const rect = el.getBoundingClientRect();
-      return {
-        x: (side === 'right' ? rect.right : rect.left) - box.left,
-        y: rect.top + rect.height / 2 - box.top,
-      };
-    };
-
-    const next = [];
-    visibleConsumers.forEach(consumer => {
-      consumer.nics.forEach(nic => {
-        if (isolatedNet && nic.networkId !== isolatedNet) {
-          return;
-        }
-        const from =
-          anchorPoint(`nic:${nic.link}`, 'right') ||
-          anchorPoint(`consumer:${consumer.id}`, 'right');
-        const to = anchorPoint(`carrier:${nic.over}`, 'left');
-        if (!from || !to) {
-          return;
-        }
-        next.push({
-          id: `nic-${consumer.id}-${nic.link}`,
-          d: bezier(from.x, from.y, to.x, to.y),
-          color: colors.get(nic.networkId),
-          width: nic.ghost ? 2.5 : 3,
-          ghost: nic.ghost,
-          struck: pendingByNic.has(`${consumer.id}|${nic.link}`),
-          netId: nic.networkId,
-          motion: nic.ghost ? MOTION_NO_FEED : motionState(graph.feedPresent, nic.usage),
-          rx: nic.usage?.rxMbps || 0,
-          tx: nic.usage?.txMbps || 0,
-          speedMbps: nic.usage?.speedMbps || 0,
-          mx: (from.x + to.x) / 2,
-          my: (from.y + to.y) / 2,
-        });
-      });
+    const built = buildTopologyPaths({
+      container,
+      anchors: anchorsRef.current,
+      visibleConsumers,
+      visibleNetworks,
+      isolatedNet,
+      colors,
+      graph,
+      pendingByNic,
+      pendingMoves,
     });
-    visibleNetworks.forEach(net => {
-      const from = anchorPoint(`carrier:${net.carrier}`, 'right');
-      const to = anchorPoint(`network:${net.id}`, 'left');
-      if (!from || !to) {
-        return;
-      }
-      const carrier = graph.adapters.find(a => a.id === net.carrier);
-      next.push({
-        id: `net-${net.id}`,
-        d: bezier(from.x, from.y, to.x, to.y),
-        color: colors.get(net.id),
-        width: widthForCount(net.live),
-        ghost: net.live === 0,
-        netId: net.id,
-        motion: net.live === 0 ? MOTION_NO_FEED : motionState(graph.feedPresent, net.usage),
-        rx: net.usage?.rxMbps || 0,
-        tx: net.usage?.txMbps || 0,
-        speedMbps: carrier?.speedMbps || 0,
-        cap: true,
-        ex: to.x,
-        ey: to.y,
-        mx: (from.x + to.x) / 2,
-        my: (from.y + to.y) / 2,
-      });
-    });
-    setPaths(next);
-
-    const staged = [];
-    pendingMoves.forEach(move => {
-      const from =
-        anchorPoint(`nic:${move.link}`, 'right') ||
-        anchorPoint(`consumer:${move.machineName}`, 'right');
-      const to = anchorPoint(`network:${move.toNetId}`, 'left');
-      if (from && to) {
-        staged.push({
-          id: `pending-${move.machineName}-${move.link}`,
-          d: bezier(from.x, from.y, to.x, to.y),
-        });
-      }
-    });
-    setPendingPaths(staged);
+    setPaths(built.paths);
+    setPendingPaths(built.pending);
   }, [visibleConsumers, visibleNetworks, isolatedNet, colors, graph, pendingByNic, pendingMoves]);
 
   useEffect(() => {
@@ -284,8 +220,10 @@ const TopologyCanvas = ({
         registerAnchor={registerAnchor}
         canRewire={canRewire}
         pendingLinks={pendingLinks}
+        pendingAdds={pendingMoves.filter(move => move.isAdd && move.machineName === consumer.id)}
         onDragNic={onDragNic}
         onOpenNetworking={onOpenNetworking}
+        onOpenSettings={onOpenSettings}
         tracedSet={traceSet}
       />
     </div>
@@ -320,6 +258,8 @@ const TopologyCanvas = ({
                   onWireChart(path.netId);
                 }
               }}
+              onMouseEnter={() => setHoverWire(path.id)}
+              onMouseLeave={() => setHoverWire(prev => (prev === path.id ? null : prev))}
             />
             <path
               d={path.d}
@@ -328,7 +268,9 @@ const TopologyCanvas = ({
               }`}
               style={{ stroke: path.color, strokeWidth: path.width }}
             />
-            {!path.struck && <FlowEffects path={path} reducedMotion={reducedMotion} />}
+            {!path.struck && (
+              <FlowEffects path={path} style={effectStyle} reducedMotion={reducedMotion} />
+            )}
             <FlowLabel path={path} />
             {path.cap && path.motion === MOTION_NO_FEED && !path.ghost && (
               <circle
@@ -344,6 +286,7 @@ const TopologyCanvas = ({
         {pendingPaths.map(path => (
           <path key={path.id} d={path.d} className="hw-topo-wire hw-topo-wire-pending" />
         ))}
+        <WireSparkline paths={paths} hoveredId={hoverWire} pulse={pulse} />
       </svg>
 
       <div className={`hw-topo-columns ${hasAggr ? 'hw-topo-columns-4' : ''}`}>
@@ -427,6 +370,8 @@ const TopologyCanvas = ({
                 tracedNetworks={graph.networks.filter(n => n.carrier === adapter.id).map(n => n.id)}
                 registerAnchor={registerAnchor}
                 onOpenNetworking={onOpenNetworking}
+                dragging={canRewire ? dragging : null}
+                onDropCarrier={onDropCarrier}
               />
             </div>
           ))}
@@ -442,21 +387,40 @@ const TopologyCanvas = ({
                 onTrace={handleTrace}
                 tracedNetworks={graph.networks.filter(n => n.carrier === swtch.id).map(n => n.id)}
                 registerAnchor={registerAnchor}
+                dragging={canRewire ? dragging : null}
+                onDropCarrier={onDropCarrier}
               />
             </div>
           ))}
-          {downAdapters.length > 0 && !isolatedNet && (
-            <div
-              className={`hw-topo-card hw-topo-downgroup ${lens === 'debug' ? '' : 'hw-topo-quiet'}`}
-            >
-              <div className="hw-topo-card-sub">
-                {t('hostTools.topology.downAdapters', { count: downAdapters.length })}
+          {downAdapters.length > 0 &&
+            !isolatedNet &&
+            (canRewire && dragging ? (
+              downAdapters.map(adapter => (
+                <div key={adapter.id} className="hw-topo-slot">
+                  <AdapterCard
+                    adapter={adapter}
+                    feedPresent={graph.feedPresent}
+                    onTrace={handleTrace}
+                    tracedNetworks={[]}
+                    registerAnchor={registerAnchor}
+                    onOpenNetworking={onOpenNetworking}
+                    dragging={dragging}
+                    onDropCarrier={onDropCarrier}
+                  />
+                </div>
+              ))
+            ) : (
+              <div
+                className={`hw-topo-card hw-topo-downgroup ${lens === 'debug' ? '' : 'hw-topo-quiet'}`}
+              >
+                <div className="hw-topo-card-sub">
+                  {t('hostTools.topology.downAdapters', { count: downAdapters.length })}
+                </div>
+                <div className="hw-topo-card-sub hw-topo-mono">
+                  {downAdapters.map(a => a.name).join(' · ')}
+                </div>
               </div>
-              <div className="hw-topo-card-sub hw-topo-mono">
-                {downAdapters.map(a => a.name).join(' · ')}
-              </div>
-            </div>
-          )}
+            ))}
         </div>
 
         <div className="hw-topo-col">
@@ -478,6 +442,18 @@ const TopologyCanvas = ({
                 dragging={canRewire ? dragging : null}
                 onDropNic={onDropNic}
                 shared={sharedNetIds ? sharedNetIds.has(network.id) : false}
+              />
+            </div>
+          ))}
+          {plannedNetworks.map(network => (
+            <div key={network.id} className="hw-topo-slot">
+              <NetworkCard
+                network={network}
+                color="var(--hw-topo-pending)"
+                feedPresent={graph.feedPresent}
+                onDrill={() => {}}
+                onTrace={() => {}}
+                registerAnchor={registerAnchor}
               />
             </div>
           ))}
@@ -521,9 +497,13 @@ TopologyCanvas.propTypes = {
   pendingMoves: PropTypes.array,
   onDragNic: PropTypes.func,
   onDropNic: PropTypes.func,
+  onDropCarrier: PropTypes.func,
   onOpenNetworking: PropTypes.func,
+  onOpenSettings: PropTypes.func,
   onWireChart: PropTypes.func,
   sharedNetIds: PropTypes.instanceOf(Set),
+  effectStyle: PropTypes.string,
+  pulse: PropTypes.number,
 };
 
 export default TopologyCanvas;

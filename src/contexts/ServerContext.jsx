@@ -146,7 +146,6 @@ export const ServerProvider = ({ children }) => {
     }
     // Prevent concurrent calls
     if (loadingRef.current) {
-      console.log('📡 SERVER: loadServers already in progress, skipping duplicate');
       return;
     }
 
@@ -157,7 +156,6 @@ export const ServerProvider = ({ children }) => {
 
       if (response.data.success) {
         setServers(response.data.servers);
-        console.log('Servers loaded:', response.data.servers);
       } else {
         console.error('Failed to load servers:', response.data.message);
       }
@@ -171,13 +169,6 @@ export const ServerProvider = ({ children }) => {
 
   // Persist currentServer to localStorage whenever it changes
   useEffect(() => {
-    console.log('📡 SERVER: currentServer changed', {
-      from: 'previous value',
-      to: currentServer?.hostname || 'null',
-      currentServerId: currentServer?.id || 'null',
-      timestamp: new Date().toISOString(),
-    });
-
     try {
       if (currentServer) {
         // Persist addressing/identity ONLY — capabilities are live data from the
@@ -260,12 +251,6 @@ export const ServerProvider = ({ children }) => {
       return;
     }
 
-    console.log('🔄 SERVER RE-ESTABLISHMENT: Checking...', {
-      serversLoaded: servers.length,
-      currentServer,
-      hasCurrentServer: !!currentServer,
-    });
-
     if (servers.length > 0 && currentServer && currentServer.hostname) {
       // Find the matching server in the loaded servers array
       const matchingServer = servers.find(
@@ -274,17 +259,6 @@ export const ServerProvider = ({ children }) => {
           server.port === currentServer.port &&
           server.protocol === currentServer.protocol
       );
-
-      console.log('🔍 SERVER RE-ESTABLISHMENT: Looking for match...', {
-        lookingFor: {
-          hostname: currentServer.hostname,
-          port: currentServer.port,
-          protocol: currentServer.protocol,
-          id: currentServer.id,
-        },
-        found: matchingServer,
-        needsUpdate: matchingServer && matchingServer.id !== currentServer.id,
-      });
 
       if (matchingServer) {
         // Compare meaningful fields instead of potentially different IDs.
@@ -300,24 +274,13 @@ export const ServerProvider = ({ children }) => {
             JSON.stringify(currentServer.capabilities ?? null);
 
         if (hasActualChanges) {
-          console.log(
-            '✅ SERVER RE-ESTABLISHMENT: Re-establishing server connection:',
-            matchingServer.hostname
-          );
           setCurrentServer(matchingServer);
-        } else {
-          console.log('✅ SERVER RE-ESTABLISHMENT: Server already current, no actual changes');
         }
       } else {
         // Server no longer exists, clear selection
-        console.log(
-          '❌ SERVER RE-ESTABLISHMENT: Previously selected server no longer exists, clearing selection'
-        );
         setCurrentServer(null);
         setCurrentMachine(null);
       }
-    } else if (servers.length > 0 && !currentServer) {
-      console.log('📝 SERVER RE-ESTABLISHMENT: No currentServer to restore');
     }
   }, [isDirect, servers, currentServer]);
 
@@ -470,12 +433,13 @@ export const ServerProvider = ({ children }) => {
    * Get all available servers
    * @returns {Array} Array of server objects
    */
-  const getServers = useCallback(() => {
-    console.log('getServers - servers:', servers);
-    return servers.sort(
-      (a, b) => new Date(b.lastUsed || b.createdAt) - new Date(a.lastUsed || a.createdAt)
-    );
-  }, [servers]);
+  const getServers = useCallback(
+    () =>
+      [...servers].sort(
+        (a, b) => new Date(b.lastUsed || b.createdAt) - new Date(a.lastUsed || a.createdAt)
+      ),
+    [servers]
+  );
 
   /**
    * Set the current server for operations

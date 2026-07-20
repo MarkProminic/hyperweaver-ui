@@ -1,137 +1,87 @@
 import PropTypes from 'prop-types';
 
+import {
+  Equalizer,
+  PacketField,
+  WaveForm,
+  lanePath,
+  lanePathReversed,
+  rateWidth,
+} from './TopologyFlowMotion';
 import { utilization, utilizationColor, flowPeriod } from './topologyPalette';
 
-const packetCount = mbps => {
-  if (mbps <= 0) {
-    return 0;
-  }
-  if (mbps <= 0.01) {
-    return 2;
-  }
-  if (mbps <= 1) {
-    return 3;
-  }
-  if (mbps <= 100) {
-    return 4;
-  }
-  return 5;
-};
+export const EFFECT_STYLES = ['comets', 'weathermap', 'wave', 'bars', 'rivers'];
 
-const packetDur = mbps => Math.max(0.6, 4.2 - Math.log10(mbps + 1) * 1.5);
-
-const packetSize = mbps => {
-  if (mbps <= 1) {
-    return 3.4;
-  }
-  if (mbps <= 100) {
-    return 4.4;
-  }
-  return 5.4;
-};
-
-const FlowStream = ({ d, mbps, reverse = false, className }) => {
+const ArrowLane = ({ id, d, mbps, speedMbps }) => {
   if (mbps <= 0) {
     return null;
   }
-  const dur = packetDur(mbps);
-  const count = packetCount(mbps);
-  const head = packetSize(mbps);
-  const reverseAttrs = reverse ? { keyPoints: '1;0', keyTimes: '0;1', calcMode: 'linear' } : {};
+  const color = utilizationColor(utilization(mbps, speedMbps));
+  const width = rateWidth(mbps);
+  const head = Math.min(16, Math.max(9, width * 1.1 + 3));
+  const markerId = `hw-arrow-${id}`;
   return (
     <>
-      {[...Array(count).keys()].map(i => (
-        <g key={i}>
-          <animateMotion
-            dur={`${dur.toFixed(2)}s`}
-            repeatCount="indefinite"
-            path={d}
-            rotate="auto"
-            begin={`${((dur * i) / count - dur).toFixed(2)}s`}
-            {...reverseAttrs}
+      <defs>
+        <marker
+          id={markerId}
+          markerWidth={head}
+          markerHeight={head}
+          refX={head - 1}
+          refY={head / 2}
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path
+            d={`M0,${(head * 0.18).toFixed(1)} L${(head - 1).toFixed(1)},${(head / 2).toFixed(1)} L0,${(head * 0.82).toFixed(1)} Z`}
+            fill={color}
           />
-          <ellipse rx={head} ry={head * 0.42} className={className} opacity="0.95" />
-          <ellipse
-            cx={-head * 1.6}
-            rx={head * 0.72}
-            ry={head * 0.3}
-            className={className}
-            opacity="0.55"
-          />
-          <ellipse
-            cx={-head * 2.9}
-            rx={head * 0.48}
-            ry={head * 0.2}
-            className={className}
-            opacity="0.3"
-          />
-          <ellipse
-            cx={-head * 4.1}
-            rx={head * 0.28}
-            ry={head * 0.13}
-            className={className}
-            opacity="0.14"
-          />
-        </g>
-      ))}
+        </marker>
+      </defs>
+      <path
+        d={d}
+        className="hw-topo-wire hw-topo-lane"
+        style={{
+          stroke: color,
+          strokeWidth: width,
+          animationDuration: `${flowPeriod(mbps).toFixed(2)}s`,
+        }}
+        markerEnd={`url(#${markerId})`}
+      />
     </>
   );
 };
 
-FlowStream.propTypes = {
+ArrowLane.propTypes = {
+  id: PropTypes.string.isRequired,
   d: PropTypes.string.isRequired,
   mbps: PropTypes.number.isRequired,
-  reverse: PropTypes.bool,
-  className: PropTypes.string,
+  speedMbps: PropTypes.number,
 };
 
-const HighTrafficPulse = ({ d, mbps }) => {
-  if (mbps <= 100) {
-    return null;
-  }
-  const dur = Math.max(0.8, packetDur(mbps) * 0.7);
-  return (
-    <circle r={packetSize(mbps) + 2.5} className="hw-topo-pulse-glow">
-      <animateMotion dur={`${dur.toFixed(2)}s`} repeatCount="indefinite" path={d} />
-      <animate
-        attributeName="r"
-        values={`${packetSize(mbps) + 1};${packetSize(mbps) + 4};${packetSize(mbps) + 1}`}
-        dur="1s"
-        repeatCount="indefinite"
-      />
-    </circle>
-  );
+const Weathermap = ({ path }) => (
+  <>
+    <ArrowLane
+      id={`${path.id}-tx`}
+      d={lanePath(path.d, -Math.max(4, rateWidth(path.tx) * 0.8))}
+      mbps={path.tx}
+      speedMbps={path.speedMbps}
+    />
+    <ArrowLane
+      id={`${path.id}-rx`}
+      d={lanePathReversed(path.d, Math.max(4, rateWidth(path.rx) * 0.8))}
+      mbps={path.rx}
+      speedMbps={path.speedMbps}
+    />
+  </>
+);
+
+Weathermap.propTypes = {
+  path: PropTypes.object.isRequired,
 };
 
-HighTrafficPulse.propTypes = {
-  d: PropTypes.string.isRequired,
-  mbps: PropTypes.number.isRequired,
-};
-
-/**
- * The full realtime effect stack for one connector carrying measured traffic:
- * two counter-flowing dash rivers (tx rides the path, rx rides it reversed),
- * wave packets with fading tails in both directions (never an empty wire —
- * negative begins), a glow pulse above 100 Mbps, and the utilization
- * temperature riding the tx river's stroke. Rates come straight from the
- * usage endpoints; no measurement, no motion.
- */
-export const FlowEffects = ({ path, reducedMotion }) => {
-  const total = path.rx + path.tx;
-  if (total <= 0) {
-    return null;
-  }
-  const heat = utilizationColor(utilization(total, path.speedMbps));
-  const width = Math.max(2, path.width * 0.45);
-  if (reducedMotion) {
-    return (
-      <path
-        d={path.d}
-        className="hw-topo-wire"
-        style={{ stroke: heat, strokeWidth: width, opacity: 0.8 }}
-      />
-    );
-  }
+const Rivers = ({ path }) => {
+  const heat = utilizationColor(utilization(path.rx + path.tx, path.speedMbps));
   return (
     <>
       <path
@@ -139,7 +89,7 @@ export const FlowEffects = ({ path, reducedMotion }) => {
         className="hw-topo-wire hw-topo-river hw-topo-river-tx"
         style={{
           stroke: heat,
-          strokeWidth: width,
+          strokeWidth: Math.max(2, rateWidth(path.tx) * 0.6),
           animationDuration: `${flowPeriod(Math.max(path.tx, 0.001)).toFixed(2)}s`,
         }}
       />
@@ -147,25 +97,74 @@ export const FlowEffects = ({ path, reducedMotion }) => {
         d={path.d}
         className="hw-topo-wire hw-topo-river hw-topo-river-rx"
         style={{
-          strokeWidth: Math.max(1.6, width * 0.7),
+          strokeWidth: Math.max(1.6, rateWidth(path.rx) * 0.5),
           animationDuration: `${flowPeriod(Math.max(path.rx, 0.001)).toFixed(2)}s`,
         }}
       />
-      <FlowStream d={path.d} mbps={path.tx} className="hw-topo-particle-tx" />
-      <FlowStream d={path.d} mbps={path.rx} reverse className="hw-topo-particle-rx" />
-      <HighTrafficPulse d={path.d} mbps={total} />
     </>
   );
 };
 
+Rivers.propTypes = {
+  path: PropTypes.object.isRequired,
+};
+
+/**
+ * The pluggable realtime effect stack. Every style reads the SAME live
+ * rx/tx endpoint rates; width, amplitude, cadence and heat all breathe with
+ * the measurement. No measurement, no motion — callers gate on that.
+ */
+export const FlowEffects = ({ path, style = 'comets', reducedMotion }) => {
+  const total = path.rx + path.tx;
+  if (reducedMotion) {
+    if (total <= 0) {
+      return null;
+    }
+    return (
+      <path
+        d={path.d}
+        className="hw-topo-wire"
+        style={{
+          stroke: utilizationColor(utilization(total, path.speedMbps)),
+          strokeWidth: rateWidth(total) * 0.6,
+          opacity: 0.8,
+        }}
+      />
+    );
+  }
+  if (style === 'comets') {
+    return (
+      <>
+        <PacketField d={path.d} mbps={path.tx} offset={-4} className="hw-topo-particle-tx" />
+        <PacketField d={path.d} mbps={path.rx} reverse offset={4} className="hw-topo-particle-rx" />
+      </>
+    );
+  }
+  if (total <= 0) {
+    return null;
+  }
+  if (style === 'wave') {
+    return <WaveForm path={path} />;
+  }
+  if (style === 'bars') {
+    return <Equalizer path={path} />;
+  }
+  if (style === 'rivers') {
+    return <Rivers path={path} />;
+  }
+  return <Weathermap path={path} />;
+};
+
 FlowEffects.propTypes = {
   path: PropTypes.shape({
+    id: PropTypes.string,
     d: PropTypes.string.isRequired,
     rx: PropTypes.number.isRequired,
     tx: PropTypes.number.isRequired,
-    width: PropTypes.number.isRequired,
+    width: PropTypes.number,
     speedMbps: PropTypes.number,
   }).isRequired,
+  style: PropTypes.string,
   reducedMotion: PropTypes.bool,
 };
 
@@ -179,7 +178,7 @@ export const compactRate = mbps => {
   return `${Math.round(mbps * 1000)}K`;
 };
 
-/** The always-on Kbps label the motion grammar promises for measured traffic. */
+/** The always-on rate label the motion grammar promises for measured traffic. */
 export const FlowLabel = ({ path }) => {
   if (path.rx + path.tx <= 0 || !path.cap) {
     return null;

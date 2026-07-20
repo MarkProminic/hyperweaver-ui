@@ -100,8 +100,24 @@ export default defineConfig({
           }
 
           // Terminal libraries (large, independent)
-          if (id.includes('node_modules/react-xtermjs')) {
+          if (id.includes('node_modules/react-xtermjs') || id.includes('node_modules/@xterm')) {
             return 'terminal';
+          }
+
+          if (
+            id.includes('node_modules/@codemirror') ||
+            id.includes('node_modules/@uiw') ||
+            id.includes('node_modules/codemirror')
+          ) {
+            return 'editor';
+          }
+
+          if (id.includes('node_modules/@cubone')) {
+            return 'file-manager';
+          }
+
+          if (id.includes('node_modules/react-vnc') || id.includes('node_modules/@novnc')) {
+            return 'vnc-console';
           }
 
           // IronRDP browser client (WASM-carrying, large, independent) —

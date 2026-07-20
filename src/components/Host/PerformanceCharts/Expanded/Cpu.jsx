@@ -50,6 +50,20 @@ const ExpandedCpuChart = ({ cpuChartData, cpuSeriesVisibility }) => {
             visible: cpuSeriesVisibility.overall,
             marker: { enabled: false },
           },
+          ...(cpuChartData.ioDelay && cpuChartData.ioDelay.length > 0
+            ? [
+                {
+                  name: t('hostCharts.cpuChart.ioDelaySeriesName'),
+                  data: cpuChartData.ioDelay,
+                  yAxis: 0,
+                  color: '#e4d354',
+                  lineWidth: 2,
+                  dashStyle: 'shortdash',
+                  visible: cpuSeriesVisibility.overall,
+                  marker: { enabled: false },
+                },
+              ]
+            : []),
           ...Object.entries(cpuChartData.cores).map(([core, data]) => ({
             name: core,
             data,
@@ -97,6 +111,7 @@ const ExpandedCpuChart = ({ cpuChartData, cpuSeriesVisibility }) => {
 ExpandedCpuChart.propTypes = {
   cpuChartData: PropTypes.shape({
     overall: PropTypes.array,
+    ioDelay: PropTypes.array,
     cores: PropTypes.object,
     load: PropTypes.object,
   }).isRequired,

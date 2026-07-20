@@ -36,6 +36,7 @@ import {
 } from './machineHelpers';
 import MachineSettingsStatus from './MachineSettingsStatus';
 import NetworkAdaptersEditor from './NetworkAdaptersEditor';
+import ResourceControlsEditor from './ResourceControlsEditor';
 import StorageDevicesEditor from './StorageDevicesEditor';
 import UsbPanel from './UsbPanel';
 import ZvolManageModal from './ZvolManageModal';
@@ -538,6 +539,7 @@ const TABS = [
   { id: 'nics', label: 'NICs' },
   { id: 'usb', label: 'USB', vboxOnly: true },
   { id: 'filesystems', label: 'Filesystems', bhyveOnly: true },
+  { id: 'resources', label: 'Resources', bhyveOnly: true },
   { id: 'advanced', label: 'Advanced', vboxOnly: true },
 ];
 
@@ -696,6 +698,54 @@ PendingChangesPanel.propTypes = {
   loading: PropTypes.bool,
   onApplyNow: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
+};
+
+// The zone's REAL devices as bhyve boot tokens (short names: bootdisk,
+// disk0, cdrom0, net0) — feeds the boot-order editor's slots/picker so
+// it behaves like the VirtualBox one instead of a bare typed input.
+const zoneBootDevicesOf = currentHardware =>
+  currentHardware.zone
+    ? [
+        ...currentHardware.zone.disks.map(disk => disk.name),
+        ...currentHardware.zone.cdroms.map(cdrom => cdrom.name),
+        ...currentHardware.zone.nics.map(nic => nic.name),
+      ]
+    : [];
+
+/** Settings → Resources tab body — kept mounted (d-none) so staged edits
+ *  survive tab switches; exists only for bhyve zones, never utm machines. */
+const ResourcesSection = ({
+  show,
+  active,
+  machineName,
+  nonce,
+  knobCurrent,
+  onChanges,
+  disabled,
+}) => {
+  if (!show) {
+    return null;
+  }
+  return (
+    <div className={active ? '' : 'd-none'}>
+      <ResourceControlsEditor
+        key={`${machineName}-${nonce}`}
+        knobCurrent={knobCurrent}
+        onChanges={onChanges}
+        disabled={disabled}
+      />
+    </div>
+  );
+};
+
+ResourcesSection.propTypes = {
+  show: PropTypes.bool,
+  active: PropTypes.bool,
+  machineName: PropTypes.string,
+  nonce: PropTypes.number,
+  knobCurrent: PropTypes.object,
+  onChanges: PropTypes.func.isRequired,
+  disabled: PropTypes.bool,
 };
 
 // The tab strip: utm machines take a fixed reduced set + the UTM tab; every
@@ -867,6 +917,10 @@ const MachineSettings = ({
   const [credsTouched, setCredsTouched] = useState([]);
   const [addFilesystems, setAddFilesystems] = useState([]);
   const [removeFilesystems, setRemoveFilesystems] = useState([]);
+  // The zonecfg resource-control fragment (Resources tab) — null = untouched;
+  // the editor owns its own state and reports the changed-only PUT fragment.
+  const [resourceChanges, setResourceChanges] = useState(null);
+  const [resourceNonce, setResourceNonce] = useState(0);
   // Zone device families (agent-confirmed wire): removals ride ATTR NAMES
   // (disk0/cdrom0) / the net resource's PHYSICAL vnic name; zone disk adds
   // are the zvol shape (create_new… | existing_dataset).
@@ -949,6 +1003,8 @@ const MachineSettings = ({
     setCredsTouched([]);
     setAddFilesystems([]);
     setRemoveFilesystems([]);
+    setResourceChanges(null);
+    setResourceNonce(nonce => nonce + 1);
     setAddZoneDisks([]);
     setRemoveZoneDisks([]);
     setRemoveZoneCdroms([]);
@@ -1305,6 +1361,9 @@ const MachineSettings = ({
     if (vboxPassthrough) {
       changes.vbox = { ...(changes.vbox || {}), ...vboxPassthrough };
     }
+    if (!isUtm && hasHypervisor(currentServer, 'bhyve') && resourceChanges) {
+      Object.assign(changes, resourceChanges);
+    }
     if (Object.keys(changes).length === 0) {
       setError(t('machineEdit.machineSettings.nothingChanged'));
       return;
@@ -1388,16 +1447,7 @@ const MachineSettings = ({
   const activeSection = sectionForTab(tab);
   const autostartSection = HARDWARE_SECTIONS.find(section => section.id === 'autostart');
   const currentHardware = currentHardwareOf({ configuration, knob_current: knobCurrent });
-  // The zone's REAL devices as bhyve boot tokens (short names: bootdisk,
-  // disk0, cdrom0, net0) — feeds the boot-order editor's slots/picker so
-  // it behaves like the VirtualBox one instead of a bare typed input.
-  const zoneBootDevices = currentHardware.zone
-    ? [
-        ...currentHardware.zone.disks.map(disk => disk.name),
-        ...currentHardware.zone.cdroms.map(cdrom => cdrom.name),
-        ...currentHardware.zone.nics.map(nic => nic.name),
-      ]
-    : [];
+  const zoneBootDevices = zoneBootDevicesOf(currentHardware);
 
   const marked = entry =>
     removeAttachments.some(
@@ -1729,6 +1779,16 @@ const MachineSettings = ({
           disabled={formDisabled}
         />
       )}
+
+      <ResourcesSection
+        show={!isUtm && hasHypervisor(currentServer, 'bhyve')}
+        active={tab === 'resources'}
+        machineName={machineName}
+        nonce={resourceNonce}
+        knobCurrent={knobCurrent}
+        onChanges={setResourceChanges}
+        disabled={formDisabled}
+      />
 
       {tab === 'utm' && (
         <div className="row g-3">

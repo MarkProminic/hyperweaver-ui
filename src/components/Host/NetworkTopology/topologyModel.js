@@ -219,6 +219,7 @@ export const buildHostGraph = ({
       mtu: parseInt(row.mtu, 10) || null,
       networkId: netId,
       ghost,
+      synthetic: !!row.synthetic,
       usage: ghost ? null : usageByLink.get(row.link) || null,
     };
   };
@@ -241,6 +242,7 @@ export const buildHostGraph = ({
             vid: net['vlan-id'] || 0,
             macaddress: net['mac-addr'] || null,
             zone: name,
+            synthetic: !net.physical,
           },
           true
         )

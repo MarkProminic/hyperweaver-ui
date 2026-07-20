@@ -4,6 +4,9 @@
  * GET /network/spaces feed. Per-VM link stats don't exist on VirtualBox —
  * nic usage stays null; host adapters keep theirs from the monitoring feed.
  * Same output shape as buildHostGraph so the renderer never branches.
+ * Bridged carriers whose VirtualBox network name matches no monitored
+ * interface row get a synthesized adapter card (state unknown) so their
+ * wires still land instead of vanishing.
  */
 
 export const vboxModeForKind = {
@@ -187,7 +190,7 @@ export const buildVBoxGraph = ({
           mtu: null,
           networkId: target.id,
           ghost: false,
-          usage: adapterUsage.get(nic.adapter) || null,
+          usage: adapterUsage.get(String(nic.adapter)) || null,
         };
       });
       nics.forEach(nic => {
@@ -204,6 +207,23 @@ export const buildVBoxGraph = ({
         ghostOnly: false,
         nics,
       };
+    });
+
+  [...networks.values()]
+    .filter(net => net.carrierKind === 'phys' && !adapters.some(a => a.id === net.carrier))
+    .forEach(net => {
+      adapters.push({
+        id: net.carrier,
+        name: net.carrier,
+        kind: 'phys',
+        state: 'unknown',
+        speedMbps: 0,
+        mtu: null,
+        members: [],
+        memberOf: null,
+        ips: [],
+        usage: usageByLink.get(net.carrier) || null,
+      });
     });
 
   const networkList = [...networks.values()].map(net => {

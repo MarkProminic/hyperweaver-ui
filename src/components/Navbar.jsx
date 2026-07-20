@@ -24,6 +24,7 @@ import ContextTabs from './Navbar/ContextTabs';
 import { HostRestartOptions, HostShutdownOptions } from './Navbar/HostActionModalContent';
 import { getActionVariant, getActionIcon, isShareableRoute } from './Navbar/navbarUtils';
 import { useNavbarActions } from './Navbar/useNavbarActions';
+import { useZoneLifecycle } from './Navbar/useZoneLifecycle';
 
 /**
  * Navbar — two rows (contract §2, XenCenter-style):
@@ -309,6 +310,8 @@ const Navbar = () => {
   }, [currentServer, currentMachine, getAllMachines]);
   const machineIsUtm = machineHypervisor === 'utm';
 
+  const zoneLifecycle = useZoneLifecycle(currentServer, currentMachine, user?.role);
+
   // Provisioning controls gate on the provision-status answer — a machine
   // gains them by carrying a provisioner document (the Provisioning tab's
   // enable path); an errored/absent status means not configured.
@@ -469,6 +472,8 @@ const Navbar = () => {
                 {t('navbar.navbar.setDisplaySize')}
               </Dropdown.Item>
             )}
+
+          {zoneLifecycle.items}
 
           {/* Provisioning — executed by the Provisioning tab (?run=/?editprov=
               params), which reports the queued tasks. */}
@@ -856,6 +861,8 @@ const Navbar = () => {
 
       {/* Row 2: context tabs for the focused node */}
       <ContextTabs />
+
+      {zoneLifecycle.modals}
 
       {guestPower && (
         <ConfirmModal

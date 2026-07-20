@@ -113,3 +113,14 @@ const MANAGE_FEATURES = [
  * @returns {boolean} True if the Manage navbar tab should render
  */
 export const hasManageSurface = server => MANAGE_FEATURES.some(token => hasFeature(server, token));
+
+/**
+ * Whether the agent behind `server` offers ANY host-networking surface — the
+ * bhyve link stack (`vnics`) or the VirtualBox spaces stack (`network-spaces`).
+ * Gates the Networking tab/route so VirtualBox hosts get their topology + IP
+ * management instead of a hidden tab.
+ * @param {Object} server - Server object (registry row or Direct self-server)
+ * @returns {boolean} True if the Networking tab/route should render
+ */
+export const hasNetworkingSurface = server =>
+  hasFeature(server, 'vnics') || hasFeature(server, 'network-spaces');

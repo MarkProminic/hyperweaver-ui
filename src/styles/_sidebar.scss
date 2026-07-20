@@ -99,3 +99,53 @@
 .hw-profile-menu {
   width: 260px;
 }
+
+// Right-click context menu (SidebarContextMenu) — themed through the --bs-*
+// tokens, so light/dark follow the theme toggle with no component logic.
+.hw-ctx-menu {
+  position: fixed;
+  z-index: 2000;
+  min-width: 190px;
+  max-width: 280px;
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  border: 1px solid var(--hw-border-light);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  padding: 4px;
+}
+
+.hw-ctx-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bs-secondary-color);
+  padding: 4px 10px 6px;
+}
+
+.hw-ctx-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--bs-body-color);
+  padding: 5px 10px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bs-secondary-bg);
+  }
+}
+
+.hw-ctx-danger {
+  color: var(--bs-danger);
+}
+
+.hw-ctx-divider {
+  margin: 4px 6px;
+  border-color: var(--hw-border-light);
+  opacity: 1;
+}

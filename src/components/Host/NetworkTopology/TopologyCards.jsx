@@ -4,24 +4,15 @@ import { useTranslation } from 'react-i18next';
 
 import { rateLabels } from './topologyPalette';
 
-/** Whether a staged rewire may target this network (wire truth: zonecfg
- *  vlan-id can be SET but not cleared in place, so an untagged target only
- *  accepts nics that are already untagged; VBox spaces never accept drops
- *  until the re-attachment wire exists). */
-export const dropAllowed = (dragging, network) => {
-  if (!dragging || dragging.fromNetId === network.id) {
+/** Whether a staged rewire may land on this carrier directly (bhyve: any
+ *  adapter or switch that isn't the nic's current carrier; vbox: only
+ *  physical adapters — a bridged re-attach). */
+export const carrierDropAllowed = (dragging, carrier) => {
+  if (!dragging || dragging.over === carrier.id) {
     return false;
   }
   if (dragging.hostKind === 'vbox') {
-    return ['bridged', 'hostonly', 'hostonlynet', 'internal', 'natnetwork', 'nat'].includes(
-      network.kind
-    );
-  }
-  if (!['vlan', 'untagged', 'internal'].includes(network.kind)) {
-    return false;
-  }
-  if (network.vlanId === 0 && dragging.vlanId > 0) {
-    return false;
+    return carrier.kind === 'phys';
   }
   return true;
 };
@@ -41,7 +32,7 @@ StateDot.propTypes = {
   ghost: PropTypes.bool,
 };
 
-const RateLine = ({ feedPresent, usage, muted }) => {
+export const RateLine = ({ feedPresent, usage, muted }) => {
   const { t } = useTranslation();
   const labels = rateLabels(feedPresent, usage);
   if (!labels) {
@@ -86,7 +77,7 @@ export const NicChip = ({
   return (
     <button
       type="button"
-      ref={el => registerAnchor(`nic:${nic.link}`, el)}
+      ref={el => registerAnchor(`nic:${machineName}|${nic.link}`, el)}
       className={`hw-topo-chip ${nic.ghost ? 'hw-topo-ghost' : ''} ${pending ? 'hw-topo-chip-pending' : ''} ${draggable ? 'hw-topo-chip-draggable' : ''} ${hot ? 'hw-topo-chip-hot' : ''}`}
       draggable={draggable}
       onDragStart={event => {
@@ -97,6 +88,7 @@ export const NicChip = ({
           adapter: nic.adapter ?? null,
           fromNetId: nic.networkId,
           vlanId: nic.vlanId,
+          over: nic.over,
         });
       }}
       onDragEnd={() => onDragNic(null)}
@@ -112,7 +104,7 @@ export const NicChip = ({
       }}
       title={pending ? t('hostTools.topology.pendingMoveTitle') : nic.mac || undefined}
     >
-      <span className="hw-topo-chip-name">{nic.link}</span>
+      <span className="hw-topo-chip-name">{nic.label || nic.link}</span>
       <span className="hw-topo-chip-net" style={{ color }}>
         {badge}
         {' · '}
@@ -154,8 +146,10 @@ export const ConsumerCard = ({
   registerAnchor,
   canRewire = false,
   pendingLinks = new Set(),
+  pendingAdds = [],
   onDragNic = () => {},
   onOpenNetworking = null,
+  onOpenSettings = null,
   tracedSet = new Set(),
 }) => {
   const { t } = useTranslation();
@@ -196,6 +190,19 @@ export const ConsumerCard = ({
             <i className="fas fa-arrow-up-right-from-square" />
           </button>
         )}
+        {consumer.type === 'machine' && onOpenSettings && (
+          <button
+            type="button"
+            className="hw-topo-open"
+            title={t('hostTools.topology.openSettings')}
+            onClick={event => {
+              event.stopPropagation();
+              onOpenSettings(consumer.name);
+            }}
+          >
+            <i className="fas fa-sliders" />
+          </button>
+        )}
       </div>
       <div className="hw-topo-card-sub">
         {consumer.ghostOnly
@@ -212,13 +219,60 @@ export const ConsumerCard = ({
             feedPresent={feedPresent}
             onTrace={onTrace}
             registerAnchor={registerAnchor}
-            draggable={canRewire && consumer.type === 'machine' && !nic.ghost}
+            draggable={canRewire && consumer.type === 'machine' && !nic.synthetic}
             pending={pendingLinks.has(`${consumer.id}|${nic.link}`)}
             hot={tracedSet.has(nic.networkId)}
             onDragNic={onDragNic}
             onOpenNetworking={onOpenNetworking}
           />
         ))}
+        {pendingAdds.map(move => (
+          <NicChip
+            key={move.link}
+            nic={{
+              link: move.link,
+              label: move.newName || t('hostTools.topology.planned'),
+              over: move.toCarrier,
+              vlanId: move.toVlanId,
+              networkId: move.toNetId,
+              ghost: true,
+              synthetic: true,
+              usage: null,
+            }}
+            machineName={consumer.id}
+            color="var(--hw-topo-pending)"
+            feedPresent={feedPresent}
+            onTrace={() => {}}
+            registerAnchor={registerAnchor}
+            pending
+          />
+        ))}
+        {canRewire && consumer.type === 'machine' && (
+          <button
+            type="button"
+            className="hw-topo-chip hw-topo-chip-add hw-topo-chip-draggable"
+            draggable
+            onDragStart={event => {
+              event.dataTransfer.effectAllowed = 'move';
+              onDragNic({
+                machineName: consumer.id,
+                link: `new-${Math.random().toString(36).slice(2, 7)}`,
+                adapter: null,
+                fromNetId: null,
+                vlanId: 0,
+                over: null,
+                addNew: true,
+              });
+            }}
+            onDragEnd={() => onDragNic(null)}
+            title={t('hostTools.topology.addNicTitle')}
+          >
+            <span className="hw-topo-chip-name">
+              <i className="fas fa-plus me-1" />
+              {t('hostTools.topology.addNic')}
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -233,8 +287,10 @@ ConsumerCard.propTypes = {
   registerAnchor: PropTypes.func.isRequired,
   canRewire: PropTypes.bool,
   pendingLinks: PropTypes.instanceOf(Set),
+  pendingAdds: PropTypes.array,
   onDragNic: PropTypes.func,
   onOpenNetworking: PropTypes.func,
+  onOpenSettings: PropTypes.func,
   tracedSet: PropTypes.instanceOf(Set),
 };
 
@@ -245,15 +301,24 @@ export const AdapterCard = ({
   tracedNetworks,
   registerAnchor,
   onOpenNetworking = null,
+  dragging = null,
+  onDropCarrier = () => {},
 }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const up = adapter.state === 'up';
   const unused = up && adapter.kind === 'phys' && !adapter.memberOf && tracedNetworks.length === 0;
+  const dropTarget = { id: adapter.id, kind: adapter.kind };
+  const validTarget = carrierDropAllowed(dragging, dropTarget);
   return (
     <div
       ref={el => registerAnchor(`carrier:${adapter.id}`, el)}
-      className={`hw-topo-card hw-topo-adapter ${unused ? 'hw-topo-unused' : ''}`}
+      className={`hw-topo-card hw-topo-adapter ${unused ? 'hw-topo-unused' : ''} ${
+        validTarget ? 'hw-topo-drop-valid' : ''
+      } ${validTarget && dragOver ? 'hw-topo-drop-over' : ''} ${
+        dragging?.pinnedCarrier === adapter.id ? 'hw-topo-pinned' : ''
+      }`}
       role="button"
       tabIndex={0}
       onClick={() => onTrace(tracedNetworks)}
@@ -261,6 +326,21 @@ export const AdapterCard = ({
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           onTrace(tracedNetworks);
+        }
+      }}
+      onDragOver={event => {
+        if (validTarget) {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          setDragOver(true);
+        }
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={event => {
+        event.preventDefault();
+        setDragOver(false);
+        if (validTarget) {
+          onDropCarrier(dropTarget, event.ctrlKey);
         }
       }}
     >
@@ -339,14 +419,30 @@ AdapterCard.propTypes = {
   tracedNetworks: PropTypes.array.isRequired,
   registerAnchor: PropTypes.func.isRequired,
   onOpenNetworking: PropTypes.func,
+  dragging: PropTypes.object,
+  onDropCarrier: PropTypes.func,
 };
 
-export const SwitchCard = ({ swtch, onTrace, tracedNetworks, registerAnchor }) => {
+export const SwitchCard = ({
+  swtch,
+  onTrace,
+  tracedNetworks,
+  registerAnchor,
+  dragging = null,
+  onDropCarrier = () => {},
+}) => {
   const { t } = useTranslation();
+  const [dragOver, setDragOver] = useState(false);
+  const dropTarget = { id: swtch.id, kind: 'switch' };
+  const validTarget = carrierDropAllowed(dragging, dropTarget);
   return (
     <div
       ref={el => registerAnchor(`carrier:${swtch.id}`, el)}
-      className={`hw-topo-card hw-topo-switch ${swtch.ports === 0 ? 'hw-topo-empty' : ''}`}
+      className={`hw-topo-card hw-topo-switch ${swtch.ports === 0 ? 'hw-topo-empty' : ''} ${
+        validTarget ? 'hw-topo-drop-valid' : ''
+      } ${validTarget && dragOver ? 'hw-topo-drop-over' : ''} ${
+        dragging?.pinnedCarrier === swtch.id ? 'hw-topo-pinned' : ''
+      }`}
       role="button"
       tabIndex={0}
       onClick={() => onTrace(tracedNetworks)}
@@ -354,6 +450,21 @@ export const SwitchCard = ({ swtch, onTrace, tracedNetworks, registerAnchor }) =
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           onTrace(tracedNetworks);
+        }
+      }}
+      onDragOver={event => {
+        if (validTarget) {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          setDragOver(true);
+        }
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={event => {
+        event.preventDefault();
+        setDragOver(false);
+        if (validTarget) {
+          onDropCarrier(dropTarget, event.ctrlKey);
         }
       }}
     >
@@ -377,120 +488,6 @@ SwitchCard.propTypes = {
   onTrace: PropTypes.func.isRequired,
   tracedNetworks: PropTypes.array.isRequired,
   registerAnchor: PropTypes.func.isRequired,
-};
-
-export const networkTitle = (network, t) => {
-  if (network.kind === 'internal') {
-    return t('hostTools.topology.internalNetwork', { name: network.carrier });
-  }
-  if (network.kind === 'bridged') {
-    return t('hostTools.topology.bridgedNetwork', { name: network.carrier });
-  }
-  if (network.kind === 'hostonly') {
-    return t('hostTools.topology.hostOnlyNetwork', { name: network.carrier });
-  }
-  if (network.kind === 'hostonlynet') {
-    return t('hostTools.topology.hostOnlyNetNetwork', { name: network.carrier });
-  }
-  if (network.kind === 'natnetwork') {
-    return t('hostTools.topology.natNetwork', { name: network.carrier });
-  }
-  if (network.kind === 'nat') {
-    return t('hostTools.topology.natShared');
-  }
-  if (network.vlanId > 0) {
-    return t('hostTools.topology.vlanNetwork', { vlanId: network.vlanId });
-  }
-  return t('hostTools.topology.untaggedNetwork');
-};
-
-export const NetworkCard = ({
-  network,
-  color,
-  feedPresent,
-  onDrill,
-  onTrace,
-  registerAnchor,
-  dragging = null,
-  onDropNic = () => {},
-  shared = false,
-}) => {
-  const { t } = useTranslation();
-  const [dragOver, setDragOver] = useState(false);
-  const title = networkTitle(network, t);
-  const validTarget = dropAllowed(dragging, network);
-  return (
-    <div
-      ref={el => registerAnchor(`network:${network.id}`, el)}
-      className={`hw-topo-card hw-topo-network ${network.live === 0 ? 'hw-topo-ghost' : ''} ${
-        validTarget ? 'hw-topo-drop-valid' : ''
-      } ${validTarget && dragOver ? 'hw-topo-drop-over' : ''}`}
-      style={{ borderColor: color }}
-      role="button"
-      tabIndex={0}
-      onClick={() => onDrill(network.id)}
-      onKeyDown={event => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onDrill(network.id);
-        }
-      }}
-      onDragOver={event => {
-        if (validTarget) {
-          event.preventDefault();
-          event.dataTransfer.dropEffect = 'move';
-          setDragOver(true);
-        }
-      }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={event => {
-        event.preventDefault();
-        setDragOver(false);
-        if (validTarget) {
-          onDropNic(network);
-        }
-      }}
-    >
-      <span className="hw-topo-net-band" style={{ background: color }} />
-      <div className="hw-topo-card-head">
-        <span className="hw-topo-card-title">{title}</span>
-        {shared && (
-          <span className="hw-topo-shared-badge">{t('hostTools.topology.sharedBadge')}</span>
-        )}
-        <button
-          type="button"
-          className="hw-topo-open"
-          title={t('hostTools.topology.isolateNetwork')}
-          onClick={event => {
-            event.stopPropagation();
-            onTrace([network.id]);
-          }}
-        >
-          <i className="fas fa-filter" />
-        </button>
-      </div>
-      <div className="hw-topo-card-sub hw-topo-mono">
-        {network.detail || t('hostTools.topology.overCarrier', { carrier: network.carrier })}
-      </div>
-      <div className="hw-topo-card-sub">
-        {t('hostTools.topology.liveCount', { count: network.live })}
-        {network.planned > 0 &&
-          ` · ${t('hostTools.topology.plannedCount', { count: network.planned })}`}
-        {' · '}
-        <RateLine feedPresent={feedPresent} usage={network.usage} muted={network.live === 0} />
-      </div>
-    </div>
-  );
-};
-
-NetworkCard.propTypes = {
-  network: PropTypes.object.isRequired,
-  color: PropTypes.string,
-  feedPresent: PropTypes.bool.isRequired,
-  onDrill: PropTypes.func.isRequired,
-  onTrace: PropTypes.func.isRequired,
-  registerAnchor: PropTypes.func.isRequired,
   dragging: PropTypes.object,
-  onDropNic: PropTypes.func,
-  shared: PropTypes.bool,
+  onDropCarrier: PropTypes.func,
 };

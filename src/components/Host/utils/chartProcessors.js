@@ -63,6 +63,7 @@ export const processCPUHistoricalData = cpuData => {
   );
 
   const overall = [];
+  const ioDelay = [];
   const load1 = [];
   const load5 = [];
   const load15 = [];
@@ -71,6 +72,9 @@ export const processCPUHistoricalData = cpuData => {
   sortedData.forEach(d => {
     const timestamp = new Date(d.scan_timestamp).getTime();
     overall.push([timestamp, d.cpu_utilization_pct]);
+    if (d.io_delay_pct !== undefined && d.io_delay_pct !== null) {
+      ioDelay.push([timestamp, d.io_delay_pct]);
+    }
     load1.push([timestamp, d.load_avg_1min]);
     load5.push([timestamp, d.load_avg_5min]);
     load15.push([timestamp, d.load_avg_15min]);
@@ -90,6 +94,7 @@ export const processCPUHistoricalData = cpuData => {
 
   return {
     overall,
+    ioDelay,
     cores,
     load: {
       '1min': load1,

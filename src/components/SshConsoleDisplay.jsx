@@ -9,6 +9,7 @@ import { getAgentBasePath, fetchWsTicket, makeAgentRequest } from '../api/server
 import { useMode } from '../contexts/ModeContext';
 import { hasConsole, hasFeature } from '../utils/capabilities';
 import { buildWsUrl } from '../utils/websocket';
+import { loadXtermPrefs } from '../utils/xtermPrefs';
 
 import {
   startVncPreview,
@@ -67,6 +68,7 @@ const SshConsoleDisplay = ({
     }
     let cancelled = false;
     let attachAddon = null;
+    Object.assign(instance.options, loadXtermPrefs());
     const fitAddon = new FitAddon();
     instance.loadAddon(fitAddon);
     instance.open(ref.current);

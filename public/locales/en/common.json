@@ -966,6 +966,29 @@
     },
     "languageModal": {
       "title": "Change Language"
+    },
+    "sidebarMenu": {
+      "vncConsole": "VNC console",
+      "zloginConsole": "zlogin console"
+    },
+    "termPrefs": {
+      "title": "Terminal preferences",
+      "save": "Save",
+      "cancel": "Cancel",
+      "resetDefaults": "Reset to defaults",
+      "fontSize": "Font size",
+      "scrollback": "Scrollback lines",
+      "cursorStyle": "Cursor style",
+      "cursorBlock": "Block",
+      "cursorUnderline": "Underline",
+      "cursorBar": "Bar",
+      "cursorBlink": "Cursor blink",
+      "on": "On",
+      "off": "Off",
+      "fontFamily": "Font family (CSS stack)",
+      "fontHint": "Any installed monospace font works — the stack falls through left to right.",
+      "preview": "preview: ls -la /var/log | grep -i weaver 0123456789",
+      "applyNote": "The footer host shell updates immediately; other terminals pick the new values up when they are next opened."
     }
   },
   "common": {
@@ -2398,7 +2421,6 @@
       "hostname": "Hostname",
       "platform": "Platform",
       "architecture": "Architecture",
-      "agentVersion": "Agent Version",
       "uptime": "Uptime",
       "monitoringService": "Monitoring Service",
       "running": "Running",
@@ -2409,7 +2431,8 @@
       "pending": "Pending",
       "done": "Done",
       "failed": "Failed",
-      "notAvailable": "N/A"
+      "notAvailable": "N/A",
+      "osBuild": "OS Build"
     },
     "systemLogs": {
       "title": "System Log Viewer",
@@ -4895,6 +4918,49 @@
       "modifiedLabel": "Modified:",
       "downloadLog": "Download Log",
       "download": "Download"
+    },
+    "networkSpaces": {
+      "title": "Network spaces",
+      "loadFailed": "Failed to load network spaces {{message}}",
+      "sectionHostonlyIfs": "Host-only interfaces",
+      "sectionHostonlyNets": "Host-only networks",
+      "sectionNat": "NAT networks",
+      "sectionIntnets": "Internal networks",
+      "intnetNote": "exist while a machine references them — read-only",
+      "newHostonlyIf": "New host-only interface",
+      "newHostonlyNet": "New host-only network",
+      "newNat": "New NAT network",
+      "createBtn": "Create",
+      "save": "Save",
+      "edit": "Edit",
+      "del": "Delete",
+      "start": "Start",
+      "stop": "Stop",
+      "name": "Name",
+      "ip": "IPv4 address",
+      "netmask": "Netmask",
+      "lowerIp": "Range start",
+      "upperIp": "Range end",
+      "cidr": "CIDR",
+      "enabledLabel": "Enabled",
+      "disabledLabel": "Disabled",
+      "dhcpToggle": "DHCP",
+      "dhcpServerIp": "DHCP server IP",
+      "dhcpRange": "DHCP {{lower}}–{{upper}}",
+      "dhcpOff": "no DHCP",
+      "ipv6Label": "IPv6",
+      "forwards": "Port forwards",
+      "noForwards": "No port forwards.",
+      "forwardCount_one": "{{count}} forward",
+      "forwardCount_other": "{{count}} forwards",
+      "addForward": "Stage this forward",
+      "fwName": "rule name",
+      "fwProto": "protocol",
+      "fwHostPort": "host port",
+      "fwGuestIp": "guest ip",
+      "fwGuestPort": "guest port",
+      "confirmDeleteTitle": "Delete {{name}}?",
+      "confirmDeleteBody": "Machines attached to this space lose their network at their next start. This cannot be undone."
     }
   },
   "hostCharts": {
@@ -4925,7 +4991,8 @@
       "load1mSeriesName": "Load 1m",
       "load5mSeriesName": "Load 5m",
       "load15mSeriesName": "Load 15m",
-      "noDataMessage": "No CPU data available"
+      "noDataMessage": "No CPU data available",
+      "ioDelaySeriesName": "IO delay %"
     },
     "memoryChart": {
       "title": "Memory Usage",
@@ -5650,7 +5717,7 @@
       "lensTraffic": "Traffic",
       "lensIssues": "Issues",
       "clearIsolation": "Clear filter",
-      "pulseLive": "live · 10s",
+      "pulseLive": "live · {{seconds}}s",
       "pulseNoFeed": "no usage feed",
       "enterFullscreen": "Fullscreen",
       "exitFullscreen": "Exit fullscreen",
@@ -5697,7 +5764,28 @@
       "sharedBadge": "shared",
       "legendDrag": "drag a vnic chip onto a network to stage a rewire — applies at reboot / power cycle",
       "hostOnlyNetNetwork": "Host-only net — {{name}}",
-      "rewireNeedsModify": "rewire needs machine-modify"
+      "rewireNeedsModify": "rewire needs machine-modify",
+      "effectsLabel": "Effects",
+      "effectWeathermap": "Weathermap",
+      "effectWave": "Waveform",
+      "effectComets": "Packets",
+      "effectRivers": "Rivers",
+      "effectBars": "Equalizer",
+      "trayVlan": "VLAN",
+      "trayVlanTitle": "Target VLAN id — edit before Apply. A tagged vnic can change VLAN but never clear it.",
+      "addNic": "add nic",
+      "addNicTitle": "Drag onto a network or adapter to stage a new nic — applies at the next boot / power cycle",
+      "openSettings": "Open machine settings",
+      "removeDrop": "Drop a nic chip here to stage its removal",
+      "removeLine": "{{machine}} · {{link}} → remove",
+      "addLine": "{{machine}} · new nic → {{carrier}}",
+      "trayName": "vnic name",
+      "applyNeedsName": "a staged add needs a vnic name — fill the name box",
+      "armedBanner": "Carrier pinned: {{link}} → {{carrier}} — click a network card to take its VLAN over that carrier · Esc cancels",
+      "legendCtrl": "Ctrl+drop on an adapter pins it as carrier, then click a network to take its VLAN · tray VLAN box targets a VLAN with no card yet",
+      "addModalTitle": "New nic on {{machine}}",
+      "addModalStage": "Stage",
+      "addModalVlanHelp": "0 = untagged"
     }
   },
   "machine": {
@@ -6605,7 +6693,8 @@
         "nics": "NICs",
         "filesystems": "Filesystems",
         "advanced": "Advanced",
-        "utm": "UTM"
+        "utm": "UTM",
+        "resources": "Resources"
       },
       "fieldsHint": "Fields show the machine's current values where the agent reports them; edits are cached across all tabs until you Apply, and only values you CHANGED are sent. Blank = the shown default stays in effect.",
       "field": {
@@ -6931,6 +7020,47 @@
       "noValue": "no",
       "exactlyWhatWillBeSent": "This is exactly what will be sent — use Back to change anything.",
       "fullRequestBody": "Full request body"
+    },
+    "resources": {
+      "hint": "zonecfg resource controls — set replaces the whole resource, remove deletes it, unchanged touches nothing. Applies at the next boot / power cycle like other infrastructure changes.",
+      "unchanged": "Unchanged",
+      "setOption": "Set",
+      "removeOption": "Remove",
+      "current": "Current",
+      "cappedCpu": "Capped CPU",
+      "dedicatedCpu": "Dedicated CPU",
+      "cappedMemory": "Capped memory",
+      "securityFlags": "Security flags",
+      "fsAllowed": "Allowed filesystems (fs-allowed)",
+      "ncpus": "ncpus (e.g. 1.5)",
+      "ncpusRange": "ncpus (e.g. 2 or 2-4)",
+      "importance": "importance",
+      "physical": "physical (e.g. 2G)",
+      "swap": "swap",
+      "locked": "locked",
+      "rctls": "Resource controls (rctl)",
+      "rctl_name": "name (e.g. zone.max-lwps)",
+      "rctl_limit": "limit",
+      "rctl_priv": "priv (privileged)",
+      "rctl_action": "action (deny)",
+      "addRctl": "Add rctl",
+      "admins": "Admin delegation",
+      "admin_user": "user",
+      "admin_auths": "auths (e.g. login,manage)",
+      "addAdmin": "Add admin",
+      "virtfs": "VirtFS shares (9p)",
+      "virtfsNote": "Saving replaces the WHOLE share set. The shared path must also be mapped into the zone (delegated dataset or lofs mount) — see bhyve(7).",
+      "shareName": "share name",
+      "sharePath": "host path",
+      "readOnly": "read-only",
+      "addShare": "Add share",
+      "ppt": "PCI pass-through (ppt)",
+      "pptNote": "Saving replaces the WHOLE set. Devices come from pptadm list -a on the host.",
+      "pptDevice": "ppt device",
+      "pptState": "state (on / off / slot0-7)",
+      "addPpt": "Add device",
+      "markRemove": "Mark for removal",
+      "dropRow": "Drop this row"
     }
   },
   "navbar": {
@@ -7072,6 +7202,26 @@
       "message": "Message (Optional)",
       "messagePlaceholder": "Custom shutdown message",
       "messageNote": "Optional message for system logs (max 200 characters)"
+    },
+    "zoneLifecycle": {
+      "header": "Zone lifecycle",
+      "ready": "Ready",
+      "verify": "Verify config",
+      "markIncomplete": "Mark incomplete",
+      "detach": "Detach",
+      "attach": "Attach…",
+      "attachTitle": "Attach {{machine}}",
+      "attachUpdate": "Update zone on attach (-u)",
+      "attachForce": "Force attach (-F)",
+      "attachSubmit": "Attach",
+      "move": "Move zonepath…",
+      "moveTitle": "Move {{machine}}",
+      "movePath": "New zonepath (absolute)",
+      "moveSubmit": "Move",
+      "verifyValid": "Configuration valid",
+      "verifyInvalid": "Configuration INVALID",
+      "failed": "Request failed",
+      "resultOutput": "Output"
     }
   },
   "pages": {
@@ -7681,7 +7831,9 @@
       "columnStarted": "Started",
       "columnCompleted": "Completed",
       "columnError": "Error",
-      "loading": "Loading tasks..."
+      "loading": "Loading tasks...",
+      "columnHost": "Host",
+      "menuRefresh": "Refresh tasks"
     },
     "taskDetailModal": {
       "priorityCritical": "CRITICAL",

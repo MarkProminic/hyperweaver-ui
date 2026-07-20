@@ -66,7 +66,7 @@ const SystemInfo = ({
                 </tr>
                 <tr>
                   <td>
-                    <strong>{t('host.systemInfo.agentVersion')}</strong>
+                    <strong>{t('host.systemInfo.osBuild')}</strong>
                   </td>
                   <td>{serverStats.version || t('host.systemInfo.notAvailable')}</td>
                 </tr>

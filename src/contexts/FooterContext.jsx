@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import { getAgentBasePath, fetchWsTicket } from '../api/serverUtils';
 import { hasFeature } from '../utils/capabilities';
@@ -13,8 +14,12 @@ const FooterContext = createContext();
 export const useFooter = () => useContext(FooterContext);
 
 export const FooterProvider = ({ children }) => {
-  const { currentServer, makeAgentRequest } = useServers();
+  const { currentServer, makeAgentRequest, getServers } = useServers();
   const { footerActiveView, footerIsActive, taskMinPriority } = useContext(UserSettings);
+  const { pathname } = useLocation();
+  // Datacenter scope (Dashboard, no single-host focus): the tasks pane
+  // aggregates EVERY registered host's queue with a host column.
+  const aggregated = pathname === '/ui' || pathname === '/ui/dashboard';
   const [tasks, setTasks] = useState([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [tasksError, setTasksError] = useState('');
@@ -40,6 +45,44 @@ export const FooterProvider = ({ children }) => {
   }, [tasks]);
 
   const fetchTasks = useCallback(async () => {
+    if (aggregated) {
+      const servers = getServers().filter(server => hasFeature(server, 'tasks'));
+      if (servers.length === 0) {
+        return;
+      }
+      const results = await Promise.allSettled(
+        servers.map(async server => ({
+          server,
+          result: await makeAgentRequest(
+            server.hostname,
+            server.port,
+            server.protocol,
+            'tasks',
+            'GET',
+            null,
+            { min_priority: taskMinPriority, limit: 50 }
+          ),
+        }))
+      );
+      const merged = [];
+      results.forEach(entry => {
+        if (entry.status !== 'fulfilled' || !entry.value.result?.success) {
+          return;
+        }
+        const { server } = entry.value;
+        (entry.value.result.data?.tasks || []).forEach(task => {
+          merged.push({
+            ...task,
+            hostLabel: server.entityName || server.hostname,
+            rowKey: `${server.hostname}:${server.port}|${task.id}`,
+          });
+        });
+      });
+      merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setTasks(merged);
+      return;
+    }
+
     if (!currentServer || !makeAgentRequest) {
       return;
     }
@@ -124,7 +167,7 @@ export const FooterProvider = ({ children }) => {
     } catch (err) {
       console.error('An error occurred while fetching tasks:', err);
     }
-  }, [currentServer, makeAgentRequest, taskMinPriority]);
+  }, [aggregated, getServers, currentServer, makeAgentRequest, taskMinPriority]);
 
   // Single useEffect to manage task fetching and refresh intervals
   useEffect(() => {
@@ -134,45 +177,24 @@ export const FooterProvider = ({ children }) => {
       intervalRef.current = null;
     }
 
-    const shouldPoll =
-      currentServer && tasksAvailable && footerIsActive && footerActiveView === 'tasks';
+    const paneOpen = footerIsActive && footerActiveView === 'tasks';
+    const shouldPoll = paneOpen && (aggregated || (currentServer && tasksAvailable));
 
-    if (currentServer) {
-      // Clear tasks when server changes
-      setTasks([]);
-      setTasksError('');
+    // Clear on scope/server changes either way
+    setTasks([]);
+    setTasksError('');
 
-      // Only fetch and refresh tasks when footer is active and tasks view is selected
-      if (shouldPoll) {
-        const loadAndStartRefresh = async () => {
-          setLoadingTasks(true);
-          await fetchTasks();
-          setLoadingTasks(false);
-          // Only start the interval after initial load is done and if conditions are still met
-          if (currentServer && tasksAvailable && footerIsActive && footerActiveView === 'tasks') {
-            intervalRef.current = setInterval(() => {
-              // Double-check conditions before each fetch to prevent unnecessary requests
-              if (
-                currentServer &&
-                tasksAvailable &&
-                footerIsActive &&
-                footerActiveView === 'tasks'
-              ) {
-                fetchTasks();
-              } else if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-              }
-            }, 1000);
-          }
-        };
+    if (shouldPoll) {
+      const loadAndStartRefresh = async () => {
+        setLoadingTasks(true);
+        await fetchTasks();
+        setLoadingTasks(false);
+        intervalRef.current = setInterval(() => {
+          fetchTasks();
+        }, 1000);
+      };
 
-        loadAndStartRefresh();
-      }
-    } else {
-      // Clear tasks when no server selected
-      setTasks([]);
-      setTasksError('');
+      loadAndStartRefresh();
     }
 
     return () => {
@@ -181,7 +203,7 @@ export const FooterProvider = ({ children }) => {
         intervalRef.current = null;
       }
     };
-  }, [currentServer, tasksAvailable, footerIsActive, footerActiveView, fetchTasks]);
+  }, [aggregated, currentServer, tasksAvailable, footerIsActive, footerActiveView, fetchTasks]);
 
   // Clean up session when server changes
   useEffect(() => {
@@ -341,10 +363,11 @@ export const FooterProvider = ({ children }) => {
       loadingTasks,
       tasksError,
       fetchTasks,
+      aggregated,
       session,
       restartShell,
     }),
-    [tasks, loadingTasks, tasksError, fetchTasks, session, restartShell]
+    [tasks, loadingTasks, tasksError, fetchTasks, aggregated, session, restartShell]
   );
 
   return <FooterContext.Provider value={value}>{children}</FooterContext.Provider>;

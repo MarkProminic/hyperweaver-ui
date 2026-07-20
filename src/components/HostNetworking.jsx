@@ -2,12 +2,16 @@ import { Helmet } from '@dr.pogodin/react-helmet';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useServers } from '../contexts/ServerContext';
+import { hasFeatureStrict } from '../utils/capabilities';
+
 import BandwidthCharts from './Host/BandwidthCharts';
 import BandwidthTable from './Host/BandwidthTable';
 import ExpandedChartModal from './Host/ExpandedChartModal';
 import InterfacesTable from './Host/InterfacesTable';
 import IpAddressTable from './Host/IpAddressTable';
 import NetworkingHeader from './Host/NetworkingHeader';
+import NetworkSpacesPanel from './Host/NetworkSpaces/NetworkSpacesPanel';
 import NetworkSummary from './Host/NetworkSummary';
 import TopologyPanel from './Host/NetworkTopology/TopologyPanel';
 import RoutingTable from './Host/RoutingTable';
@@ -63,6 +67,12 @@ const HostNetworking = () => {
 
   // Use useMemo to prevent getServers() calls on every render
   const serverList = useMemo(() => getServers(), [getServers]);
+
+  // The page's structure rows carry no networkSpaces/machine detail — on a
+  // spaces-speaking (VirtualBox) host the topology feed fetches its own
+  // structure instead of consuming this preload.
+  const { currentServer } = useServers();
+  const spacesHost = hasFeatureStrict(currentServer, 'network-spaces');
 
   const preloadedTopology = useMemo(
     () => ({
@@ -178,9 +188,16 @@ const HostNetworking = () => {
               </div>
 
               {!sectionsCollapsed.topology && (
-                <TopologyPanel preloaded={preloadedTopology} reloadPreloaded={loadNetworkData} />
+                <TopologyPanel
+                  preloaded={spacesHost ? null : preloadedTopology}
+                  reloadPreloaded={loadNetworkData}
+                />
               )}
             </div>
+
+            {spacesHost && currentServer && (
+              <NetworkSpacesPanel server={currentServer} onChanged={loadNetworkData} />
+            )}
 
             <IpAddressTable
               ipAddresses={ipAddresses}

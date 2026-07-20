@@ -8,7 +8,7 @@ import { buildHostGraph } from './topologyModel';
 import { buildVBoxGraph } from './topologyModelVBox';
 
 const STRUCTURE_INTERVAL_MS = 60000;
-const USAGE_INTERVAL_MS = 4000;
+export const USAGE_INTERVAL_MS = 4000;
 
 /**
  * Topology data feed for one or many hosts.
@@ -25,7 +25,12 @@ const USAGE_INTERVAL_MS = 4000;
  * @param {Function} [options.reloadPreloaded] - page-owned structure reload.
  * @returns {{hosts: Array, loading: boolean, error: string, refresh: Function, pulse: number}}
  */
-export const useTopologyFeed = ({ scope = 'host', preloaded = null, reloadPreloaded = null }) => {
+export const useTopologyFeed = ({
+  scope = 'host',
+  preloaded = null,
+  reloadPreloaded = null,
+  disabled = false,
+}) => {
   const { currentServer, getServers, makeAgentRequest } = useServers();
   const [structures, setStructures] = useState(new Map());
   const [usageMaps, setUsageMaps] = useState(new Map());
@@ -38,11 +43,14 @@ export const useTopologyFeed = ({ scope = 'host', preloaded = null, reloadPreloa
   const serverKey = server => `${server.hostname}:${server.port}`;
 
   const targetServers = useMemo(() => {
+    if (disabled) {
+      return [];
+    }
     if (scope === 'all') {
       return getServers();
     }
     return currentServer ? [currentServer] : [];
-  }, [scope, currentServer, getServers]);
+  }, [disabled, scope, currentServer, getServers]);
 
   const loadStructures = useCallback(async () => {
     if (busyRef.current || targetServers.length === 0) {
@@ -114,12 +122,13 @@ export const useTopologyFeed = ({ scope = 'host', preloaded = null, reloadPreloa
       const byMachine = new Map();
       rows.forEach(row => {
         const name = row.machine_name || row.name || row.machine;
-        if (!name || !Array.isArray(row.nics)) {
+        const adapterRows = Array.isArray(row.nics) ? row.nics : row.network;
+        if (!name || !Array.isArray(adapterRows)) {
           return;
         }
         const byAdapter = new Map();
-        row.nics.forEach(nicRow => {
-          byAdapter.set(nicRow.adapter, {
+        adapterRows.forEach(nicRow => {
+          byAdapter.set(String(nicRow.adapter), {
             rxMbps: (parseFloat(nicRow.rx_bps) || 0) / 1000000,
             txMbps: (parseFloat(nicRow.tx_bps) || 0) / 1000000,
             speedMbps: 0,

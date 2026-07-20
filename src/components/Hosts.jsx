@@ -15,7 +15,6 @@ import ExpandedChartModal from './Host/PerformanceCharts/Expanded/Modal.jsx';
 import MemoryChart from './Host/PerformanceCharts/Memory.jsx';
 import NetworkChart from './Host/PerformanceCharts/Network.jsx';
 import StorageIOChart from './Host/PerformanceCharts/StorageIO.jsx';
-import ProvisioningStatus from './Host/ProvisioningStatus.jsx';
 import SystemInfo from './Host/SystemInfo.jsx';
 import { useHostData } from './Host/useHostData.js';
 
@@ -352,12 +351,6 @@ const Hosts = () => {
                 {/* Self-hides on realtime-only agents (empty store = no database). */}
                 <MonitoringDatabase currentServer={currentServer} />
               </>
-            )}
-
-            {/* Token-gated per Mark's go (sync OPEN ITEM 1) — render-gating also
-                stops the widget's own fetches on agents without provisioning. */}
-            {hasFeature(currentServer, 'provisioning') && (
-              <ProvisioningStatus currentServer={currentServer} />
             )}
           </div>
         </div>

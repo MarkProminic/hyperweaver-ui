@@ -304,6 +304,31 @@
   animation-direction: reverse;
 }
 
+.hw-topo-lane {
+  fill: none;
+  stroke-dasharray: 14 10;
+  animation: hw-topo-flow linear infinite;
+}
+
+.hw-topo-lane-reverse {
+  animation-direction: reverse;
+}
+
+.hw-topo-waveline {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.hw-topo-waveline-tx {
+  stroke: var(--hw-topo-tx);
+  opacity: 0.85;
+}
+
+.hw-topo-waveline-rx {
+  stroke: var(--hw-topo-up);
+  opacity: 0.7;
+}
+
 .hw-topo-wire-struck {
   stroke-dasharray: 3 6;
   stroke-opacity: 0.3;
@@ -324,7 +349,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .hw-topo-river,
-  .hw-topo-wire-pending {
+  .hw-topo-lane,
+  .hw-topo-wire-pending,
+  .hw-topo-pinned {
     animation: none;
   }
 }
@@ -362,6 +389,66 @@
 
 .hw-topo-particle-tx {
   fill: var(--hw-topo-tx);
+}
+
+.hw-topo-eq {
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.hw-topo-eq-tx {
+  stroke: var(--hw-topo-tx);
+  opacity: 0.8;
+}
+
+.hw-topo-eq-rx {
+  stroke: var(--hw-topo-up);
+  opacity: 0.8;
+}
+
+.hw-topo-spark {
+  pointer-events: none;
+
+  rect {
+    fill: var(--bs-body-bg);
+    stroke: var(--hw-border-light);
+    opacity: 0.92;
+  }
+}
+
+.hw-topo-spark-rx {
+  fill: none;
+  stroke: var(--hw-topo-up);
+  stroke-width: 1.5;
+}
+
+.hw-topo-spark-tx {
+  fill: none;
+  stroke: var(--hw-topo-tx);
+  stroke-width: 1.5;
+}
+
+.hw-topo-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hw-topo-mini-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.hw-topo-mini-hot {
+  animation: hw-topo-pulse 1.6s ease-in-out infinite;
+}
+
+.hw-topo-mini-rate {
+  font-family: var(--bs-font-monospace);
+  font-size: 10.5px;
+  color: var(--bs-secondary-color);
+  font-variant-numeric: tabular-nums;
 }
 
 // ---------- trace / lenses ----------
@@ -452,7 +539,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hw-topo-pulse-live .hw-topo-pulse-dot {
+  .hw-topo-pulse-live .hw-topo-pulse-dot,
+  .hw-topo-mini-hot {
     animation: none;
   }
 }
@@ -513,6 +601,25 @@
   box-shadow: 0 0 0 3px var(--hw-topo-pending), 0 0 14px var(--hw-topo-pending);
 }
 
+.hw-topo-pinned {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 2px var(--bs-primary);
+  animation: hw-topo-wiggle 0.9s ease-in-out infinite;
+}
+
+@keyframes hw-topo-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-0.7deg);
+  }
+  75% {
+    transform: rotate(0.7deg);
+  }
+}
+
 .hw-topo-unused-note {
   color: var(--hw-topo-pending);
   font-weight: 600;
@@ -561,6 +668,46 @@
   font-size: 11px;
   color: var(--bs-secondary-color);
   margin-top: 6px;
+}
+
+.hw-topo-tray-vlan {
+  width: 84px;
+  font-family: var(--bs-font-monospace);
+  font-size: 12px;
+}
+
+.hw-topo-armed {
+  border-color: var(--bs-primary);
+  font-size: 12px;
+}
+
+.hw-topo-chip-add {
+  border-style: dashed;
+  color: var(--bs-secondary-color);
+  justify-content: center;
+}
+
+.hw-topo-trash {
+  display: block;
+  width: 100%;
+  background: none;
+  border: 2px dashed var(--bs-danger);
+  border-radius: 8px;
+  color: var(--bs-danger);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  text-align: center;
+  font-size: 12.5px;
+}
+
+.hw-topo-tray-name {
+  width: 140px;
+  font-family: var(--bs-font-monospace);
+  font-size: 12px;
+}
+
+.hw-topo-tray-remove {
+  color: var(--bs-danger);
 }
 
 .hw-topo-chipbar {

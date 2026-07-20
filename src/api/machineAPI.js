@@ -107,6 +107,69 @@ export const resumeMachine = async (hostname, port, protocol, machineName) =>
   await makeAgentRequest(hostname, port, protocol, `machines/${machineName}/resume`, 'POST');
 
 /**
+ * zoneadm ready — transition an installed (halted) zone to the ready state
+ * (sync answer; the agent 400s with {error, current_status} otherwise).
+ * @param {string} hostname - Server hostname
+ * @param {number} port - Server port
+ * @param {string} protocol - Server protocol
+ * @param {string} machineName - Machine name
+ * @returns {Promise<Object>} {success, machine_name, message}
+ */
+export const readyMachine = async (hostname, port, protocol, machineName) =>
+  await makeAgentRequest(hostname, port, protocol, `machines/${machineName}/ready`, 'POST');
+
+/**
+ * zoneadm verify — config validation; 200 either way, `valid` is the verdict.
+ * @param {string} hostname - Server hostname
+ * @param {number} port - Server port
+ * @param {string} protocol - Server protocol
+ * @param {string} machineName - Machine name
+ * @returns {Promise<Object>} {success, machine_name, valid, output}
+ */
+export const verifyMachine = async (hostname, port, protocol, machineName) =>
+  await makeAgentRequest(hostname, port, protocol, `machines/${machineName}/verify`, 'POST');
+
+/**
+ * zoneadm mark incomplete (sync; refuses on a running zone).
+ * @param {string} hostname - Server hostname
+ * @param {number} port - Server port
+ * @param {string} protocol - Server protocol
+ * @param {string} machineName - Machine name
+ * @returns {Promise<Object>} {success, machine_name, message}
+ */
+export const markIncompleteMachine = async (hostname, port, protocol, machineName) =>
+  await makeAgentRequest(
+    hostname,
+    port,
+    protocol,
+    `machines/${machineName}/mark-incomplete`,
+    'POST'
+  );
+
+/**
+ * zoneadm detach (queued task zone_detach; installed/halted only).
+ * @param {string} hostname - Server hostname
+ * @param {number} port - Server port
+ * @param {string} protocol - Server protocol
+ * @param {string} machineName - Machine name
+ * @returns {Promise<Object>} {success, task_id, operation, status}
+ */
+export const detachMachine = async (hostname, port, protocol, machineName) =>
+  await makeAgentRequest(hostname, port, protocol, `machines/${machineName}/detach`, 'POST');
+
+/**
+ * zoneadm attach (queued task zone_attach; configured/detached only).
+ * @param {string} hostname - Server hostname
+ * @param {number} port - Server port
+ * @param {string} protocol - Server protocol
+ * @param {string} machineName - Machine name
+ * @param {Object} body - {update?: boolean (-u), force?: boolean (-F)}
+ * @returns {Promise<Object>} {success, task_id, operation, status}
+ */
+export const attachMachine = async (hostname, port, protocol, machineName, body) =>
+  await makeAgentRequest(hostname, port, protocol, `machines/${machineName}/attach`, 'POST', body);
+
+/**
  * Delete a machine. `cleanup_disks` is the CONVERGED key on both agents
  * (zoneweaver renamed cleanup_datasets → cleanup_disks, 2026-07-19). Sent
  * EXPLICITLY on every call because the agents' defaults disagree (Go true,

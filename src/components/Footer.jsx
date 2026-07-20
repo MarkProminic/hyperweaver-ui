@@ -11,7 +11,9 @@ import { UserSettings } from '../contexts/UserSettingsContext';
 import { hasFeature } from '../utils/capabilities';
 
 import HostShell from './Host/HostShell';
+import SidebarContextMenu from './SidebarContextMenu';
 import Tasks, { getTaskColumns } from './Tasks';
+import TerminalPrefsModal from './TerminalPrefsModal';
 
 // Custom dropdown toggle for the footer toolbar: a small icon button with no Bootstrap
 // caret. react-bootstrap injects onClick/ref/aria-* AND a `dropdown-toggle` className (whose
@@ -57,8 +59,10 @@ const Footer = () => {
     taskVisibleColumns,
     setTaskVisibleColumns,
   } = userSettings;
-  const { restartShell } = useFooter();
+  const { restartShell, fetchTasks } = useFooter();
   const { currentServer } = useServers();
+  const [paneMenu, setPaneMenu] = useState(null);
+  const [showTermPrefs, setShowTermPrefs] = useState(false);
   const [showShellDropdown, setShowShellDropdown] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showColumnsDropdown, setShowColumnsDropdown] = useState(false);
@@ -259,6 +263,17 @@ const Footer = () => {
                     <i className="fas fa-refresh me-2" />
                     {t('chrome.footer.restartShell')}
                   </Dropdown.Item>
+                  <Dropdown.Item
+                    as="button"
+                    type="button"
+                    onClick={() => {
+                      setShowShellDropdown(false);
+                      setShowTermPrefs(true);
+                    }}
+                  >
+                    <i className="fas fa-sliders me-2" />
+                    {t('chrome.termPrefs.title')}
+                  </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
             )}
@@ -378,11 +393,51 @@ const Footer = () => {
           minConstraints={[Infinity, 0]}
           handle={FooterHandle}
         >
-          <div className="log-console text-white h-100">
+          <div
+            className="log-console text-white h-100"
+            role="presentation"
+            onContextMenu={event => {
+              event.preventDefault();
+              setPaneMenu({
+                x: event.clientX,
+                y: event.clientY,
+                title:
+                  effectiveView === 'shell' ? t('chrome.footer.shell') : t('chrome.footer.tasks'),
+                items:
+                  effectiveView === 'shell'
+                    ? [
+                        {
+                          key: 'restart',
+                          icon: 'fas fa-refresh',
+                          label: t('chrome.footer.restartShell'),
+                          onClick: restartShell,
+                        },
+                        {
+                          key: 'term-prefs',
+                          icon: 'fas fa-sliders',
+                          label: t('chrome.termPrefs.title'),
+                          onClick: () => setShowTermPrefs(true),
+                        },
+                      ]
+                    : [
+                        {
+                          key: 'refresh',
+                          icon: 'fas fa-rotate',
+                          label: t('tasks.tasks.menuRefresh'),
+                          onClick: fetchTasks,
+                        },
+                      ],
+              });
+            }}
+          >
             {effectiveView === 'shell' ? <HostShell /> : <Tasks />}
           </div>
         </ResizableBox>
       )}
+
+      {paneMenu && <SidebarContextMenu menu={paneMenu} onClose={() => setPaneMenu(null)} />}
+
+      <TerminalPrefsModal isOpen={showTermPrefs} onClose={() => setShowTermPrefs(false)} />
     </div>
   );
 };

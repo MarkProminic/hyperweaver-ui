@@ -34,6 +34,52 @@ jobs:
       - name: Check Prettier formatting
         run: npx prettier --check .
 
+  locale-parity:
+    name: Locale Parity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      # Every locale must carry EXACTLY the master English key set — missing
+      # keys fail the build listing them; extra (orphaned) keys fail too.
+      # Translation itself happens in dedicated sessions; this only enforces.
+      - name: Check locale key parity against en
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'fs';
+          const flat = (obj, prefix = '') =>
+            Object.entries(obj).flatMap(([key, value]) =>
+              value && typeof value === 'object' ? flat(value, `${prefix}${key}.`) : [`${prefix}${key}`]
+            );
+          const read = lang => new Set(flat(JSON.parse(fs.readFileSync(`public/locales/${lang}/common.json`, 'utf8'))));
+          const en = read('en');
+          const langs = fs.readdirSync('public/locales').filter(dir => dir !== 'en');
+          let failed = false;
+          for (const lang of langs) {
+            const keys = read(lang);
+            const missing = [...en].filter(key => !keys.has(key));
+            const extra = [...keys].filter(key => !en.has(key));
+            if (missing.length > 0) {
+              failed = true;
+              console.error(`${lang}/common.json is MISSING ${missing.length} keys:\n  ${missing.join('\n  ')}`);
+            }
+            if (extra.length > 0) {
+              failed = true;
+              console.error(`${lang}/common.json has ${extra.length} keys en lacks:\n  ${extra.join('\n  ')}`);
+            }
+            if (missing.length === 0 && extra.length === 0) {
+              console.log(`${lang}: parity OK (${keys.size} keys)`);
+            }
+          }
+          process.exit(failed ? 1 : 0);
+          EOF
+
   build:
     name: Build
     runs-on: ubuntu-latest

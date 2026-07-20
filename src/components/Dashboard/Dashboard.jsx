@@ -1,5 +1,5 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,6 +8,7 @@ import { useServers } from '../../contexts/ServerContext';
 import { hasMachines } from '../../utils/capabilities';
 import { resourceLabel } from '../../utils/resourceLabel';
 import TopologyPanel from '../Host/NetworkTopology/TopologyPanel';
+import { useTopologyFeed } from '../Host/NetworkTopology/useTopologyFeed';
 
 import DashboardHealthModal from './DashboardHealthModal';
 import DashboardQuickActions from './DashboardQuickActions';
@@ -39,6 +40,15 @@ const Dashboard = () => {
   } = useServers();
   const { isDirect } = useMode();
   const navigate = useNavigate();
+
+  const topologyFeed = useTopologyFeed({ scope: 'all' });
+  const topologyByHost = useMemo(
+    () =>
+      new Map(
+        topologyFeed.hosts.map(host => [`${host.server.hostname}:${host.server.port}`, host.graph])
+      ),
+    [topologyFeed.hosts]
+  );
 
   // The Dashboard is datacenter/host scope — a machine selection carried in from
   // /ui/machines would keep that machine highlighted in the tree (and in the
@@ -285,6 +295,7 @@ const Dashboard = () => {
           <DashboardServerCards
             servers={infrastructureData.servers || []}
             onNavigateToServer={navigateToServer}
+            topologyByHost={topologyByHost}
           />
 
           {!isDirect && servers.length > 0 && (
@@ -294,7 +305,7 @@ const Dashboard = () => {
                   <i className="fas fa-project-diagram me-2" />
                   {t('dashboard.dashboard.datacenterTopology')}
                 </h2>
-                <TopologyPanel fixedScope="all" />
+                <TopologyPanel fixedScope="all" sharedFeed={topologyFeed} />
               </div>
             </div>
           )}

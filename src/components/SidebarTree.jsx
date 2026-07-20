@@ -10,6 +10,8 @@ import { UserSettings } from '../contexts/UserSettingsContext';
 import { useAgentHostname } from '../hooks/useAgentHostname';
 import { hasMachines } from '../utils/capabilities';
 
+import { useSidebarMenus } from './useSidebarMenus';
+
 /**
  * SidebarTree — the single-select navigation tree (contract §2 / I2D-1).
  *
@@ -29,7 +31,7 @@ import { hasMachines } from '../utils/capabilities';
 const onDashboardRoute = pathname => pathname === '/ui' || pathname === '/ui/dashboard';
 
 // A running machine gets a filled green dot; a stopped one an outline dot (matches MachineManager).
-const MachineNode = ({ server, name, running }) => {
+const MachineNode = ({ server, name, running, onMenu = null }) => {
   const { currentServer, currentMachine, selectServer, selectMachine } = useServers();
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,6 +52,12 @@ const MachineNode = ({ server, name, running }) => {
     <button
       type="button"
       onClick={handleClick}
+      onContextMenu={event => {
+        if (onMenu) {
+          event.preventDefault();
+          onMenu(event, { server, name, running });
+        }
+      }}
       className={`btn w-100 d-flex align-items-center gap-2 hw-tree-row hw-tree-machine ${active ? 'active' : ''}`}
       title={name}
     >
@@ -66,12 +74,13 @@ MachineNode.propTypes = {
     .isRequired,
   name: PropTypes.string.isRequired,
   running: PropTypes.bool,
+  onMenu: PropTypes.func,
 };
 
 // A host row: caret toggles lazy-loaded machines; the name selects the host + its Overview.
 // Machine expansion is capability-gated (hasMachines): agents that don't offer machine
 // management yet render as a plain host row — no caret, no machine fetch.
-const HostNode = ({ server, autoExpanded = false }) => {
+const HostNode = ({ server, autoExpanded = false, onHostMenu = null, onMachineMenu = null }) => {
   const { t } = useTranslation();
   const { currentServer, currentMachine, selectServer, makeAgentRequest } = useServers();
   const { sidebarMinimized } = useContext(UserSettings);
@@ -126,12 +135,20 @@ const HostNode = ({ server, autoExpanded = false }) => {
     navigate('/ui/hosts');
   };
 
+  const handleHostContext = event => {
+    if (onHostMenu) {
+      event.preventDefault();
+      onHostMenu(event, server);
+    }
+  };
+
   if (sidebarMinimized) {
     // Icon-only: select the host; no machine expansion at this width.
     return (
       <button
         type="button"
         onClick={handleSelectHost}
+        onContextMenu={handleHostContext}
         className={`btn w-100 d-flex justify-content-center hw-tree-row ${hostActive ? 'active' : ''}`}
         title={displayName}
       >
@@ -172,6 +189,7 @@ const HostNode = ({ server, autoExpanded = false }) => {
         <button
           type="button"
           onClick={handleSelectHost}
+          onContextMenu={handleHostContext}
           className="btn flex-grow-1 d-flex align-items-center gap-2 text-start"
           title={displayName}
         >
@@ -206,6 +224,7 @@ const HostNode = ({ server, autoExpanded = false }) => {
                 server={server}
                 name={name}
                 running={machines.running.includes(name)}
+                onMenu={onMachineMenu}
               />
             ))}
         </div>
@@ -223,6 +242,8 @@ HostNode.propTypes = {
     entityName: PropTypes.string,
   }).isRequired,
   autoExpanded: PropTypes.bool,
+  onHostMenu: PropTypes.func,
+  onMachineMenu: PropTypes.func,
 };
 
 // The aggregate root (Aggregated only) — its Overview IS the Dashboard (contract §2).
@@ -296,6 +317,7 @@ const SidebarTree = () => {
   const { servers, currentServer } = useServers();
   const { datacenterLabel, user } = useAuth();
   const canAddHost = user?.role === 'admin' || user?.role === 'super-admin';
+  const { handleMachineMenu, handleHostMenu, elements } = useSidebarMenus();
 
   // Direct mode: exactly one host (the origin agent), auto-expanded, no Datacenter root.
   if (isDirect) {
@@ -305,7 +327,13 @@ const SidebarTree = () => {
     }
     return (
       <div className="hw-tree">
-        <HostNode server={self} autoExpanded />
+        <HostNode
+          server={self}
+          autoExpanded
+          onHostMenu={handleHostMenu}
+          onMachineMenu={handleMachineMenu}
+        />
+        {elements}
       </div>
     );
   }
@@ -318,8 +346,14 @@ const SidebarTree = () => {
         canAddHost={canAddHost}
       />
       {servers.map(server => (
-        <HostNode key={server.id ?? server.hostname} server={server} />
+        <HostNode
+          key={server.id ?? server.hostname}
+          server={server}
+          onHostMenu={handleHostMenu}
+          onMachineMenu={handleMachineMenu}
+        />
       ))}
+      {elements}
     </div>
   );
 };

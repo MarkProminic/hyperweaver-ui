@@ -4,19 +4,47 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { useServers } from '../../../contexts/ServerContext';
+import { useAgentHostname } from '../../../hooks/useAgentHostname';
 import { hasFeature } from '../../../utils/capabilities';
 
+import TopologyAddNicModal from './TopologyAddNicModal';
+import { buildNicBody } from './topologyApply';
 import TopologyCanvas from './TopologyCanvas';
 import TopologyDrillPanel from './TopologyDrillPanel';
 import TopologyHeader from './TopologyHeader';
 import { detectSharedNetworks } from './topologyModel';
-import { vboxModeForKind } from './topologyModelVBox';
 import { assignNetworkColors } from './topologyPalette';
+import TopologyTray from './TopologyTray';
 import { useTopologyFeed } from './useTopologyFeed';
+import { useTopologyRewire } from './useTopologyRewire';
 
 const hostKeyOf = server => `${server.hostname}:${server.port}`;
 
-const TopologyPanel = ({ preloaded = null, reloadPreloaded = null, fixedScope = null }) => {
+const TopologyHostTitle = ({ server, canRewire }) => {
+  const { t } = useTranslation();
+  const displayName = useAgentHostname(server);
+  return (
+    <div className="hw-topo-host-title">
+      <i className="fas fa-server me-2" />
+      <span>{displayName}</span>
+      {!canRewire && (
+        <span className="hw-topo-card-meta ms-2">{t('hostTools.topology.rewireNeedsModify')}</span>
+      )}
+    </div>
+  );
+};
+
+TopologyHostTitle.propTypes = {
+  server: PropTypes.object.isRequired,
+  canRewire: PropTypes.bool,
+};
+
+const TopologyPanel = ({
+  preloaded = null,
+  reloadPreloaded = null,
+  fixedScope = null,
+  sharedFeed = null,
+}) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { getServers, selectMachine, makeAgentRequest } = useServers();
@@ -26,16 +54,36 @@ const TopologyPanel = ({ preloaded = null, reloadPreloaded = null, fixedScope = 
   const [isolation, setIsolation] = useState(null);
   const [drill, setDrill] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [dragging, setDragging] = useState(null);
-  const [pendingMoves, setPendingMoves] = useState([]);
   const [applyBusy, setApplyBusy] = useState(false);
   const [applyResults, setApplyResults] = useState([]);
+  const [effectStyle, setEffectStyle] = useState(
+    () => localStorage.getItem('hw-topo-effect') || 'comets'
+  );
 
-  const { hosts, loading, error, refresh } = useTopologyFeed({
+  const {
+    dragging,
+    setDragging,
+    trashOver,
+    setTrashOver,
+    pendingMoves,
+    setPendingMoves,
+    addDraft,
+    setAddDraft,
+    stageMove,
+    stageCarrierMove,
+    stageRemove,
+    completeAdd,
+    retargetVlan,
+    renameNic,
+  } = useTopologyRewire();
+
+  const ownFeed = useTopologyFeed({
     scope,
     preloaded,
     reloadPreloaded,
+    disabled: Boolean(sharedFeed),
   });
+  const { hosts, loading, error, refresh, pulse } = sharedFeed || ownFeed;
 
   const multiHostAvailable = getServers().length > 1;
   const feedLive = hosts.some(host => host.graph.feedPresent);
@@ -44,6 +92,14 @@ const TopologyPanel = ({ preloaded = null, reloadPreloaded = null, fixedScope = 
     machineName => {
       selectMachine(machineName);
       navigate('/ui/machines');
+    },
+    [selectMachine, navigate]
+  );
+
+  const handleOpenSettings = useCallback(
+    machineName => {
+      selectMachine(machineName);
+      navigate('/ui/machines?tab=settings');
     },
     [selectMachine, navigate]
   );
@@ -107,25 +163,6 @@ const TopologyPanel = ({ preloaded = null, reloadPreloaded = null, fixedScope = 
     [hosts]
   );
 
-  const stageMove = useCallback((hostKey, network, drag) => {
-    setPendingMoves(prev => [
-      ...prev.filter(move => !(move.machineName === drag.machineName && move.link === drag.link)),
-      {
-        hostKey,
-        hostKind: drag.hostKind,
-        machineName: drag.machineName,
-        link: drag.link,
-        adapter: drag.adapter,
-        fromNetId: drag.fromNetId,
-        toNetId: network.id,
-        toCarrier: network.carrier,
-        toVlanId: network.vlanId,
-        toMode: vboxModeForKind[network.kind] || null,
-      },
-    ]);
-    setDragging(null);
-  }, []);
-
   const applyMoves = useCallback(async () => {
     setApplyBusy(true);
     const results = [];
@@ -148,22 +185,16 @@ const TopologyPanel = ({ preloaded = null, reloadPreloaded = null, fixedScope = 
           results.push({ machineName, ok: false, message: t('hostTools.topology.applyNoHost') });
           return;
         }
-        const body =
-          moves[0].hostKind === 'vbox'
-            ? {
-                nics: moves.map(move => ({
-                  adapter: move.adapter,
-                  mode: move.toMode,
-                  ...(move.toMode === 'nat' ? {} : { network: move.toCarrier }),
-                })),
-              }
-            : {
-                update_nics: moves.map(move => ({
-                  physical: move.link,
-                  global_nic: move.toCarrier,
-                  ...(move.toVlanId > 0 ? { vlan_id: move.toVlanId } : {}),
-                })),
-              };
+        const built = buildNicBody(moves[0].hostKind, moves);
+        if (built.error) {
+          results.push({
+            machineName,
+            ok: false,
+            message: t('hostTools.topology.applyNeedsName'),
+          });
+          return;
+        }
+        const { body } = built;
         const result = await makeAgentRequest(
           server.hostname,
           server.port,
@@ -201,7 +232,7 @@ const TopologyPanel = ({ preloaded = null, reloadPreloaded = null, fixedScope = 
     );
     setApplyBusy(false);
     refresh();
-  }, [pendingMoves, hosts, makeAgentRequest, refresh, t]);
+  }, [pendingMoves, setPendingMoves, hosts, makeAgentRequest, refresh, t]);
 
   return (
     <div className={isFullscreen ? 'hw-topo-fullscreen' : ''}>
@@ -215,6 +246,11 @@ const TopologyPanel = ({ preloaded = null, reloadPreloaded = null, fixedScope = 
         multiHostAvailable={multiHostAvailable && !fixedScope}
         lens={lens}
         onLensChange={setLens}
+        effectStyle={effectStyle}
+        onEffectChange={next => {
+          setEffectStyle(next);
+          localStorage.setItem('hw-topo-effect', next);
+        }}
         isolatedNet={isolation ? isolation.netId : null}
         onClearIsolation={() => setIsolation(null)}
         feedLive={feedLive}
@@ -255,67 +291,56 @@ const TopologyPanel = ({ preloaded = null, reloadPreloaded = null, fixedScope = 
         </div>
       )}
 
-      {pendingMoves.length > 0 && (
-        <div className="hw-topo-tray">
-          <div className="hw-topo-tray-head">
-            <span className="fw-semibold">
-              {t('hostTools.topology.stagedHeading', { count: pendingMoves.length })}
-            </span>
-            <button
-              type="button"
-              className="btn btn-sm btn-warning ms-auto"
-              disabled={applyBusy}
-              onClick={applyMoves}
-            >
-              {applyBusy ? (
-                <i className="fas fa-spinner fa-spin" />
-              ) : (
-                t('hostTools.topology.applyChanges')
-              )}
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-light"
-              disabled={applyBusy}
-              onClick={() => {
-                setPendingMoves([]);
-                setApplyResults([]);
-              }}
-            >
-              {t('hostTools.topology.discard')}
-            </button>
-          </div>
-          {pendingMoves.map(move => (
-            <div key={`${move.machineName}|${move.link}`} className="hw-topo-tray-row hw-topo-mono">
-              {t('hostTools.topology.moveLine', {
-                machine: move.machineName,
-                link: move.link,
-                carrier: move.toCarrier,
-                vlan: move.toVlanId > 0 ? ` VLAN ${move.toVlanId}` : '',
-              })}
-            </div>
-          ))}
-          <div className="hw-topo-tray-note">{t('hostTools.topology.trayNote')}</div>
+      {dragging?.drag?.pinnedCarrier && (
+        <div className="hw-topo-tray hw-topo-armed hw-topo-mono">
+          {t('hostTools.topology.armedBanner', {
+            link: dragging.drag.link,
+            carrier: dragging.drag.pinnedCarrier,
+          })}
         </div>
       )}
-      {applyResults.length > 0 && (
-        <div className="hw-topo-tray">
-          {applyResults.map(result => (
-            <div
-              key={result.machineName + result.message}
-              className={`hw-topo-tray-row ${result.ok ? '' : 'hw-topo-tray-fail'}`}
-            >
-              <span className="fw-semibold">{result.machineName}</span> — {result.message}
-            </div>
-          ))}
-          <button
-            type="button"
-            className="btn btn-sm btn-light mt-1"
-            onClick={() => setApplyResults([])}
-          >
-            {t('hostTools.topology.closeDrill')}
-          </button>
-        </div>
+
+      {dragging && !dragging.drag.addNew && !dragging.drag.pinnedCarrier && (
+        <button
+          type="button"
+          className={`hw-topo-trash ${trashOver ? 'hw-topo-drop-over' : ''}`}
+          onDragOver={event => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            setTrashOver(true);
+          }}
+          onDragLeave={() => setTrashOver(false)}
+          onDrop={event => {
+            event.preventDefault();
+            setTrashOver(false);
+            stageRemove(dragging.hostKey, dragging.drag);
+          }}
+        >
+          <i className="fas fa-trash me-2" />
+          {t('hostTools.topology.removeDrop')}
+        </button>
+      )}
+
+      <TopologyTray
+        pendingMoves={pendingMoves}
+        applyBusy={applyBusy}
+        onApply={applyMoves}
+        onDiscard={() => {
+          setPendingMoves([]);
+          setApplyResults([]);
+        }}
+        onRetargetVlan={retargetVlan}
+        onRenameNic={renameNic}
+        applyResults={applyResults}
+        onClearResults={() => setApplyResults([])}
+      />
+
+      {addDraft && (
+        <TopologyAddNicModal
+          draft={addDraft}
+          onStage={completeAdd}
+          onClose={() => setAddDraft(null)}
+        />
       )}
 
       {loading && hosts.length === 0 ? (
@@ -335,15 +360,7 @@ const TopologyPanel = ({ preloaded = null, reloadPreloaded = null, fixedScope = 
           return (
             <div key={hostKey} className="hw-topo-host">
               {(scope === 'all' || multiHostAvailable) && (
-                <div className="hw-topo-host-title">
-                  <i className="fas fa-server me-2" />
-                  <span>{host.server.entityName || host.server.hostname}</span>
-                  {!canRewire && (
-                    <span className="hw-topo-card-meta ms-2">
-                      {t('hostTools.topology.rewireNeedsModify')}
-                    </span>
-                  )}
-                </div>
+                <TopologyHostTitle server={host.server} canRewire={canRewire} />
               )}
               <div className="hw-topo-chipbar">
                 {host.graph.networks
@@ -399,17 +416,36 @@ const TopologyPanel = ({ preloaded = null, reloadPreloaded = null, fixedScope = 
                 canRewire={canRewire}
                 dragging={dragging && dragging.hostKey === hostKey ? dragging.drag : null}
                 pendingMoves={pendingMoves.filter(move => move.hostKey === hostKey)}
-                onDragNic={drag =>
-                  setDragging(drag ? { hostKey, drag: { ...drag, hostKind } } : null)
-                }
+                onDragNic={drag => {
+                  if (!drag) {
+                    setDragging(prev => (prev?.drag?.pinnedCarrier ? prev : null));
+                    return;
+                  }
+                  setDragging({ hostKey, drag: { ...drag, hostKind } });
+                }}
                 onDropNic={network => {
                   if (dragging && dragging.hostKey === hostKey) {
                     stageMove(hostKey, network, dragging.drag);
                   }
                 }}
+                onDropCarrier={(carrier, ctrl) => {
+                  if (!dragging || dragging.hostKey !== hostKey) {
+                    return;
+                  }
+                  if (ctrl && hostKind !== 'vbox') {
+                    setDragging(prev =>
+                      prev ? { ...prev, drag: { ...prev.drag, pinnedCarrier: carrier.id } } : prev
+                    );
+                    return;
+                  }
+                  stageCarrierMove(hostKey, carrier, dragging.drag);
+                }}
                 onOpenNetworking={handleOpenNetworking}
+                onOpenSettings={handleOpenSettings}
                 onWireChart={handleWireChart}
                 sharedNetIds={sharedIdsByHost.get(hostKey) || null}
+                effectStyle={effectStyle}
+                pulse={pulse}
               />
               {drillNet && (
                 <TopologyDrillPanel
@@ -431,6 +467,7 @@ const TopologyPanel = ({ preloaded = null, reloadPreloaded = null, fixedScope = 
         <span>{t('hostTools.topology.legendGhost')}</span>
         <span>{t('hostTools.topology.legendClick')}</span>
         <span>{t('hostTools.topology.legendDrag')}</span>
+        <span>{t('hostTools.topology.legendCtrl')}</span>
       </div>
     </div>
   );
@@ -440,6 +477,7 @@ TopologyPanel.propTypes = {
   preloaded: PropTypes.object,
   reloadPreloaded: PropTypes.func,
   fixedScope: PropTypes.string,
+  sharedFeed: PropTypes.object,
 };
 
 export default TopologyPanel;

@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useXTerm } from 'react-xtermjs';
 
 import { useFooter } from '../../contexts/FooterContext';
+import { XTERM_PREFS_EVENT, loadXtermPrefs } from '../../utils/xtermPrefs';
 
 // NUL prefix for PTY control messages (resize) on the terminal WebSocket.
 // Keystrokes never arrive as a NUL-led JSON blob, and the agent writes anything
@@ -70,6 +71,21 @@ const HostShell = () => {
       }
     }
   }, [instance, ref]);
+
+  // The user's xterm prefs — applied at init and live on every save (the
+  // footer shell holds its Terminal instance, so it never needs a reopen).
+  useEffect(() => {
+    if (!instance) {
+      return undefined;
+    }
+    const applyPrefs = () => {
+      Object.assign(instance.options, loadXtermPrefs());
+      setTimeout(fitAndResizePty, 50);
+    };
+    applyPrefs();
+    window.addEventListener(XTERM_PREFS_EVENT, applyPrefs);
+    return () => window.removeEventListener(XTERM_PREFS_EVENT, applyPrefs);
+  }, [instance, fitAndResizePty]);
 
   useEffect(() => {
     if (instance) {

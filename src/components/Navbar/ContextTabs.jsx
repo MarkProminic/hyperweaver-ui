@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { useServers } from '../../contexts/ServerContext';
-import { hasFeature, hasManageSurface } from '../../utils/capabilities';
+import { hasFeature, hasManageSurface, hasNetworkingSurface } from '../../utils/capabilities';
 import { canCreateMachines } from '../../utils/permissions';
 import { resourceLabel } from '../../utils/resourceLabel';
 
@@ -29,7 +29,6 @@ const HOST_TABS = [
     to: '/ui/host-networking',
     labelKey: 'navbar.contextTabs.networking',
     icon: 'fas fa-sitemap',
-    feature: 'vnics',
   },
   {
     to: '/ui/host-devices',
@@ -119,6 +118,9 @@ const ContextTabs = () => {
         // advertises none of them (hasManageSurface), instead of an empty page.
         if (tab.to === '/ui/host-manage') {
           return hasManageSurface(currentServer);
+        }
+        if (tab.to === '/ui/host-networking') {
+          return hasNetworkingSurface(currentServer);
         }
         return !tab.feature || hasFeature(currentServer, tab.feature);
       }).map(tab => (

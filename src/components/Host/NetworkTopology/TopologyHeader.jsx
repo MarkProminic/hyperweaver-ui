@@ -1,6 +1,17 @@
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
+import { EFFECT_STYLES } from './TopologyFlow';
+import { USAGE_INTERVAL_MS } from './useTopologyFeed';
+
+const EFFECT_LABEL_KEYS = {
+  weathermap: 'hostTools.topology.effectWeathermap',
+  wave: 'hostTools.topology.effectWave',
+  bars: 'hostTools.topology.effectBars',
+  comets: 'hostTools.topology.effectComets',
+  rivers: 'hostTools.topology.effectRivers',
+};
+
 /**
  * Topology controls: scope toggle, the two lenses, isolation clear, feed
  * pulse, and fullscreen. Everything else in the old header (6 view tabs,
@@ -12,6 +23,8 @@ const TopologyHeader = ({
   multiHostAvailable,
   lens,
   onLensChange,
+  effectStyle,
+  onEffectChange,
   isolatedNet,
   onClearIsolation,
   feedLive,
@@ -58,6 +71,20 @@ const TopologyHeader = ({
         {lensButton('debug', 'fa-bug', t('hostTools.topology.lensDebug'))}
       </div>
 
+      <select
+        className="form-select form-select-sm w-auto"
+        value={effectStyle}
+        onChange={event => onEffectChange(event.target.value)}
+        aria-label={t('hostTools.topology.effectsLabel')}
+        title={t('hostTools.topology.effectsLabel')}
+      >
+        {EFFECT_STYLES.map(style => (
+          <option key={style} value={style}>
+            {t(EFFECT_LABEL_KEYS[style])}
+          </option>
+        ))}
+      </select>
+
       {isolatedNet && (
         <button type="button" className="btn btn-sm btn-warning" onClick={onClearIsolation}>
           <i className="fas fa-filter-circle-xmark me-2" />
@@ -67,10 +94,16 @@ const TopologyHeader = ({
 
       <span
         className={`hw-topo-pulse ms-auto ${feedLive ? 'hw-topo-pulse-live' : ''}`}
-        title={feedLive ? t('hostTools.topology.pulseLive') : t('hostTools.topology.pulseNoFeed')}
+        title={
+          feedLive
+            ? t('hostTools.topology.pulseLive', { seconds: USAGE_INTERVAL_MS / 1000 })
+            : t('hostTools.topology.pulseNoFeed')
+        }
       >
         <span className="hw-topo-pulse-dot" />
-        {feedLive ? t('hostTools.topology.pulseLive') : t('hostTools.topology.pulseNoFeed')}
+        {feedLive
+          ? t('hostTools.topology.pulseLive', { seconds: USAGE_INTERVAL_MS / 1000 })
+          : t('hostTools.topology.pulseNoFeed')}
       </span>
 
       <button
@@ -95,6 +128,8 @@ TopologyHeader.propTypes = {
   multiHostAvailable: PropTypes.bool.isRequired,
   lens: PropTypes.string,
   onLensChange: PropTypes.func.isRequired,
+  effectStyle: PropTypes.string.isRequired,
+  onEffectChange: PropTypes.func.isRequired,
   isolatedNet: PropTypes.string,
   onClearIsolation: PropTypes.func.isRequired,
   feedLive: PropTypes.bool.isRequired,

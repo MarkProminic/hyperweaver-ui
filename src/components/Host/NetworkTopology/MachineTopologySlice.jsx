@@ -14,7 +14,7 @@ import { useTopologyFeed } from './useTopologyFeed';
 const MachineTopologySlice = ({ machineName, colClass = null }) => {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
-  const { hosts } = useTopologyFeed({ scope: 'host' });
+  const { hosts, pulse } = useTopologyFeed({ scope: 'host' });
 
   const noop = useCallback(() => {}, []);
 
@@ -48,6 +48,7 @@ const MachineTopologySlice = ({ machineName, colClass = null }) => {
             onIsolate={noop}
             onDrill={noop}
             onOpenMachine={noop}
+            pulse={pulse}
           />
         </div>
       )}

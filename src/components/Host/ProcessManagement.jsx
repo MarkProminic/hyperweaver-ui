@@ -75,7 +75,7 @@ const ProcessManagement = ({ server }) => {
       setLoading(true);
       setError('');
 
-      const params = {};
+      const params = { limit: 5000 };
       if (debouncedPattern) {
         params.command = debouncedPattern;
       }

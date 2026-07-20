@@ -8,7 +8,7 @@ import { FooterProvider } from '../contexts/FooterContext';
 import { useMode } from '../contexts/ModeContext';
 import { useServers } from '../contexts/ServerContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
-import { hasFeature, hasManageSurface } from '../utils/capabilities';
+import { hasFeature, hasManageSurface, hasNetworkingSurface } from '../utils/capabilities';
 
 import Footer from './Footer';
 import Navbar from './Navbar';
@@ -67,7 +67,6 @@ const LayoutContent = () => {
     const machineParam = searchParams.get('machine');
 
     if (!hostParam && !machineParam) {
-      console.log('🔗 LAYOUT: No URL parameters to process');
       sessionStorage.setItem(sessionKey, 'true');
       return;
     }
@@ -157,12 +156,12 @@ const LayoutContent = () => {
               <Route
                 path="host-networking"
                 element={
-                  hasFeature(currentServer, 'vnics') ? (
+                  hasNetworkingSurface(currentServer) ? (
                     <HostNetworking />
                   ) : (
                     <NotAvailableStub
                       title={t('chrome.layout.hostNetworking')}
-                      tokenLabel="vnics"
+                      tokenLabel="vnics / network-spaces"
                     />
                   )
                 }

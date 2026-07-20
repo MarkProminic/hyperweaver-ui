@@ -149,11 +149,11 @@ const getStatusClass = status => {
   }
 };
 
-const TaskRow = memo(({ task, visibleColumns, onSelect }) => (
+const TaskRow = memo(({ task, visibleColumns, onSelect = null }) => (
   <tr
     className={getStatusClass(task.status)}
-    onClick={() => onSelect(task)}
-    style={{ cursor: 'pointer' }}
+    onClick={() => onSelect && onSelect(task)}
+    style={{ cursor: onSelect ? 'pointer' : 'default' }}
   >
     {visibleColumns.map(col => (
       <td key={col.key}>{col.render(task)}</td>
@@ -173,12 +173,12 @@ TaskRow.propTypes = {
       render: PropTypes.func.isRequired,
     })
   ).isRequired,
-  onSelect: PropTypes.func.isRequired,
+  onSelect: PropTypes.func,
 };
 
 const Tasks = () => {
   const { t } = useTranslation();
-  const { tasks, loadingTasks, tasksError } = useFooter();
+  const { tasks, loadingTasks, tasksError, aggregated } = useFooter();
   const { tasksScrollPosition, setTasksScrollPosition, taskVisibleColumns } =
     useContext(UserSettings);
   const tableContainerRef = useRef(null);
@@ -187,7 +187,17 @@ const Tasks = () => {
   const [selectedTask, setSelectedTask] = useState(null);
 
   const allColumns = getTaskColumns(t);
-  const visibleColumns = allColumns.filter(col => taskVisibleColumns.includes(col.key));
+  const filteredColumns = allColumns.filter(col => taskVisibleColumns.includes(col.key));
+  const visibleColumns = aggregated
+    ? [
+        {
+          key: 'host',
+          label: t('tasks.tasks.columnHost'),
+          render: task => task.hostLabel || '-',
+        },
+        ...filteredColumns,
+      ]
+    : filteredColumns;
 
   // Only restore scroll position on initial load or server change
   useEffect(() => {
@@ -242,10 +252,10 @@ const Tasks = () => {
             <tbody>
               {tasks.map(task => (
                 <TaskRow
-                  key={task.id}
+                  key={task.rowKey || task.id}
                   task={task}
                   visibleColumns={visibleColumns}
-                  onSelect={setSelectedTask}
+                  onSelect={aggregated ? null : setSelectedTask}
                 />
               ))}
             </tbody>
