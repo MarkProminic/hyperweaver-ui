@@ -126,7 +126,10 @@ export const AuthProvider = ({ children }) => {
       // The API key IS the highest credential on this host; Server-only surfaces
       // (users/orgs/server settings) are hidden in Direct mode regardless.
       role: 'super-admin',
-      email: null,
+      // SSO-bound keys answer the federated identity (agent wire); plain keys don't.
+      email: entity.email ?? null,
+      auth_provider: entity.auth_provider ?? null,
+      customer_id: entity.customer_id ?? null,
       entity,
     };
   }, []);

@@ -1,4 +1,5 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
+import axios from 'axios';
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -118,11 +119,122 @@ DirectModeFields.propTypes = {
   loading: PropTypes.bool,
 };
 
-// Seconds to wait after a provider is chosen before auto-handing off to the IdP.
-const OIDC_REDIRECT_DELAY = 3;
-
 // Loopback origin: the hwa:// handler reaches the agent on THIS machine.
 const IS_LOOPBACK = ['127.0.0.1', 'localhost', '[::1]'].includes(window.location.hostname);
+
+/**
+ * The whole Direct-mode auth cluster (extracted from Login for complexity):
+ * silent-probe hint, SSO-primary device login, the demoted key/bootstrap form
+ * behind "Use an API key instead", and the loopback desktop-handoff button
+ * with its countdown.
+ */
+const DirectAuthSection = ({
+  agentSso,
+  ssoProbe,
+  showKeyForm,
+  onShowKeyForm,
+  directFirstBoot,
+  serverInfo,
+  setupToken,
+  setSetupToken,
+  onBootstrap,
+  onShowKeyEntry,
+  apiKey,
+  setApiKey,
+  loading,
+  desktopCountdown,
+  onDesktopSignIn,
+  onCancelCountdown,
+  onSsoStart,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      {agentSso && IS_LOOPBACK && ssoProbe === 'navigating' && (
+        <div className="mb-3 text-muted">
+          <span
+            className="spinner-border spinner-border-sm me-2"
+            role="status"
+            aria-hidden="true"
+          />
+          {t('auth.login.ssoChecking')}
+        </div>
+      )}
+
+      {agentSso && <DeviceSsoLogin disabled={loading} onStart={onSsoStart} />}
+
+      {(!agentSso || showKeyForm) && (
+        <DirectModeFields
+          directFirstBoot={directFirstBoot}
+          serverInfo={serverInfo}
+          setupToken={setupToken}
+          setSetupToken={setSetupToken}
+          onBootstrap={onBootstrap}
+          onShowKeyEntry={onShowKeyEntry}
+          apiKey={apiKey}
+          setApiKey={setApiKey}
+          loading={loading}
+        />
+      )}
+      {agentSso && !showKeyForm && (
+        <div className="mb-3">
+          <button type="button" className="btn btn-link btn-sm p-0" onClick={onShowKeyForm}>
+            {t('auth.login.useApiKeyInstead')}
+          </button>
+        </div>
+      )}
+
+      {IS_LOOPBACK && (
+        <div className="mb-3">
+          <button
+            type="button"
+            className="btn btn-outline-secondary w-100"
+            onClick={onDesktopSignIn}
+            disabled={loading}
+          >
+            {t('auth.login.signInWithDesktopBtn')}
+          </button>
+          <div className="form-text text-muted">{t('auth.login.desktopAgentDesc')}</div>
+          {desktopCountdown !== null && desktopCountdown > 0 && (
+            <div className="form-text">
+              {t('auth.login.autoSignInCountdown', { count: desktopCountdown })}{' '}
+              <button
+                type="button"
+                className="btn btn-link btn-sm p-0 align-baseline"
+                onClick={onCancelCountdown}
+              >
+                {t('auth.login.cancelBtn')}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+};
+
+DirectAuthSection.propTypes = {
+  agentSso: PropTypes.bool,
+  ssoProbe: PropTypes.string,
+  showKeyForm: PropTypes.bool,
+  onShowKeyForm: PropTypes.func,
+  directFirstBoot: PropTypes.bool,
+  serverInfo: PropTypes.shape({ hostname: PropTypes.string }),
+  setupToken: PropTypes.string,
+  setSetupToken: PropTypes.func,
+  onBootstrap: PropTypes.func,
+  onShowKeyEntry: PropTypes.func,
+  apiKey: PropTypes.string,
+  setApiKey: PropTypes.func,
+  loading: PropTypes.bool,
+  desktopCountdown: PropTypes.number,
+  onDesktopSignIn: PropTypes.func,
+  onCancelCountdown: PropTypes.func,
+  onSsoStart: PropTypes.func,
+};
+
+// Seconds to wait after a provider is chosen before auto-handing off to the IdP.
+const OIDC_REDIRECT_DELAY = 3;
 
 // Seconds an idle loopback login page waits before auto-firing the desktop
 // sign-in. Fires ONCE per page load (never retried — no hammering).
@@ -352,6 +464,12 @@ const Login = () => {
   const [desktopCountdown, setDesktopCountdown] = useState(null);
   // One attempt per page load, ever — even across effect re-runs.
   const desktopHandoffFired = useRef(false);
+  // Silent SSO pre-check (loopback agents): pending | navigating | skipped | failed.
+  // The desktop-handoff countdown arms only after the probe settles negative.
+  const [ssoProbe, setSsoProbe] = useState('pending');
+  const ssoProbeFired = useRef(false);
+  // Direct-mode SSO-primary layout: the key/bootstrap form demotes behind a toggle.
+  const [showKeyForm, setShowKeyForm] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login, loginWithApiKey, bootstrapFirstKey, isAuthenticated, getAuthMethods } = useAuth();
@@ -433,15 +551,57 @@ const Login = () => {
     return () => clearTimeout(timer);
   }, [oidcCountdown, authMethod]);
 
+  const agentSso = isDirect && Array.isArray(serverInfo?.auth) && serverInfo.auth.includes('oidc');
+
+  /**
+   * Silent SSO pre-check (identity-first, Mark's ruling): before ANY local
+   * auto-login, a loopback agent page asks the agent for a prompt=none
+   * authorize URL and navigates there. A live IdP session + prior consent
+   * comes back signed in FEDERATED via the tray handoff, zero clicks; any
+   * other outcome bounces to ?sso=unavailable and local login proceeds. The
+   * agent gates on IdP reachability and answers a fast local error when the
+   * IdP is unreachable or oidc is off — an offline machine loses milliseconds,
+   * never hangs. One probe per page load.
+   */
+  useEffect(() => {
+    if (!modeReady || ssoProbeFired.current) {
+      return;
+    }
+    const bounced = searchParams.get('sso') === 'unavailable';
+    if (!isDirect || !IS_LOOPBACK || isAuthenticated || !agentSso || bounced) {
+      ssoProbeFired.current = true;
+      setSsoProbe('skipped');
+      return;
+    }
+    ssoProbeFired.current = true;
+    axios
+      .post('/auth/oidc/silent-start')
+      .then(response => {
+        if (response.data?.authorize_url) {
+          setSsoProbe('navigating');
+          window.location.assign(response.data.authorize_url);
+        } else {
+          setSsoProbe('failed');
+        }
+      })
+      .catch(() => {
+        setSsoProbe('failed');
+      });
+  }, [modeReady, isDirect, isAuthenticated, agentSso, searchParams]);
+
   // Idle loopback login (Direct mode): arm the one-shot desktop handoff — the
   // user is sitting at their own machine, so after a short wait the hwa://
-  // sign-in fires itself instead of waiting for the manual click.
+  // sign-in fires itself instead of waiting for the manual click. Arms only
+  // once the silent SSO pre-check has settled negative (identity-first).
   useEffect(() => {
     if (!modeReady || !isDirect || !IS_LOOPBACK || isAuthenticated || desktopHandoffFired.current) {
       return;
     }
+    if (ssoProbe !== 'skipped' && ssoProbe !== 'failed') {
+      return;
+    }
     setDesktopCountdown(DESKTOP_HANDOFF_DELAY);
-  }, [modeReady, isDirect, isAuthenticated]);
+  }, [modeReady, isDirect, isAuthenticated, ssoProbe]);
 
   // Tick the desktop-handoff countdown. Any user engagement (typing a key or
   // setup token, a login in flight) cancels it; at zero it fires exactly once.
@@ -747,9 +907,14 @@ const Login = () => {
                   </div>
                 )}
 
-                {/* Direct-mode auth (first-boot bootstrap or API-key entry) */}
+                {/* The whole Direct-mode auth cluster: probe hint, SSO-primary device
+                    login, demoted key/bootstrap form, desktop handoff + countdown. */}
                 {isDirect && (
-                  <DirectModeFields
+                  <DirectAuthSection
+                    agentSso={agentSso}
+                    ssoProbe={ssoProbe}
+                    showKeyForm={showKeyForm}
+                    onShowKeyForm={() => setShowKeyForm(true)}
                     directFirstBoot={directFirstBoot}
                     serverInfo={serverInfo}
                     setupToken={setupToken}
@@ -759,48 +924,19 @@ const Login = () => {
                     apiKey={apiKey}
                     setApiKey={setApiKey}
                     loading={loading}
+                    desktopCountdown={desktopCountdown}
+                    onDesktopSignIn={() => {
+                      desktopHandoffFired.current = true;
+                      setDesktopCountdown(null);
+                      window.location.assign('hwa://open');
+                    }}
+                    onCancelCountdown={() => setDesktopCountdown(null)}
+                    onSsoStart={() => {
+                      desktopHandoffFired.current = true;
+                      setDesktopCountdown(null);
+                    }}
                   />
                 )}
-
-                {/* Desktop sign-in via the agent's hwa:// handler — loopback only (the handler
-                    reaches the agent on THIS machine). Renders in both Direct states (first-boot
-                    and key entry): on a desktop install it skips the setup token entirely. If no
-                    handler is installed, the browser shows its own notice — acceptable. */}
-                {isDirect && IS_LOOPBACK && (
-                  <div className="mb-3">
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary w-100"
-                      onClick={() => {
-                        desktopHandoffFired.current = true;
-                        setDesktopCountdown(null);
-                        window.location.assign('hwa://open');
-                      }}
-                      disabled={loading}
-                    >
-                      {t('auth.login.signInWithDesktopBtn')}
-                    </button>
-                    <div className="form-text text-muted">{t('auth.login.desktopAgentDesc')}</div>
-                    {desktopCountdown !== null && desktopCountdown > 0 && (
-                      <div className="form-text">
-                        {t('auth.login.autoSignInCountdown', { count: desktopCountdown })}{' '}
-                        <button
-                          type="button"
-                          className="btn btn-link btn-sm p-0 align-baseline"
-                          onClick={() => setDesktopCountdown(null)}
-                        >
-                          {t('auth.login.cancelBtn')}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Device-flow SSO — capability-gated on auth[] containing 'oidc' (Go agent
-                    only; zoneweaver never advertises it), per the frozen sync wire. */}
-                {isDirect &&
-                  Array.isArray(serverInfo?.auth) &&
-                  serverInfo.auth.includes('oidc') && <DeviceSsoLogin disabled={loading} />}
 
                 {/* Show username/password fields only for local/LDAP authentication */}
                 {!isDirect && !authMethod.startsWith('oidc-') && (
@@ -846,7 +982,7 @@ const Login = () => {
                     <div className="form-text text-muted">{getAuthMethodHelpText()}</div>
                   </div>
                 )}
-                {!directFirstBoot && (
+                {!directFirstBoot && (!isDirect || !agentSso || showKeyForm) && (
                   <LoginSubmitButton
                     loading={loading}
                     authMethod={authMethod}

@@ -696,7 +696,9 @@
       "oidcHelpText": "Sign in through your identity provider",
       "localHelpText": "Use your local account credentials",
       "documentationLink": "Documentation",
-      "ssoUnavailableMsg": "No active single sign-on session was found — sign in below."
+      "ssoUnavailableMsg": "No active single sign-on session was found — sign in below.",
+      "useApiKeyInstead": "Use an API key instead",
+      "ssoChecking": "Checking your single sign-on session…"
     },
     "register": {
       "allFieldsRequired": "All fields are required",
@@ -899,7 +901,8 @@
       "openVerification": "Open the approval page",
       "denied": "The sign-in was denied at the identity provider.",
       "expired": "The sign-in request expired — try again.",
-      "retry": "Try SSO sign-in again"
+      "retry": "Try SSO sign-in again",
+      "failed": "Sign-in failed — try again."
     }
   },
   "chrome": {

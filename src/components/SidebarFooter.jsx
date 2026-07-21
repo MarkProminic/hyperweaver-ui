@@ -230,7 +230,7 @@ const SidebarFooter = () => {
         }
         const params = new URLSearchParams({
           req: ts.req_type?.value || 'sso',
-          customerId: customerId || '',
+          customerId: customerId || user?.customer_id || '',
           user: user?.username || '',
           email: user?.email || '',
           context: ts.context?.value || '',

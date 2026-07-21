@@ -696,7 +696,9 @@
       "oidcHelpText": "Inicia sesión a través de tu proveedor de identidad",
       "localHelpText": "Usa las credenciales de tu cuenta local",
       "documentationLink": "Documentación",
-      "ssoUnavailableMsg": "No se encontró una sesión de inicio de sesión único activa; inicia sesión abajo."
+      "ssoUnavailableMsg": "No se encontró una sesión de inicio de sesión único activa; inicia sesión abajo.",
+      "useApiKeyInstead": "Usar una clave API en su lugar",
+      "ssoChecking": "Comprobando tu sesión de inicio de sesión único…"
     },
     "register": {
       "allFieldsRequired": "Todos los campos son obligatorios",
@@ -899,7 +901,8 @@
       "openVerification": "Abrir la página de aprobación",
       "denied": "El inicio de sesión fue denegado en el proveedor de identidad.",
       "expired": "La solicitud de inicio de sesión caducó; inténtalo de nuevo.",
-      "retry": "Reintentar el inicio de sesión con SSO"
+      "retry": "Reintentar el inicio de sesión con SSO",
+      "failed": "El inicio de sesión falló; inténtalo de nuevo."
     }
   },
   "chrome": {
