@@ -695,7 +695,8 @@
       "ldapHelpText": "Use your directory credentials",
       "oidcHelpText": "Sign in through your identity provider",
       "localHelpText": "Use your local account credentials",
-      "documentationLink": "Documentation"
+      "documentationLink": "Documentation",
+      "ssoUnavailableMsg": "No active single sign-on session was found — sign in below."
     },
     "register": {
       "allFieldsRequired": "All fields are required",
@@ -889,6 +890,16 @@
       "noGravatar": "No Gravatar profile found for this email address.",
       "createGravatar": "Create a Gravatar profile",
       "createGravatarSuffix": "to display your profile information here."
+    },
+    "deviceSso": {
+      "signInWithSso": "Sign in with SSO",
+      "desc": "Approve the sign-in at your identity provider — no API key needed.",
+      "waitingApproval": "Waiting for approval at your identity provider…",
+      "codeLabel": "Your code:",
+      "openVerification": "Open the approval page",
+      "denied": "The sign-in was denied at the identity provider.",
+      "expired": "The sign-in request expired — try again.",
+      "retry": "Try SSO sign-in again"
     }
   },
   "chrome": {
@@ -996,6 +1007,12 @@
       "fontHint": "Any installed monospace font works — the stack falls through left to right.",
       "preview": "preview: ls -la /var/log | grep -i weaver 0123456789",
       "applyNote": "The footer host shell updates immediately; other terminals pick the new values up when they are next opened."
+    },
+    "orgSwitcher": {
+      "title": "Switch Organization",
+      "allOrganizations": "All organizations",
+      "primaryOrganization": "Primary organization",
+      "noOrgs": "No organizations found for your account."
     }
   },
   "common": {

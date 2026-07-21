@@ -15,6 +15,7 @@ import { supportedLanguages } from '../i18n';
 
 import { ContentModal } from './common';
 import GravatarImage from './GravatarImage.jsx';
+import OrgSwitcherModal, { OrgSwitcherMenuItem } from './OrgSwitcherModal.jsx';
 
 // Language identity helpers (the BoxVault navbar pattern): the flag comes from
 // the locale's region via Intl.Locale (maximize() infers e.g. en → US), the
@@ -145,6 +146,7 @@ const SidebarFooter = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [showOrgModal, setShowOrgModal] = useState(false);
   const changeLanguage = async lang => {
     await i18n.changeLanguage(lang);
     setShowLanguageModal(false);
@@ -362,6 +364,8 @@ const SidebarFooter = () => {
             <span>{getLanguageDisplayName(i18n.language)}</span>
           </Dropdown.Item>
 
+          <OrgSwitcherMenuItem onOpen={() => setShowOrgModal(true)} />
+
           {/* Profile — a Server user concept (not in Direct). OIDC users go to their IdP profile
               (contract §2 / phase E); local/LDAP users to the local profile page. */}
           {!isDirect &&
@@ -461,6 +465,8 @@ const SidebarFooter = () => {
           />
         </Dropdown.Menu>
       </Dropdown>
+
+      <OrgSwitcherModal isOpen={showOrgModal} onClose={() => setShowOrgModal(false)} />
 
       <ContentModal
         isOpen={showLanguageModal}

@@ -19,6 +19,7 @@ import {
   getIpSuggestions,
 } from '../../api/provisioningAPI';
 import { getZfsPools, getZfsDatasets } from '../../api/zfsAPI';
+import { useOrgFilter } from '../../contexts/OrgFilterContext';
 import { flattenBoxCatalog, pickDefaultSource } from '../../utils/boxCatalog';
 import { hasFeature, hasHypervisor } from '../../utils/capabilities';
 import { resourceLabel } from '../../utils/resourceLabel';
@@ -161,6 +162,7 @@ const browseBoxVaultHandler = (aggregated, setBoxVaultOpen) =>
 
 const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => {
   const { t } = useTranslation();
+  const { activeOrg } = useOrgFilter();
   const [stepIndex, setStepIndex] = useState(0);
   const [maxVisited, setMaxVisited] = useState(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -465,7 +467,13 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       }
     );
     if (aggregated) {
-      getKnownOrgs().then(orgs => setOrgChoices(managerOrgsOf(orgs)));
+      getKnownOrgs().then(orgs => {
+        const managers = managerOrgsOf(orgs);
+        setOrgChoices(managers);
+        if (activeOrg && managers.some(org => org.uuid === activeOrg)) {
+          setOrgUuid(activeOrg);
+        }
+      });
     } else {
       setOrgChoices([]);
     }
@@ -598,7 +606,17 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     loadZfsFeeds();
     loadMedia();
     loadUplinks();
-  }, [isOpen, currentServer, aggregated, resetForm, loadZfsFeeds, loadMedia, loadUplinks, t]);
+  }, [
+    isOpen,
+    currentServer,
+    aggregated,
+    activeOrg,
+    resetForm,
+    loadZfsFeeds,
+    loadMedia,
+    loadUplinks,
+    t,
+  ]);
 
   // Re-fetch the feeds a step consumes each time it is ENTERED (Mark:
   // "sometimes the dropdown data is stale") — picker data is only ever as

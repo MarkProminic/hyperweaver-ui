@@ -695,7 +695,8 @@
       "ldapHelpText": "Usa las credenciales de tu directorio",
       "oidcHelpText": "Inicia sesión a través de tu proveedor de identidad",
       "localHelpText": "Usa las credenciales de tu cuenta local",
-      "documentationLink": "Documentación"
+      "documentationLink": "Documentación",
+      "ssoUnavailableMsg": "No se encontró una sesión de inicio de sesión único activa; inicia sesión abajo."
     },
     "register": {
       "allFieldsRequired": "Todos los campos son obligatorios",
@@ -889,6 +890,16 @@
       "noGravatar": "No se encontró un perfil de Gravatar para este correo electrónico.",
       "createGravatar": "Crea un perfil de Gravatar",
       "createGravatarSuffix": "para mostrar aquí la información de tu perfil."
+    },
+    "deviceSso": {
+      "signInWithSso": "Iniciar sesión con SSO",
+      "desc": "Aprueba el inicio de sesión en tu proveedor de identidad; no se necesita clave API.",
+      "waitingApproval": "Esperando la aprobación en tu proveedor de identidad…",
+      "codeLabel": "Tu código:",
+      "openVerification": "Abrir la página de aprobación",
+      "denied": "El inicio de sesión fue denegado en el proveedor de identidad.",
+      "expired": "La solicitud de inicio de sesión caducó; inténtalo de nuevo.",
+      "retry": "Reintentar el inicio de sesión con SSO"
     }
   },
   "chrome": {
@@ -996,6 +1007,12 @@
       "fontHint": "Sirve cualquier fuente monoespaciada instalada — la pila se recorre de izquierda a derecha.",
       "preview": "vista previa: ls -la /var/log | grep -i weaver 0123456789",
       "applyNote": "El shell del host en el pie de página se actualiza de inmediato; los demás terminales toman los nuevos valores la próxima vez que se abran."
+    },
+    "orgSwitcher": {
+      "title": "Cambiar de organización",
+      "allOrganizations": "Todas las organizaciones",
+      "primaryOrganization": "Organización principal",
+      "noOrgs": "No se encontraron organizaciones para tu cuenta."
     }
   },
   "common": {

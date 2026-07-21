@@ -21,6 +21,7 @@ import * as vlanAPI from '../api/vlanAPI';
 
 import { useAuth } from './AuthContext';
 import { useMode } from './ModeContext';
+import { useOrgFilter, serverVisibleUnderOrg } from './OrgFilterContext';
 
 /**
  * Server context for managing Agent connections
@@ -53,6 +54,7 @@ export const ServerProvider = ({ children }) => {
   const { t } = useTranslation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { isDirect, ready: modeReady, serverInfo } = useMode();
+  const { activeOrg } = useOrgFilter();
   const [servers, setServers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentServer, setCurrentServer] = useState(() => {
@@ -430,15 +432,46 @@ export const ServerProvider = ({ children }) => {
   );
 
   /**
+   * The registry under the org-switcher's view filter (fails open on rows without the
+   * Server's org_uuids annotation). This is what every view surface consumes; the
+   * settings page fetches its own unfiltered list.
+   */
+  const visibleServers = useMemo(
+    () => servers.filter(server => serverVisibleUnderOrg(server, activeOrg)),
+    [servers, activeOrg]
+  );
+
+  /**
+   * A selection hidden by an org switch is dropped so the navbar auto-select lands on
+   * the first visible host instead of pinning a filtered-out one.
+   */
+  useEffect(() => {
+    if (
+      !isDirect &&
+      currentServer &&
+      servers.length > 0 &&
+      !visibleServers.some(
+        server =>
+          server.hostname === currentServer.hostname &&
+          server.port === currentServer.port &&
+          server.protocol === currentServer.protocol
+      )
+    ) {
+      setCurrentServer(null);
+      setCurrentMachine(null);
+    }
+  }, [isDirect, servers, visibleServers, currentServer]);
+
+  /**
    * Get all available servers
    * @returns {Array} Array of server objects
    */
   const getServers = useCallback(
     () =>
-      [...servers].sort(
+      [...visibleServers].sort(
         (a, b) => new Date(b.lastUsed || b.createdAt) - new Date(a.lastUsed || a.createdAt)
       ),
-    [servers]
+    [visibleServers]
   );
 
   /**
@@ -537,7 +570,7 @@ export const ServerProvider = ({ children }) => {
   // stable by definition, not deps.
   const value = useMemo(
     () => ({
-      servers,
+      servers: visibleServers,
       loading,
       currentServer,
       currentMachine,
@@ -598,7 +631,7 @@ export const ServerProvider = ({ children }) => {
       deleteApiKey,
     }),
     [
-      servers,
+      visibleServers,
       loading,
       currentServer,
       currentMachine,

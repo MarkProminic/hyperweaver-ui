@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useMode } from '../contexts/ModeContext';
 import { copyText } from '../utils/clipboard';
 
+import DeviceSsoLogin from './DeviceSsoLogin';
 import Logo from './Logo';
 
 /**
@@ -130,11 +131,18 @@ const DESKTOP_HANDOFF_DELAY = 7;
 // OIDC redirect helper — module scope so it is NOT a hook dependency. Stashes the intended URL
 // (unless already on the login page) then hard-navigates to the Server's provider-start endpoint.
 // `register:true` adds ?register (C10) → the Server sends prompt=create → IdP registration page.
-const redirectToOidc = (provider, { register = false } = {}) => {
+// `silent:true` adds ?silent → the Server sends prompt=none — an active IdP session logs in with
+// no UI; otherwise the callback bounces back benign as /ui/login?sso=unavailable (never an error).
+const redirectToOidc = (provider, { register = false, silent = false } = {}) => {
   if (window.location.pathname !== '/ui/login') {
     localStorage.setItem('hyperweaver_intended_url', window.location.pathname);
   }
-  const query = register ? '?register' : '';
+  let query = '';
+  if (register) {
+    query = '?register';
+  } else if (silent) {
+    query = '?silent';
+  }
   window.location.href = `/api/auth/oidc/${encodeURIComponent(provider)}${query}`;
 };
 
@@ -457,6 +465,39 @@ const Login = () => {
     return () => clearTimeout(timer);
   }, [desktopCountdown, apiKey, setupToken, loading]);
 
+  /**
+   * Silent-SSO auto-login: fires ONLY where no local login affordance exists —
+   * aggregated mode with OIDC as the sole enabled method family. One probe per
+   * page load; a benign bounce (?sso=unavailable) or any ?error=/?provider=
+   * suppresses it, so a failed probe can never loop.
+   */
+  const silentSsoTried = useRef(false);
+  useEffect(() => {
+    if (silentSsoTried.current || methodsLoading || isDirect || isAuthenticated) {
+      return;
+    }
+    if (
+      searchParams.get('sso') === 'unavailable' ||
+      searchParams.get('error') ||
+      searchParams.get('provider')
+    ) {
+      return;
+    }
+    const enabled = authMethods.filter(method => method.enabled);
+    if (enabled.length === 0 || !enabled.every(method => method.id.startsWith('oidc-'))) {
+      return;
+    }
+    silentSsoTried.current = true;
+    redirectToOidc(enabled[0].id.slice('oidc-'.length), { silent: true });
+  }, [methodsLoading, isDirect, isAuthenticated, authMethods, searchParams]);
+
+  /** The benign silent bounce gets a quiet info line, never an error flash. */
+  useEffect(() => {
+    if (searchParams.get('sso') === 'unavailable') {
+      setMsg(t('auth.login.ssoUnavailableMsg'));
+    }
+  }, [searchParams, t]);
+
   // Provider-via-URL: /ui/login?provider=<name> pre-selects that OIDC provider and starts the
   // auto-redirect once. Lets a link (or the Server) deep-link straight to a specific IdP.
   const urlProviderHandled = useRef(false);
@@ -754,6 +795,12 @@ const Login = () => {
                     )}
                   </div>
                 )}
+
+                {/* Device-flow SSO — capability-gated on auth[] containing 'oidc' (Go agent
+                    only; zoneweaver never advertises it), per the frozen sync wire. */}
+                {isDirect &&
+                  Array.isArray(serverInfo?.auth) &&
+                  serverInfo.auth.includes('oidc') && <DeviceSsoLogin disabled={loading} />}
 
                 {/* Show username/password fields only for local/LDAP authentication */}
                 {!isDirect && !authMethod.startsWith('oidc-') && (

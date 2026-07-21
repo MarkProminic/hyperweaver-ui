@@ -5,6 +5,7 @@ import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import AppErrorBoundary from './components/AppErrorBoundary';
 import { AuthProvider } from './contexts/AuthContext';
 import { ModeProvider } from './contexts/ModeContext';
+import { OrgFilterProvider } from './contexts/OrgFilterContext';
 import { ServerProvider } from './contexts/ServerContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { UserSettingsProvider } from './contexts/UserSettingsContext';
@@ -33,44 +34,50 @@ const App = () => (
   <ThemeProvider>
     <ModeProvider>
       <AuthProvider>
-        <ServerProvider>
-          <UserSettingsProvider>
-            <ZoneTerminalProvider>
-              <HelmetProvider>
-                <BrowserRouter>
-                  <AppErrorBoundary>
-                    <Suspense fallback={<BootFallback />}>
-                      <Routes>
-                        <Route exact path="/" element={<Landing />} />
-                        {/* Canonical login is /ui/login — it's under the server-served /ui/ base (so a
+        <OrgFilterProvider>
+          <ServerProvider>
+            <UserSettingsProvider>
+              <ZoneTerminalProvider>
+                <HelmetProvider>
+                  <BrowserRouter>
+                    <AppErrorBoundary>
+                      <Suspense fallback={<BootFallback />}>
+                        <Routes>
+                          <Route exact path="/" element={<Landing />} />
+                          {/* Canonical login is /ui/login — it's under the server-served /ui/ base (so a
                           refresh/deep-link resolves), and Login/AuthCallback/the server's OIDC
                           error + ?sso=unavailable redirects all target it. Bare /login funnels here. */}
-                        <Route path="/ui/login" element={<Login />} />
-                        <Route exact path="/login" element={<Navigate to="/ui/login" replace />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/setup" element={<ServerSetup />} />
-                        <Route path="/ui/auth/callback" element={<AuthCallback />} />
-                        <Route
-                          path="/ui/console/:agentId/:machineName"
-                          element={<StandaloneConsole />}
-                        />
-                        <Route
-                          path="/ui/rdp/:agentId/:machineName"
-                          element={<StandaloneRdpConsole />}
-                        />
-                        <Route
-                          path="/ui/settings"
-                          element={<Navigate to="/ui/settings/hyperweaver" />}
-                        />
-                        <Route path="/ui/*" element={<Layout />} />
-                      </Routes>
-                    </Suspense>
-                  </AppErrorBoundary>
-                </BrowserRouter>
-              </HelmetProvider>
-            </ZoneTerminalProvider>
-          </UserSettingsProvider>
-        </ServerProvider>
+                          <Route path="/ui/login" element={<Login />} />
+                          <Route
+                            exact
+                            path="/login"
+                            element={<Navigate to="/ui/login" replace />}
+                          />
+                          <Route path="/register" element={<Register />} />
+                          <Route path="/setup" element={<ServerSetup />} />
+                          <Route path="/ui/auth/callback" element={<AuthCallback />} />
+                          <Route
+                            path="/ui/console/:agentId/:machineName"
+                            element={<StandaloneConsole />}
+                          />
+                          <Route
+                            path="/ui/rdp/:agentId/:machineName"
+                            element={<StandaloneRdpConsole />}
+                          />
+                          <Route
+                            path="/ui/settings"
+                            element={<Navigate to="/ui/settings/hyperweaver" />}
+                          />
+                          <Route path="/ui/*" element={<Layout />} />
+                        </Routes>
+                      </Suspense>
+                    </AppErrorBoundary>
+                  </BrowserRouter>
+                </HelmetProvider>
+              </ZoneTerminalProvider>
+            </UserSettingsProvider>
+          </ServerProvider>
+        </OrgFilterProvider>
       </AuthProvider>
     </ModeProvider>
   </ThemeProvider>
