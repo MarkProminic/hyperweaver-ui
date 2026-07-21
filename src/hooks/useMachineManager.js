@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
+import { useOrgFilter, filterMachineNamesUnderOrg } from '../contexts/OrgFilterContext';
 import { useServers } from '../contexts/ServerContext';
 
 /**
@@ -15,6 +16,7 @@ export const useMachineManager = currentServer => {
   const [error, setError] = useState('');
 
   const { makeAgentRequest } = useServers();
+  const { activeOrg } = useOrgFilter();
 
   const loadMachines = useCallback(
     async server => {
@@ -35,8 +37,14 @@ export const useMachineManager = currentServer => {
 
         if (result.success) {
           const { data } = result;
-          setMachines(data.allmachines || []);
-          setRunningMachines(data.runningmachines || []);
+          const visible = await filterMachineNamesUnderOrg(
+            makeAgentRequest,
+            server,
+            data.allmachines || [],
+            activeOrg
+          );
+          setMachines(visible);
+          setRunningMachines((data.runningmachines || []).filter(name => visible.includes(name)));
         } else {
           setError(`Failed to fetch machines for ${server.hostname}: ${result.message}`);
           setMachines([]);
@@ -51,8 +59,8 @@ export const useMachineManager = currentServer => {
         setLoading(false);
       }
     },
-    [makeAgentRequest]
-  ); // FIXED: Remove loading dependency to prevent re-creation
+    [makeAgentRequest, activeOrg]
+  );
 
   useEffect(() => {
     if (currentServer) {

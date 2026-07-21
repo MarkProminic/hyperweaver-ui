@@ -49,6 +49,29 @@ export const machineVisibleUnderOrg = (machine, activeOrg) =>
   machine.org_uuids.length === 0 ||
   machine.org_uuids.includes(activeOrg);
 
+/**
+ * Filter a /stats machine-NAME array under the active org. The org annotation lives on
+ * GET machines rows (Server-decorated org_uuids), so an active filter joins one rows
+ * fetch against the names; names without a row, rows without the annotation, and the
+ * no-filter case all fail open. Costs zero requests while the filter is off.
+ * @param {Function} makeAgentRequest - The agent request fn (hostname, port, protocol, path)
+ * @param {Object} server - Agent server object
+ * @param {string[]} names - /stats allmachines-style name array
+ * @param {string} activeOrg - Active org uuid ('' = all)
+ * @returns {Promise<string[]>} Names visible under the filter
+ */
+export const filterMachineNamesUnderOrg = async (makeAgentRequest, server, names, activeOrg) => {
+  if (!activeOrg || names.length === 0) {
+    return names;
+  }
+  const result = await makeAgentRequest(server.hostname, server.port, server.protocol, 'machines');
+  if (!result.success || !Array.isArray(result.data?.machines)) {
+    return names;
+  }
+  const rows = new Map(result.data.machines.map(row => [row.name, row]));
+  return names.filter(name => machineVisibleUnderOrg(rows.get(name) ?? null, activeOrg));
+};
+
 export const OrgFilterProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();
   const { isDirect, ready: modeReady } = useMode();

@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useMode } from '../contexts/ModeContext';
+import { useOrgFilter, filterMachineNamesUnderOrg } from '../contexts/OrgFilterContext';
 import { useServers } from '../contexts/ServerContext';
 import { UserSettings } from '../contexts/UserSettingsContext';
 import { useAgentHostname } from '../hooks/useAgentHostname';
@@ -83,6 +84,7 @@ MachineNode.propTypes = {
 const HostNode = ({ server, autoExpanded = false, onHostMenu = null, onMachineMenu = null }) => {
   const { t } = useTranslation();
   const { currentServer, currentMachine, selectServer, makeAgentRequest } = useServers();
+  const { activeOrg } = useOrgFilter();
   const { sidebarMinimized } = useContext(UserSettings);
   const navigate = useNavigate();
   const location = useLocation();
@@ -106,15 +108,24 @@ const HostNode = ({ server, autoExpanded = false, onHostMenu = null, onMachineMe
     }
     const load = () => {
       makeAgentRequest(server.hostname, server.port, server.protocol, 'stats')
-        .then(res => {
+        .then(async res => {
           if (cancelled) {
             return;
           }
           if (res.success) {
+            const visible = await filterMachineNamesUnderOrg(
+              makeAgentRequest,
+              server,
+              res.data.allmachines || [],
+              activeOrg
+            );
+            if (cancelled) {
+              return;
+            }
             setLoadError(false);
             setMachines({
-              all: res.data.allmachines || [],
-              running: res.data.runningmachines || [],
+              all: visible,
+              running: (res.data.runningmachines || []).filter(name => visible.includes(name)),
             });
           } else {
             setLoadError(true);
@@ -128,7 +139,7 @@ const HostNode = ({ server, autoExpanded = false, onHostMenu = null, onMachineMe
       cancelled = true;
       clearInterval(interval);
     };
-  }, [machinesAvailable, expanded, sidebarMinimized, makeAgentRequest, server]);
+  }, [machinesAvailable, expanded, sidebarMinimized, makeAgentRequest, server, activeOrg]);
 
   const handleSelectHost = () => {
     selectServer(server);
