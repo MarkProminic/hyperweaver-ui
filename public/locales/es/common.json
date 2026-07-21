@@ -6040,7 +6040,8 @@
       "activeStatus": "Activo",
       "inactiveStatus": "Inactivo",
       "vncPortLabel": "Puerto VNC",
-      "zloginLabel": "zlogin"
+      "zloginLabel": "zlogin",
+      "natForwardsHeading": "Redirecciones de puertos NAT"
     },
     "machineGuestAgent": {
       "nameHeader": "Nombre",

@@ -223,6 +223,9 @@ const UnattendedInstallModal = ({
               {probe.supported === false
                 ? t('machine.unattendedInstallModal.unsupportedIso')
                 : t('machine.unattendedInstallModal.supportedIso')}
+              {Array.isArray(probe.os_languages) &&
+                probe.os_languages.length > 0 &&
+                ` · ${probe.os_languages.join(', ')}`}
             </div>
           </div>
         )}
@@ -282,11 +285,23 @@ const UnattendedInstallModal = ({
                   id="unattended-locale"
                   className="form-control"
                   type="text"
+                  list={
+                    Array.isArray(probe?.os_languages) && probe.os_languages.length > 0
+                      ? 'unattended-locale-options'
+                      : undefined
+                  }
                   placeholder={t('machine.unattendedInstallModal.localePlaceholder')}
                   value={form.locale}
                   onChange={e => patch({ locale: e.target.value })}
                   disabled={loading}
                 />
+                {Array.isArray(probe?.os_languages) && probe.os_languages.length > 0 && (
+                  <datalist id="unattended-locale-options">
+                    {probe.os_languages.map(lang => (
+                      <option key={lang} value={lang} />
+                    ))}
+                  </datalist>
+                )}
               </div>
               <div className="col-6 col-md-4">
                 <label className="form-label" htmlFor="unattended-timezone">

@@ -126,14 +126,17 @@ const ProcessDetailsModal = ({ process, server, onClose }) => {
           </div>
         </div>
 
-        {process.details?.open_files_sample && (
-          <div className="card">
-            <div className="card-body">
-              <h4 className="fs-6 fw-bold">{t('host.processDetailsModal.openFilesSample')}</h4>
-              <pre className="small p-3 bg-body-tertiary">{process.details.open_files_sample}</pre>
+        {Array.isArray(process.details?.open_files_sample) &&
+          process.details.open_files_sample.length > 0 && (
+            <div className="card">
+              <div className="card-body">
+                <h4 className="fs-6 fw-bold">{t('host.processDetailsModal.openFilesSample')}</h4>
+                <pre className="small p-3 bg-body-tertiary">
+                  {process.details.open_files_sample.join('\n')}
+                </pre>
+              </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
     );
   };
@@ -320,7 +323,7 @@ ProcessDetailsModal.propTypes = {
   process: PropTypes.shape({
     pid: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     details: PropTypes.shape({
-      open_files_sample: PropTypes.string,
+      open_files_sample: PropTypes.arrayOf(PropTypes.string),
     }),
   }).isRequired,
   server: PropTypes.shape({

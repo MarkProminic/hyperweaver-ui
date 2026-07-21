@@ -26,8 +26,9 @@ const MachineHardware = ({ machineDetails, currentHardware, colClass = 'col-12' 
     currentHardware?.attachments?.length > 0 ||
     currentHardware?.nics?.length > 0
   );
+  const natForwards = Array.isArray(configuration?.nat_forwards) ? configuration.nat_forwards : [];
 
-  if (!isZone && !hasDevices) {
+  if (!isZone && !hasDevices && natForwards.length === 0) {
     return null;
   }
 
@@ -233,6 +234,29 @@ const MachineHardware = ({ machineDetails, currentHardware, colClass = 'col-12' 
               <HardwareDeviceTree currentHardware={currentHardware} />
             </div>
           )}
+
+          {natForwards.length > 0 && (
+            <div className={isZone || hasDevices ? 'mt-3' : ''}>
+              <h5 className="fs-6 fw-bold mb-2">
+                {t('machine.machineHardware.natForwardsHeading')}
+              </h5>
+              {natForwards.map(fw => (
+                <div
+                  key={`${fw.name}|${fw.adapter ?? ''}`}
+                  className="d-flex align-items-center gap-2 font-monospace small py-1"
+                >
+                  <span className="badge text-bg-secondary">{fw.protocol}</span>
+                  {fw.adapter !== undefined && fw.adapter !== null && (
+                    <span className="badge text-bg-light">nic{fw.adapter}</span>
+                  )}
+                  <span className="text-truncate">
+                    {fw.name}: {fw.host_ip || '*'}:{fw.host_port} → {fw.guest_ip || '*'}:
+                    {fw.guest_port}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -255,6 +279,17 @@ MachineHardware.propTypes = {
       rng: PropTypes.string,
       type: PropTypes.string,
       'cloud-init': PropTypes.string,
+      nat_forwards: PropTypes.arrayOf(
+        PropTypes.shape({
+          name: PropTypes.string,
+          protocol: PropTypes.string,
+          host_ip: PropTypes.string,
+          host_port: PropTypes.number,
+          guest_ip: PropTypes.string,
+          guest_port: PropTypes.number,
+          adapter: PropTypes.number,
+        })
+      ),
     }),
     vnc_session_info: PropTypes.shape({
       web_port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),

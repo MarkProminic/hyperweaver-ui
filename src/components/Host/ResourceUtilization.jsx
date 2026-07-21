@@ -113,9 +113,18 @@ const ResourceUtilization = ({ serverStats, cpuUsagePct, swapSummaryData, arcSiz
               {t('host.resourceUtilization.swapUsage')}
               <span className="small text-muted ms-2">
                 {t('host.resourceUtilization.swapSummary', {
-                  total: swapSummaryData.totalSwapGB || 'N/A',
-                  used: swapSummaryData.usedSwapGB || 'N/A',
-                  free: swapSummaryData.freeSwapGB || 'N/A',
+                  total:
+                    typeof swapSummaryData.totalSwapBytes === 'number'
+                      ? bytesToSize(swapSummaryData.totalSwapBytes)
+                      : 'N/A',
+                  used:
+                    typeof swapSummaryData.usedSwapBytes === 'number'
+                      ? bytesToSize(swapSummaryData.usedSwapBytes)
+                      : 'N/A',
+                  free:
+                    typeof swapSummaryData.freeSwapBytes === 'number'
+                      ? bytesToSize(swapSummaryData.freeSwapBytes)
+                      : 'N/A',
                 })}
               </span>
             </div>
