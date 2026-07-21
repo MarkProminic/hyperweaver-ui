@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.11.0](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.12...v0.11.0) (2026-07-21)
+
+
+### Features
+
+* translations ([4c65a59](https://github.com/MarkProminic/hyperweaver-ui/commit/4c65a59c81c6f1a7dcf2719b18e2f9b46620c2f5))
+
+
+### Bug Fixes
+
+* ansible host and other goodies ([473a2f4](https://github.com/MarkProminic/hyperweaver-ui/commit/473a2f4136095a4d69b1b71e9da84464b6f2ede7))
+* ansible host and other goodies ([3217022](https://github.com/MarkProminic/hyperweaver-ui/commit/321702226738fd1baecd888ebc98dd2dc59ba77b))
+* bye bye old topo v1 ([ea05297](https://github.com/MarkProminic/hyperweaver-ui/commit/ea05297b6f2893ed9652f976ae26cfd5bd5d2f09))
+* bye bye old topo v1 ([5702962](https://github.com/MarkProminic/hyperweaver-ui/commit/570296200f688d4ad6a99513136f6cfa7d8bf2a4))
+* consume Go structured shapes, platform-split network spaces, uplink picker filtering ([a6d70b4](https://github.com/MarkProminic/hyperweaver-ui/commit/a6d70b4e59bb263961bafa0a317cf0efc451f996))
+* consume Go structured shapes, platform-split network spaces, uplink picker filtering ([a4fe6ff](https://github.com/MarkProminic/hyperweaver-ui/commit/a4fe6ffab038cf03c4b22f72ed50c09b6198bc9b))
+* drag-drop dashboard widgets, settings message variants + i18n, terminal prefs polish ([9950632](https://github.com/MarkProminic/hyperweaver-ui/commit/99506326d55a84d071013d5f4bc840939a5308ae))
+* identity-first silent SSO pre-check, SSO-primary direct login, device-flow failed state and refresh resume, SSO key identity on ticket links ([734fcdc](https://github.com/MarkProminic/hyperweaver-ui/commit/734fcdcb8f356f80fff8962d71319a04a2ee3dcd))
+* machine Resources tab (zonecfg controls), terminal preferences, OS Build relabel ([d92322e](https://github.com/MarkProminic/hyperweaver-ui/commit/d92322efefbb673c510a82a1046907cf073c4b44))
+* more translations! ([048d7cf](https://github.com/MarkProminic/hyperweaver-ui/commit/048d7cf2396967867eab20bd0544b0f4026aa6a8))
+* org assignment UI, BoxVault box picker, org-stamped creates, machine-scoped WS tickets ([73c965f](https://github.com/MarkProminic/hyperweaver-ui/commit/73c965fed587d42c60b05c9bcc7d9cff768766fa))
+* org filter on machine lists, resource-controls row editors split, direct SSO identity relay ([17b110a](https://github.com/MarkProminic/hyperweaver-ui/commit/17b110a0c64d98b76830897d3c84ff8ea7bc09e8))
+* org switcher + org-filtered views, org assignment, BoxVault picker, machine-scoped WS tickets, silent-SSO and device-flow SSO login ([f6cc510](https://github.com/MarkProminic/hyperweaver-ui/commit/f6cc510cc59e8d6174f7bb59d796d0f1649b0b42))
+* RDP, API Shaping, General Improvments ([e6ed6d2](https://github.com/MarkProminic/hyperweaver-ui/commit/e6ed6d255721cd710271a1812fc1bc8c50535056))
+* RDP, API Shaping, General Improvments ([3511d54](https://github.com/MarkProminic/hyperweaver-ui/commit/3511d54b9669f9e1b23ecc18d336836117ddad0f))
+* RDP, API Shaping, General Improvments ([b076f30](https://github.com/MarkProminic/hyperweaver-ui/commit/b076f3074a1cbffd3ad1b7ea19f69929360cd215))
+* RDP, API Shaping, General Improvments ([fa4df00](https://github.com/MarkProminic/hyperweaver-ui/commit/fa4df0076069d0ff3a407e4e14975bfff1f69273))
+* RDP, API Shaping, General Improvments ([978d0f4](https://github.com/MarkProminic/hyperweaver-ui/commit/978d0f4e057ca642d2ab89b077c1255b4b6c95be))
+* RDP, API Shaping, General Improvments ([4dd0920](https://github.com/MarkProminic/hyperweaver-ui/commit/4dd0920902d2944c5057a2a7f09384a1042d71c4))
+* RDP, API Shaping, General Improvments ([d0aeb3d](https://github.com/MarkProminic/hyperweaver-ui/commit/d0aeb3d7c9cb5ffd539595436e9c9cb14c473252))
+* RDP, API Shaping, General Improvments ([4822b1d](https://github.com/MarkProminic/hyperweaver-ui/commit/4822b1d19c61c72b0347a71c2243103badb2b4e2))
+* RDP, API Shaping, General Improvments ([d4fcd42](https://github.com/MarkProminic/hyperweaver-ui/commit/d4fcd42e6bc4c2aeb7e543d264421df68f9900a2))
+* RDP, API Shaping, General Improvments ([065698c](https://github.com/MarkProminic/hyperweaver-ui/commit/065698c8f69dc8171b29646788a92f41fa52b5ae))
+* request dedup, app error boundary, faster machine detail loads ([0d141e3](https://github.com/MarkProminic/hyperweaver-ui/commit/0d141e32feea52e18403f59a6c23755afdf535bc))
+* translations round 2 ([f24d326](https://github.com/MarkProminic/hyperweaver-ui/commit/f24d326ba0cdad221cdd01e7191704c701b1aafb))
+
 ## [0.10.12](https://github.com/MarkProminic/hyperweaver-ui/compare/v0.10.11...v0.10.12) (2026-07-17)
 
 
