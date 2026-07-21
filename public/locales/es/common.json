@@ -2298,7 +2298,8 @@
       "allowSelfSignedTlsLabel": "Permitir TLS autofirmado para {{hostname}}",
       "never": "Nunca",
       "editServer": "Editar Servidor",
-      "removeServer": "Quitar Servidor"
+      "removeServer": "Quitar Servidor",
+      "assignOrgs": "Asignar organizaciones"
     },
     "serviceDetailsModal": {
       "title": "Detalles del Servicio",
@@ -4978,6 +4979,24 @@
       "fwGuestPort": "puerto del invitado",
       "confirmDeleteTitle": "¿Eliminar {{name}}?",
       "confirmDeleteBody": "Las máquinas conectadas a este espacio pierden su red en su próximo arranque. No se puede deshacer."
+    },
+    "orgAssignment": {
+      "agentTitle": "Organizaciones de {{target}}",
+      "machineTitle": "Organizaciones de la máquina {{target}}",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "forbidden": "No eres gestor de organización de este recurso: las asignaciones están protegidas contra lectura.",
+      "agentHelp": "Las organizaciones propietarias de este host lo ven completo, incluidas las máquinas sin asignación. Una lista vacía abre el host a todos los usuarios autenticados de este Server.",
+      "machineHelp": "Los usuarios de estas organizaciones ven y (según su rol) gestionan esta máquina aunque su organización no sea propietaria del host.",
+      "loading": "Cargando organizaciones…",
+      "loadFailed": "No se pudo cargar la asignación de organizaciones",
+      "saveFailed": "No se pudo guardar la asignación de organizaciones",
+      "invalidUuid": "Eso no parece un uuid de organización",
+      "noKnownOrgs": "Tu sesión no conoce organizaciones: añade una por uuid abajo.",
+      "primary": "principal",
+      "manualUuidPlaceholder": "UUID de la organización",
+      "addUuid": "Añadir",
+      "openAgentNote": "Sin organizaciones seleccionadas: este host queda abierto a todos los usuarios autenticados."
     }
   },
   "hostCharts": {
@@ -6770,7 +6789,9 @@
       "rawDataDebug": "Datos crudos (depuración)",
       "utmNotes": "Notas de la VM",
       "utmQemuArgs": "Argumentos de QEMU",
-      "utmQemuArgsHint": "Un argumento por línea — se aplican mediante los argumentos adicionales de QEMU de UTM."
+      "utmQemuArgsHint": "Un argumento por línea — se aplican mediante los argumentos adicionales de QEMU de UTM.",
+      "orgAccess": "Acceso de organizaciones",
+      "orgsUpdated": "Organizaciones actualizadas para {{machineName}}"
     },
     "machineCreateModal": {
       "failedToLoadProvisioners": "Error al cargar los provisionadores: {{message}}",
@@ -7037,7 +7058,12 @@
       "yesValue": "sí",
       "noValue": "no",
       "exactlyWhatWillBeSent": "Esto es exactamente lo que se enviará — usa Atrás para cambiar algo.",
-      "fullRequestBody": "Cuerpo completo de la solicitud"
+      "fullRequestBody": "Cuerpo completo de la solicitud",
+      "owningOrg": "Organización propietaria",
+      "primaryOrgDefault": "Organización principal (predeterminada)",
+      "owningOrgHint": "Cuál de tus organizaciones es propietaria de la nueva máquina.",
+      "browseBoxVault": "Explorar BoxVault…",
+      "browseBoxVaultHint": "Elige una box de BoxVault con tu propia cuenta, incluidas las privadas de tu organización."
     },
     "resources": {
       "hint": "Controles de recursos de zonecfg — «Establecer» reemplaza el recurso completo, «Eliminar» lo borra, «Sin cambios» no toca nada. Se aplica en el próximo arranque / ciclo de energía como el resto de cambios de infraestructura.",
@@ -7079,6 +7105,28 @@
       "addPpt": "Añadir dispositivo",
       "markRemove": "Marcar para eliminar",
       "dropRow": "Quitar esta fila"
+    },
+    "boxVaultPicker": {
+      "title": "Explorar BoxVault",
+      "useThisBox": "Usar esta box",
+      "cancel": "Cancelar",
+      "help": "Elige un archivo de box: se genera un enlace de descarga firmado de una hora y se coloca en el documento de la máquina, para que el host lo descargue sin credenciales.",
+      "unconfigured": "La integración con BoxVault no está configurada en este Server (integrations.boxvault.url).",
+      "federatedRequired": "El acceso a BoxVault requiere un inicio de sesión federado (OIDC): inicia sesión con tu proveedor de identidad para explorar boxes.",
+      "loadFailed": "No se pudieron cargar las boxes de BoxVault",
+      "pickAllParts": "Elige box, versión, proveedor y arquitectura",
+      "orgSlug": "Organización",
+      "orgSlugPlaceholder": "p. ej. STARTcloud",
+      "orgSlugHint": "Carga las boxes de una organización: las privadas aparecen cuando tu cuenta tiene acceso.",
+      "loadOrgBoxes": "Cargar",
+      "loading": "Cargando boxes…",
+      "box": "Box",
+      "selectABox": "Selecciona una box…",
+      "noBoxes": "No se encontraron boxes",
+      "privateSuffix": " (privada)",
+      "version": "Versión",
+      "provider": "Proveedor",
+      "architecture": "Arquitectura"
     }
   },
   "navbar": {
@@ -7568,7 +7616,8 @@
       "saveButton": "Guardar",
       "unsavedChanges": "cambios sin guardar",
       "loadingEditor": "Cargando el editor…",
-      "footerExplanation": "Este YAML ES el documento completo — quitar una sección la ELIMINA (secciones: settings, zones, networks, disks, provisioner, metadata). Se guarda tal cual, se conserva el orden de las claves, los comentarios no se preservan. El agente rechaza YAML no interpretable, formas de sección imposibles, claves de control interno y claves de nivel superior desconocidas; cualquier otra cosa dudosa vuelve como una observación no bloqueante."
+      "footerExplanation": "Este YAML ES el documento completo — quitar una sección la ELIMINA (secciones: settings, zones, networks, disks, provisioner, metadata). Se guarda tal cual, se conserva el orden de las claves, los comentarios no se preservan. El agente rechaza YAML no interpretable, formas de sección imposibles, claves de control interno y claves de nivel superior desconocidas; cualquier otra cosa dudosa vuelve como una observación no bloqueante.",
+      "managerOnly": "El documento de la máquina es solo para gestores: contiene variables de aprovisionamiento y secretos que tu rol de organización no puede leer."
     },
     "machineProvisioning": {
       "heading": "Aprovisionamiento",
@@ -7806,7 +7855,8 @@
       "testConnection": "Probar conexión",
       "bootstrapServer": "Arranque inicial del servidor",
       "removeServerTitle": "Eliminar servidor",
-      "removeServerMessage": "¿Seguro que quieres eliminar este servidor? Esto quitará la conexión al servidor."
+      "removeServerMessage": "¿Seguro que quieres eliminar este servidor? Esto quitará la conexión al servidor.",
+      "orgsUpdated": "Organizaciones del host actualizadas"
     },
     "settingsContent": {
       "sectionSettings": "Configuración de {{title}}",

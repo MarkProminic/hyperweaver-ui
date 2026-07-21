@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { getMachineDefaults, getMachineOsTypes } from '../../api/machineAPI';
+import { getKnownOrgs, managerOrgsOf } from '../../api/orgAccessAPI';
 import {
   getProvisioners,
   getProvisionerVersion,
@@ -23,6 +24,7 @@ import { hasFeature, hasHypervisor } from '../../utils/capabilities';
 import { resourceLabel } from '../../utils/resourceLabel';
 import { FormModal, ResourceIssueList, validationDetails, resourceWarnings } from '../common';
 
+import BoxVaultPickerModal from './BoxVaultPickerModal';
 import {
   GeneralStep,
   BoxStep,
@@ -152,6 +154,11 @@ const defaultExternalNetwork = () => ({
   dns: ['1.1.1.1', '8.8.8.8'],
 });
 
+const isAggregated = server => !!server && server.id !== 'self';
+
+const browseBoxVaultHandler = (aggregated, setBoxVaultOpen) =>
+  aggregated ? () => setBoxVaultOpen(true) : null;
+
 const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => {
   const { t } = useTranslation();
   const [stepIndex, setStepIndex] = useState(0);
@@ -187,6 +194,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   const [vboxJson, setVboxJson] = useState('');
   const [tagsInput, setTagsInput] = useState('');
   const [notes, setNotes] = useState('');
+  const [orgUuid, setOrgUuid] = useState('');
+  const [orgChoices, setOrgChoices] = useState([]);
+  const [boxVaultOpen, setBoxVaultOpen] = useState(false);
   const [networks, setNetworks] = useState([]);
   const [roles, setRoles] = useState([]);
   // The DSL answers — ONE flat map keyed by exact field name; hidden fields
@@ -242,6 +252,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
   // creates REQUIRE a template boot with settings.box — validateStep holds
   // the gate; non-darwin agents 400 the spec server-side regardless.
   const utmOffered = !!currentServer && hasHypervisor(currentServer, 'utm');
+  const aggregated = isAggregated(currentServer);
   const [machineHypervisor, setMachineHypervisor] = useState('');
 
   const family = useMemo(
@@ -335,6 +346,8 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     setRemoveTransport('');
     setSafeIdPath('');
     setStartAfterCreate(false);
+    setOrgUuid('');
+    setBoxVaultOpen(false);
   }, []);
 
   // ---- live picker feeds — fetched on open AND re-fetched on step entry
@@ -451,6 +464,11 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
         setAgentDefaults(result.success ? result.data : null);
       }
     );
+    if (aggregated) {
+      getKnownOrgs().then(orgs => setOrgChoices(managerOrgsOf(orgs)));
+    } else {
+      setOrgChoices([]);
+    }
     getMachineOsTypes(currentServer.hostname, currentServer.port, currentServer.protocol).then(
       result => {
         const list = result.success ? result.data?.ostypes : null;
@@ -580,7 +598,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     loadZfsFeeds();
     loadMedia();
     loadUplinks();
-  }, [isOpen, currentServer, resetForm, loadZfsFeeds, loadMedia, loadUplinks, t]);
+  }, [isOpen, currentServer, aggregated, resetForm, loadZfsFeeds, loadMedia, loadUplinks, t]);
 
   // Re-fetch the feeds a step consumes each time it is ENTERED (Mark:
   // "sometimes the dropdown data is stale") — picker data is only ever as
@@ -921,6 +939,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
       // Rides ONLY when the picked version's manifest declares id_files —
       // package-declared need, never a standing key.
       ...(needsSafeId && safeIdPath.trim() && { safe_id_path: safeIdPath.trim() }),
+      ...(orgUuid && { org_uuid: orgUuid }),
       start_after_create: startAfterCreate,
     };
   };
@@ -1149,6 +1168,9 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           setTagsInput={setTagsInput}
           notes={notes}
           setNotes={setNotes}
+          orgChoices={orgChoices}
+          orgUuid={orgUuid}
+          setOrgUuid={setOrgUuid}
           advanced={showAdvanced}
           loading={loading}
         />
@@ -1168,6 +1190,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
           setBoxPickCustom={setBoxPickCustom}
           bootSource={bootSource}
           setBootSource={setBootSource}
+          onBrowseBoxVault={browseBoxVaultHandler(aggregated, setBoxVaultOpen)}
           advanced={showAdvanced}
           loading={loading}
         />
@@ -1276,6 +1299,19 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
         />
       )}
       {currentStepId === 'confirm' && <ConfirmStep spec={buildSpec()} />}
+
+      <BoxVaultPickerModal
+        isOpen={boxVaultOpen}
+        onClose={() => setBoxVaultOpen(false)}
+        onPicked={pick => {
+          setBoxPickCustom(true);
+          setSetting('box', `${pick.orgSlug}/${pick.boxName}`);
+          setSetting('box_version', pick.version);
+          setSetting('box_arch', pick.architecture);
+          setSetting('box_url', pick.downloadUrl);
+          setBoxVaultOpen(false);
+        }}
+      />
     </FormModal>
   );
 };

@@ -2298,7 +2298,8 @@
       "allowSelfSignedTlsLabel": "Allow self-signed TLS for {{hostname}}",
       "never": "Never",
       "editServer": "Edit Server",
-      "removeServer": "Remove Server"
+      "removeServer": "Remove Server",
+      "assignOrgs": "Assign organizations"
     },
     "serviceDetailsModal": {
       "title": "Service Details",
@@ -4978,6 +4979,24 @@
       "fwGuestPort": "guest port",
       "confirmDeleteTitle": "Delete {{name}}?",
       "confirmDeleteBody": "Machines attached to this space lose their network at their next start. This cannot be undone."
+    },
+    "orgAssignment": {
+      "agentTitle": "Organizations for {{target}}",
+      "machineTitle": "Organizations for machine {{target}}",
+      "save": "Save",
+      "cancel": "Cancel",
+      "forbidden": "You are not an organization manager of this resource — assignments are read-protected.",
+      "agentHelp": "Organizations that own this host see all of it, including machines with no assignment. An empty list opens the host to every authenticated user of this Server.",
+      "machineHelp": "Users in these organizations see and (per role) manage this machine even when their organization does not own the host.",
+      "loading": "Loading organizations…",
+      "loadFailed": "Failed to load organization assignment",
+      "saveFailed": "Failed to save organization assignment",
+      "invalidUuid": "That does not look like an organization uuid",
+      "noKnownOrgs": "No organizations known to your session — add one by uuid below.",
+      "primary": "primary",
+      "manualUuidPlaceholder": "Organization uuid",
+      "addUuid": "Add",
+      "openAgentNote": "No organizations selected — this host stays open to every authenticated user."
     }
   },
   "hostCharts": {
@@ -6770,7 +6789,9 @@
       "rawDataDebug": "Raw Data (Debug)",
       "utmNotes": "VM Notes",
       "utmQemuArgs": "QEMU arguments",
-      "utmQemuArgsHint": "One argument per line — applied via UTM's additional QEMU arguments."
+      "utmQemuArgsHint": "One argument per line — applied via UTM's additional QEMU arguments.",
+      "orgAccess": "Organization access",
+      "orgsUpdated": "Organizations updated for {{machineName}}"
     },
     "machineCreateModal": {
       "failedToLoadProvisioners": "Failed to load provisioners: {{message}}",
@@ -7037,7 +7058,12 @@
       "yesValue": "yes",
       "noValue": "no",
       "exactlyWhatWillBeSent": "This is exactly what will be sent — use Back to change anything.",
-      "fullRequestBody": "Full request body"
+      "fullRequestBody": "Full request body",
+      "owningOrg": "Owning organization",
+      "primaryOrgDefault": "Primary organization (default)",
+      "owningOrgHint": "Which of your organizations owns the new machine.",
+      "browseBoxVault": "Browse BoxVault…",
+      "browseBoxVaultHint": "Pick a box from BoxVault with your own account — org-private boxes included."
     },
     "resources": {
       "hint": "zonecfg resource controls — set replaces the whole resource, remove deletes it, unchanged touches nothing. Applies at the next boot / power cycle like other infrastructure changes.",
@@ -7079,6 +7105,28 @@
       "addPpt": "Add device",
       "markRemove": "Mark for removal",
       "dropRow": "Drop this row"
+    },
+    "boxVaultPicker": {
+      "title": "Browse BoxVault",
+      "useThisBox": "Use this box",
+      "cancel": "Cancel",
+      "help": "Pick a box file — a signed one-hour download link is minted for it and placed in the machine document, so the host downloads it without any credential.",
+      "unconfigured": "BoxVault integration is not configured on this Server (integrations.boxvault.url).",
+      "federatedRequired": "BoxVault access needs a federated (OIDC) login — sign in through your identity provider to browse boxes.",
+      "loadFailed": "Failed to load boxes from BoxVault",
+      "pickAllParts": "Pick a box, version, provider, and architecture",
+      "orgSlug": "Organization",
+      "orgSlugPlaceholder": "e.g. STARTcloud",
+      "orgSlugHint": "Load an organization's boxes — private boxes appear when your account has access.",
+      "loadOrgBoxes": "Load",
+      "loading": "Loading boxes…",
+      "box": "Box",
+      "selectABox": "Select a box…",
+      "noBoxes": "No boxes found",
+      "privateSuffix": " (private)",
+      "version": "Version",
+      "provider": "Provider",
+      "architecture": "Architecture"
     }
   },
   "navbar": {
@@ -7568,7 +7616,8 @@
       "saveButton": "Save",
       "unsavedChanges": "unsaved changes",
       "loadingEditor": "Loading the editor…",
-      "footerExplanation": "This YAML IS the whole document — removing a section DELETES it (sections: settings, zones, networks, disks, provisioner, metadata). Saved verbatim, key order kept, comments not preserved. The agent refuses unparseable YAML, impossible section shapes, bookkeeping keys, and unknown top-level keys; anything else questionable comes back as a non-blocking advisory."
+      "footerExplanation": "This YAML IS the whole document — removing a section DELETES it (sections: settings, zones, networks, disks, provisioner, metadata). Saved verbatim, key order kept, comments not preserved. The agent refuses unparseable YAML, impossible section shapes, bookkeeping keys, and unknown top-level keys; anything else questionable comes back as a non-blocking advisory.",
+      "managerOnly": "The machine document is manager-only — it carries provisioning variables and secrets your organization role cannot read."
     },
     "machineProvisioning": {
       "heading": "Provisioning",
@@ -7806,7 +7855,8 @@
       "testConnection": "Test Connection",
       "bootstrapServer": "Bootstrap Server",
       "removeServerTitle": "Remove Server",
-      "removeServerMessage": "Are you sure you want to remove this server? This will remove the server connection."
+      "removeServerMessage": "Are you sure you want to remove this server? This will remove the server connection.",
+      "orgsUpdated": "Host organizations updated"
     },
     "settingsContent": {
       "sectionSettings": "{{title}} Settings",

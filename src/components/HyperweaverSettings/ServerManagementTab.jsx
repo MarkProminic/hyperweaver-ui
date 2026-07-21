@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { ConfirmModal } from '../common';
+import OrgAssignmentModal from '../Host/OrgAssignmentModal';
 import ServerForm from '../Host/ServerForm';
 import ServerHelpPanel from '../Host/ServerHelpPanel';
 import ServerStatusCard from '../Host/ServerStatusCard';
@@ -38,13 +39,12 @@ const ServerManagementTab = ({
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  // Only consumed at submit time, so the flag lives here instead of the parent's form state
+  const [orgTarget, setOrgTarget] = useState(null);
   const [allowInsecure, setAllowInsecure] = useState(false);
 
   const { removeServer, addServer, testServer, updateServer, refreshServers, selectServer } =
     serverContext;
 
-  // Reset form to initial state
   const resetForm = useCallback(() => {
     setHostname('');
     setPort('5001');
@@ -66,7 +66,6 @@ const ServerManagementTab = ({
     setMsg,
   ]);
 
-  // Handle server deletion
   const handleDeleteServer = useCallback(
     async serverId => {
       try {
@@ -91,7 +90,6 @@ const ServerManagementTab = ({
     [removeServer, setMsg, t]
   );
 
-  // Handle server editing
   const handleEditServer = useCallback(
     serverHostname => {
       const server = servers.find(s => s.hostname === serverHostname);
@@ -103,7 +101,6 @@ const ServerManagementTab = ({
     [servers, selectServer, navigate]
   );
 
-  // Toggle a row's allow_insecure flag (self-signed TLS acceptance)
   const handleToggleInsecure = useCallback(
     async server => {
       try {
@@ -132,7 +129,6 @@ const ServerManagementTab = ({
     [updateServer, setMsg, t]
   );
 
-  // Handle connection test
   const handleTestConnection = useCallback(async () => {
     if (!hostname || !port || !protocol) {
       setMsg({ text: t('settings.serverManagementTab.fillHostPortProtocol'), variant: 'warning' });
@@ -166,7 +162,6 @@ const ServerManagementTab = ({
     }
   }, [hostname, port, protocol, allowInsecure, testServer, setMsg, setTestResult, t]);
 
-  // Handle server addition
   const handleAddServer = useCallback(
     async e => {
       e.preventDefault();
@@ -254,7 +249,6 @@ const ServerManagementTab = ({
     <>
       <div className="card mb-4">
         <div className="card-body">
-          {/* Server Management Header */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <h2 className="fs-5 fw-bold">{t('settings.serverManagementTab.servers')}</h2>
             <button
@@ -274,7 +268,6 @@ const ServerManagementTab = ({
             </button>
           </div>
 
-          {/* Add Server Form or Server Table */}
           {showAddForm ? (
             <form onSubmit={handleAddServer} autoComplete="off">
               <div className="row g-3">
@@ -340,13 +333,27 @@ const ServerManagementTab = ({
                 setConfirmDelete(serverId);
               }}
               onToggleInsecure={handleToggleInsecure}
+              onAssignOrgs={server => setOrgTarget(server)}
               loading={loading}
             />
           )}
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {orgTarget && (
+        <OrgAssignmentModal
+          isOpen
+          onClose={saved => {
+            if (saved) {
+              setMsg({ text: t('settings.serverManagementTab.orgsUpdated'), variant: 'success' });
+            }
+            setOrgTarget(null);
+          }}
+          serverId={orgTarget.id}
+          targetLabel={orgTarget.hostname}
+        />
+      )}
+
       <ConfirmModal
         isOpen={confirmDelete !== null}
         onClose={() => {

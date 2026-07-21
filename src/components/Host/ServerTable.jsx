@@ -2,11 +2,10 @@ import PropTypes from 'prop-types';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) => {
+const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, onAssignOrgs, loading }) => {
   const { t } = useTranslation();
   const [copiedKey, setCopiedKey] = useState(null);
 
-  // Mask API key for security (show first 6 and last 4 characters)
   const maskApiKey = apiKey => {
     if (!apiKey || apiKey.length < 10) {
       return t('host.serverTable.notSet');
@@ -16,7 +15,6 @@ const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) =
     return `${start}...${end}`;
   };
 
-  // Copy API key to clipboard
   const copyApiKey = async (apiKey, serverId) => {
     if (!apiKey) {
       return;
@@ -127,6 +125,15 @@ const ServerTable = ({ servers, onEdit, onDelete, onToggleInsecure, loading }) =
                   </button>
                   <button
                     type="button"
+                    className="btn btn-sm btn-info"
+                    onClick={() => onAssignOrgs(server)}
+                    disabled={loading}
+                    title={t('host.serverTable.assignOrgs')}
+                  >
+                    <i className="fas fa-building-user" />
+                  </button>
+                  <button
+                    type="button"
                     className="btn btn-sm btn-danger"
                     onClick={() => onDelete(server.id)}
                     disabled={loading}
@@ -149,6 +156,7 @@ ServerTable.propTypes = {
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onToggleInsecure: PropTypes.func.isRequired,
+  onAssignOrgs: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
 };
 

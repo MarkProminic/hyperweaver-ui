@@ -34,6 +34,7 @@ import {
   isoFilenames,
   zfsPoolOptions,
 } from './machineHelpers';
+import MachineOrgAccess from './MachineOrgAccess';
 import MachineSettingsStatus from './MachineSettingsStatus';
 import NetworkAdaptersEditor from './NetworkAdaptersEditor';
 import ResourceControlsEditor from './ResourceControlsEditor';
@@ -1513,6 +1514,13 @@ const MachineSettings = ({
         loading={loading}
         onApplyNow={applyPendingNow}
         onCancel={cancelPending}
+      />
+
+      <MachineOrgAccess
+        currentServer={currentServer}
+        machineName={machineName}
+        disabled={formDisabled}
+        onDone={onDone}
       />
 
       <ul className="nav nav-pills mb-3 flex-wrap gap-1">

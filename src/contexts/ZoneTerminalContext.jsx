@@ -213,7 +213,7 @@ export const ZoneTerminalProvider = ({ children }) => {
 
         // WS path is DERIVED, never read from the backend (plan §4.2).
         // Phase H: fetch a fresh WS ticket right before opening.
-        const ticket = await fetchWsTicket(server);
+        const ticket = await fetchWsTicket(server, zoneName);
         const wsUrl = buildWsUrl(`${getAgentBasePath(server)}/zlogin/${sessionData.id}`, ticket);
         const ws = new WebSocket(wsUrl);
 
@@ -340,7 +340,7 @@ export const ZoneTerminalProvider = ({ children }) => {
 
       // WS path is DERIVED from mode + session id (plan §4.2).
       // Phase H: fetch a fresh WS ticket right before opening.
-      const ticket = await fetchWsTicket(server);
+      const ticket = await fetchWsTicket(server, zoneName);
       const wsUrl = buildWsUrl(`${getAgentBasePath(server)}/zlogin/${sessionData.id}`, ticket);
       const ws = new WebSocket(wsUrl);
 

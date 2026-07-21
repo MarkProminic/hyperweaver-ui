@@ -267,13 +267,25 @@ export const makeAgentRequest = (...args) => {
  * Every agent WS upgrade requires a `?ticket=` minted by `GET /ws-ticket` under
  * API-key (direct) / JWT (aggregated, via the server proxy) auth. Call this right
  * before opening any console/stream WS and pass the result to `buildWsUrl(path, ticket)`.
+ * Machine console/stream connects pass the machine name — the ticket binds to that
+ * machine (agents enforcing scope reject mismatched upgrades); host-level streams
+ * mint unscoped. Agents that predate scoping ignore the parameter.
  * @param {Object} server - Server object ({ id } or { hostname, port, protocol })
+ * @param {string} [machine] - Machine name to scope the ticket to
  * @returns {Promise<string|null>} The ticket, or null if unavailable
  */
-export const fetchWsTicket = async server => {
+export const fetchWsTicket = async (server, machine = null) => {
   if (!server) {
     return null;
   }
-  const result = await makeAgentRequest(server.hostname, server.port, server.protocol, 'ws-ticket');
+  const result = await makeAgentRequest(
+    server.hostname,
+    server.port,
+    server.protocol,
+    'ws-ticket',
+    'GET',
+    null,
+    machine ? { machine } : null
+  );
   return result.success ? result.data?.ticket || null : null;
 };

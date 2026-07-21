@@ -86,6 +86,9 @@ export const GeneralStep = ({
   setTagsInput,
   notes,
   setNotes,
+  orgChoices = [],
+  orgUuid = '',
+  setOrgUuid = null,
   advanced,
   loading,
 }) => {
@@ -127,6 +130,30 @@ export const GeneralStep = ({
         onChange={e => setTagsInput(e.target.value)}
         disabled={loading}
       />
+      {setOrgUuid && orgChoices.length > 0 && (
+        <div className="col-12 col-md-4">
+          <label className="form-label" htmlFor="machine-setting-org">
+            {t('machineEdit.createWizardSteps.owningOrg')}
+          </label>
+          <select
+            id="machine-setting-org"
+            className="form-select"
+            value={orgUuid}
+            onChange={e => setOrgUuid(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">{t('machineEdit.createWizardSteps.primaryOrgDefault')}</option>
+            {orgChoices.map(org => (
+              <option key={org.uuid} value={org.uuid}>
+                {org.name || org.uuid}
+              </option>
+            ))}
+          </select>
+          <span className="form-text text-muted">
+            {t('machineEdit.createWizardSteps.owningOrgHint')}
+          </span>
+        </div>
+      )}
       {advanced && (
         <div className="col-12 col-md-8">
           <label className="form-label" htmlFor="machine-create-notes">
@@ -234,6 +261,9 @@ GeneralStep.propTypes = {
   setTagsInput: PropTypes.func.isRequired,
   notes: PropTypes.string.isRequired,
   setNotes: PropTypes.func.isRequired,
+  orgChoices: PropTypes.array,
+  orgUuid: PropTypes.string,
+  setOrgUuid: PropTypes.func,
   advanced: PropTypes.bool,
   loading: PropTypes.bool,
 };
@@ -262,6 +292,7 @@ export const BoxStep = ({
   setBoxPickCustom,
   bootSource,
   setBootSource,
+  onBrowseBoxVault = null,
   advanced,
   loading,
 }) => {
@@ -531,6 +562,22 @@ export const BoxStep = ({
               </div>
             </>
           )}
+          {onBrowseBoxVault && (
+            <div className="col-12">
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-info"
+                onClick={onBrowseBoxVault}
+                disabled={loading}
+              >
+                <i className="fas fa-box-open me-2" />
+                {t('machineEdit.createWizardSteps.browseBoxVault')}
+              </button>
+              <span className="form-text text-muted ms-2">
+                {t('machineEdit.createWizardSteps.browseBoxVaultHint')}
+              </span>
+            </div>
+          )}
           <p className="form-text text-muted mb-0">
             {t('machineEdit.createWizardSteps.boxDownloadHint')}
           </p>
@@ -554,6 +601,7 @@ BoxStep.propTypes = {
   setBoxPickCustom: PropTypes.func.isRequired,
   bootSource: PropTypes.string.isRequired,
   setBootSource: PropTypes.func.isRequired,
+  onBrowseBoxVault: PropTypes.func,
   advanced: PropTypes.bool,
   loading: PropTypes.bool,
 };

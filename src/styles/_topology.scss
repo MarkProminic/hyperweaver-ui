@@ -85,7 +85,9 @@
   border: 1px solid var(--hw-border-light);
   border-radius: 8px;
   padding: 10px 12px;
-  transition: opacity 0.2s ease, border-color 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .hw-topo-slot {
@@ -598,7 +600,9 @@
 }
 
 .hw-topo-drop-over {
-  box-shadow: 0 0 0 3px var(--hw-topo-pending), 0 0 14px var(--hw-topo-pending);
+  box-shadow:
+    0 0 0 3px var(--hw-topo-pending),
+    0 0 14px var(--hw-topo-pending);
 }
 
 .hw-topo-pinned {

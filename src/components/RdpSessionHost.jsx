@@ -93,7 +93,7 @@ const RdpSessionHost = ({
 
     const connectSession = async ui => {
       try {
-        const ticket = await fetchWsTicket(currentServer);
+        const ticket = await fetchWsTicket(currentServer, machineName);
         const basePath = getAgentBasePath(currentServer);
         if (cancelled) {
           return;

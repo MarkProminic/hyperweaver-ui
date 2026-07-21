@@ -87,7 +87,7 @@ const SshConsoleDisplay = ({
     window.addEventListener('resize', handleWindowResize);
 
     const basePath = getAgentBasePath(currentServer);
-    fetchWsTicket(currentServer).then(ticket => {
+    fetchWsTicket(currentServer, selectedMachine).then(ticket => {
       if (cancelled || basePath === null) {
         return;
       }
@@ -118,7 +118,7 @@ const SshConsoleDisplay = ({
         wsRef.current = null;
       }
     };
-  }, [instance, ref, currentServer, session?.id, t]);
+  }, [instance, ref, currentServer, selectedMachine, session?.id, t]);
 
   const handlePaste = async () => {
     try {

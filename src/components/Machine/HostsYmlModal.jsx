@@ -21,6 +21,7 @@ const HostsYmlModal = ({ isOpen, onClose, currentServer, machineName, onSaved })
   const [original, setOriginal] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [forbidden, setForbidden] = useState(false);
   const [warnings, setWarnings] = useState([]);
   const [savedNote, setSavedNote] = useState('');
   const editorRef = useRef(null);
@@ -32,6 +33,7 @@ const HostsYmlModal = ({ isOpen, onClose, currentServer, machineName, onSaved })
     setYaml('');
     setOriginal('');
     setError('');
+    setForbidden(false);
     setWarnings([]);
     setSavedNote('');
     setLoading(true);
@@ -46,6 +48,8 @@ const HostsYmlModal = ({ isOpen, onClose, currentServer, machineName, onSaved })
         const text = result.data?.yaml ?? '';
         setYaml(text);
         setOriginal(text);
+      } else if (result.status === 403) {
+        setForbidden(true);
       } else {
         setError(t('provisioning.hostsYmlModal.failedToLoad', { message: result.message }));
       }
@@ -108,8 +112,12 @@ const HostsYmlModal = ({ isOpen, onClose, currentServer, machineName, onSaved })
       icon="fas fa-file-code"
       submitText={t('provisioning.hostsYmlModal.saveButton')}
       loading={loading}
+      disabled={forbidden}
       showCancelButton
     >
+      {forbidden && (
+        <div className="alert alert-info py-2">{t('provisioning.hostsYmlModal.managerOnly')}</div>
+      )}
       {error && <div className="alert alert-danger py-2">{error}</div>}
       {savedNote && (
         <div className="alert alert-warning py-2">
@@ -128,14 +136,18 @@ const HostsYmlModal = ({ isOpen, onClose, currentServer, machineName, onSaved })
           </span>
         </p>
       )}
-      <div className="border rounded overflow-hidden">
-        <Suspense fallback={editorFallback}>
-          <HostsYmlEditor ref={editorRef} value={yaml} onChange={setYaml} disabled={loading} />
-        </Suspense>
-      </div>
-      <p className="form-text text-muted mb-0">
-        {t('provisioning.hostsYmlModal.footerExplanation')}
-      </p>
+      {!forbidden && (
+        <>
+          <div className="border rounded overflow-hidden">
+            <Suspense fallback={editorFallback}>
+              <HostsYmlEditor ref={editorRef} value={yaml} onChange={setYaml} disabled={loading} />
+            </Suspense>
+          </div>
+          <p className="form-text text-muted mb-0">
+            {t('provisioning.hostsYmlModal.footerExplanation')}
+          </p>
+        </>
+      )}
     </FormModal>
   );
 };

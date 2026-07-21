@@ -168,8 +168,8 @@ const VncViewerReact = forwardRef(
     // one (the ticket is checked only at upgrade, so a 60s TTL covers the retry window).
     const [ticket, setTicket] = useState(null);
     const refreshTicket = useCallback(async () => {
-      setTicket(server ? await fetchWsTicket(server) : null);
-    }, [server]);
+      setTicket(server ? await fetchWsTicket(server, machineName) : null);
+    }, [server, machineName]);
     useEffect(() => {
       refreshTicket();
     }, [refreshTicket]);

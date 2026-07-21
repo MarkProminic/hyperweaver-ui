@@ -297,7 +297,13 @@ const TaskDetailModal = ({ task, onClose }) => {
       const basePath = getAgentBasePath(currentServer);
       if (basePath !== null) {
         // Phase H: fetch a fresh WS ticket, then open the mode-aware task-output stream.
-        fetchWsTicket(currentServer).then(ticket => {
+        // Machine tasks mint a machine-scoped ticket; system/artifact tasks are
+        // host-level and mint unscoped (the agents' scoping contract).
+        const taskMachine =
+          task.machine_name && !['system', 'artifact'].includes(task.machine_name)
+            ? task.machine_name
+            : null;
+        fetchWsTicket(currentServer, taskMachine).then(ticket => {
           if (cancelled) {
             return;
           }
@@ -326,7 +332,7 @@ const TaskDetailModal = ({ task, onClose }) => {
         wsRef.current = null;
       }
     };
-  }, [task.id, currentServer]);
+  }, [task.id, task.machine_name, currentServer]);
 
   // Auto-scroll output to bottom
   useEffect(() => {
