@@ -7,6 +7,25 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useMode } from '../contexts/ModeContext';
 
+// BoxVault's "Deploy to Hyperweaver" deep link lands here as
+// /?create=machine&box=<org/name>&box_version=&box_arch=&box_url= — translate
+// it into the machines page's own create intent URL. Unknown params are
+// ignored; only the four box keys the create wizard's settings carry ride.
+const boxVaultDeepLinkTarget = () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('create') !== 'machine') {
+    return null;
+  }
+  const target = new URLSearchParams({ create: 'machine' });
+  ['box', 'box_version', 'box_arch', 'box_url'].forEach(key => {
+    const value = params.get(key);
+    if (value) {
+      target.set(key, value);
+    }
+  });
+  return `/ui/machines?${target.toString()}`;
+};
+
 /**
  * Landing component that handles first-time setup flow
  * @returns {JSX.Element} Landing component
@@ -23,6 +42,10 @@ const Landing = () => {
    * Check if system needs initial setup
    */
   useEffect(() => {
+    // Aggregated only — Direct mode has no BoxVault integration, so its
+    // redirects below stay untouched and the params are simply ignored.
+    const deepLink = isDirect ? null : boxVaultDeepLinkTarget();
+
     const checkSetupStatus = async () => {
       try {
         const response = await axios.get('/api/auth/setup-status');
@@ -32,10 +55,16 @@ const Landing = () => {
           // System needs setup - redirect to registration
           navigate('/register');
         } else if (isAuthenticated) {
-          // User is logged in - go to dashboard
-          navigate('/ui');
+          // User is logged in - go to dashboard (or straight into the
+          // deep-linked machine-create intent).
+          navigate(deepLink || '/ui');
         } else {
-          // System is set up but user not logged in - go to login
+          // System is set up but user not logged in - go to login. A deep
+          // link rides the intended-url rail: the password login and the
+          // OIDC callback both restore it after auth.
+          if (deepLink) {
+            localStorage.setItem('hyperweaver_intended_url', deepLink);
+          }
           navigate('/login');
         }
       } catch (setupErr) {

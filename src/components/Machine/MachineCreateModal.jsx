@@ -160,7 +160,7 @@ const isAggregated = server => !!server && server.id !== 'self';
 const browseBoxVaultHandler = (aggregated, setBoxVaultOpen) =>
   aggregated ? () => setBoxVaultOpen(true) : null;
 
-const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => {
+const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted, boxSeed = null }) => {
   const { t } = useTranslation();
   const { activeOrg } = useOrgFilter();
   const [stepIndex, setStepIndex] = useState(0);
@@ -617,6 +617,24 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted }) => 
     loadUplinks,
     t,
   ]);
+
+  // BoxVault "Deploy to Hyperweaver" seed — lands exactly where the picker
+  // writes (custom pick mode + the four box settings) on the default
+  // template boot. Declared AFTER the open effect so it runs after its
+  // resetForm in the same commit.
+  useEffect(() => {
+    if (!isOpen || !boxSeed?.box) {
+      return;
+    }
+    setBoxPickCustom(true);
+    setSettings(prev => ({
+      ...prev,
+      box: boxSeed.box,
+      box_version: boxSeed.box_version || '',
+      box_arch: boxSeed.box_arch || '',
+      box_url: boxSeed.box_url || '',
+    }));
+  }, [isOpen, boxSeed]);
 
   // Re-fetch the feeds a step consumes each time it is ENTERED (Mark:
   // "sometimes the dropdown data is stale") — picker data is only ever as
@@ -1339,6 +1357,12 @@ MachineCreateModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   currentServer: PropTypes.object,
   onCompleted: PropTypes.func.isRequired,
+  boxSeed: PropTypes.shape({
+    box: PropTypes.string,
+    box_version: PropTypes.string,
+    box_arch: PropTypes.string,
+    box_url: PropTypes.string,
+  }),
 };
 
 export default MachineCreateModal;

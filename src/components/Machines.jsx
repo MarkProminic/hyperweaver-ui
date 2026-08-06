@@ -269,6 +269,7 @@ const MachinePageModals = ({
   onWizardCompleted,
   onNotice,
   loadMachines,
+  boxSeed = null,
 }) => {
   const { t } = useTranslation();
   return (
@@ -279,6 +280,7 @@ const MachinePageModals = ({
           onClose={closeModal('wizard')}
           currentServer={currentServer}
           onCompleted={onWizardCompleted}
+          boxSeed={boxSeed}
         />
       )}
 
@@ -394,6 +396,7 @@ MachinePageModals.propTypes = {
   onWizardCompleted: PropTypes.func.isRequired,
   onNotice: PropTypes.func.isRequired,
   loadMachines: PropTypes.func.isRequired,
+  boxSeed: PropTypes.object,
 };
 
 const Machines = () => {
@@ -417,6 +420,7 @@ const Machines = () => {
   const {
     makeAgentRequest,
     servers: allServers,
+    registryLoaded,
     currentServer,
     currentMachine,
     selectMachine,
@@ -441,6 +445,9 @@ const Machines = () => {
   } = useMachineDetails(currentServer, currentMachine);
 
   const [wizardOpen, setWizardOpen] = useState(false);
+  // BoxVault deep-link box prefill ({box, box_version, box_arch, box_url}) —
+  // captured with the ?create intent, handed to the wizard, cleared on close.
+  const [boxSeed, setBoxSeed] = useState(null);
   // {text, warning} — warning flags a chained download or requires_restart.
   const [provisioningNotice, setProvisioningNotice] = useState(null);
   const [cloneOpen, setCloneOpen] = useState(false);
@@ -471,7 +478,12 @@ const Machines = () => {
   // component stays a dumb renderer.
   const closeModal = key => () =>
     ({
-      wizard: setWizardOpen,
+      wizard: value => {
+        setWizardOpen(value);
+        // A closed wizard drops the deep-link seed — a later manual New
+        // starts clean.
+        setBoxSeed(null);
+      },
       clone: setCloneOpen,
       install: setInstallOpen,
       imp: setImportOpen,
@@ -554,6 +566,24 @@ const Machines = () => {
 
   // Handle URL query parameter for zone selection
   useEffect(() => {
+    // BoxVault deep link (?create=machine&box=…) arrives on a COLD page load —
+    // hold the create intent until the registry answers and the navbar's
+    // auto-select lands a currentServer, else the consume-either-way loop
+    // below eats it while the gate is still false. A settled-empty registry
+    // falls through and the page's own no-servers state stands.
+    const createParam = searchParams.get('create');
+    if (createParam && !currentServer && (!registryLoaded || allServers.length > 0)) {
+      return;
+    }
+    if (createParam && wizardAvailable && searchParams.get('box')) {
+      setBoxSeed({
+        box: searchParams.get('box'),
+        box_version: searchParams.get('box_version') || '',
+        box_arch: searchParams.get('box_arch') || '',
+        box_url: searchParams.get('box_url') || '',
+      });
+    }
+
     const zloginParam = searchParams.get('zlogin');
     if (zloginParam) {
       handleMachineSelect(zloginParam);
@@ -647,6 +677,8 @@ const Machines = () => {
     wizardAvailable,
     currentMachine,
     currentServer,
+    allServers,
+    registryLoaded,
     snapshotsAvailable,
     cloneAvailable,
     unattendedAvailable,
@@ -1025,6 +1057,7 @@ const Machines = () => {
         onWizardCompleted={handleWizardCompleted}
         onNotice={setProvisioningNotice}
         loadMachines={loadMachines}
+        boxSeed={boxSeed}
       />
 
       <VncModal

@@ -572,6 +572,10 @@ export const ServerProvider = ({ children }) => {
     () => ({
       servers: visibleServers,
       loading,
+      // TRUE once the registry answered (or Direct's self-server stood up) —
+      // `loading` is false during the mount delay too, so cold-load consumers
+      // (the BoxVault deep link) need this to tell "not yet" from "empty".
+      registryLoaded: hasLoadedOnce,
       currentServer,
       currentMachine,
       loadServers,
@@ -633,6 +637,7 @@ export const ServerProvider = ({ children }) => {
     [
       visibleServers,
       loading,
+      hasLoadedOnce,
       currentServer,
       currentMachine,
       loadServers,
