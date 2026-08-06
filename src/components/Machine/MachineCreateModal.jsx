@@ -160,7 +160,19 @@ const isAggregated = server => !!server && server.id !== 'self';
 const browseBoxVaultHandler = (aggregated, setBoxVaultOpen) =>
   aggregated ? () => setBoxVaultOpen(true) : null;
 
-const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted, boxSeed = null }) => {
+// Hypervisor presence flags — hoisted from the component for the complexity
+// budget (the isAggregated pattern). utmOffered: the hypervisor picker is
+// INFORMATIONAL (never token-gating, D14) — it renders only when the agent's
+// hypervisors[] actually offers utm; utm creates REQUIRE a template boot with
+// settings.box (validateStep holds the gate; non-darwin agents 400 the spec
+// server-side regardless).
+const hypervisorFlags = currentServer => ({
+  bhyve: !!currentServer && hasHypervisor(currentServer, 'bhyve'),
+  vbox: !!currentServer && hasHypervisor(currentServer, 'virtualbox'),
+  utmOffered: !!currentServer && hasHypervisor(currentServer, 'utm'),
+});
+
+const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted, boxSeed }) => {
   const { t } = useTranslation();
   const { activeOrg } = useOrgFilter();
   const [stepIndex, setStepIndex] = useState(0);
@@ -247,13 +259,7 @@ const MachineCreateModal = ({ isOpen, onClose, currentServer, onCompleted, boxSe
   const [osTypes, setOsTypes] = useState(null);
 
   const singular = resourceLabel(currentServer, { plural: false });
-  const bhyve = !!currentServer && hasHypervisor(currentServer, 'bhyve');
-  const vbox = !!currentServer && hasHypervisor(currentServer, 'virtualbox');
-  // The hypervisor picker is INFORMATIONAL (never token-gating, D14): it
-  // renders only when the agent's hypervisors[] actually offers utm. utm
-  // creates REQUIRE a template boot with settings.box — validateStep holds
-  // the gate; non-darwin agents 400 the spec server-side regardless.
-  const utmOffered = !!currentServer && hasHypervisor(currentServer, 'utm');
+  const { bhyve, vbox, utmOffered } = hypervisorFlags(currentServer);
   const aggregated = isAggregated(currentServer);
   const [machineHypervisor, setMachineHypervisor] = useState('');
 
