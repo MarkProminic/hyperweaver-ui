@@ -1,5 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img">
   <title>Hyperweaver woven H monogram</title>
+  <style>
+    .frame { stroke: #111111; }
+    .shadow { fill: #111111; stroke: none; }
+    @media (prefers-color-scheme: dark) {
+      .frame { stroke: #f4f6f8; }
+      .shadow { fill: #f4f6f8; }
+    }
+  </style>
   <defs>
     <!-- vertical ribbon gradient (posts) -->
     <linearGradient id="rib" x1="0" y1="0" x2="0" y2="1">
@@ -13,7 +21,7 @@
     </linearGradient>
   </defs>
 
-  <g stroke="#111111" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+  <g class="frame" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
 
     <!-- LEFT POST (painted first => bar passes OVER it at the left crossing) -->
     <rect x="30" y="28" width="48" height="200" rx="10" fill="url(#rib)"/>
@@ -24,14 +32,14 @@
 
     <!-- under-dive shadow: soft ink band on the bar just left of the right post,
          sold as the bar diving BENEATH the right post (drawn above bar, below right post) -->
-    <rect x="164" y="106" width="16" height="44" rx="6" fill="#111111" opacity="0.24" stroke="none"/>
+    <rect class="shadow" x="164" y="106" width="16" height="44" rx="6" opacity="0.24"/>
 
     <!-- RIGHT POST (painted last => covers bar, bar passes UNDER it) -->
     <rect x="178" y="28" width="48" height="200" rx="10" fill="url(#rib)"/>
 
     <!-- over-crossing shadow: soft ink band on the LEFT post just below the bar,
          sold as the post receding UNDER the bar (drawn last, sits on top of post) -->
-    <rect x="32" y="152" width="44" height="16" rx="6" fill="#111111" opacity="0.20" stroke="none"/>
+    <rect class="shadow" x="32" y="152" width="44" height="16" rx="6" opacity="0.20"/>
 
   </g>
 </svg>
