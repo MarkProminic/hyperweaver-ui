@@ -5,6 +5,17 @@
     <link rel="icon" type="image/svg+xml" href="/images/hyperweaver-glyph.svg" />
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      try {
+        var hwTheme = localStorage.getItem('hyperweaver-theme') || 'auto';
+        if (hwTheme === 'auto') {
+          hwTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-bs-theme', hwTheme);
+      } catch {
+        document.documentElement.setAttribute('data-bs-theme', 'light');
+      }
+    </script>
     <meta name="theme-color" content="#ff6600" />
     <meta name="description" content="Hyperweaver — web console for managing hypervisor hosts" />
     <link rel="apple-touch-icon" href="/images/logo192.png" />
